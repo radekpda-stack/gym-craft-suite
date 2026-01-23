@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Trophy, Trash2, Edit2, MoreVertical, Dumbbell, Clock, User } from 'lucide-react';
+import { Trophy, Trash2, Edit2, MoreVertical, Dumbbell, Clock, User, Heart, Zap, MapPin, Timer } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,11 +21,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ExerciseEntry, ExerciseEntryWithClient, useExerciseEntries } from '@/hooks/useExerciseEntries';
+import { ExerciseEntry, useExerciseEntries } from '@/hooks/useExerciseEntries';
 import { EditEntryDialog } from './EditEntryDialog';
+import type { UnifiedExerciseEntry } from '@/hooks/useAllExerciseEntries';
 
 interface ProgressListProps {
-  entries: ExerciseEntryWithClient[];
+  entries: UnifiedExerciseEntry[];
   showClient?: boolean;
 }
 
@@ -41,15 +42,15 @@ function formatTime(seconds: number): string {
 /**
  * Calculate true PRs - best weight (higher) OR best time (lower) for each exercise per client
  */
-function calculateTruePRs(entries: ExerciseEntryWithClient[]): Set<string> {
+function calculateTruePRs(entries: UnifiedExerciseEntry[]): Set<string> {
   const prIds = new Set<string>();
   
   // Group entries by client_id and exercise_name
-  const exerciseGroups = new Map<string, ExerciseEntryWithClient[]>();
+  const exerciseGroups = new Map<string, UnifiedExerciseEntry[]>();
   
   entries.forEach(entry => {
     // Skip entries without weight or time
-    if (!entry.weight_kg && !entry.time_seconds) return;
+    if (!entry.weight_kg && !entry.time_seconds && !entry.duration_seconds) return;
     
     const key = `${entry.client_id}-${entry.exercise_name}`;
     if (!exerciseGroups.has(key)) {
@@ -60,17 +61,17 @@ function calculateTruePRs(entries: ExerciseEntryWithClient[]): Set<string> {
   
   // For each group, find the PR entry
   exerciseGroups.forEach(groupEntries => {
-    // Check if this is a time-based exercise (has time_seconds entries)
-    const hasTimeEntries = groupEntries.some(e => e.time_seconds && e.time_seconds > 0);
+    const hasTimeEntries = groupEntries.some(e => (e.time_seconds && e.time_seconds > 0) || (e.duration_seconds && e.duration_seconds > 0));
     const hasWeightEntries = groupEntries.some(e => e.weight_kg && e.weight_kg > 0);
     
     if (hasTimeEntries && !hasWeightEntries) {
       // Time-based exercise: lower time is better
-      const entriesWithTime = groupEntries.filter(e => e.time_seconds && e.time_seconds > 0);
-      const minTime = Math.min(...entriesWithTime.map(e => e.time_seconds!));
+      const entriesWithTime = groupEntries.filter(e => (e.time_seconds || e.duration_seconds));
+      const getTime = (e: UnifiedExerciseEntry) => e.time_seconds || e.duration_seconds || Infinity;
+      const minTime = Math.min(...entriesWithTime.map(getTime));
       const prEntry = entriesWithTime
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .find(e => e.time_seconds === minTime);
+        .find(e => getTime(e) === minTime);
       
       if (prEntry) {
         prIds.add(prEntry.id);
@@ -94,7 +95,7 @@ function calculateTruePRs(entries: ExerciseEntryWithClient[]): Set<string> {
 
 export function ProgressList({ entries, showClient = true }: ProgressListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [editEntry, setEditEntry] = useState<ExerciseEntry | null>(null);
+  const [editEntry, setEditEntry] = useState<UnifiedExerciseEntry | null>(null);
   const { deleteEntry } = useExerciseEntries();
 
   const handleDelete = async () => {
@@ -121,7 +122,7 @@ export function ProgressList({ entries, showClient = true }: ProgressListProps) 
     }
     acc[dateKey].push(entry);
     return acc;
-  }, {} as Record<string, ExerciseEntryWithClient[]>);
+  }, {} as Record<string, UnifiedExerciseEntry[]>);
 
   // Calculate true PRs based on best weight per exercise per client
   const truePRs = calculateTruePRs(entries);
@@ -145,10 +146,17 @@ export function ProgressList({ entries, showClient = true }: ProgressListProps) 
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
+                            {entry.entry_type === 'cardio' && <Heart className="w-3.5 h-3.5 text-rose-500" />}
+                            {entry.entry_type === 'skill' && <Zap className="w-3.5 h-3.5 text-amber-500" />}
                             <span className="font-semibold">{entry.exercise_name}</span>
                             {isActualPR && (
                               <Badge className="gap-1 bg-warning/20 text-warning border-warning/30">
                                 <Trophy className="w-3 h-3" /> PR
+                              </Badge>
+                            )}
+                            {entry.is_breakthrough && entry.entry_type === 'skill' && (
+                              <Badge className="gap-1 bg-amber-500/20 text-amber-600 border-amber-500/30">
+                                <Zap className="w-3 h-3" /> Průlom
                               </Badge>
                             )}
                           </div>
@@ -160,16 +168,62 @@ export function ProgressList({ entries, showClient = true }: ProgressListProps) 
                           </div>
                         )}
 
-                        <div className="flex items-center gap-4 mt-2 text-sm">
-                          <span className="font-medium text-primary">
-                            {entry.sets}×{entry.reps || '—'}
-                          </span>
-                          {entry.is_bodyweight ? (
-                            <span className="text-muted-foreground">vlastní váha</span>
-                          ) : entry.weight_kg ? (
-                            <span>{entry.weight_kg} kg</span>
-                          ) : null}
-                          {entry.time_seconds && (
+                        <div className="flex items-center gap-4 mt-2 text-sm flex-wrap">
+                          {/* Strength metrics */}
+                          {entry.entry_type === 'strength' && (
+                            <>
+                              <span className="font-medium text-primary">
+                                {entry.sets}×{entry.reps || '—'}
+                              </span>
+                              {entry.is_bodyweight ? (
+                                <span className="text-muted-foreground">vlastní váha</span>
+                              ) : entry.weight_kg ? (
+                                <span>{entry.weight_kg} kg</span>
+                              ) : null}
+                            </>
+                          )}
+                          
+                          {/* Cardio metrics */}
+                          {entry.entry_type === 'cardio' && (
+                            <>
+                              {entry.duration_seconds && (
+                                <span className="flex items-center gap-1">
+                                  <Timer className="w-3 h-3" />
+                                  {formatTime(entry.duration_seconds)}
+                                </span>
+                              )}
+                              {entry.distance_meters && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {entry.distance_meters >= 1000 
+                                    ? `${(entry.distance_meters / 1000).toFixed(2)} km`
+                                    : `${entry.distance_meters} m`}
+                                </span>
+                              )}
+                              {entry.avg_heart_rate && (
+                                <span className="flex items-center gap-1 text-muted-foreground">
+                                  <Heart className="w-3 h-3" />
+                                  {entry.avg_heart_rate} bpm
+                                </span>
+                              )}
+                            </>
+                          )}
+                          
+                          {/* Skill metrics */}
+                          {entry.entry_type === 'skill' && (
+                            <>
+                              {entry.attempts && (
+                                <span>{entry.successful || 0}/{entry.attempts} úspěšných</span>
+                              )}
+                              {entry.technique_rating && (
+                                <Badge variant="outline" className="text-xs">
+                                  {entry.technique_rating}
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                          
+                          {entry.time_seconds && entry.entry_type === 'strength' && (
                             <span className="flex items-center gap-1 text-muted-foreground">
                               <Clock className="w-3 h-3" />
                               {formatTime(entry.time_seconds)}
