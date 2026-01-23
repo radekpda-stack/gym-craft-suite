@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
@@ -188,6 +189,7 @@ function useRecentFoodEntries(clientId: string | undefined) {
 export default function ClientPortalNutritionTab() {
   const { clientId, clientAccount } = useClientPortal();
   const trainerId = clientAccount?.trainer_id;
+  const [searchParams] = useSearchParams();
   
   const { session, isLoading, createSession } = useOngoingNutritionSession(clientId ?? undefined, trainerId);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -210,6 +212,18 @@ export default function ClientPortalNutritionTab() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<EditingEntry>(null);
   const [prefilledMealType, setPrefilledMealType] = useState<MealTypeId | undefined>();
+
+  // Handle URL action parameter - auto-open add form
+  useEffect(() => {
+    const actionParam = searchParams.get('action');
+    if (actionParam === 'add-food' && session) {
+      setShowAddForm(true);
+      // Clean up URL parameter
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('action');
+      window.history.replaceState({}, '', newUrl.toString());
+    }
+  }, [searchParams, session]);
 
   const handleQuickWater = async () => {
     if (!session || !clientId) return;

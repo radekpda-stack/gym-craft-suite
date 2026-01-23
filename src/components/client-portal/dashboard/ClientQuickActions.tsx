@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { Dumbbell, Scale, MessageCircle, Trophy } from 'lucide-react';
+import { BookOpen, Scale, MessageCircle, Plus, Dumbbell, Apple } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useClientPortal } from '@/contexts/ClientPortalContext';
+import { useClientActivityPreferences } from '@/hooks/useClientActivityPreferences';
 
 interface QuickAction {
   id: string;
@@ -13,53 +15,82 @@ interface QuickAction {
   bgColor: string;
 }
 
-const quickActions: QuickAction[] = [
-  {
-    id: 'workout',
-    label: 'Trénink',
-    icon: <Dumbbell className="w-5 h-5" />,
-    path: '/diary',
-    color: 'text-primary',
-    bgColor: 'bg-primary/10 hover:bg-primary/20',
-  },
-  {
-    id: 'chat',
-    label: 'S trenérem',
-    icon: <MessageCircle className="w-5 h-5" />,
-    path: '/chat',
-    color: 'text-accent',
-    bgColor: 'bg-accent/10 hover:bg-accent/20',
-  },
-  {
-    id: 'competitions',
-    label: 'Soutěže',
-    icon: <Trophy className="w-5 h-5" />,
-    path: '/competitions',
-    color: 'text-warning',
-    bgColor: 'bg-warning/10 hover:bg-warning/20',
-  },
-  {
-    id: 'progress',
-    label: 'Pokrok',
-    icon: <Scale className="w-5 h-5" />,
-    path: '/progress',
-    color: 'text-success',
-    bgColor: 'bg-success/10 hover:bg-success/20',
-  },
-];
-
 export function ClientQuickActions() {
+  const { clientId } = useClientPortal();
+  const { data: prefs } = useClientActivityPreferences(clientId ?? undefined);
   const location = useLocation();
   const basePath = location.pathname.startsWith('/zona') ? '/zona' : '/client';
+
+  // Base actions (always visible)
+  const baseActions: QuickAction[] = [
+    {
+      id: 'diary',
+      label: 'Deník',
+      icon: <BookOpen className="w-5 h-5" />,
+      path: '/diary',
+      color: 'text-primary',
+      bgColor: 'bg-primary/10 hover:bg-primary/20',
+    },
+    {
+      id: 'chat',
+      label: 'S trenérem',
+      icon: <MessageCircle className="w-5 h-5" />,
+      path: '/chat',
+      color: 'text-accent',
+      bgColor: 'bg-accent/10 hover:bg-accent/20',
+    },
+    {
+      id: 'progress',
+      label: 'Pokrok',
+      icon: <Scale className="w-5 h-5" />,
+      path: '/progress',
+      color: 'text-success',
+      bgColor: 'bg-success/10 hover:bg-success/20',
+    },
+  ];
+
+  // Smart shortcuts (only shown if client uses these features)
+  const smartActions: QuickAction[] = [];
+  
+  if (prefs?.hasOwnWorkouts) {
+    smartActions.push({
+      id: 'add-workout',
+      label: '+ Trénink',
+      icon: <Dumbbell className="w-5 h-5" />,
+      path: '/diary?action=add-workout',
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-500/10 hover:bg-orange-500/20',
+    });
+  }
+  
+  if (prefs?.hasNutritionEntries) {
+    smartActions.push({
+      id: 'add-food',
+      label: '+ Strava',
+      icon: <Apple className="w-5 h-5" />,
+      path: '/diary?tab=nutrition&action=add-food',
+      color: 'text-green-500',
+      bgColor: 'bg-green-500/10 hover:bg-green-500/20',
+    });
+  }
+
+  const allActions = [...baseActions, ...smartActions];
+  
+  // Dynamic grid columns based on number of actions
+  const gridCols = allActions.length <= 3 
+    ? 'grid-cols-3' 
+    : allActions.length === 4 
+      ? 'grid-cols-4' 
+      : 'grid-cols-5';
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.05 }}
-      className="grid grid-cols-4 gap-2"
+      className={cn("grid gap-2", gridCols)}
     >
-      {quickActions.map((action, index) => (
+      {allActions.map((action, index) => (
         <motion.div
           key={action.id}
           initial={{ opacity: 0, scale: 0.9 }}
