@@ -3,13 +3,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { Apple, Plus, Droplets, Coffee, Loader2, Clock, RotateCcw, MessageSquare } from 'lucide-react';
+import { Apple, Plus, Droplets, Coffee, Loader2, Clock, RotateCcw, MessageSquare, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleFoodForm } from '@/components/client-portal/nutrition/SimpleFoodForm';
 import { TodayEntries } from '@/components/client-portal/nutrition/TodayEntries';
 import { EditEntryDialog } from '@/components/client-portal/nutrition/EditEntryDialog';
 import { WeekStrip } from '@/components/client-portal/nutrition/WeekStrip';
+import { WaterGoalWidget, calculateDailyWaterIntake } from '@/components/client-portal/nutrition/WaterGoalWidget';
+import { CaffeineWindowWidget } from '@/components/client-portal/nutrition/CaffeineWindowWidget';
+import { DayNoteInput, DayNoteDisplay } from '@/components/client-portal/nutrition/DayNoteInput';
+import { HabitSettingsForm } from '@/components/client-portal/nutrition/HabitSettingsForm';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { type MealTypeId, QUICK_WATER_AMOUNTS } from '@/components/client-portal/nutrition/constants';
@@ -22,6 +26,8 @@ import {
   useAddFoodEntry,
 } from '@/hooks/useClientPortalNutrition';
 import { useNutritionXP } from '@/hooks/useNutritionXP';
+import { useEffectiveHabitSettings } from '@/hooks/useClientHabitSettings';
+import { useDayNote, useUpsertDayNote } from '@/hooks/useNutritionDayNotes';
 
 type EditingEntry = {
   type: 'food' | 'drink' | 'coffee';
@@ -214,9 +220,43 @@ export default function ClientPortalNutrition() {
   const nutritionXP = useNutritionXP();
   const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_nutrition');
 
+  // Habit settings and day notes
+  const { settings: habitSettings } = useEffectiveHabitSettings(clientId ?? undefined);
+  const { data: dayNote } = useDayNote(clientId ?? undefined, selectedDateStr);
+  const upsertDayNote = useUpsertDayNote();
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<EditingEntry>(null);
   const [prefilledMealType, setPrefilledMealType] = useState<MealTypeId | undefined>();
+
+  // Calculate water intake for current day
+  const waterIntake = dayData?.drinks ? calculateDailyWaterIntake(dayData.drinks) : 0;
+
+  // Prepare caffeine entries for widget - match CaffeineEntry interface
+  const caffeineEntriesForWidget = (dayData?.coffee || []).map(c => ({
+    id: c.id,
+    entry_time: c.occurred_at 
+      ? format(new Date(c.occurred_at), 'HH:mm')
+      : c.entry_time || '12:00',
+    coffee_type: c.coffee_type || 'espresso',
+    is_caffeinated: c.is_caffeinated !== false, // default true if not specified
+    count: c.count || 1,
+  }));
+
+  // Handle saving day note
+  const handleSaveDayNote = async (note: string) => {
+    if (!clientId) return;
+    try {
+      await upsertDayNote.mutateAsync({
+        clientId,
+        date: selectedDateStr,
+        clientNote: note,
+      });
+      toast.success('Poznámka uložena');
+    } catch (error) {
+      toast.error('Nepodařilo se uložit poznámku');
+    }
+  };
 
   useEffect(() => {
     trackPageMount();
@@ -389,6 +429,45 @@ export default function ClientPortalNutrition() {
             onDaySelect={setSelectedDate}
           />
 
+          {/* Habit Widgets Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Water Goal Widget */}
+            <WaterGoalWidget
+              currentMl={waterIntake}
+              goalMl={habitSettings?.water_goal_ml || 2000}
+            />
+
+            {/* Caffeine Window Widget */}
+            <CaffeineWindowWidget
+              entries={caffeineEntriesForWidget}
+              sleepTime={habitSettings?.sleep_time || null}
+              cutoffMinutes={habitSettings?.caffeine_cutoff_minutes || 480}
+            />
+          </div>
+
+          {/* Day Note Section */}
+          <div className="flex items-center gap-2">
+            <DayNoteInput
+              currentNote={dayNote?.client_note || ''}
+              onSave={handleSaveDayNote}
+              isSaving={upsertDayNote.isPending}
+            />
+            {dayNote?.trainer_note && (
+              <span className="text-xs text-muted-foreground ml-2">
+                (Trenér odpověděl)
+              </span>
+            )}
+          </div>
+
+          {/* Day Note Display */}
+          {(dayNote?.client_note || dayNote?.trainer_note) && (
+            <DayNoteDisplay
+              clientNote={dayNote?.client_note || undefined}
+              trainerNote={dayNote?.trainer_note || undefined}
+              onEditClient={() => {/* handled by DayNoteInput above */}}
+            />
+          )}
+
           {/* Quick Stats Row */}
           <div className="grid grid-cols-3 gap-2">
             <div className="bg-muted/50 rounded-xl p-3 text-center">
@@ -412,6 +491,14 @@ export default function ClientPortalNutrition() {
               <span className="text-sm">Trenér komentoval některé záznamy</span>
             </div>
           )}
+
+          {/* Habit Settings Link */}
+          <HabitSettingsForm
+            clientId={clientId || ''}
+            editedBy="client"
+            mode="dialog"
+            triggerLabel="⚙️ Nastavení návyků"
+          />
 
           {/* Quick Actions - Main Focus */}
           <Card className="overflow-hidden">
