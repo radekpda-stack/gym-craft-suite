@@ -520,9 +520,12 @@ export default function NutritionClientDetail() {
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {dayEntries.drinks.map(d => (
-                            <div key={d.id} className="group relative">
+                            <div key={d.id} className="group relative flex items-center gap-1">
+                              <span className="text-[10px] text-muted-foreground shrink-0">
+                                {d.entry_time?.slice(0, 5)}
+                              </span>
                               <Badge variant="secondary" className="text-xs pr-6">
-                                {drinkTypeLabels[d.drink_type] || d.drink_type}
+                                {d.drink_name || drinkTypeLabels[d.drink_type] || d.drink_type}
                                 {d.amount_ml && ` ${d.amount_ml} ml`}
                                 {d.trainer_comment && <MessageSquare className="w-2.5 h-2.5 ml-1 text-primary" />}
                               </Badge>
@@ -548,7 +551,10 @@ export default function NutritionClientDetail() {
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {dayEntries.coffee.map(c => (
-                            <div key={c.id} className="group relative">
+                            <div key={c.id} className="group relative flex items-center gap-1">
+                              <span className="text-[10px] text-muted-foreground shrink-0">
+                                {c.entry_time?.slice(0, 5)}
+                              </span>
                               <Badge variant="secondary" className="text-xs pr-6">
                                 {coffeeTypeLabels[c.coffee_type] || c.coffee_type}
                                 {c.count > 1 && ` × ${c.count}`}
