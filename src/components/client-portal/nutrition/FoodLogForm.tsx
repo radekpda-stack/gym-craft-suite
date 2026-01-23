@@ -4,7 +4,6 @@ import { Utensils, Droplets, Coffee, X, Loader2, Calendar, ChevronDown, ChevronU
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -22,6 +21,8 @@ import {
   CoffeeEntryInput 
 } from '@/hooks/useClientPortalNutrition';
 import { useNutritionXP } from '@/hooks/useNutritionXP';
+import { FoodAutocomplete } from './FoodAutocomplete';
+import { QuickFoodPresets, BREAKFAST_PRESETS, LUNCH_PRESETS, SNACK_PRESETS, FoodPreset } from './QuickFoodPresets';
 import {
   MEAL_TYPES,
   PORTION_SIZES,
@@ -71,6 +72,10 @@ export function FoodLogForm({
   const [satiation, setSatiation] = useState<SatiationId | undefined>();
   const [note, setNote] = useState('');
   const [showMoreDetails, setShowMoreDetails] = useState(false);
+  const [showQuantityDetails, setShowQuantityDetails] = useState(false);
+  const [grams, setGrams] = useState<string>('');
+  const [unitsCount, setUnitsCount] = useState<string>('');
+  const [unitsLabel, setUnitsLabel] = useState<string>('');
 
   // Drink form state
   const [drinkType, setDrinkType] = useState<DrinkTypeId>('water');
@@ -318,16 +323,62 @@ export function FoodLogForm({
                 </div>
               </div>
 
-              {/* Description */}
+              {/* Description with Autocomplete */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Co jsi jedl/a?</Label>
-                <Textarea
+                <FoodAutocomplete
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="např. kuřecí prsa, rýže, zelenina"
-                  className="min-h-[80px] resize-none"
+                  onChange={setDescription}
+                  clientId={clientId}
+                  onSelectSuggestion={(food) => {
+                    setDescription(food.description);
+                    if (food.portion_size) {
+                      setPortionSize(food.portion_size as PortionSizeId);
+                    }
+                  }}
                 />
               </div>
+
+              {/* Quick Presets based on meal type */}
+              {mealType === 'breakfast' && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Rychlá volba</Label>
+                  <QuickFoodPresets
+                    presets={BREAKFAST_PRESETS}
+                    onSelect={(preset) => {
+                      setDescription(preset.description);
+                      setPortionSize(preset.portion_size);
+                    }}
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
+              {(mealType === 'lunch' || mealType === 'dinner') && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Rychlá volba</Label>
+                  <QuickFoodPresets
+                    presets={LUNCH_PRESETS}
+                    onSelect={(preset) => {
+                      setDescription(preset.description);
+                      setPortionSize(preset.portion_size);
+                    }}
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
+              {mealType === 'snack' && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Rychlá volba</Label>
+                  <QuickFoodPresets
+                    presets={SNACK_PRESETS}
+                    onSelect={(preset) => {
+                      setDescription(preset.description);
+                      setPortionSize(preset.portion_size);
+                    }}
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
 
               {/* Portion Size */}
               <div className="space-y-2">
@@ -413,6 +464,42 @@ export function FoodLogForm({
                       placeholder="např. domácí příprava, restaurace..."
                     />
                   </div>
+
+                  {/* Optional Quantity Details */}
+                  <Collapsible open={showQuantityDetails} onOpenChange={setShowQuantityDetails}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground">
+                        <span className="text-xs">Přesnější množství</span>
+                        {showQuantityDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-2 pt-2">
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          type="number"
+                          value={grams}
+                          onChange={(e) => setGrams(e.target.value)}
+                          placeholder="gramů"
+                          className="w-24"
+                        />
+                        <span className="text-xs text-muted-foreground">g</span>
+                        <span className="text-xs text-muted-foreground">nebo</span>
+                        <Input
+                          type="number"
+                          value={unitsCount}
+                          onChange={(e) => setUnitsCount(e.target.value)}
+                          placeholder="počet"
+                          className="w-20"
+                        />
+                        <Input
+                          value={unitsLabel}
+                          onChange={(e) => setUnitsLabel(e.target.value)}
+                          placeholder="kusů/vajec..."
+                          className="flex-1"
+                        />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 </CollapsibleContent>
               </Collapsible>
 

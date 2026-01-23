@@ -161,27 +161,34 @@ function useRecentFoodEntries(clientId: string | undefined) {
         .select('description, meal_type, portion_size')
         .eq('client_id', clientId)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (error) throw error;
 
-      // Get unique descriptions (case-insensitive)
-      const seen = new Set<string>();
-      const unique: { description: string; meal_type: string; portion_size: string }[] = [];
+      // Count frequency and get unique descriptions
+      const frequencyMap = new Map<string, { count: number; entry: { description: string; meal_type: string; portion_size: string } }>();
       
       for (const entry of data || []) {
         const key = entry.description.toLowerCase().trim();
-        if (!seen.has(key) && unique.length < 5) {
-          seen.add(key);
-          unique.push({
-            description: entry.description,
-            meal_type: entry.meal_type,
-            portion_size: entry.portion_size || 'medium',
+        if (frequencyMap.has(key)) {
+          frequencyMap.get(key)!.count++;
+        } else {
+          frequencyMap.set(key, {
+            count: 1,
+            entry: {
+              description: entry.description,
+              meal_type: entry.meal_type,
+              portion_size: entry.portion_size || 'medium',
+            },
           });
         }
       }
 
-      return unique;
+      // Sort by frequency and return top 8
+      return Array.from(frequencyMap.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8)
+        .map(item => item.entry);
     },
     enabled: !!clientId,
   });
@@ -498,12 +505,12 @@ export default function ClientPortalNutrition() {
                 </Button>
               </div>
 
-              {/* Recent Foods - Quick Re-add */}
+              {/* Recent/Favorite Foods - Quick Re-add */}
               {recentFoods.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Clock className="w-3.5 h-3.5" />
-                    <span>Nedávná jídla</span>
+                    <span>Oblíbená & nedávná jídla</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {recentFoods.map((food, idx) => (
@@ -516,7 +523,7 @@ export default function ClientPortalNutrition() {
                         className="h-auto py-1.5 px-3 text-xs bg-muted/50 hover:bg-muted"
                       >
                         <RotateCcw className="w-3 h-3 mr-1.5 text-muted-foreground" />
-                        <span className="truncate max-w-[120px]">{food.description}</span>
+                        <span className="truncate max-w-[140px]">{food.description}</span>
                       </Button>
                     ))}
                   </div>
