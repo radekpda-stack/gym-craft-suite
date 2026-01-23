@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { SimpleAddWorkoutDialog } from '@/components/client-portal/workout-diary/SimpleAddWorkoutDialog';
 import { SimpleWorkoutCard } from '@/components/client-portal/workout-diary/SimpleWorkoutCard';
-import { SimpleStatsCard } from '@/components/client-portal/workout-diary/SimpleStatsCard';
+
 import { getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkoutTypeColor } from '@/components/client-portal/workout-diary/WorkoutTypeSelector';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -77,13 +77,6 @@ export default function ClientPortalWorkoutDiary() {
     return (entries?.filter(e => e.status === 'completed' || e.status === 'reviewed') || [])
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [entries]);
-
-  // Extract workout dates for stats
-  const workoutDates = useMemo(() => {
-    return completedEntries
-      .filter(e => !e.is_coached)
-      .map(e => e.date);
-  }, [completedEntries]);
 
   const handleDeleteWorkout = (entry: UnifiedDiaryEntry) => {
     if (entry.is_coached) return;
@@ -213,8 +206,15 @@ export default function ClientPortalWorkoutDiary() {
 
         {/* Workouts Tab */}
         <TabsContent value="workouts" className="mt-4 space-y-4">
-          {/* Stats Card */}
-          <SimpleStatsCard workoutDates={workoutDates} />
+          {/* Add Workout Button - Always visible */}
+          <Button 
+            onClick={() => setDialogOpen(true)}
+            className="w-full gap-2 h-12"
+            size="lg"
+          >
+            <Plus className="w-5 h-5" />
+            Přidat svůj trénink
+          </Button>
 
           {/* Trainer-assigned workouts section */}
           {hasPlannedWorkouts && (
