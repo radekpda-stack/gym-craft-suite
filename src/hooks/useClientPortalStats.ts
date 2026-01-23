@@ -308,7 +308,7 @@ export function useClientRecentActivity(clientId: string | undefined, limit = 5)
         });
       });
 
-      // Add credit payments
+// Add credit payments
       (transactions ?? []).forEach(t => {
         activities.push({
           id: `credit-${t.id}`,
@@ -327,6 +327,48 @@ export function useClientRecentActivity(clientId: string | undefined, limit = 5)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       return [...upcoming, ...past].slice(0, limit);
+    },
+    enabled: !!clientId,
+  });
+}
+
+// =====================================================
+// UNPAID TRAININGS (for effective balance calculation)
+// =====================================================
+
+export interface UnpaidTrainingsInfo {
+  count: number;
+  amount: number;
+  sessions: Array<{
+    id: string;
+    date: string;
+    final_price: number | null;
+  }>;
+}
+
+export function useClientUnpaidTrainings(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['client-portal-unpaid', clientId],
+    queryFn: async (): Promise<UnpaidTrainingsInfo> => {
+      if (!clientId) {
+        return { count: 0, amount: 0, sessions: [] };
+      }
+
+      const { data, error } = await supabase
+        .from('training_sessions')
+        .select('id, date, final_price')
+        .eq('client_id', clientId)
+        .eq('status', 'completed')
+        .eq('payment_status', 'pending')
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+
+      const sessions = data ?? [];
+      const count = sessions.length;
+      const amount = sessions.reduce((sum, t) => sum + (t.final_price || 0), 0);
+
+      return { count, amount, sessions };
     },
     enabled: !!clientId,
   });
