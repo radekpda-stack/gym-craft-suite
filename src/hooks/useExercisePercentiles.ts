@@ -10,6 +10,7 @@ export interface ExerciseWithPercentile {
   client_percentile: number | null;
   client_best_value: number | null;
   metric_type?: 'weight' | 'time' | 'distance' | 'height';
+  side?: 'left' | 'right' | null;
 }
 
 // Fetch exercises with client's percentile for each via edge function

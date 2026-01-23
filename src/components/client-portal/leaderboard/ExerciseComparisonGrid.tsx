@@ -12,7 +12,8 @@ import {
   useStrengthExerciseLeaderboard, 
   useCardioExerciseLeaderboard,
   ExerciseLeaderboardEntry,
-  GenderFilter 
+  GenderFilter,
+  AgeFilter
 } from '@/hooks/useExerciseLeaderboard';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
 import { PercentileGauge } from './PercentileGauge';
@@ -101,6 +102,43 @@ function GenderFilterToggle({
       <ToggleGroupItem value="female" aria-label="Ženy" className="gap-1 px-3 py-2 text-xs min-h-[44px]">
         <span className="text-sm font-medium">♀</span>
       </ToggleGroupItem>
+    </ToggleGroup>
+  );
+}
+
+const AGE_FILTERS = [
+  { value: 'all', label: 'Vše' },
+  { value: '20-30', label: '20-30' },
+  { value: '30-40', label: '30-40' },
+  { value: '40-50', label: '40-50' },
+  { value: '50+', label: '50+' },
+] as const;
+
+function AgeFilterToggle({ 
+  value, 
+  onChange 
+}: { 
+  value: AgeFilter; 
+  onChange: (value: AgeFilter) => void;
+}) {
+  return (
+    <ToggleGroup 
+      type="single" 
+      value={value} 
+      onValueChange={(v) => v && onChange(v as AgeFilter)}
+      size="sm"
+      className="flex-wrap"
+    >
+      {AGE_FILTERS.map(filter => (
+        <ToggleGroupItem 
+          key={filter.value}
+          value={filter.value} 
+          aria-label={filter.label}
+          className="gap-1 px-2 py-1.5 text-xs min-h-[36px]"
+        >
+          {filter.label}
+        </ToggleGroupItem>
+      ))}
     </ToggleGroup>
   );
 }
@@ -204,24 +242,35 @@ function ExerciseCard({
   onToggle: () => void;
 }) {
   const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
+  const [ageFilter, setAgeFilter] = useState<AgeFilter>('all');
   const [cardioMetric, setCardioMetric] = useState<'distance' | 'duration'>('distance');
   
   const style = getPercentileStyle(exercise.client_percentile);
   const percentile = exercise.client_percentile;
   const isTopPerformer = percentile !== null && percentile >= 75;
   
+  // Extract base exercise name without (L)/(R) suffix for query
+  // The exercise_name from backend now includes (L)/(R) for display
+  const baseExerciseName = exercise.exercise_name
+    .replace(/ \(L\)$/, '')
+    .replace(/ \(R\)$/, '')
+    .toLowerCase();
+  
   // For plyometrics, use strength leaderboard (same structure, different metrics)
   const { data: strengthLeaderboard, isLoading: strengthLoading } = useStrengthExerciseLeaderboard(
-    (exerciseType === 'strength' || exerciseType === 'plyometrics') && isExpanded ? exercise.exercise_name : null,
+    (exerciseType === 'strength' || exerciseType === 'plyometrics') && isExpanded ? baseExerciseName : null,
     trainerId,
-    genderFilter
+    genderFilter,
+    ageFilter,
+    exercise.side
   );
   
   const { data: cardioLeaderboard, isLoading: cardioLoading } = useCardioExerciseLeaderboard(
     exerciseType === 'cardio' && isExpanded ? exercise.exercise_name : null,
     trainerId,
     cardioMetric,
-    genderFilter
+    genderFilter,
+    ageFilter
   );
   
   const leaderboard = (exerciseType === 'strength' || exerciseType === 'plyometrics') ? strengthLeaderboard : cardioLeaderboard;
@@ -283,7 +332,20 @@ function ExerciseCard({
             {/* Exercise name and value */}
             <div className="min-w-0 flex-1 overflow-hidden">
               <div className="flex items-center gap-2 min-w-0">
-                <h4 className="font-semibold capitalize truncate text-base">{exercise.exercise_name}</h4>
+                <h4 className="font-semibold capitalize truncate text-base">
+                  {exercise.exercise_name}
+                </h4>
+                {exercise.side && (
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "text-xs font-medium shrink-0",
+                      exercise.side === 'left' ? "border-blue-500/50 text-blue-500" : "border-orange-500/50 text-orange-500"
+                    )}
+                  >
+                    {exercise.side === 'left' ? 'L' : 'R'}
+                  </Badge>
+                )}
                 <StatInfoTooltip
                   title="Srovnání výkonu"
                   description="Percentil ukazuje, kolik procent klientů jsi překonal v tomto cviku. Čím vyšší číslo, tím lepší výkon ve srovnání s ostatními."
@@ -360,11 +422,20 @@ function ExerciseCard({
               )}
               
               {/* Filters */}
-              <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border/30">
-                <span className="text-xs text-muted-foreground">Filtrovat:</span>
-                <GenderFilterToggle value={genderFilter} onChange={setGenderFilter} />
+              <div className="flex flex-col gap-3 pt-2 border-t border-border/30">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-muted-foreground min-w-fit">Pohlaví:</span>
+                  <GenderFilterToggle value={genderFilter} onChange={setGenderFilter} />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-muted-foreground min-w-fit">Věk:</span>
+                  <AgeFilterToggle value={ageFilter} onChange={setAgeFilter} />
+                </div>
                 {exerciseType === 'cardio' && (
-                  <CardioMetricToggle value={cardioMetric} onChange={setCardioMetric} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-muted-foreground min-w-fit">Metrika:</span>
+                    <CardioMetricToggle value={cardioMetric} onChange={setCardioMetric} />
+                  </div>
                 )}
               </div>
               
