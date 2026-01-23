@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Trophy, Dumbbell, Heart } from 'lucide-react';
+import { Trophy, Dumbbell, Heart, Zap } from 'lucide-react';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useExercisesWithPercentiles } from '@/hooks/useExercisePercentiles';
 import OverallPositionHero from '@/components/client-portal/leaderboard/OverallPositionHero';
@@ -60,11 +60,37 @@ export default function ClientPortalLeaderboard() {
         />
       </motion.section>
 
-      {/* Cardio Exercises Section */}
+      {/* Plyometrics Section */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
+        className="space-y-3"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
+            <Zap className="w-4 h-4 text-warning" />
+          </div>
+          <h2 className="text-lg font-semibold">Plyometrika</h2>
+          <span className="text-sm text-muted-foreground">
+            ({exercises?.plyometrics.length || 0} cviků)
+          </span>
+        </div>
+        
+        <ExerciseComparisonGrid
+          exercises={exercises?.plyometrics || []}
+          exerciseType="plyometrics"
+          trainerId={trainerId}
+          clientId={clientId ?? undefined}
+          isLoading={exercisesLoading}
+        />
+      </motion.section>
+
+      {/* Cardio Exercises Section */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
         className="space-y-3"
       >
         <div className="flex items-center gap-2">
@@ -90,7 +116,7 @@ export default function ClientPortalLeaderboard() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.4 }}
       >
         <GamificationSection clientId={clientId ?? undefined} />
       </motion.div>

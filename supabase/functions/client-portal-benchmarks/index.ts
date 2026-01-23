@@ -457,19 +457,27 @@ serve(async (req) => {
         });
       });
 
-      // Sort by entry count and filter
-      const strength = strengthResults
-        .filter(e => e.entry_count >= 1)
+      // Filter only exercises where client has records, then categorize by metric_type
+      const allResults = [...strengthResults, ...cardioResults]
+        .filter(e => e.client_best_value !== null); // Only exercises where client has entries
+
+      // Categorize by metric_type
+      const strength = allResults
+        .filter(e => e.metric_type === 'weight')
         .sort((a, b) => b.entry_count - a.entry_count);
 
-      const cardio = cardioResults
-        .filter(e => e.entry_count >= 1)
+      const plyometrics = allResults
+        .filter(e => e.metric_type === 'distance' || e.metric_type === 'height')
         .sort((a, b) => b.entry_count - a.entry_count);
 
-      console.log(`[Benchmarks] Available exercises: ${strength.length} strength, ${cardio.length} cardio`);
+      const cardio = allResults
+        .filter(e => e.metric_type === 'time')
+        .sort((a, b) => b.entry_count - a.entry_count);
+
+      console.log(`[Benchmarks] Available exercises: ${strength.length} strength, ${plyometrics.length} plyometrics, ${cardio.length} cardio`);
 
       return new Response(
-        JSON.stringify({ strength, cardio }),
+        JSON.stringify({ strength, plyometrics, cardio }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

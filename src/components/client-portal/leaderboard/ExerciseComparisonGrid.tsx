@@ -19,7 +19,7 @@ import { PercentileGauge } from './PercentileGauge';
 
 interface ExerciseComparisonGridProps {
   exercises: ExerciseWithPercentile[];
-  exerciseType: 'strength' | 'cardio';
+  exerciseType: 'strength' | 'cardio' | 'plyometrics';
   trainerId: string | undefined;
   clientId: string | undefined;
   isLoading: boolean;
@@ -196,7 +196,7 @@ function ExerciseCard({
   onToggle,
 }: {
   exercise: ExerciseWithPercentile;
-  exerciseType: 'strength' | 'cardio';
+  exerciseType: 'strength' | 'cardio' | 'plyometrics';
   trainerId: string | undefined;
   clientId: string | undefined;
   clientName: string | undefined;
@@ -210,8 +210,9 @@ function ExerciseCard({
   const percentile = exercise.client_percentile;
   const isTopPerformer = percentile !== null && percentile >= 75;
   
+  // For plyometrics, use strength leaderboard (same structure, different metrics)
   const { data: strengthLeaderboard, isLoading: strengthLoading } = useStrengthExerciseLeaderboard(
-    exerciseType === 'strength' && isExpanded ? exercise.exercise_name : null,
+    (exerciseType === 'strength' || exerciseType === 'plyometrics') && isExpanded ? exercise.exercise_name : null,
     trainerId,
     genderFilter
   );
@@ -223,8 +224,8 @@ function ExerciseCard({
     genderFilter
   );
   
-  const leaderboard = exerciseType === 'strength' ? strengthLeaderboard : cardioLeaderboard;
-  const isLoading = exerciseType === 'strength' ? strengthLoading : cardioLoading;
+  const leaderboard = (exerciseType === 'strength' || exerciseType === 'plyometrics') ? strengthLeaderboard : cardioLeaderboard;
+  const isLoading = (exerciseType === 'strength' || exerciseType === 'plyometrics') ? strengthLoading : cardioLoading;
 
   return (
     <motion.div
@@ -256,10 +257,14 @@ function ExerciseCard({
               "relative w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden",
               exerciseType === 'strength' 
                 ? "bg-gradient-to-br from-primary/20 to-primary/10" 
+                : exerciseType === 'plyometrics'
+                ? "bg-gradient-to-br from-warning/20 to-warning/10"
                 : "bg-gradient-to-br from-success/20 to-success/10"
             )}>
               {exerciseType === 'strength' ? (
                 <Dumbbell className="w-6 h-6 text-primary" />
+              ) : exerciseType === 'plyometrics' ? (
+                <Zap className="w-6 h-6 text-warning" />
               ) : (
                 <Heart className="w-6 h-6 text-success" />
               )}
@@ -435,7 +440,7 @@ function formatCardioValue(value: number): string {
 function formatExerciseValue(
   value: number, 
   metricType: string | undefined, 
-  exerciseType: 'strength' | 'cardio'
+  exerciseType: 'strength' | 'cardio' | 'plyometrics'
 ): string {
   if (exerciseType === 'cardio') {
     return formatCardioValue(value);
@@ -489,12 +494,18 @@ export default function ExerciseComparisonGrid({
           <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-muted flex items-center justify-center">
             {exerciseType === 'strength' ? (
               <Dumbbell className="w-6 h-6 text-muted-foreground" />
+            ) : exerciseType === 'plyometrics' ? (
+              <Zap className="w-6 h-6 text-muted-foreground" />
             ) : (
               <Heart className="w-6 h-6 text-muted-foreground" />
             )}
           </div>
           <p className="text-muted-foreground">
-            Zatím nemáš žádné záznamy u {exerciseType === 'strength' ? 'silových' : 'kardio'} cviků
+            Zatím nemáš žádné záznamy u {
+              exerciseType === 'strength' ? 'silových' : 
+              exerciseType === 'plyometrics' ? 'plyometrických' : 
+              'kardio'
+            } cviků
           </p>
         </CardContent>
       </Card>
