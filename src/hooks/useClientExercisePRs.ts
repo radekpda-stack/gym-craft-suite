@@ -123,12 +123,13 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
             category,
           });
         } else {
-          // Update max weight
+          // Update max weight - also update exerciseId to match the best entry
           if (entry.weight_kg && entry.weight_kg > existing.maxWeight) {
             existing.maxWeight = entry.weight_kg;
             existing.maxWeightReps = entry.reps || 0;
             existing.maxWeightDate = entry.date;
             existing.id = entry.id;
+            existing.exerciseId = entry.exercise_id;
             existing.hasWeight = true;
           }
           
