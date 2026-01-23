@@ -85,11 +85,14 @@ export function useClientExercisePRs(clientId: string | null | undefined) {
         const isTimeBased = exerciseData?.is_time_based ?? false;
         const category = exerciseData?.category ?? null;
         
-        // Group by exercise name + side for unilateral exercises
+        // Normalize exercise name (case-insensitive grouping)
+        const normalizedName = entry.exercise_name.toLowerCase().trim();
+        
+        // Group by normalized exercise name + side for unilateral exercises
         const entrySide = (entry.side as 'left' | 'right' | 'both' | 'none') || 'none';
         const key = entrySide === 'left' || entrySide === 'right' 
-          ? `${entry.exercise_name}__${entrySide}` 
-          : entry.exercise_name;
+          ? `${normalizedName}__${entrySide}` 
+          : normalizedName;
         const existing = exerciseMap.get(key);
         
         if (!existing) {

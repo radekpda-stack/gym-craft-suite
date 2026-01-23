@@ -13,7 +13,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Calendar, 
-  Trophy, 
+  Trophy,
   Heart, 
   MessageSquare, 
   Settings,
@@ -199,14 +199,8 @@ export function ClientDetailTabs({
         {/* Asymmetry L vs R */}
         <AsymmetryCard clientId={client.id} />
         
-        {/* PRs */}
-        <div className="bg-card border border-border rounded-2xl p-4">
-          <h3 className="font-semibold mb-3 flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-primary" />
-            Osobní rekordy
-          </h3>
-          <ClientPRsCard clientId={client.id} />
-        </div>
+        {/* PRs - no wrapper since ClientPRsCard has its own Card */}
+        <ClientPRsCard clientId={client.id} clientName={client.first_name} />
         
         {/* Tag Analytics */}
         <div className="bg-card border border-border rounded-2xl p-4">
