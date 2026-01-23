@@ -285,15 +285,23 @@ export default function ClientPortalNutrition() {
     if (!session || !clientId) return;
     
     try {
+      const now = new Date();
+      const entryDate = format(selectedDate, 'yyyy-MM-dd');
+      const entryTime = format(now, 'HH:mm');
+      const occurredAt = new Date(`${entryDate}T${entryTime}:00`).toISOString();
+      
       const { error } = await supabase
         .from('nutrition_coffee_entries')
         .insert({
           session_id: session.id,
           client_id: clientId,
-          entry_date: format(selectedDate, 'yyyy-MM-dd'),
-          entry_time: format(new Date(), 'HH:mm'),
+          entry_date: entryDate,
+          entry_time: entryTime,
+          occurred_at: occurredAt,
           coffee_type: coffeeType,
           count: 1,
+          is_caffeinated: coffeeType !== 'tea', // Tea is typically not caffeinated in this context
+          created_from: 'web',
         });
       
       if (error) throw error;

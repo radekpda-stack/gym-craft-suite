@@ -284,23 +284,35 @@ export function useUpdateFoodEntry() {
       sessionId, 
       clientId, 
       entry,
+      entryDate,
     }: { 
       entryId: string;
       sessionId: string; 
       clientId: string; 
       entry: Partial<FoodEntryInput>;
+      entryDate?: string; // yyyy-MM-dd format for recalculating occurred_at
     }) => {
+      const updateData: Record<string, unknown> = {};
+      
+      if (entry.description !== undefined) updateData.description = entry.description;
+      if (entry.meal_type !== undefined) updateData.meal_type = entry.meal_type;
+      if (entry.portion_size !== undefined) updateData.portion_size = entry.portion_size;
+      if (entry.quality !== undefined) updateData.quality = entry.quality;
+      if (entry.satiation !== undefined) updateData.satiation = entry.satiation;
+      if (entry.feeling_after !== undefined) updateData.feeling_after = entry.feeling_after;
+      if (entry.note !== undefined) updateData.note = entry.note;
+      
+      // Handle entry_time update with occurred_at recalculation
+      if (entry.entry_time !== undefined) {
+        updateData.entry_time = entry.entry_time;
+        if (entryDate && entry.entry_time) {
+          updateData.occurred_at = new Date(`${entryDate}T${entry.entry_time}:00`).toISOString();
+        }
+      }
+
       const { data, error } = await supabase
         .from('nutrition_food_entries')
-        .update({
-          description: entry.description,
-          meal_type: entry.meal_type,
-          portion_size: entry.portion_size,
-          quality: entry.quality,
-          satiation: entry.satiation,
-          feeling_after: entry.feeling_after,
-          note: entry.note,
-        })
+        .update(updateData)
         .eq('id', entryId)
         .select()
         .single();
@@ -312,6 +324,8 @@ export function useUpdateFoodEntry() {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-food-entries', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['trainer-client-nutrition'] });
     },
   });
 }
@@ -325,20 +339,32 @@ export function useUpdateDrinkEntry() {
       sessionId, 
       clientId, 
       entry,
+      entryDate,
     }: { 
       entryId: string;
       sessionId: string; 
       clientId: string; 
       entry: Partial<DrinkEntryInput>;
+      entryDate?: string;
     }) => {
+      const updateData: Record<string, unknown> = {};
+      
+      if (entry.drink_type !== undefined) updateData.drink_type = entry.drink_type;
+      if (entry.drink_name !== undefined) updateData.drink_name = entry.drink_name;
+      if (entry.amount_ml !== undefined) updateData.amount_ml = entry.amount_ml;
+      if (entry.note !== undefined) updateData.note = entry.note;
+      
+      // Handle entry_time update with occurred_at recalculation
+      if (entry.entry_time !== undefined) {
+        updateData.entry_time = entry.entry_time;
+        if (entryDate && entry.entry_time) {
+          updateData.occurred_at = new Date(`${entryDate}T${entry.entry_time}:00`).toISOString();
+        }
+      }
+
       const { data, error } = await supabase
         .from('nutrition_drink_entries')
-        .update({
-          drink_type: entry.drink_type,
-          drink_name: entry.drink_name,
-          amount_ml: entry.amount_ml,
-          note: entry.note,
-        })
+        .update(updateData)
         .eq('id', entryId)
         .select()
         .single();
@@ -350,6 +376,8 @@ export function useUpdateDrinkEntry() {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-drink-entries', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['trainer-client-nutrition'] });
     },
   });
 }
@@ -363,22 +391,36 @@ export function useUpdateCoffeeEntry() {
       sessionId, 
       clientId, 
       entry,
+      entryDate,
     }: { 
       entryId: string;
       sessionId: string; 
       clientId: string; 
       entry: Partial<CoffeeEntryInput>;
+      entryDate?: string;
     }) => {
+      const updateData: Record<string, unknown> = {};
+      
+      if (entry.coffee_type !== undefined) updateData.coffee_type = entry.coffee_type;
+      if (entry.count !== undefined) updateData.count = entry.count;
+      if (entry.sugar !== undefined) updateData.sugar = entry.sugar;
+      if (entry.sugar_spoons !== undefined) updateData.sugar_spoons = entry.sugar_spoons;
+      if (entry.milk !== undefined) updateData.milk = entry.milk;
+      if (entry.note !== undefined) updateData.note = entry.note;
+      if (entry.is_caffeinated !== undefined) updateData.is_caffeinated = entry.is_caffeinated;
+      if (entry.coffee_amount_ml !== undefined) updateData.coffee_amount_ml = entry.coffee_amount_ml;
+      
+      // Handle entry_time update with occurred_at recalculation
+      if (entry.entry_time !== undefined) {
+        updateData.entry_time = entry.entry_time;
+        if (entryDate && entry.entry_time) {
+          updateData.occurred_at = new Date(`${entryDate}T${entry.entry_time}:00`).toISOString();
+        }
+      }
+
       const { data, error } = await supabase
         .from('nutrition_coffee_entries')
-        .update({
-          coffee_type: entry.coffee_type,
-          count: entry.count,
-          sugar: entry.sugar,
-          sugar_spoons: entry.sugar_spoons,
-          milk: entry.milk,
-          note: entry.note,
-        })
+        .update(updateData)
         .eq('id', entryId)
         .select()
         .single();
@@ -390,6 +432,8 @@ export function useUpdateCoffeeEntry() {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-coffee-entries', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['trainer-client-nutrition'] });
     },
   });
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Utensils, Droplets, Coffee, Loader2 } from 'lucide-react';
+import { Utensils, Droplets, Coffee, Loader2, Clock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,8 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import { 
   useUpdateFoodEntry, 
   useUpdateDrinkEntry, 
@@ -20,6 +22,12 @@ import {
   DrinkEntryInput,
   CoffeeEntryInput 
 } from '@/hooks/useClientPortalNutrition';
+import {
+  MEAL_TYPES,
+  PORTION_SIZES,
+  DRINK_TYPES,
+  COFFEE_TYPES,
+} from './constants';
 
 interface EditEntryDialogProps {
   open: boolean;
@@ -30,35 +38,6 @@ interface EditEntryDialogProps {
   clientId: string;
 }
 
-const MEAL_TYPES = [
-  { id: 'breakfast', label: 'Snídaně', icon: '🌅' },
-  { id: 'lunch', label: 'Oběd', icon: '☀️' },
-  { id: 'dinner', label: 'Večeře', icon: '🌙' },
-  { id: 'snack', label: 'Svačina', icon: '🍎' },
-] as const;
-
-const PORTION_SIZES = [
-  { id: 'small', label: 'Malá', icon: '🥄' },
-  { id: 'medium', label: 'Střední', icon: '🍽️' },
-  { id: 'large', label: 'Velká', icon: '🍳' },
-] as const;
-
-const DRINK_TYPES = [
-  { id: 'water', label: 'Voda', icon: '💧' },
-  { id: 'sugary', label: 'Slazené', icon: '🥤' },
-  { id: 'sports', label: 'Ionťák', icon: '⚡' },
-  { id: 'alcohol', label: 'Alkohol', icon: '🍺' },
-  { id: 'other', label: 'Jiné', icon: '🧃' },
-] as const;
-
-const COFFEE_TYPES = [
-  { id: 'espresso', label: 'Espresso', icon: '☕' },
-  { id: 'cappuccino', label: 'Cappuccino', icon: '🥛' },
-  { id: 'tea', label: 'Čaj', icon: '🍵' },
-  { id: 'energy', label: 'Energy', icon: '⚡' },
-  { id: 'other', label: 'Jiné', icon: '🫖' },
-] as const;
-
 export function EditEntryDialog({ 
   open, 
   onOpenChange, 
@@ -67,6 +46,9 @@ export function EditEntryDialog({
   sessionId, 
   clientId 
 }: EditEntryDialogProps) {
+  // Common state
+  const [entryTime, setEntryTime] = useState<string>('12:00');
+
   // Food form state
   const [mealType, setMealType] = useState<FoodEntryInput['meal_type']>('lunch');
   const [description, setDescription] = useState('');
@@ -80,6 +62,8 @@ export function EditEntryDialog({
   // Coffee form state
   const [coffeeType, setCoffeeType] = useState<CoffeeEntryInput['coffee_type']>('espresso');
   const [coffeeCount, setCoffeeCount] = useState(1);
+  const [isCaffeinated, setIsCaffeinated] = useState(true);
+  const [coffeeAmountMl, setCoffeeAmountMl] = useState<number | undefined>(undefined);
 
   const updateFood = useUpdateFoodEntry();
   const updateDrink = useUpdateDrinkEntry();
@@ -87,9 +71,24 @@ export function EditEntryDialog({
 
   const isLoading = updateFood.isPending || updateDrink.isPending || updateCoffee.isPending;
 
+  // Helper to get entry time from entry
+  const getTimeFromEntry = (e: any): string => {
+    if (e.occurred_at) {
+      try {
+        return format(new Date(e.occurred_at), 'HH:mm');
+      } catch {}
+    }
+    if (e.entry_time) {
+      return e.entry_time.slice(0, 5);
+    }
+    return format(new Date(), 'HH:mm');
+  };
+
   // Initialize form with entry data
   useEffect(() => {
     if (entry) {
+      setEntryTime(getTimeFromEntry(entry));
+      
       if (type === 'food') {
         setMealType(entry.meal_type || 'lunch');
         setDescription(entry.description || '');
@@ -101,12 +100,16 @@ export function EditEntryDialog({
       } else if (type === 'coffee') {
         setCoffeeType(entry.coffee_type || 'espresso');
         setCoffeeCount(entry.count || 1);
+        setIsCaffeinated(entry.is_caffeinated !== false);
+        setCoffeeAmountMl(entry.coffee_amount_ml || undefined);
       }
     }
   }, [entry, type]);
 
   const handleSubmit = async () => {
     try {
+      const entryDate = entry.entry_date;
+      
       if (type === 'food') {
         if (!description.trim()) {
           toast.error('Vyplň co jsi jedl/a');
@@ -116,10 +119,12 @@ export function EditEntryDialog({
           entryId: entry.id,
           sessionId,
           clientId,
+          entryDate,
           entry: {
             meal_type: mealType,
             description: description.trim(),
             portion_size: portionSize,
+            entry_time: entryTime,
           },
         });
       } else if (type === 'drink') {
@@ -127,10 +132,12 @@ export function EditEntryDialog({
           entryId: entry.id,
           sessionId,
           clientId,
+          entryDate,
           entry: {
             drink_type: drinkType,
             amount_ml: drinkAmount,
             drink_name: drinkType === 'other' && drinkName.trim() ? drinkName.trim() : undefined,
+            entry_time: entryTime,
           },
         });
       } else if (type === 'coffee') {
@@ -138,9 +145,13 @@ export function EditEntryDialog({
           entryId: entry.id,
           sessionId,
           clientId,
+          entryDate,
           entry: {
             coffee_type: coffeeType,
             count: coffeeCount,
+            is_caffeinated: isCaffeinated,
+            coffee_amount_ml: coffeeAmountMl,
+            entry_time: entryTime,
           },
         });
       }
@@ -175,6 +186,20 @@ export function EditEntryDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
+          {/* Entry Time - Common for all types */}
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              Čas
+            </Label>
+            <Input
+              type="time"
+              value={entryTime}
+              onChange={(e) => setEntryTime(e.target.value)}
+              className="w-32"
+            />
+          </div>
+
           {type === 'food' && (
             <>
               {/* Meal Type */}
@@ -341,6 +366,32 @@ export function EditEntryDialog({
                   >
                     +
                   </Button>
+                </div>
+              </div>
+
+              {/* Caffeinated toggle */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                <Label className="text-sm">Obsahuje kofein</Label>
+                <Switch
+                  checked={isCaffeinated}
+                  onCheckedChange={setIsCaffeinated}
+                />
+              </div>
+
+              {/* Coffee Amount (optional) */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Objem (volitelné)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={coffeeAmountMl || ''}
+                    onChange={(e) => setCoffeeAmountMl(e.target.value ? parseInt(e.target.value) : undefined)}
+                    placeholder="např. 150"
+                    className="w-24"
+                    min={0}
+                    max={1000}
+                  />
+                  <span className="text-sm text-muted-foreground">ml</span>
                 </div>
               </div>
             </>

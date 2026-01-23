@@ -2,7 +2,7 @@
  * DayNoteInput - component for adding/editing day notes
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -44,6 +44,13 @@ export function DayNoteInput({
 }: DayNoteInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [note, setNote] = useState(currentNote || '');
+
+  // Sync local state when currentNote prop changes
+  useEffect(() => {
+    if (!isOpen) {
+      setNote(currentNote || '');
+    }
+  }, [currentNote, isOpen]);
 
   const handleOpen = (open: boolean) => {
     if (open) {
