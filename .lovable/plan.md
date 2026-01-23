@@ -1,211 +1,272 @@
 
-# Plán: Redesign nutričního deníku pro klientské centrum
+# Plán: Rozdělení L/R pro plyometriku a věkové filtry v žebříčku
 
-## Shrnutí problému
+## Shrnutí požadavků
 
-Na základě screenshotů a analýzy kódu mám přehled o aktuálních problémech:
-
-1. **Zastaralý vzhled** - Formulář působí těžkopádně, neladí s moderním glassmorphism designem aplikace
-2. **Příliš mnoho rozklikávacích sekcí** - Collapsible "Více detailů", "Přesnější množství" komplikují UX
-3. **Chybí výběr času jídla** - V databázi existuje `entry_time`, ale klient ho nemůže zadat (automaticky se nastaví aktuální čas)
-4. **Příliš mnoho kroků** - Výběr typu → Formulář → Další sekce → Uložit
-5. **Vizuální nepřehlednost** - Tlačítka jsou příliš velká, formulář je příliš dlouhý
+1. **Unilaterální cviky** (např. "Skok z jedné nohy") se musí zobrazovat jako dva samostatné záznamy: levá a pravá noha
+2. **Věkové filtry** - klient se může porovnat v rámci věkových skupin (20-30, 30-40, 40-50, 50-60+)
+3. **Výchozí stav** - všichni se porovnávají se všemi (bez filtrů)
 
 ---
 
-## Navrhovaný nový design
+## Technické změny
 
-### Filozofie redesignu
-- **Jedna obrazovka, minimální scroll** - vše podstatné viditelné najednou
-- **Čas je klíčový** - výrazný time picker vedle data
-- **Méně rozklikávání** - všechny základní možnosti viditelné
-- **Glassmorphism** - sjednocení s vizuálním jazykem aplikace
-- **Mobile-first** - optimalizace pro palec
+### 1. Edge funkce: `client-portal-benchmarks/index.ts`
 
-### Nový layout formuláře pro jídlo
+#### A) Akce `get_available_exercises` - rozdělit unilaterální cviky
 
-```text
-┌─────────────────────────────────────────────────┐
-│  ✕                     Přidat jídlo             │
-├─────────────────────────────────────────────────┤
-│                                                 │
-│  📅 Datum          ⏰ Čas                       │
-│  ┌─────────────┐  ┌─────────────┐              │
-│  │ 23. ledna   │  │   12:30     │              │
-│  └─────────────┘  └─────────────┘              │
-│                                                 │
-│  🍽️ Typ jídla                                  │
-│  ┌───┐ ┌───┐ ┌───┐ ┌───┐                       │
-│  │🌅│ │☀️│ │🌙│ │🍎│                       │
-│  └───┘ └───┘ └───┘ └───┘                       │
-│                                                 │
-│  🔍 Co jsi jedl/a?                              │
-│  ┌─────────────────────────────────────────┐   │
-│  │ Kuřecí prsa s rýží...             🔍    │   │
-│  └─────────────────────────────────────────┘   │
-│                                                 │
-│  📏 Porce                                       │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐           │
-│  │  Malá   │ │ Střední │ │  Velká  │           │
-│  └─────────┘ └─────────┘ └─────────┘           │
-│                                                 │
-│  💬 Poznámka (volitelné)                        │
-│  ┌─────────────────────────────────────────┐   │
-│  │ domácí příprava, restaurace...          │   │
-│  └─────────────────────────────────────────┘   │
-│                                                 │
-│  ┌─────────────────────────────────────────┐   │
-│  │                 Uložit                   │   │
-│  └─────────────────────────────────────────┘   │
-│                                                 │
-└─────────────────────────────────────────────────┘
+**Změna v SQL dotazu:**
+```typescript
+// Přidat sloupec 'side' do SELECT
+const { data: exerciseData } = await supabase
+  .from('exercise_entries')
+  .select('exercise_name, exercise_id, client_id, weight_kg, distance_meters, height_cm, time_seconds, side')  // + side
+  .eq('user_id', trainerId);
 ```
 
-### Klíčové změny
+**Změna v logice seskupování:**
+```typescript
+// Místo klíče "exercise_name" použít "exercise_name + side"
+// Pro side = 'left' nebo 'right' vytvořit oddělené záznamy
+const key = (e.side === 'left' || e.side === 'right')
+  ? `${e.exercise_name.toLowerCase().trim()}::${e.side}`
+  : e.exercise_name.toLowerCase().trim();
+```
 
-| Aspekt | Před | Po |
-|--------|------|-----|
-| **Čas jídla** | Pouze automaticky z `new Date()` | Explicitní time picker s předvolbami |
-| **Kvalita jídla** | V Collapsible "Více detailů" | Odstraněno (zřídka používáno) |
-| **Jak jsi se najedl/a** | V Collapsible | Odstraněno (přesunut do poznámky) |
-| **Gramáž/kusy** | V Collapsible | Odstraněno (příliš detailní) |
-| **Design tlačítek** | Velké, řádkové | Kompaktní, inline |
-| **Formulář jako Card** | Samostatná karta | Sheet/Modal zespodu |
+**Výstup s označením strany:**
+```typescript
+// Upravit exercise_name pro zobrazení
+const displayName = sideKey === 'left' 
+  ? `${exerciseName} (L)` 
+  : sideKey === 'right' 
+  ? `${exerciseName} (R)` 
+  : exerciseName;
+```
+
+#### B) Akce `get_exercise_leaderboard` - podpora pro side a věk
+
+**Nové parametry:**
+```typescript
+const { 
+  action, clientId, trainerId, exerciseName, 
+  genderFilter, ageFilter, side,  // NOVÉ: ageFilter, side
+  exerciseType, cardioMetric
+} = body;
+```
+
+**Filtr podle věku:**
+```typescript
+// Výpočet věku z birth_date
+function calculateAge(birthDate: string): number {
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+// Věkové filtry
+type AgeFilter = 'all' | '20-30' | '30-40' | '40-50' | '50+';
+
+// Aplikovat filtr
+if (ageFilter && ageFilter !== 'all') {
+  filteredClientIds = filteredClientIds.filter(cid => {
+    const client = clientsMap.get(cid);
+    if (!client?.birth_date) return false;
+    const age = calculateAge(client.birth_date);
+    switch (ageFilter) {
+      case '20-30': return age >= 20 && age < 30;
+      case '30-40': return age >= 30 && age < 40;
+      case '40-50': return age >= 40 && age < 50;
+      case '50+': return age >= 50;
+      default: return true;
+    }
+  });
+}
+```
+
+**Filtr podle strany (side):**
+```typescript
+// V SQL dotazu přidat filtr
+const { data: entries } = await supabase
+  .from('exercise_entries')
+  .select('client_id, distance_meters, date, side')
+  .eq('user_id', trainerId)
+  .ilike('exercise_name', exerciseName)
+  .eq('side', side)  // Pokud side je 'left' nebo 'right'
+  .not('distance_meters', 'is', null);
+```
 
 ---
 
-## Technické detaily
+### 2. Hook: `useExercisePercentiles.ts`
 
-### 1. Nová komponenta: SimpleFoodForm
-
-**Soubor:** `src/components/client-portal/nutrition/SimpleFoodForm.tsx`
-
-Úplně nová, zjednodušená komponenta nahrazující původní `FoodLogForm`:
+Rozšířit interface o stranu:
 
 ```typescript
-interface SimpleFoodFormProps {
-  sessionId: string;
-  clientId: string;
-  selectedDate: Date;
-  prefilledMealType?: MealTypeId;
-  onClose: () => void;
-}
-
-// State
-const [mealType, setMealType] = useState<MealTypeId>('lunch');
-const [description, setDescription] = useState('');
-const [portionSize, setPortionSize] = useState<PortionSizeId>('medium');
-const [entryTime, setEntryTime] = useState<string>(format(new Date(), 'HH:mm'));
-const [note, setNote] = useState('');
-```
-
-Klíčové vlastnosti:
-- **Přímý výběr času** pomocí `<input type="time">` (nativní time picker)
-- **Rychlé časové předvolby**: "Nyní", "Ráno (7:00)", "Poledne (12:00)", "Večer (18:00)"
-- **Bez Collapsible sekcí** - vše na jedné úrovni
-- **Sheet místo Card** - vysune se zespodu jako iOS-style modal
-
-### 2. Přidání času do hooks
-
-**Soubor:** `src/hooks/useClientPortalNutrition.ts`
-
-Rozšířit `FoodEntryInput` o čas:
-```typescript
-export interface FoodEntryInput {
-  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
-  description: string;
-  portion_size?: 'small' | 'medium' | 'large';
-  note?: string;
-  entry_time?: string; // NOVÉ: formát "HH:mm"
+export interface ExerciseWithPercentile {
+  exercise_name: string;
+  exercise_id: string | null;
+  entry_count: number;
+  exercise_type: 'strength' | 'cardio' | 'plyometrics';
+  client_percentile: number | null;
+  client_best_value: number | null;
+  metric_type?: 'weight' | 'time' | 'distance' | 'height';
+  side?: 'left' | 'right' | null;  // NOVÉ
 }
 ```
 
-V `useAddFoodEntry` použít předaný čas:
+---
+
+### 3. Hook: `useExerciseLeaderboard.ts`
+
+Přidat typ a parametr pro věkový filtr:
+
 ```typescript
-entry_time: entry.entry_time || format(new Date(), 'HH:mm'),
+export type AgeFilter = 'all' | '20-30' | '30-40' | '40-50' | '50+';
+
+export function useStrengthExerciseLeaderboard(
+  exerciseName: string | null,
+  trainerId: string | undefined,
+  genderFilter: GenderFilter = 'all',
+  ageFilter: AgeFilter = 'all',  // NOVÉ
+  side?: 'left' | 'right' | null  // NOVÉ
+) {
+  // ... předat do edge funkce
+  body: {
+    action: 'get_exercise_leaderboard',
+    trainerId,
+    clientId,
+    exerciseName,
+    exerciseType: 'strength',
+    genderFilter,
+    ageFilter,  // NOVÉ
+    side,       // NOVÉ
+  },
+}
 ```
 
-### 3. Zjednodušení hlavní stránky
+---
 
-**Soubor:** `src/pages/client-portal/ClientPortalNutrition.tsx`
+### 4. Komponenta: `ExerciseComparisonGrid.tsx`
 
-Změny:
-- Použít **Sheet** místo inline karty pro formulář
-- Zjednodušit Quick Actions - menší tlačítka
-- Přidat animovaný progress pro denní vodu
-- Přeuspořádat layout pro lepší přehlednost
+#### A) Nový AgeFilterToggle komponent
 
 ```typescript
-// Místo inline FoodLogForm použít Sheet
-<Sheet open={showAddForm} onOpenChange={setShowAddForm}>
-  <SheetContent side="bottom" className="h-[85vh]">
-    <SimpleFoodForm ... />
-  </SheetContent>
-</Sheet>
-```
-
-### 4. Konstanty pro časové předvolby
-
-**Soubor:** `src/components/client-portal/nutrition/constants.ts`
-
-```typescript
-export const TIME_PRESETS = [
-  { label: 'Ráno', time: '07:00', icon: '🌅' },
-  { label: 'Dopoledne', time: '10:00', icon: '☀️' },
-  { label: 'Poledne', time: '12:00', icon: '🌤️' },
-  { label: 'Odpoledne', time: '15:00', icon: '🍎' },
-  { label: 'Večer', time: '18:00', icon: '🌙' },
-  { label: 'Nyní', time: 'now', icon: '⏱️' },
+const AGE_FILTERS = [
+  { value: 'all', label: 'Vše' },
+  { value: '20-30', label: '20-30' },
+  { value: '30-40', label: '30-40' },
+  { value: '40-50', label: '40-50' },
+  { value: '50+', label: '50+' },
 ] as const;
+
+function AgeFilterToggle({ 
+  value, 
+  onChange 
+}: { 
+  value: AgeFilter; 
+  onChange: (value: AgeFilter) => void;
+}) {
+  return (
+    <ToggleGroup 
+      type="single" 
+      value={value} 
+      onValueChange={(v) => v && onChange(v as AgeFilter)}
+      size="sm"
+    >
+      {AGE_FILTERS.map(filter => (
+        <ToggleGroupItem 
+          key={filter.value}
+          value={filter.value} 
+          className="text-xs px-2 py-1.5 min-h-[36px]"
+        >
+          {filter.label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
 ```
 
-### 5. Úprava TodayEntries
+#### B) Přidání stavu pro věk do ExerciseCard
 
-**Soubor:** `src/components/client-portal/nutrition/TodayEntries.tsx`
+```typescript
+function ExerciseCard({ exercise, ... }) {
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
+  const [ageFilter, setAgeFilter] = useState<AgeFilter>('all');  // NOVÉ
+  
+  // Předat do hooku
+  const { data: strengthLeaderboard } = useStrengthExerciseLeaderboard(
+    exerciseName,
+    trainerId,
+    genderFilter,
+    ageFilter,      // NOVÉ
+    exercise.side   // NOVÉ - pro unilaterální cviky
+  );
+}
+```
 
-- Zobrazit čas prominentněji vedle typu jídla
-- Seřadit záznamy podle času (již funguje přes `order by entry_time`)
-- Přidat vizuální timeline (čas vlevo, obsah vpravo)
+#### C) Vizuální označení strany v kartě
+
+```typescript
+// V ExerciseCard header
+<h4 className="font-semibold capitalize truncate text-base">
+  {exercise.exercise_name}
+  {exercise.side && (
+    <Badge variant="outline" className="ml-2 text-xs">
+      {exercise.side === 'left' ? 'L' : 'R'}
+    </Badge>
+  )}
+</h4>
+```
+
+#### D) UI pro filtry (rozšířený)
+
+```typescript
+{/* Filters section */}
+<div className="flex flex-col gap-2 pt-2 border-t border-border/30">
+  <div className="flex items-center gap-2">
+    <span className="text-xs text-muted-foreground">Pohlaví:</span>
+    <GenderFilterToggle value={genderFilter} onChange={setGenderFilter} />
+  </div>
+  <div className="flex items-center gap-2">
+    <span className="text-xs text-muted-foreground">Věk:</span>
+    <AgeFilterToggle value={ageFilter} onChange={setAgeFilter} />
+  </div>
+  {exerciseType === 'cardio' && (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-muted-foreground">Metrika:</span>
+      <CardioMetricToggle value={cardioMetric} onChange={setCardioMetric} />
+    </div>
+  )}
+</div>
+```
 
 ---
 
-## Odstranění nepotřebných prvků
+## Výsledné chování
 
-Z formuláře **odstraníme**:
-1. ✂️ `Kvalita jídla` (good/normal/poor) - nepoužívané
-2. ✂️ `Jak jsi se najedl/a` (satiation) - nepoužívané
-3. ✂️ `Přesnější množství` (grams/units) - příliš detailní
-4. ✂️ Collapsible sekce "Více detailů" - komplikuje UX
+### Pro klienta Tomáše Fremra:
 
-Tyto údaje mohou být volitelně v `poznámce`, pokud klient chce.
+| Cvik | Před | Po |
+|------|------|-----|
+| Skok z jedné nohy | Jeden záznam (1.72 m) | Dva záznamy: (L) 1.72 m, (R) 1.69 m |
 
----
+### Filtrování:
 
-## Vizuální styl
-
-```css
-/* Sheet styling */
-.food-form-sheet {
-  background: hsl(var(--background) / 0.95);
-  backdrop-blur: 12px;
-  border-top-left-radius: 1.5rem;
-  border-top-right-radius: 1.5rem;
-}
-
-/* Kompaktní tlačítka pro typ jídla */
-.meal-type-btn {
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.75rem;
-  font-size: 0.75rem;
-}
-
-/* Time picker styling */
-.time-input {
-  font-size: 1.25rem;
-  font-weight: 600;
-  text-align: center;
-}
-```
+| Filtr | Popis |
+|-------|-------|
+| Pohlaví: Vše | Všichni klienti |
+| Pohlaví: ♂ | Pouze muži |
+| Pohlaví: ♀ | Pouze ženy |
+| Věk: 20-30 | Klienti ve věku 20-29 let |
+| Věk: 30-40 | Klienti ve věku 30-39 let |
+| Věk: 40-50 | Klienti ve věku 40-49 let |
+| Věk: 50+ | Klienti 50 let a starší |
 
 ---
 
@@ -213,33 +274,30 @@ Tyto údaje mohou být volitelně v `poznámce`, pokud klient chce.
 
 | Soubor | Změna |
 |--------|-------|
-| `SimpleFoodForm.tsx` (nový) | Nová zjednodušená komponenta |
-| `ClientPortalNutrition.tsx` | Sheet místo inline karty, zjednodušení |
-| `constants.ts` | Přidat TIME_PRESETS |
-| `useClientPortalNutrition.ts` | Podpora entry_time v inputu |
-| `TodayEntries.tsx` | Lepší zobrazení času |
-| `FoodLogForm.tsx` | Zachovat pro kompatibilitu, ale nepoužívat |
+| `supabase/functions/client-portal-benchmarks/index.ts` | Rozdělit cviky podle side, přidat věkový filtr |
+| `src/hooks/useExercisePercentiles.ts` | Přidat `side` do interface |
+| `src/hooks/useExerciseLeaderboard.ts` | Přidat `AgeFilter` typ a parametry |
+| `src/components/client-portal/leaderboard/ExerciseComparisonGrid.tsx` | AgeFilterToggle, zobrazení side badge |
 
 ---
 
-## Očekávaný výsledek
-
-1. **Rychlejší zadávání** - 3 kroky místo 5
-2. **Přehlednější** - vše na jedné obrazovce bez scrollu
-3. **Moderní vzhled** - Sheet zespodu, glassmorphism
-4. **Přesný čas** - klient může zadat kdy přesně jedl
-5. **Méně klikání** - žádné rozklikávací sekce
-
----
-
-## Ukázka nového flow
+## Vizuální ukázka filtrů
 
 ```text
-1. Klient klikne "+ Přidat jídlo" nebo "Snídaně"
-2. Zespodu vyjede Sheet s formulářem
-3. Klient vidí: Datum | Čas | Typ jídla | Popis | Porce | Poznámka
-4. Klikne "Uložit"
-5. Sheet se zavře, záznam se objeví v seznamu
+┌─────────────────────────────────────────┐
+│  Skok z jedné nohy (L)                  │
+│  1.72 m • Top 25%                       │
+├─────────────────────────────────────────┤
+│                                         │
+│  Pohlaví: [Vše] [♂] [♀]                │
+│                                         │
+│  Věk:     [Vše] [20-30] [30-40]        │
+│           [40-50] [50+]                 │
+│                                         │
+│  #1  Rychlý Lev #42     2.06 m         │
+│  #2  Silný Orel #15     1.93 m         │
+│  #3  Tomáš (Ty)         1.72 m  ←      │
+│  #4  Vytrvalý Vlk #8    1.45 m         │
+│                                         │
+└─────────────────────────────────────────┘
 ```
-
-Celkový čas zadání: ~5-8 sekund (oproti 15-20 sekund nyní)
