@@ -1,152 +1,194 @@
 
-# Plán: Zjednodušení klientského centra
+# Plán: Vylepšení zadávání jídla pro klienta
 
-## Identifikované problémy
+## Ověření stavu
 
-### 1. Kalendář na dashboardu
-- Zabírá příliš mnoho místa
-- Má navigaci měsíců (kterou klient sotva používá)
-- Má legendu která je zbytečná pro běžný přehled
+### ✅ Co funguje správně:
+1. **Data se správně propisují** - záznamy z klientského portálu jsou viditelné v trenérské aplikaci:
+   - `ClientNutritionCard` - přehled u klienta
+   - `NutritionClientDetail` (`/nutrition/client/:clientId`) - detailní týdenní pohled
+   - Trenér může přidávat komentáře k jednotlivým záznamům
+   
+2. **Současné UI je již zjednodušené**:
+   - Jedno tlačítko "Přidat jídlo nebo nápoj"
+   - Autocomplete s historií a běžnými jídly
+   - Quick add pro vodu (+300ml) a kávu (+1)
 
-### 2. Deník stravy - **3× duplicitní přidávání!**
-Klient má tři způsoby jak přidat jídlo:
-1. Velké tlačítko "Přidat stravu" nahoře
-2. 4× velká tlačítka (Snídaně/Oběd/Večeře/Svačina) v kartě
-3. Tlačítko "Přidat jiný záznam" dole
-
-Plus další prvky:
-- Quick stats (3 karty)
-- Quick water/coffee tlačítka
-- Nedávná jídla
-- WeekStrip
-
-**Výsledek**: 7+ sekcí na jedné obrazovce = matoucí
+### ⚠️ Identifikované problémy k opravě:
 
 ---
 
-## Navrhované změny
+## Problém 1: Příliš mnoho kroků při zadávání jídla
 
-### A) Zmenšení kalendáře na dashboardu
-
-**Soubor:** `src/components/client-portal/calendar/TrainingCalendar.tsx`
-
-Změny:
-1. Odstranit navigaci měsíců (jen aktuální měsíc)
-2. Menší buňky dnů (text-[10px] místo text-[11px])
-3. Odstranit legendu úplně (není potřeba pro přehled)
-4. Kompaktnější padding
-
-```text
-PŘED:
-┌─────────────────────────────────┐
-│ 📅 Kalendář          🏋️ 5     │
-│ ← led 2025 →                    │
-├─────────────────────────────────┤
-│ Po Út St Čt Pá So Ne            │
-│  1  2  3  4  5  6  7            │
-│  8  9 10 11 12 13 14            │
-│ 15 16 17 18 19 20 21            │
-│ ...                             │
-├─────────────────────────────────┤
-│ [■ 1×] [■■ 2+]  ← legenda       │
-└─────────────────────────────────┘
-
-PO:
-┌─────────────────────────────────┐
-│ 📅 Aktivita tento měsíc   🏋️ 5 │
-├─────────────────────────────────┤
-│ Po Út St Čt Pá So Ne            │
-│  1  2  3  4  5  6  7            │
-│  8  9 10 11 12 13 14            │
-│ 15 16 17 18 19 20 21            │
-│ ...                             │
-└─────────────────────────────────┘
+**Současný stav:**
+```
+Klik "Přidat jídlo" → Výběr typu (Jídlo/Pití/Káva) → Formulář
 ```
 
-### B) Zjednodušení deníku stravy
+**Řešení:** Sloučit výběr typu přímo do jednoho formuláře s taby nahoře
 
-**Soubor:** `src/pages/client-portal/ClientPortalNutritionTab.tsx`
+### Změny v `src/components/client-portal/nutrition/FoodLogForm.tsx`:
 
-Kompletní redesign na jednoduchý flow:
+```typescript
+// PŘED: Dvoustupňový flow (výběr typu → formulář)
+step === 'type' ? <TypeSelector /> : <Form />
 
-```text
-PŘED (7 sekcí):
-┌─────────────────────────────────┐
-│ [Po] [Út] [St] [Čt] [Pá] [So] [Ne] │  ← WeekStrip
-├─────────────────────────────────┤
-│ [+ Přidat stravu           ]    │  ← Velké tlačítko #1
-├─────────────────────────────────┤
-│ [3 Jídel] [600ml vody] [2 kávy] │  ← Quick stats
-├─────────────────────────────────┤
-│ ┌────────────────────────────┐  │
-│ │ [🌅 Snídaně] [☀️ Oběd]    │  │  ← Tlačítka #2
-│ │ [🌙 Večeře] [🍎 Svačina]  │  │
-│ │──────────────────────────│  │
-│ │ [💧+300ml] [☕+1 Káva]    │  │  ← Quick add
-│ │──────────────────────────│  │
-│ │ ⏰ Nedávná jídla          │  │  ← History
-│ │ [Ovesná kaše] [Kuře]     │  │
-│ │──────────────────────────│  │
-│ │ [+ Přidat jiný záznam]   │  │  ← Tlačítko #3
-│ └────────────────────────────┘  │
-├─────────────────────────────────┤
-│ Dnešní záznamy                  │  ← Entries list
-└─────────────────────────────────┘
-
-PO (4 sekce - čisté a jednoduché):
-┌─────────────────────────────────┐
-│ [Po] [Út] [St] [Čt] [Pá] [So] [Ne] │  ← WeekStrip
-├─────────────────────────────────┤
-│ [+ Přidat jídlo/nápoj      ]    │  ← JEDNO tlačítko
-├─────────────────────────────────┤
-│ Quick Add: [💧+300ml] [☕+1]    │  ← Inline quick actions
-├─────────────────────────────────┤
-│ Záznamy (3 jídla, 600ml, 2☕)   │  ← Entries + stats v headeru
-│ [Snídaně - Ovesná kaše...]      │
-│ [Voda 300ml]                    │
-│ [Káva espresso]                 │
-└─────────────────────────────────┘
+// PO: Jeden formulář s taby nahoře
+<Tabs defaultValue="food">
+  <TabsList className="grid w-full grid-cols-3">
+    <TabsTrigger value="food">🍽️ Jídlo</TabsTrigger>
+    <TabsTrigger value="drink">💧 Pití</TabsTrigger>
+    <TabsTrigger value="coffee">☕ Káva</TabsTrigger>
+  </TabsList>
+  <TabsContent value="food">{/* Food form */}</TabsContent>
+  <TabsContent value="drink">{/* Drink form */}</TabsContent>
+  <TabsContent value="coffee">{/* Coffee form */}</TabsContent>
+</Tabs>
 ```
 
-**Změny:**
-1. **Odstranit duplicitní tlačítka** - jedno "Přidat jídlo/nápoj" stačí
-2. **Odstranit Quick Meal grid** (Snídaně/Oběd/Večeře/Svačina) - typ jídla se vybere ve formuláři
-3. **Zjednodušit Quick Stats** - přesunout do headeru záznamu
-4. **Ponechat Quick Water/Coffee** - inline menší tlačítka
-5. **Odstranit Nedávná jídla** - zbytečné (autocomplete je ve formuláři)
-6. **Odstranit "Přidat jiný záznam"** - duplicita
+**Výsledek:** Místo 2 kliků stačí 1 klik
 
 ---
 
-## Soubory k úpravě
+## Problém 2: Quick presety jsou schované
+
+**Současný stav:**
+- Presety (Ovesná kaše, Kuřecí prsa...) se zobrazují až po výběru typu jídla
+- Jsou v collapsible sekci "Rychlá volba"
+
+**Řešení:** Zobrazit presety prominentně hned pod autocomplete
+
+### Změny v `FoodLogForm.tsx`:
+
+```typescript
+// Zobrazit presety přímo pod autocomplete (ne v collapsible)
+<div className="space-y-2">
+  <Label className="text-xs text-muted-foreground">Co jsi jedl/a?</Label>
+  <FoodAutocomplete ... />
+  
+  {/* Presety přímo viditelné */}
+  {description.length === 0 && (
+    <div className="flex flex-wrap gap-1.5 pt-1">
+      {currentPresets.slice(0, 6).map(preset => (
+        <Button 
+          key={preset.description}
+          variant="outline" 
+          size="sm"
+          className="h-7 text-xs"
+          onClick={() => selectPreset(preset)}
+        >
+          {preset.icon} {preset.description}
+        </Button>
+      ))}
+    </div>
+  )}
+</div>
+```
+
+**Výsledek:** Klient vidí běžná jídla ihned, může je vybrat jedním klikem
+
+---
+
+## Problém 3: TodayEntries nezobrazuje všechny detaily
+
+**Současný stav:**
+- Zobrazuje: typ jídla, popis, porci, čas
+- NEzobrazuje: kvalitu, pocit sytosti, poznámku
+
+**Řešení:** Přidat tyto detaily (pokud jsou vyplněné)
+
+### Změny v `src/components/client-portal/nutrition/TodayEntries.tsx`:
+
+```typescript
+// V food entries přidat:
+{entry.quality && (
+  <span className="text-xs">
+    {entry.quality === 'good' ? '💚' : entry.quality === 'poor' ? '🔴' : '🟡'}
+  </span>
+)}
+{entry.satiation && (
+  <span className="text-xs text-muted-foreground">
+    {entry.satiation === 'just_right' ? 'Akorát' : 
+     entry.satiation === 'still_hungry' ? 'Hlad' : 'Přejedení'}
+  </span>
+)}
+{entry.note && (
+  <p className="text-xs text-muted-foreground italic mt-1">{entry.note}</p>
+)}
+```
+
+---
+
+## Problém 4: Volitelné detaily jsou příliš skryté
+
+**Současný stav:**
+- "Více detailů" v collapsible - klient nemusí vědět, že tam jsou
+- Obsahuje: kvalitu jídla, pocit sytosti, poznámku
+
+**Řešení:** Přejmenovat na jasnější label a zobrazit hint
+
+```typescript
+<CollapsibleTrigger>
+  <span>📝 Přidat hodnocení (volitelné)</span>
+  <span className="text-[10px] text-muted-foreground">
+    Kvalita, sytost, poznámka
+  </span>
+</CollapsibleTrigger>
+```
+
+---
+
+## Souhrn změn
 
 | Soubor | Změna |
 |--------|-------|
-| `src/components/client-portal/calendar/TrainingCalendar.tsx` | Zmenšit: bez navigace měsíců, bez legendy |
-| `src/pages/client-portal/ClientPortalNutritionTab.tsx` | Zjednodušit: odstranit duplicity, sloučit sekce |
+| `src/components/client-portal/nutrition/FoodLogForm.tsx` | Sloučit kroky do tabs, zobrazit presety prominentně |
+| `src/components/client-portal/nutrition/TodayEntries.tsx` | Přidat zobrazení quality, satiation, note |
 
 ---
 
 ## Vizuální výsledek
 
-### Dashboard - menší kalendář
-Ušetří ~40px výšky, čistější vzhled bez zbytečných prvků.
+### Nový formulář (jeden krok místo dvou):
+```
+┌─────────────────────────────────────────┐
+│ Přidat záznam                       [×] │
+├─────────────────────────────────────────┤
+│ [🍽️ Jídlo] [💧 Pití] [☕ Káva]         │
+├─────────────────────────────────────────┤
+│ Datum: 23. ledna 2025                   │
+├─────────────────────────────────────────┤
+│ [🌅Snídaně][☀️Oběd][🌙Večeře][🍎Svač.] │
+├─────────────────────────────────────────┤
+│ 🔍 Co jsi jedl/a?                       │
+│ ┌─────────────────────────────────────┐ │
+│ │                                     │ │
+│ └─────────────────────────────────────┘ │
+│ [🥣Ovesná kaše][🍳Vajíčka][🥗Salát]... │  ← Presety viditelné!
+├─────────────────────────────────────────┤
+│ [🥄Malá] [🍽️Střední] [🍳Velká]          │
+├─────────────────────────────────────────┤
+│ ▸ 📝 Přidat hodnocení (volitelné)       │
+├─────────────────────────────────────────┤
+│              [Uložit]                   │
+└─────────────────────────────────────────┘
+```
 
-### Deník stravy - před/po
-
-**PŘED:** 7 sekcí, 3 způsoby přidání jídla
-**PO:** 4 sekce, 1 jasný způsob přidání
-
-Klient okamžitě vidí:
-1. Který den má vybraný (WeekStrip)
-2. Jak přidat (jedno velké tlačítko)
-3. Co už zapsal (seznam záznamů se statistikou v headeru)
+### Záznamy s více detaily:
+```
+┌─────────────────────────────────────────┐
+│ 🍽️ Oběd                         12:30  │
+│ Kuřecí prsa s rýží                      │
+│ Střední porce 💚 Akorát                 │
+│ 📝 Domácí příprava                      │
+└─────────────────────────────────────────┘
+```
 
 ---
 
-## Výhody
+## Očekávaný výsledek
 
-1. **Méně rozhodování** - jeden jasný způsob přidání místo tří
-2. **Rychlejší orientace** - méně sekcí = rychlejší skenování
-3. **Čistší design** - méně vizuálního šumu
-4. **Stejná funkcionalita** - nic se neodebírá, jen se konsoliduje
+1. **Rychlejší zadávání** - 1 klik místo 2 pro výběr typu
+2. **Presety ihned viditelné** - běžná jídla na dosah
+3. **Více informací v přehledu** - klient vidí co vyplnil
+4. **Jasný hint** - volitelné detaily mají popis
