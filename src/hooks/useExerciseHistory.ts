@@ -52,11 +52,12 @@ export function useExerciseHistory(
         .eq('client_id', clientId)
         .order('date', { ascending: false });
 
-      // Filter by exercise
+      // Filter by exercise - prefer exercise_id for accuracy
       if (exerciseId) {
         query = query.eq('exercise_id', exerciseId);
       } else {
-        query = query.eq('exercise_name', exerciseName);
+        // Use case-insensitive search for exercise name
+        query = query.ilike('exercise_name', exerciseName);
       }
 
       // Filter by side if specified (for unilateral exercises)

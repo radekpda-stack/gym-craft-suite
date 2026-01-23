@@ -169,9 +169,12 @@ export function ExerciseHistorySheet({
   clientId,
   clientName 
 }: ExerciseHistorySheetProps) {
+  // Extract clean exercise name (remove L/R suffix if present)
+  const cleanExerciseName = pr?.exerciseName?.replace(/ \([LR]\)$/, '') || null;
+  
   const { data: history = [], isLoading } = useExerciseHistory(
     open ? clientId : null,
-    pr?.exerciseName,
+    cleanExerciseName,
     pr?.exerciseId,
     pr?.side
   );
