@@ -1,265 +1,245 @@
 
-# Plán: Zjednodušení zadávání jídla pro klienty
+# Plán: Redesign nutričního deníku pro klientské centrum
 
-## Shrnutí
+## Shrnutí problému
 
-Cílem je učinit zadávání jídla **rychlejší a přirozenější** - klient by měl zvládnout zapsat většinu jídel do 5 sekund. Aktuálně systém funguje na volném textu bez napovídání, což vede k nekonzistentním záznamům a pomalému zadávání.
+Na základě screenshotů a analýzy kódu mám přehled o aktuálních problémech:
+
+1. **Zastaralý vzhled** - Formulář působí těžkopádně, neladí s moderním glassmorphism designem aplikace
+2. **Příliš mnoho rozklikávacích sekcí** - Collapsible "Více detailů", "Přesnější množství" komplikují UX
+3. **Chybí výběr času jídla** - V databázi existuje `entry_time`, ale klient ho nemůže zadat (automaticky se nastaví aktuální čas)
+4. **Příliš mnoho kroků** - Výběr typu → Formulář → Další sekce → Uložit
+5. **Vizuální nepřehlednost** - Tlačítka jsou příliš velká, formulář je příliš dlouhý
 
 ---
 
-## Navrhované změny
+## Navrhovaný nový design
 
-### 1. Inteligentní napovídání (Autocomplete)
+### Filozofie redesignu
+- **Jedna obrazovka, minimální scroll** - vše podstatné viditelné najednou
+- **Čas je klíčový** - výrazný time picker vedle data
+- **Méně rozklikávání** - všechny základní možnosti viditelné
+- **Glassmorphism** - sjednocení s vizuálním jazykem aplikace
+- **Mobile-first** - optimalizace pro palec
 
-Při psaní do pole "Co jsi jedl/a?" se budou **zobrazovat návrhy** z:
-- Předchozích záznamů klienta
-- Běžných českých jídel (základní preset)
+### Nový layout formuláře pro jídlo
 
-| Příklad | Jak to funguje |
-|---------|---------------|
-| Klient píše "kur" | Nabídne se: "Kuřecí prsa", "Kuřecí řízek", "Kuřecí polévka" |
-| Klient píše "ova" | Nabídne se: "Ovesná kaše", "Ovocný salát" |
-
-### 2. Rozšíření "Nedávná jídla" na "Oblíbená jídla"
-
-**Aktuální stav:**
-- 5 posledních jedinečných jídel
-- Nelze přidat do oblíbených
-
-**Nový stav:**
-- Sekce "Oblíbená" + "Nedávná"
-- Možnost označit jídlo srdíčkem jako oblíbené
-- Oblíbená se zobrazí jako první
-
-### 3. Rychlé předvolby snídaně
-
-Většina klientů má **opakující se snídaně**. Nabídnout 4-6 běžných předvoleb:
-
+```text
+┌─────────────────────────────────────────────────┐
+│  ✕                     Přidat jídlo             │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  📅 Datum          ⏰ Čas                       │
+│  ┌─────────────┐  ┌─────────────┐              │
+│  │ 23. ledna   │  │   12:30     │              │
+│  └─────────────┘  └─────────────┘              │
+│                                                 │
+│  🍽️ Typ jídla                                  │
+│  ┌───┐ ┌───┐ ┌───┐ ┌───┐                       │
+│  │🌅│ │☀️│ │🌙│ │🍎│                       │
+│  └───┘ └───┘ └───┘ └───┘                       │
+│                                                 │
+│  🔍 Co jsi jedl/a?                              │
+│  ┌─────────────────────────────────────────┐   │
+│  │ Kuřecí prsa s rýží...             🔍    │   │
+│  └─────────────────────────────────────────┘   │
+│                                                 │
+│  📏 Porce                                       │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐           │
+│  │  Malá   │ │ Střední │ │  Velká  │           │
+│  └─────────┘ └─────────┘ └─────────┘           │
+│                                                 │
+│  💬 Poznámka (volitelné)                        │
+│  ┌─────────────────────────────────────────┐   │
+│  │ domácí příprava, restaurace...          │   │
+│  └─────────────────────────────────────────┘   │
+│                                                 │
+│  ┌─────────────────────────────────────────┐   │
+│  │                 Uložit                   │   │
+│  └─────────────────────────────────────────┘   │
+│                                                 │
+└─────────────────────────────────────────────────┘
 ```
-┌─────────────────────────────────────────┐
-│  Rychlá snídaně                         │
-│  ┌────────┐ ┌────────┐ ┌────────┐      │
-│  │ 🥣     │ │ 🍳     │ │ 🥐     │      │
-│  │ Ovesná │ │Vajíčka │ │ Pečivo │      │
-│  │ kaše   │ │        │ │        │      │
-│  └────────┘ └────────┘ └────────┘      │
-└─────────────────────────────────────────┘
-```
 
-### 4. Lepší specifikace množství
+### Klíčové změny
 
-Přidat možnost zadat **přesnější množství** (volitelné):
-
-| Aktuální | Nové (volitelné) |
-|----------|------------------|
-| Malá/Střední/Velká | + Gramáž (např. "150g") |
-| | + Kusy (např. "2 vajíčka") |
-
-### 5. Foto jídla (budoucí rozšíření)
-
-Databáze již má sloupec `photo_url` - možnost vyfotit jídlo pro lepší přehled trenéra.
+| Aspekt | Před | Po |
+|--------|------|-----|
+| **Čas jídla** | Pouze automaticky z `new Date()` | Explicitní time picker s předvolbami |
+| **Kvalita jídla** | V Collapsible "Více detailů" | Odstraněno (zřídka používáno) |
+| **Jak jsi se najedl/a** | V Collapsible | Odstraněno (přesunut do poznámky) |
+| **Gramáž/kusy** | V Collapsible | Odstraněno (příliš detailní) |
+| **Design tlačítek** | Velké, řádkové | Kompaktní, inline |
+| **Formulář jako Card** | Samostatná karta | Sheet/Modal zespodu |
 
 ---
 
 ## Technické detaily
 
-### Nové soubory
+### 1. Nová komponenta: SimpleFoodForm
 
-**1. `src/components/client-portal/nutrition/FoodAutocomplete.tsx`**
-Komponenta s napovídáním:
+**Soubor:** `src/components/client-portal/nutrition/SimpleFoodForm.tsx`
+
+Úplně nová, zjednodušená komponenta nahrazující původní `FoodLogForm`:
+
 ```typescript
-interface FoodAutocompleteProps {
-  value: string;
-  onChange: (value: string) => void;
+interface SimpleFoodFormProps {
+  sessionId: string;
   clientId: string;
-  onSelectSuggestion: (food: { description: string; portion_size?: string }) => void;
+  selectedDate: Date;
+  prefilledMealType?: MealTypeId;
+  onClose: () => void;
 }
-```
-- Použije `cmdk` (již nainstalován) pro command palette UI
-- Hledá v historii klienta + základním presetu
 
-**2. `src/components/client-portal/nutrition/QuickFoodPresets.tsx`**
-Rychlé předvolby pro běžná jídla:
-```typescript
-const BREAKFAST_PRESETS = [
-  { description: 'Ovesná kaše s ovocem', icon: '🥣', portion_size: 'medium' },
-  { description: 'Míchaná vajíčka', icon: '🍳', portion_size: 'medium' },
-  { description: 'Jogurt s müsli', icon: '🥛', portion_size: 'medium' },
-  { description: 'Pečivo s máslem', icon: '🥐', portion_size: 'medium' },
-  { description: 'Cottage cheese', icon: '🧀', portion_size: 'medium' },
-];
+// State
+const [mealType, setMealType] = useState<MealTypeId>('lunch');
+const [description, setDescription] = useState('');
+const [portionSize, setPortionSize] = useState<PortionSizeId>('medium');
+const [entryTime, setEntryTime] = useState<string>(format(new Date(), 'HH:mm'));
+const [note, setNote] = useState('');
 ```
 
-### Úpravy existujících souborů
+Klíčové vlastnosti:
+- **Přímý výběr času** pomocí `<input type="time">` (nativní time picker)
+- **Rychlé časové předvolby**: "Nyní", "Ráno (7:00)", "Poledne (12:00)", "Večer (18:00)"
+- **Bez Collapsible sekcí** - vše na jedné úrovni
+- **Sheet místo Card** - vysune se zespodu jako iOS-style modal
 
-**1. `src/components/client-portal/nutrition/FoodLogForm.tsx`**
+### 2. Přidání času do hooks
 
-Nahradit `Textarea` za `FoodAutocomplete`:
+**Soubor:** `src/hooks/useClientPortalNutrition.ts`
+
+Rozšířit `FoodEntryInput` o čas:
 ```typescript
-// Místo:
-<Textarea
-  value={description}
-  onChange={(e) => setDescription(e.target.value)}
-  placeholder="např. kuřecí prsa, rýže, zelenina"
-/>
-
-// Nově:
-<FoodAutocomplete
-  value={description}
-  onChange={setDescription}
-  clientId={clientId}
-  onSelectSuggestion={(food) => {
-    setDescription(food.description);
-    if (food.portion_size) setPortionSize(food.portion_size);
-  }}
-/>
-```
-
-Přidat volitelný vstup pro gramáž:
-```typescript
-// Po výběru porce - collapsible sekce
-<div className="space-y-2">
-  <Label className="text-xs text-muted-foreground">Přesnější množství (volitelné)</Label>
-  <div className="flex gap-2">
-    <Input
-      type="number"
-      value={grams}
-      onChange={(e) => setGrams(e.target.value)}
-      placeholder="gramů"
-      className="w-24"
-    />
-    <span className="text-sm text-muted-foreground self-center">nebo</span>
-    <Input
-      value={unitsCount}
-      onChange={(e) => setUnitsCount(e.target.value)}
-      placeholder="počet"
-      className="w-20"
-    />
-    <Input
-      value={unitsLabel}
-      onChange={(e) => setUnitsLabel(e.target.value)}
-      placeholder="kusů/vajec/..."
-      className="flex-1"
-    />
-  </div>
-</div>
-```
-
-**2. `src/pages/client-portal/ClientPortalNutrition.tsx`**
-
-Rozšířit sekci "Nedávná jídla":
-```typescript
-// Přidat hook pro oblíbená jídla
-function useFavoriteFoods(clientId: string | undefined) {
-  return useQuery({
-    queryKey: ['client-favorite-foods', clientId],
-    queryFn: async () => {
-      // Načíst nejčastěji zadávaná jídla
-      const { data } = await supabase
-        .from('nutrition_food_entries')
-        .select('description, meal_type, portion_size')
-        .eq('client_id', clientId)
-        .limit(100);
-      
-      // Spočítat frekvenci a vrátit top 5
-      const counts = new Map<string, number>();
-      // ...grouping logic
-      return topFoods;
-    },
-  });
+export interface FoodEntryInput {
+  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  description: string;
+  portion_size?: 'small' | 'medium' | 'large';
+  note?: string;
+  entry_time?: string; // NOVÉ: formát "HH:mm"
 }
 ```
 
-Přidat rychlé předvolby:
+V `useAddFoodEntry` použít předaný čas:
 ```typescript
-// Pod quick meal buttons
-{mealType === 'breakfast' && (
-  <QuickFoodPresets 
-    presets={BREAKFAST_PRESETS}
-    onSelect={(preset) => handleQuickPresetFood(preset)}
-  />
-)}
+entry_time: entry.entry_time || format(new Date(), 'HH:mm'),
 ```
 
-**3. `src/hooks/useClientPortalNutrition.ts`**
+### 3. Zjednodušení hlavní stránky
 
-Přidat hook pro historii jídel (pro autocomplete):
+**Soubor:** `src/pages/client-portal/ClientPortalNutrition.tsx`
+
+Změny:
+- Použít **Sheet** místo inline karty pro formulář
+- Zjednodušit Quick Actions - menší tlačítka
+- Přidat animovaný progress pro denní vodu
+- Přeuspořádat layout pro lepší přehlednost
+
 ```typescript
-export function useFoodHistory(clientId: string | undefined, search: string) {
-  return useQuery({
-    queryKey: ['food-history', clientId, search],
-    queryFn: async () => {
-      if (!search || search.length < 2) return [];
-      
-      const { data } = await supabase
-        .from('nutrition_food_entries')
-        .select('description, portion_size')
-        .eq('client_id', clientId)
-        .ilike('description', `%${search}%`)
-        .limit(10);
-      
-      return data || [];
-    },
-    enabled: !!clientId && search.length >= 2,
-  });
-}
+// Místo inline FoodLogForm použít Sheet
+<Sheet open={showAddForm} onOpenChange={setShowAddForm}>
+  <SheetContent side="bottom" className="h-[85vh]">
+    <SimpleFoodForm ... />
+  </SheetContent>
+</Sheet>
 ```
 
-**4. `src/components/client-portal/nutrition/constants.ts`**
+### 4. Konstanty pro časové předvolby
 
-Přidat běžná česká jídla jako preset:
+**Soubor:** `src/components/client-portal/nutrition/constants.ts`
+
 ```typescript
-export const COMMON_FOODS = [
-  // Snídaně
-  { description: 'Ovesná kaše', category: 'breakfast' },
-  { description: 'Míchaná vajíčka', category: 'breakfast' },
-  { description: 'Jogurt s müsli', category: 'breakfast' },
-  { description: 'Pečivo s máslem', category: 'breakfast' },
-  { description: 'Cottage cheese s ovocem', category: 'breakfast' },
-  
-  // Oběd/Večeře
-  { description: 'Kuřecí prsa s rýží', category: 'main' },
-  { description: 'Těstoviny s omáčkou', category: 'main' },
-  { description: 'Salát s tuňákem', category: 'main' },
-  { description: 'Řízek s bramborovým salátem', category: 'main' },
-  { description: 'Polévka', category: 'main' },
-  
-  // Svačiny
-  { description: 'Jablko', category: 'snack' },
-  { description: 'Banán', category: 'snack' },
-  { description: 'Ořechy', category: 'snack' },
-  { description: 'Proteinová tyčinka', category: 'snack' },
+export const TIME_PRESETS = [
+  { label: 'Ráno', time: '07:00', icon: '🌅' },
+  { label: 'Dopoledne', time: '10:00', icon: '☀️' },
+  { label: 'Poledne', time: '12:00', icon: '🌤️' },
+  { label: 'Odpoledne', time: '15:00', icon: '🍎' },
+  { label: 'Večer', time: '18:00', icon: '🌙' },
+  { label: 'Nyní', time: 'now', icon: '⏱️' },
 ] as const;
 ```
+
+### 5. Úprava TodayEntries
+
+**Soubor:** `src/components/client-portal/nutrition/TodayEntries.tsx`
+
+- Zobrazit čas prominentněji vedle typu jídla
+- Seřadit záznamy podle času (již funguje přes `order by entry_time`)
+- Přidat vizuální timeline (čas vlevo, obsah vpravo)
+
+---
+
+## Odstranění nepotřebných prvků
+
+Z formuláře **odstraníme**:
+1. ✂️ `Kvalita jídla` (good/normal/poor) - nepoužívané
+2. ✂️ `Jak jsi se najedl/a` (satiation) - nepoužívané
+3. ✂️ `Přesnější množství` (grams/units) - příliš detailní
+4. ✂️ Collapsible sekce "Více detailů" - komplikuje UX
+
+Tyto údaje mohou být volitelně v `poznámce`, pokud klient chce.
+
+---
+
+## Vizuální styl
+
+```css
+/* Sheet styling */
+.food-form-sheet {
+  background: hsl(var(--background) / 0.95);
+  backdrop-blur: 12px;
+  border-top-left-radius: 1.5rem;
+  border-top-right-radius: 1.5rem;
+}
+
+/* Kompaktní tlačítka pro typ jídla */
+.meal-type-btn {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.75rem;
+}
+
+/* Time picker styling */
+.time-input {
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+}
+```
+
+---
+
+## Soubory k úpravě
+
+| Soubor | Změna |
+|--------|-------|
+| `SimpleFoodForm.tsx` (nový) | Nová zjednodušená komponenta |
+| `ClientPortalNutrition.tsx` | Sheet místo inline karty, zjednodušení |
+| `constants.ts` | Přidat TIME_PRESETS |
+| `useClientPortalNutrition.ts` | Podpora entry_time v inputu |
+| `TodayEntries.tsx` | Lepší zobrazení času |
+| `FoodLogForm.tsx` | Zachovat pro kompatibilitu, ale nepoužívat |
 
 ---
 
 ## Očekávaný výsledek
 
-Po implementaci:
-
-| Metrika | Před | Po |
-|---------|------|-----|
-| Čas na zadání běžného jídla | 15-20 sekund | 3-5 sekund |
-| Konzistence záznamů | Nízká (duplicity) | Vysoká (napovídání) |
-| Opakované zadávání | Ruční psaní | 1 klik (oblíbené) |
-| Zadání snídaně | 4 kroky | 1 klik (preset) |
+1. **Rychlejší zadávání** - 3 kroky místo 5
+2. **Přehlednější** - vše na jedné obrazovce bez scrollu
+3. **Moderní vzhled** - Sheet zespodu, glassmorphism
+4. **Přesný čas** - klient může zadat kdy přesně jedl
+5. **Méně klikání** - žádné rozklikávací sekce
 
 ---
 
-## Priorita implementace
+## Ukázka nového flow
 
-| Priorita | Funkce | Důvod |
-|----------|--------|-------|
-| 🔴 Vysoká | Autocomplete z historie klienta | Největší úspora času |
-| 🔴 Vysoká | Rozšíření "Nedávná jídla" (více položek) | Rychlé znovupřidání |
-| 🟡 Střední | Preset běžných jídel | Pomáhá novým klientům |
-| 🟡 Střední | Rychlé předvolby snídaně | Opakující se vzorec |
-| 🟢 Nízká | Gramáž/kusy | Pokročilí uživatelé |
-| 🟢 Nízká | Foto jídla | Budoucí rozšíření |
+```text
+1. Klient klikne "+ Přidat jídlo" nebo "Snídaně"
+2. Zespodu vyjede Sheet s formulářem
+3. Klient vidí: Datum | Čas | Typ jídla | Popis | Porce | Poznámka
+4. Klikne "Uložit"
+5. Sheet se zavře, záznam se objeví v seznamu
+```
 
----
-
-## Databázové změny
-
-**Není potřeba měnit schéma** - sloupce `grams`, `units_count`, `units_label` již existují v tabulce `nutrition_food_entries`, jen se nepoužívají.
+Celkový čas zadání: ~5-8 sekund (oproti 15-20 sekund nyní)
