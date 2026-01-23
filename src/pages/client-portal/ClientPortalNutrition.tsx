@@ -3,26 +3,24 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { Apple, Plus, Droplets, UtensilsCrossed, Coffee, Loader2, Check, MessageSquare, Clock, RotateCcw } from 'lucide-react';
+import { Apple, Plus, Droplets, Coffee, Loader2, Clock, RotateCcw, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FoodLogForm } from '@/components/client-portal/nutrition/FoodLogForm';
+import { SimpleFoodForm } from '@/components/client-portal/nutrition/SimpleFoodForm';
 import { TodayEntries } from '@/components/client-portal/nutrition/TodayEntries';
 import { EditEntryDialog } from '@/components/client-portal/nutrition/EditEntryDialog';
 import { WeekStrip } from '@/components/client-portal/nutrition/WeekStrip';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { type MealTypeId, type DrinkTypeId, type CoffeeTypeId, QUICK_WATER_AMOUNTS } from '@/components/client-portal/nutrition/constants';
+import { type MealTypeId, QUICK_WATER_AMOUNTS } from '@/components/client-portal/nutrition/constants';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   useQuickAddWater, 
   useDeleteNutritionEntryPortal,
-  useAddDrinkEntry,
   useAddCoffeeEntry,
   useAddFoodEntry,
 } from '@/hooks/useClientPortalNutrition';
-import { MEAL_LABELS } from '@/components/client-portal/nutrition/constants';
 import { useNutritionXP } from '@/hooks/useNutritionXP';
 
 type EditingEntry = {
@@ -209,9 +207,8 @@ export default function ClientPortalNutrition() {
   );
   const { data: completedDays = [] } = useCompletedDays(session?.id);
   const { data: recentFoods = [] } = useRecentFoodEntries(clientId ?? undefined);
+  const queryClient = useQueryClient();
   const quickWater = useQuickAddWater();
-  const addDrink = useAddDrinkEntry();
-  const addCoffee = useAddCoffeeEntry();
   const addFood = useAddFoodEntry();
   const deleteEntry = useDeleteNutritionEntryPortal();
   const nutritionXP = useNutritionXP();
@@ -244,20 +241,28 @@ export default function ClientPortalNutrition() {
     }
   };
 
-  const handleQuickCoffee = async () => {
+  const handleQuickCoffee = async (coffeeType: 'espresso' | 'tea' = 'espresso') => {
     if (!session || !clientId) return;
     
     try {
-      await addCoffee.mutateAsync({
-        sessionId: session.id,
-        clientId,
-        entry: {
-          coffee_type: 'espresso',
+      const { error } = await supabase
+        .from('nutrition_coffee_entries')
+        .insert({
+          session_id: session.id,
+          client_id: clientId,
+          entry_date: format(selectedDate, 'yyyy-MM-dd'),
+          entry_time: format(new Date(), 'HH:mm'),
+          coffee_type: coffeeType,
           count: 1,
-        },
-      });
-      toast.success('Káva přidána');
-      trackPortalEvent('client_portal_quick_coffee');
+        });
+      
+      if (error) throw error;
+      toast.success(coffeeType === 'tea' ? 'Čaj přidán' : 'Káva přidána');
+      trackPortalEvent('client_portal_quick_coffee', { coffeeType });
+      
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId, session.id] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-completed-days', session.id] });
       
       // Calculate XP for the entry
       nutritionXP.mutate({ clientId, date: selectedDateStr, entryType: 'coffee' });
@@ -476,8 +481,7 @@ export default function ClientPortalNutrition() {
                 <Button 
                   variant="secondary"
                   size="lg"
-                  onClick={handleQuickCoffee}
-                  disabled={addCoffee.isPending}
+                  onClick={() => handleQuickCoffee('espresso')}
                   className="h-14 gap-2"
                 >
                   <Coffee className="w-5 h-5 text-amber-600" />
@@ -486,18 +490,7 @@ export default function ClientPortalNutrition() {
                 <Button 
                   variant="secondary"
                   size="lg"
-                  onClick={() => {
-                    if (!session || !clientId) return;
-                    addCoffee.mutateAsync({
-                      sessionId: session.id,
-                      clientId,
-                      entry: { coffee_type: 'tea', count: 1 },
-                    }).then(() => {
-                      toast.success('Čaj přidán');
-                      nutritionXP.mutate({ clientId, date: selectedDateStr, entryType: 'coffee' });
-                    });
-                  }}
-                  disabled={addCoffee.isPending}
+                  onClick={() => handleQuickCoffee('tea')}
                   className="h-14 gap-2"
                 >
                   <span className="text-lg">🍵</span>
@@ -545,21 +538,18 @@ export default function ClientPortalNutrition() {
             </CardContent>
           </Card>
 
-          {/* Add Form Modal */}
-          {showAddForm && session && clientId && (
-            <FoodLogForm
-              sessionId={session.id}
-              clientId={clientId}
-              selectedDate={selectedDate}
-              prefilledMealType={prefilledMealType}
-              campaignStartDate={session.start_date}
-              campaignEndDate={session.end_date}
-              onClose={() => {
-                setShowAddForm(false);
-                setPrefilledMealType(undefined);
-              }}
-            />
-          )}
+          {/* Add Form Modal - SimpleFoodForm */}
+          <SimpleFoodForm
+            open={showAddForm}
+            onOpenChange={(open) => {
+              setShowAddForm(open);
+              if (!open) setPrefilledMealType(undefined);
+            }}
+            sessionId={session?.id || ''}
+            clientId={clientId || ''}
+            selectedDate={selectedDate}
+            prefilledMealType={prefilledMealType}
+          />
 
           {/* Day's Entries */}
           {dayData && (
