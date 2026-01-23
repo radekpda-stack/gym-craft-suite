@@ -17,6 +17,7 @@ export interface DrinkEntryInput {
   amount_ml?: number;
   drink_name?: string;
   note?: string;
+  entry_time?: string; // Format "HH:mm"
 }
 
 export interface CoffeeEntryInput {
@@ -26,6 +27,9 @@ export interface CoffeeEntryInput {
   sugar_spoons?: number;
   milk?: 'none' | 'little' | 'normal' | 'much';
   note?: string;
+  entry_time?: string; // Format "HH:mm"
+  is_caffeinated?: boolean; // Default true
+  coffee_amount_ml?: number; // Optional volume in ml
 }
 
 export function useAddFoodEntry() {
@@ -45,6 +49,9 @@ export function useAddFoodEntry() {
     }) => {
       const entryDate = format(date || new Date(), 'yyyy-MM-dd');
       const entryTime = entry.entry_time || format(new Date(), 'HH:mm');
+      
+      // Calculate occurred_at timestamp
+      const occurredAt = new Date(`${entryDate}T${entryTime}:00`).toISOString();
 
       const { data, error } = await supabase
         .from('nutrition_food_entries')
@@ -53,6 +60,7 @@ export function useAddFoodEntry() {
           client_id: clientId,
           entry_date: entryDate,
           entry_time: entryTime,
+          occurred_at: occurredAt,
           description: entry.description,
           meal_type: entry.meal_type,
           portion_mode: 'portion_size',
@@ -61,6 +69,7 @@ export function useAddFoodEntry() {
           satiation: entry.satiation,
           feeling_after: entry.feeling_after,
           note: entry.note,
+          created_from: 'web',
         })
         .select()
         .single();
@@ -132,7 +141,10 @@ export function useAddDrinkEntry() {
       date?: Date;
     }) => {
       const entryDate = format(date || new Date(), 'yyyy-MM-dd');
-      const entryTime = format(new Date(), 'HH:mm');
+      const entryTime = entry.entry_time || format(new Date(), 'HH:mm');
+      
+      // Calculate occurred_at timestamp
+      const occurredAt = new Date(`${entryDate}T${entryTime}:00`).toISOString();
 
       const { data, error } = await supabase
         .from('nutrition_drink_entries')
@@ -141,10 +153,12 @@ export function useAddDrinkEntry() {
           client_id: clientId,
           entry_date: entryDate,
           entry_time: entryTime,
+          occurred_at: occurredAt,
           drink_type: entry.drink_type,
           drink_name: entry.drink_name,
           amount_ml: entry.amount_ml,
           note: entry.note,
+          created_from: 'web',
         })
         .select()
         .single();
@@ -178,7 +192,10 @@ export function useAddCoffeeEntry() {
       date?: Date;
     }) => {
       const entryDate = format(date || new Date(), 'yyyy-MM-dd');
-      const entryTime = format(new Date(), 'HH:mm');
+      const entryTime = entry.entry_time || format(new Date(), 'HH:mm');
+      
+      // Calculate occurred_at timestamp
+      const occurredAt = new Date(`${entryDate}T${entryTime}:00`).toISOString();
 
       const { data, error } = await supabase
         .from('nutrition_coffee_entries')
@@ -187,12 +204,16 @@ export function useAddCoffeeEntry() {
           client_id: clientId,
           entry_date: entryDate,
           entry_time: entryTime,
+          occurred_at: occurredAt,
           coffee_type: entry.coffee_type,
           count: entry.count,
           sugar: entry.sugar || false,
           sugar_spoons: entry.sugar_spoons || 0,
           milk: entry.milk || 'none',
           note: entry.note,
+          is_caffeinated: entry.is_caffeinated !== false, // Default true
+          coffee_amount_ml: entry.coffee_amount_ml,
+          created_from: 'web',
         })
         .select()
         .single();
@@ -225,6 +246,7 @@ export function useQuickAddWater() {
     }) => {
       const entryDate = format(new Date(), 'yyyy-MM-dd');
       const entryTime = format(new Date(), 'HH:mm');
+      const occurredAt = new Date().toISOString();
 
       const { data, error } = await supabase
         .from('nutrition_drink_entries')
@@ -233,8 +255,10 @@ export function useQuickAddWater() {
           client_id: clientId,
           entry_date: entryDate,
           entry_time: entryTime,
+          occurred_at: occurredAt,
           drink_type: 'water',
           amount_ml: amount,
+          created_from: 'web',
         })
         .select()
         .single();
