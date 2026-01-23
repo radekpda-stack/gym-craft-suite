@@ -92,23 +92,23 @@ export function ActiveChallengeWidget({ className }: ActiveChallengeWidgetProps)
             </div>
           </div>
 
-          {/* Stats bar */}
+          {/* Stats bar - wrap on mobile */}
           {!isLoading && challenge && (
-            <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4" />
+                <Clock className="w-4 h-4 shrink-0" />
                 <span className={cn(isUrgent && "text-destructive font-medium")}>{countdownText}</span>
               </div>
               {participantCount > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <Users className="w-4 h-4" />
-                  <span>{participantCount} účastníků</span>
+                  <Users className="w-4 h-4 shrink-0" />
+                  <span>{participantCount}</span>
                 </div>
               )}
               {myRank && (
                 <div className="flex items-center gap-1.5">
-                  <Target className="w-4 h-4 text-primary" />
-                  <span className="text-primary font-medium">{myRank}. místo</span>
+                  <Target className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-primary font-medium">{myRank}.</span>
                 </div>
               )}
             </div>

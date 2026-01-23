@@ -190,7 +190,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
       )}
 
       <div className={cn(
-        "min-h-screen bg-background pb-20 md:pb-0 md:pl-20",
+        "min-h-screen bg-background pb-24 md:pb-0 md:pl-20",
         isDemo && "pt-10" // Add padding for demo banner
       )}>
       {/* Mobile Header */}
@@ -281,19 +281,19 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         </motion.div>
       </main>
 
-      {/* Mobile Bottom Navigation - Only 5 items to prevent overflow */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t z-50 md:hidden pb-[env(safe-area-inset-bottom)]">
-        <div className="flex items-center justify-around h-16 px-2">
+      {/* Mobile Bottom Navigation - Floating style for iOS safe area */}
+      <nav className="fixed bottom-4 left-4 right-4 bg-card/95 backdrop-blur-md border rounded-[20px] shadow-lg z-50 md:hidden">
+        <div className="flex items-center justify-around h-14 px-1">
           {mobileNavItems.map((item) => {
             const isActive = location.pathname === item.to || 
-              (item.to !== '/client' && location.pathname.startsWith(item.to));
+              (item.to !== '/client' && item.to !== '/zona' && location.pathname.startsWith(item.to));
             
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-2 rounded-lg transition-all relative",
+                  "flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-1.5 rounded-xl transition-all relative",
                   isActive 
                     ? "text-primary" 
                     : "text-muted-foreground"
@@ -303,11 +303,11 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
                   "w-5 h-5 transition-transform shrink-0",
                   isActive && "scale-110"
                 )} />
-                <span className="text-[9px] font-medium truncate max-w-full px-1">{item.label}</span>
+                <span className="text-[9px] font-medium truncate max-w-full px-0.5">{item.label}</span>
                 {isActive && (
                   <motion.div
-                    layoutId="activeTab"
-                    className="absolute bottom-0.5 w-1 h-1 rounded-full bg-primary"
+                    layoutId="clientActiveTab"
+                    className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary"
                   />
                 )}
               </NavLink>
