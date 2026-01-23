@@ -40,7 +40,30 @@ import {
   MEAL_LABELS,
   DRINK_LABELS,
   COFFEE_LABELS,
+  QUALITY_LABELS,
+  SATIATION_LABELS,
 } from './constants';
+
+// Helper functions for quality and satiation display
+const getQualityIcon = (quality: string | null | undefined) => {
+  if (!quality) return null;
+  switch (quality) {
+    case 'good': return '💚';
+    case 'poor': return '🔴';
+    case 'neutral': return '🟡';
+    default: return null;
+  }
+};
+
+const getSatiationLabel = (satiation: string | null | undefined) => {
+  if (!satiation) return null;
+  switch (satiation) {
+    case 'just_right': return 'Akorát';
+    case 'still_hungry': return 'Hlad';
+    case 'overeaten': return 'Přejedení';
+    default: return null;
+  }
+};
 
 export function TodayEntries({ 
   food, 
@@ -62,6 +85,12 @@ export function TodayEntries({
   const hasEntries = food.length > 0 || drinks.length > 0 || coffee.length > 0;
   const canEdit = onEditFood || onEditDrink || onEditCoffee;
   const canDelete = onDeleteFood || onDeleteDrink || onDeleteCoffee;
+
+  // Calculate stats for header
+  const totalWaterMl = drinks
+    .filter(d => d.drink_type === 'water')
+    .reduce((sum, d) => sum + (d.amount_ml || 0), 0);
+  const totalCoffee = coffee.reduce((sum, c) => sum + (c.count || 1), 0);
 
   const handleConfirmDelete = () => {
     if (!deleteDialog) return;
@@ -115,7 +144,13 @@ export function TodayEntries({
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center justify-between">
-            <span>{isSelectedToday ? 'Dnešní záznamy' : 'Záznamy'}</span>
+            <div className="flex items-center gap-2">
+              <span>{isSelectedToday ? 'Dnešní záznamy' : 'Záznamy'}</span>
+              {/* Inline stats */}
+              <span className="text-xs font-normal text-muted-foreground">
+                ({food.length} jídel{totalWaterMl > 0 && `, ${totalWaterMl}ml`}{totalCoffee > 0 && `, ${totalCoffee}☕`})
+              </span>
+            </div>
             <span className="text-xs font-normal text-muted-foreground">
               {format(displayDate, 'd. MMMM', { locale: cs })}
             </span>
@@ -141,11 +176,30 @@ export function TodayEntries({
                       {entry.entry_time?.slice(0, 5)}
                     </span>
                   </div>
-                  <p className="text-sm truncate">{entry.description}</p>
-                  {entry.portion_size && (
-                    <span className="text-xs text-muted-foreground">
-                      {entry.portion_size === 'small' ? 'Malá' : entry.portion_size === 'large' ? 'Velká' : 'Střední'} porce
-                    </span>
+                  <p className="text-sm">{entry.description}</p>
+                  
+                  {/* Portion + Quality + Satiation on one line */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {entry.portion_size && (
+                      <span className="text-xs text-muted-foreground">
+                        {entry.portion_size === 'small' ? 'Malá' : entry.portion_size === 'large' ? 'Velká' : 'Střední'} porce
+                      </span>
+                    )}
+                    {entry.quality && (
+                      <span className="text-xs">
+                        {getQualityIcon(entry.quality)}
+                      </span>
+                    )}
+                    {entry.satiation && (
+                      <span className="text-xs text-muted-foreground">
+                        {getSatiationLabel(entry.satiation)}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Note if present */}
+                  {entry.note && (
+                    <p className="text-xs text-muted-foreground italic mt-1">📝 {entry.note}</p>
                   )}
                 </div>
                 {(canEdit || canDelete) && (
