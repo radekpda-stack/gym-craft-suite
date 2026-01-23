@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { TrendingUp, Filter, Trophy } from 'lucide-react';
+import { TrendingUp, Filter, Trophy, Dumbbell, Heart, Zap } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
@@ -12,18 +12,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProgressEntryForm } from '@/components/progress/ProgressEntryForm';
 import { ProgressList } from '@/components/progress/ProgressList';
 import { ProgressChart } from '@/components/progress/ProgressChart';
-import { useExerciseEntries } from '@/hooks/useExerciseEntries';
+import { useAllExerciseEntries } from '@/hooks/useAllExerciseEntries';
 import { useClients } from '@/hooks/useClients';
 import { ClientSearchSelect } from '@/components/ui/client-search-select';
 
 export default function ProgressContent() {
   const [selectedClient, setSelectedClient] = useState<string>('all');
   const [selectedExercise, setSelectedExercise] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<string>('all');
   
   const { data: clients = [] } = useClients();
-  const { entries, isLoading } = useExerciseEntries(
+  const { data: allEntries = [], isLoading } = useAllExerciseEntries(
     selectedClient !== 'all' ? selectedClient : undefined
   );
+  
+  // Filter by exercise type
+  const entries = useMemo(() => {
+    if (selectedType === 'all') return allEntries;
+    return allEntries.filter(e => e.entry_type === selectedType);
+  }, [allEntries, selectedType]);
 
   // Get unique exercises from entries
   const uniqueExercises = useMemo(() => {
@@ -42,14 +49,17 @@ export default function ProgressContent() {
     return entries.filter(e => e.is_pr).length;
   }, [entries]);
 
-  // Get stats
+  // Get stats - now includes type breakdown
   const stats = useMemo(() => {
     const totalEntries = entries.length;
     const uniqueClients = new Set(entries.map(e => e.client_id)).size;
     const uniqueExercisesCount = uniqueExercises.length;
+    const strengthCount = allEntries.filter(e => e.entry_type === 'strength').length;
+    const cardioCount = allEntries.filter(e => e.entry_type === 'cardio').length;
+    const skillCount = allEntries.filter(e => e.entry_type === 'skill').length;
     
-    return { totalEntries, uniqueClients, uniqueExercisesCount, prsCount };
-  }, [entries, uniqueExercises, prsCount]);
+    return { totalEntries, uniqueClients, uniqueExercisesCount, prsCount, strengthCount, cardioCount, skillCount };
+  }, [entries, allEntries, uniqueExercises, prsCount]);
 
   return (
     <div className="space-y-6">
@@ -82,6 +92,34 @@ export default function ProgressContent() {
                 allowAll
                 allLabel="Všichni klienti"
               />
+            </div>
+            <div className="w-full sm:w-40">
+              <label className="text-sm font-medium mb-2 block">Typ cviku</label>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    <span className="flex items-center gap-2">Všechny ({allEntries.length})</span>
+                  </SelectItem>
+                  <SelectItem value="strength">
+                    <span className="flex items-center gap-2">
+                      <Dumbbell className="w-3.5 h-3.5" /> Silové ({stats.strengthCount})
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="cardio">
+                    <span className="flex items-center gap-2">
+                      <Heart className="w-3.5 h-3.5" /> Kardio ({stats.cardioCount})
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="skill">
+                    <span className="flex items-center gap-2">
+                      <Zap className="w-3.5 h-3.5" /> Plyo/Skill ({stats.skillCount})
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex-1">
               <label className="text-sm font-medium mb-2 block">Cvik</label>
