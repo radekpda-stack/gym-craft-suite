@@ -62,8 +62,8 @@ function buildMobileNavItems(base: string): NavItem[] {
   return [
     { to: base, icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
     { to: `${base}/diary`, icon: BookOpen, label: 'Deník', trackName: 'diary' },
+    { to: `${base}/progress`, icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
     { to: `${base}/chat`, icon: MessageCircle, label: 'Chat', trackName: 'chat' },
-    { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
     { to: `${base}/settings`, icon: Settings, label: 'Více', trackName: 'settings' },
   ];
 }

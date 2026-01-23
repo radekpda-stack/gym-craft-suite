@@ -57,16 +57,27 @@ export default function ClientPortalWorkoutDiary() {
   // Initialize tab from URL query parameter
   const initialTab = searchParams.get('tab') === 'nutrition' ? 'nutrition' : 'workouts';
   const [activeTab, setActiveTab] = useState<'workouts' | 'nutrition'>(initialTab);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [trainerSectionExpanded, setTrainerSectionExpanded] = useState(true);
 
-  // Update tab when URL changes
+  // Handle URL parameters for tab and action
   useEffect(() => {
     const tabParam = searchParams.get('tab');
+    const actionParam = searchParams.get('action');
+    
     if (tabParam === 'nutrition') {
       setActiveTab('nutrition');
     }
+    
+    // Handle action=add-workout - open dialog automatically
+    if (actionParam === 'add-workout') {
+      setDialogOpen(true);
+      // Clean up URL parameter
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('action');
+      window.history.replaceState({}, '', newUrl.toString());
+    }
   }, [searchParams]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [trainerSectionExpanded, setTrainerSectionExpanded] = useState(true);
   
   // Delete confirmation
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);

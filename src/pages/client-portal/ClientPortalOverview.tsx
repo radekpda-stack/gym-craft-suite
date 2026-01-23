@@ -1,32 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
-import { useClientRecentActivity, type PeriodDays } from '@/hooks/useClientPortalStats';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { 
-  Dumbbell,
-  ArrowDownLeft,
-  CalendarClock,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react';
-import { format, parseISO, formatDistanceToNow } from 'date-fns';
-import { cs } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { type PeriodDays } from '@/hooks/useClientPortalStats';
 import { toVocative } from '@/lib/czechVocative';
-import { Button } from '@/components/ui/button';
 
 // Dashboard widgets
 import { ActiveChallengeWidget } from '@/components/client-portal/dashboard/ActiveChallengeWidget';
-import { OverallPerformanceCard } from '@/components/client-portal/dashboard/OverallPerformanceCard';
 import { TrainingCalendar } from '@/components/client-portal/calendar/TrainingCalendar';
 import { PeriodChips } from '@/components/client-portal/common/SharedComponents';
 import { ClientQuickActions } from '@/components/client-portal/dashboard/ClientQuickActions';
 import { ClientActionRequired } from '@/components/client-portal/dashboard/ClientActionRequired';
 import { HeroStatsRow } from '@/components/client-portal/dashboard/HeroStatsRow';
-import { ClientInsightsCard } from '@/components/client-portal/dashboard/ClientInsightsCard';
 
 const periodOptions: { value: PeriodDays; label: string }[] = [
   { value: 7, label: '7 dní' },
@@ -35,11 +19,8 @@ const periodOptions: { value: PeriodDays; label: string }[] = [
 ];
 
 export default function ClientPortalOverview() {
-  const { clientId, clientProfile } = useClientPortal();
+  const { clientProfile } = useClientPortal();
   const [period, setPeriod] = useState<PeriodDays>(30);
-  const [activityExpanded, setActivityExpanded] = useState(false);
-  
-  const { data: recentActivity, isLoading: activityLoading } = useClientRecentActivity(clientId ?? undefined, 5);
   
   const { trackPageMount } = useClientPortalPageTracking('client_portal_overview');
 
@@ -66,97 +47,14 @@ export default function ClientPortalOverview() {
       {/* 3. Hero Stats Row - Credit + Streak + Next Training */}
       <HeroStatsRow period={period} />
 
-      {/* 4. Insights Card - Personalized insights from data */}
-      <ClientInsightsCard />
-
-      {/* 5. Quick Actions - 4 main icons */}
+      {/* 4. Quick Actions - Dynamic shortcuts */}
       <ClientQuickActions />
 
-      {/* 6. Training Calendar */}
+      {/* 5. Training Calendar */}
       <TrainingCalendar />
 
-      {/* 7. Overall Performance Card */}
-      {clientId && <OverallPerformanceCard clientId={clientId} />}
-
-      {/* 8. Active Challenges */}
+      {/* 6. Active Challenges (only if any) */}
       <ActiveChallengeWidget />
-
-      {/* 9. Recent Activity - Collapsible */}
-      {recentActivity && recentActivity.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card>
-            <CardContent className="p-4">
-              <Button
-                variant="ghost"
-                className="w-full flex items-center justify-between p-0 h-auto hover:bg-transparent"
-                onClick={() => setActivityExpanded(!activityExpanded)}
-              >
-                <h3 className="text-sm font-medium text-muted-foreground">Poslední aktivita</h3>
-                {activityExpanded ? (
-                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                )}
-              </Button>
-              
-              <AnimatePresence>
-                {activityExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="space-y-2 mt-3">
-                      {activityLoading ? (
-                        [1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)
-                      ) : (
-                        recentActivity.map(item => (
-                          <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                            <div className={cn(
-                              "w-8 h-8 rounded-full flex items-center justify-center",
-                              item.type === 'training' ? "bg-success/10" : 
-                              item.type === 'upcoming_training' ? "bg-primary/10" : 
-                              "bg-success/10"
-                            )}>
-                              {item.type === 'training' ? (
-                                <Dumbbell className="w-4 h-4 text-success" />
-                              ) : item.type === 'upcoming_training' ? (
-                                <CalendarClock className="w-4 h-4 text-primary" />
-                              ) : (
-                                <ArrowDownLeft className="w-4 h-4 text-success" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{item.label}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {item.type === 'upcoming_training' 
-                                  ? format(parseISO(item.date), 'd. MMMM', { locale: cs })
-                                  : formatDistanceToNow(parseISO(item.date), { addSuffix: true, locale: cs })
-                                }
-                              </p>
-                            </div>
-                            {item.value && (
-                              <p className="text-sm font-medium text-success">
-                                {item.value}
-                              </p>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
     </div>
   );
 }
