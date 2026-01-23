@@ -6,7 +6,7 @@ export interface ExerciseWithPercentile {
   exercise_name: string;
   exercise_id: string | null;
   entry_count: number;
-  exercise_type: 'strength' | 'cardio';
+  exercise_type: 'strength' | 'cardio' | 'plyometrics';
   client_percentile: number | null;
   client_best_value: number | null;
   metric_type?: 'weight' | 'time' | 'distance' | 'height';
@@ -36,6 +36,7 @@ export function useExercisesWithPercentiles(trainerId: string | undefined) {
 
       return {
         strength: (data?.strength || []) as ExerciseWithPercentile[],
+        plyometrics: (data?.plyometrics || []) as ExerciseWithPercentile[],
         cardio: (data?.cardio || []) as ExerciseWithPercentile[],
       };
     },
