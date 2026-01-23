@@ -9,6 +9,7 @@ export interface FoodEntryInput {
   satiation?: 'just_right' | 'still_hungry' | 'overate';
   feeling_after?: string;
   note?: string;
+  entry_time?: string; // Format "HH:mm"
 }
 
 export interface DrinkEntryInput {
@@ -43,7 +44,7 @@ export function useAddFoodEntry() {
       date?: Date;
     }) => {
       const entryDate = format(date || new Date(), 'yyyy-MM-dd');
-      const entryTime = format(new Date(), 'HH:mm');
+      const entryTime = entry.entry_time || format(new Date(), 'HH:mm');
 
       const { data, error } = await supabase
         .from('nutrition_food_entries')

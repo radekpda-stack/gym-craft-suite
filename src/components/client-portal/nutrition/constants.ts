@@ -2,6 +2,15 @@
  * Shared constants for nutrition logging
  */
 
+export const TIME_PRESETS = [
+  { label: 'Nyní', time: 'now', icon: '⏱️' },
+  { label: 'Ráno', time: '07:00', icon: '🌅' },
+  { label: 'Dopol.', time: '10:00', icon: '☀️' },
+  { label: 'Poledne', time: '12:00', icon: '🌤️' },
+  { label: 'Odpol.', time: '15:00', icon: '🍎' },
+  { label: 'Večer', time: '18:00', icon: '🌙' },
+] as const;
+
 export const MEAL_TYPES = [
   { id: 'breakfast', label: 'Snídaně', icon: '🌅' },
   { id: 'lunch', label: 'Oběd', icon: '☀️' },
