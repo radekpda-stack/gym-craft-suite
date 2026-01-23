@@ -21,6 +21,7 @@ export interface ExerciseForLeaderboard {
 }
 
 export type GenderFilter = 'all' | 'male' | 'female';
+export type AgeFilter = 'all' | '20-30' | '30-40' | '40-50' | '50+';
 
 // Fetch all exercises for comparison via edge function
 export function useExercisesForComparison(trainerId: string | undefined) {
@@ -58,12 +59,14 @@ export function useExercisesForComparison(trainerId: string | undefined) {
 export function useStrengthExerciseLeaderboard(
   exerciseName: string | null,
   trainerId: string | undefined,
-  genderFilter: GenderFilter = 'all'
+  genderFilter: GenderFilter = 'all',
+  ageFilter: AgeFilter = 'all',
+  side?: 'left' | 'right' | null
 ) {
   const { clientId } = useClientPortal();
 
   return useQuery({
-    queryKey: ['strength-exercise-leaderboard', exerciseName, trainerId, genderFilter, clientId],
+    queryKey: ['strength-exercise-leaderboard', exerciseName, trainerId, genderFilter, ageFilter, side, clientId],
     queryFn: async () => {
       if (!exerciseName || !trainerId || !clientId) return null;
 
@@ -75,6 +78,8 @@ export function useStrengthExerciseLeaderboard(
           exerciseName,
           exerciseType: 'strength',
           genderFilter,
+          ageFilter,
+          side,
         },
       });
 
@@ -94,6 +99,7 @@ export function useStrengthExerciseLeaderboard(
         metric: data.metric as string,
         unit: data.unit as string,
         gender_filter: data.gender_filter as GenderFilter,
+        age_filter: ageFilter,
       };
     },
     enabled: !!exerciseName && !!trainerId && !!clientId,
@@ -106,12 +112,13 @@ export function useCardioExerciseLeaderboard(
   exerciseName: string | null,
   trainerId: string | undefined,
   metric: 'distance' | 'duration' = 'distance',
-  genderFilter: GenderFilter = 'all'
+  genderFilter: GenderFilter = 'all',
+  ageFilter: AgeFilter = 'all'
 ) {
   const { clientId } = useClientPortal();
 
   return useQuery({
-    queryKey: ['cardio-exercise-leaderboard', exerciseName, trainerId, metric, genderFilter, clientId],
+    queryKey: ['cardio-exercise-leaderboard', exerciseName, trainerId, metric, genderFilter, ageFilter, clientId],
     queryFn: async () => {
       if (!exerciseName || !trainerId || !clientId) return null;
 
@@ -124,6 +131,7 @@ export function useCardioExerciseLeaderboard(
           exerciseType: 'cardio',
           cardioMetric: metric,
           genderFilter,
+          ageFilter,
         },
       });
 
@@ -143,6 +151,7 @@ export function useCardioExerciseLeaderboard(
         metric: data.metric as string,
         unit: data.unit as string,
         gender_filter: data.gender_filter as GenderFilter,
+        age_filter: ageFilter,
       };
     },
     enabled: !!exerciseName && !!trainerId && !!clientId,

@@ -48,8 +48,40 @@ serve(async (req) => {
       challengeId, minGroupSize, score_primary, score_secondary, note, 
       video_url, media_urls, teamName, inviteCode, teamId,
       // New params for leaderboard actions
-      leaderboardType, genderFilter, exerciseType, cardioMetric
+      leaderboardType, genderFilter, exerciseType, cardioMetric,
+      // New params for L/R and age filtering
+      ageFilter, side
     } = body;
+
+    // Helper: Calculate age from birth date
+    function calculateAge(birthDate: string): number {
+      const today = new Date();
+      const birth = new Date(birthDate);
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      return age;
+    }
+
+    // Helper: Filter client IDs by age group
+    function filterByAge(clientIds: string[], clientsMap: Map<string, any>, ageGroup: string): string[] {
+      if (!ageGroup || ageGroup === 'all') return clientIds;
+      
+      return clientIds.filter(cid => {
+        const client = clientsMap.get(cid);
+        if (!client?.birth_date) return false;
+        const age = calculateAge(client.birth_date);
+        switch (ageGroup) {
+          case '20-30': return age >= 20 && age < 30;
+          case '30-40': return age >= 30 && age < 40;
+          case '40-50': return age >= 40 && age < 50;
+          case '50+': return age >= 50;
+          default: return true;
+        }
+      });
+    }
 
     console.log(`[Benchmarks] Action: ${action}, ClientId: ${clientId}, TrainerId: ${trainerId}`);
 
@@ -261,9 +293,10 @@ serve(async (req) => {
       console.log(`[Benchmarks] Getting available exercises for client: ${clientId}`);
 
       // Get ALL exercise entries (including plyometrics with distance/height/time)
+      // NOW INCLUDING 'side' field for unilateral exercises
       const { data: exerciseData } = await supabase
         .from('exercise_entries')
-        .select('exercise_name, exercise_id, client_id, weight_kg, distance_meters, height_cm, time_seconds')
+        .select('exercise_name, exercise_id, client_id, weight_kg, distance_meters, height_cm, time_seconds, side')
         .eq('user_id', trainerId);
 
       // Get exercise definitions to identify plyometric exercises
@@ -289,17 +322,22 @@ serve(async (req) => {
         client_percentile: number | null;
         client_best_value: number | null;
         metric_type?: string;
+        side?: 'left' | 'right' | null;
       }
 
-      // Process exercise entries - group by exercise and determine best metric
+      // Process exercise entries - group by exercise AND side for unilateral exercises
       const exerciseByName = new Map<string, { 
         clients: Map<string, { value: number; metric: string }>;
         metric: string;
         exerciseId: string | null;
+        side: 'left' | 'right' | null;
       }>();
 
       (exerciseData || []).forEach((e: any) => {
-        const key = e.exercise_name.toLowerCase().trim();
+        const baseName = e.exercise_name.toLowerCase().trim();
+        // For unilateral exercises (side = 'left' or 'right'), create separate keys
+        const sideValue = (e.side === 'left' || e.side === 'right') ? e.side : null;
+        const key = sideValue ? `${baseName}::${sideValue}` : baseName;
         const exerciseDef = exerciseDefMap.get(key);
         
         // Determine which metric to use based on exercise definition and available data
@@ -372,7 +410,8 @@ serve(async (req) => {
           exerciseByName.set(key, { 
             clients: new Map(), 
             metric,
-            exerciseId: e.exercise_id 
+            exerciseId: e.exercise_id,
+            side: sideValue
           });
         }
 
@@ -391,7 +430,7 @@ serve(async (req) => {
 
       // Calculate percentiles for strength/plyometric exercises
       const strengthResults: ExerciseWithPercentile[] = [];
-      exerciseByName.forEach((data, exerciseName) => {
+      exerciseByName.forEach((data, key) => {
         const values = Array.from(data.clients.values()).map(c => c.value);
         const clientData = data.clients.get(clientId);
         
@@ -409,14 +448,26 @@ serve(async (req) => {
           }
         }
 
+        // Extract base exercise name (remove ::left or ::right suffix if present)
+        let displayName = key;
+        if (key.includes('::')) {
+          const [baseName, sideKey] = key.split('::');
+          // Capitalize first letter and add L/R suffix
+          displayName = baseName.charAt(0).toUpperCase() + baseName.slice(1);
+          displayName += sideKey === 'left' ? ' (L)' : ' (R)';
+        } else {
+          displayName = key.charAt(0).toUpperCase() + key.slice(1);
+        }
+
         strengthResults.push({
-          exercise_name: exerciseName,
+          exercise_name: displayName,
           exercise_id: data.exerciseId,
           entry_count: values.length,
           exercise_type: 'strength',
           client_percentile: percentile,
           client_best_value: clientData?.value ?? null,
           metric_type: data.metric,
+          side: data.side,
         });
       });
 
@@ -605,6 +656,8 @@ serve(async (req) => {
               return client?.gender === genderFilter;
             });
           }
+          // Apply age filter
+          filteredClientIds = filterByAge(filteredClientIds, clientsMap, ageFilter);
 
           leaderboard = filteredClientIds
             .map(cid => {
@@ -644,12 +697,19 @@ serve(async (req) => {
           metric = 'distance';
           unit = 'm';
 
-          const { data: entries } = await supabase
+          let query = supabase
             .from('exercise_entries')
-            .select('client_id, distance_meters, date')
+            .select('client_id, distance_meters, date, side')
             .eq('user_id', trainerId)
             .ilike('exercise_name', exerciseName)
             .not('distance_meters', 'is', null);
+          
+          // Filter by side if provided (for unilateral exercises)
+          if (side === 'left' || side === 'right') {
+            query = query.eq('side', side);
+          }
+          
+          const { data: entries } = await query;
 
           if (!entries?.length) {
             return new Response(
@@ -682,6 +742,8 @@ serve(async (req) => {
               return client?.gender === genderFilter;
             });
           }
+          // Apply age filter
+          filteredClientIds = filterByAge(filteredClientIds, clientsMap, ageFilter);
 
           leaderboard = filteredClientIds
             .map(cid => {
@@ -718,11 +780,18 @@ serve(async (req) => {
           metric = 'height';
           unit = 'cm';
 
-          const { data: entries } = await supabase
+          let query = supabase
             .from('exercise_entries')
-            .select('client_id, height_cm, distance_meters, date')
+            .select('client_id, height_cm, distance_meters, date, side')
             .eq('user_id', trainerId)
             .ilike('exercise_name', exerciseName);
+          
+          // Filter by side if provided (for unilateral exercises)
+          if (side === 'left' || side === 'right') {
+            query = query.eq('side', side);
+          }
+          
+          const { data: entries } = await query;
 
           if (!entries?.length) {
             return new Response(
@@ -761,6 +830,8 @@ serve(async (req) => {
               return client?.gender === genderFilter;
             });
           }
+          // Apply age filter
+          filteredClientIds = filterByAge(filteredClientIds, clientsMap, ageFilter);
 
           leaderboard = filteredClientIds
             .map(cid => {
@@ -832,6 +903,8 @@ serve(async (req) => {
               return client?.gender === genderFilter;
             });
           }
+          // Apply age filter
+          filteredClientIds = filterByAge(filteredClientIds, clientsMap, ageFilter);
 
           leaderboard = filteredClientIds
             .map(cid => {
@@ -919,6 +992,8 @@ serve(async (req) => {
             return client?.gender === genderFilter;
           });
         }
+        // Apply age filter
+        filteredClientIds = filterByAge(filteredClientIds, clientsMap, ageFilter);
 
         // Build leaderboard
         leaderboard = filteredClientIds
