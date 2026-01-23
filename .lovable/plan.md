@@ -1,126 +1,168 @@
 
-# Plán: Oprava žebříčku v klientském centru
+# Plán: Vylepšení nutričního deníku pro klienty
 
-## Shrnutí problému
-Žebříček v klientském centru nezobrazuje plyometrické cviky (skoky) a kardio cviky (veslo, skierg). Navíc se zobrazují všechny cviky trenéra místo pouze těch, které klient skutečně má.
+## Shrnutí
 
-## Hlavní změny
+Cílem je zjednodušit a zpříjemnit zadávání stravy pro klienty, aby je týden zapisování bavilo. Aktuální rozhraní je funkční, ale lze ho výrazně vylepšit z hlediska rychlosti zadávání, přehlednosti a motivace.
 
-### 1. Filtrování cviků podle klientových záznamů
-Klient uvidí pouze cviky, kde má vlastní záznamy. Pokud nemá bench press, nebude ho v žebříčku vidět.
+---
 
-### 2. Správná kategorizace cviků
-Místo dvou kategorií (Síla/Kardio) budou tři:
+## Navrhované změny
 
-| Kategorie | Typ metriky | Příklady |
-|-----------|-------------|----------|
-| **Síla** | váha (kg) | Bench press, Mrtvý tah, Dřep |
-| **Plyometrika** | vzdálenost (m), výška (cm) | Skok do dálky, Skok z jedné nohy, Výskok |
-| **Kardio** | čas (nižší = lepší) | Veslo 500m, SkiErg 500m, Běh |
+### 1. Rychlé přidání nápojů - rozšíření možností
 
-### 3. Sjednocení zdroje dat
-Kardio cviky budou čerpány jak z `cardio_entries` tak z `exercise_entries` (kde mají time_seconds).
+**Aktuální stav:**
+- Tlačítko "+300ml vody" přidá vodu
+- Tlačítko "+1 Káva" přidá espresso
+
+**Nový stav:**
+- Přidat **více rychlých tlačítek pro vodu** s různým množstvím (sklenice 💧, hrnek ☕, láhev 🍶)
+- Při výběru typu "Jiné" v nápojích přidat **pole pro poznámku/název nápoje** (např. "Limonáda", "Sodovka", "Mléko")
+- Zobrazit poznámku v seznamu záznamů
+
+| Tlačítko | Množství | Ikona |
+|----------|----------|-------|
+| Sklenice | 200 ml | 💧 |
+| Hrnek | 300 ml | ☕ |
+| Láhev | 500 ml | 🍶 |
+
+### 2. Přidání pole pro název nápoje (u typu "Jiné")
+
+**Problém:** Když klient pije limonádu nebo sodovku, nemá kde napsat co přesně pil.
+
+**Řešení:**
+- Pokud je zvolen typ nápoje `other` (Jiné), zobrazit **textové pole pro název nápoje**
+- Toto pole se uloží do sloupce `drink_name` (již existuje v databázi)
+- V seznamu záznamů zobrazit název nápoje místo "Jiné"
+
+### 3. Vylepšení formuláře pro pití
+
+**Aktuální stav:**
+```
+Typ nápoje: [Voda] [Slazené] [Ionťák] [Alkohol] [Jiné]
+Množství: [200] [300] [500] [750] [Jiné]
+```
+
+**Nový stav:**
+```
+Typ nápoje: [Voda] [Slazené] [Ionťák] [Alkohol] [Jiné]
+→ Pokud "Jiné": Textové pole "Jaký nápoj?" (max 50 znaků)
+
+Množství: [200] [300] [500] [750] [Jiné]
+→ Vizuálně s ikonami kontejnerů (sklenice, hrnek, láhev, velká láhev)
+```
+
+### 4. Přehlednější zobrazení nápojů v seznamu
+
+**Aktuální stav:**
+```
+💧 Jiné - 500 ml    14:30
+```
+
+**Nový stav:**
+```
+🧃 Limonáda - 500 ml    14:30
+   (Jiné)
+```
+
+### 5. Motivační prvky pro dlouhodobé zapisování
+
+| Prvek | Popis |
+|-------|-------|
+| **Série dní** | "🔥 3 dny v řadě!" - zobrazit na hlavní obrazovce |
+| **Denní cíl vody** | Progress bar "💧 1.5L / 2L (75%)" |
+| **Barevné označení dnů** | Ve WeekStrip použít barvy podle počtu záznamů |
+| **Jednoduché emoji zpětné vazby** | Po přidání záznamu krátká animace ✅ |
+
+### 6. Zjednodušení hlavních akcí
+
+**Reorganizovat Quick Actions:**
+```
+┌─────────────────────────────────────────┐
+│  JÍDLO                                  │
+│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
+│  │ 🌅     │ │ ☀️     │ │ 🌙     │ │ 🍎     │
+│  │Snídaně │ │ Oběd   │ │ Večeře │ │Svačina │
+│  └────────┘ └────────┘ └────────┘ └────────┘
+├─────────────────────────────────────────┤
+│  PITÍ                                   │
+│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
+│  │ 💧     │ │ 🥤     │ │ ⚡     │ │ 🧃     │
+│  │ +Voda  │ │Slazené │ │Ionťák  │ │ Jiné   │
+│  └────────┘ └────────┘ └────────┘ └────────┘
+├─────────────────────────────────────────┤
+│  KÁVA / ČAJ                             │
+│  ┌────────────────────┐ ┌────────────────────┐
+│  │ ☕ +1 Káva         │ │ 🍵 +1 Čaj          │
+│  └────────────────────┘ └────────────────────┘
+└─────────────────────────────────────────┘
+```
 
 ---
 
 ## Technické detaily
 
-### Změny v edge funkci `client-portal-benchmarks`
+### Soubory k úpravě
 
-**Soubor:** `supabase/functions/client-portal-benchmarks/index.ts`
-
-**Akce `get_available_exercises` - úpravy:**
-
-1. **Přidat filtrování podle klienta:**
+**1. `src/components/client-portal/nutrition/constants.ts`**
+- Přidat nové konstanty pro rychlé množství s ikonami:
 ```typescript
-// Před vrácením výsledků - filtrovat pouze cviky, kde klient má záznamy
-const strength = strengthResults
-  .filter(e => e.client_best_value !== null) // NOVÉ: pouze cviky s klientovými záznamy
-  .sort((a, b) => b.entry_count - a.entry_count);
+export const QUICK_WATER_AMOUNTS = [
+  { amount: 200, label: 'Sklenice', icon: '💧' },
+  { amount: 300, label: 'Hrnek', icon: '☕' },
+  { amount: 500, label: 'Láhev', icon: '🍶' },
+] as const;
 ```
 
-2. **Rozdělit výsledky do 3 kategorií:**
+**2. `src/components/client-portal/nutrition/FoodLogForm.tsx`**
+- Přidat state pro `drinkName` (string)
+- Při `drinkType === 'other'` zobrazit Input pro název nápoje
+- Předat `drink_name` do `handleSubmitDrink`
+- Přidat vizuální ikony ke množství
+
+Změny v sekci drink-form:
 ```typescript
-// Kategorizace podle metric_type
-const strengthExercises = results.filter(e => e.metric_type === 'weight');
-const plyometricExercises = results.filter(e => 
-  e.metric_type === 'distance' || e.metric_type === 'height'
-);
-const cardioExercises = results.filter(e => e.metric_type === 'time');
-```
+// Nový state
+const [drinkName, setDrinkName] = useState('');
 
-3. **Vrátit 3 kategorie:**
-```typescript
-return new Response(
-  JSON.stringify({ 
-    strength: strengthExercises,
-    plyometrics: plyometricExercises,
-    cardio: cardioExercises
-  }),
-  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-);
-```
+// Při odeslání
+entry: {
+  drink_type: drinkType,
+  amount_ml: finalAmount,
+  drink_name: drinkType === 'other' ? drinkName.trim() : undefined,
+},
 
-### Změny v React komponentách
-
-**Soubor:** `src/hooks/useExercisePercentiles.ts`
-
-Přidat nový typ pro plyometriku:
-```typescript
-export interface ExerciseWithPercentile {
-  // ... existující
-  exercise_type: 'strength' | 'cardio' | 'plyometrics';
-}
-
-// Upravit return:
-return {
-  strength: (data?.strength || []),
-  plyometrics: (data?.plyometrics || []),
-  cardio: (data?.cardio || []),
-};
-```
-
-**Soubor:** `src/pages/client-portal/ClientPortalLeaderboard.tsx`
-
-Přidat novou sekci pro plyometriku:
-```typescript
-{/* Plyometrics Section */}
-<motion.section className="space-y-3">
-  <div className="flex items-center gap-2">
-    <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
-      <Zap className="w-4 h-4 text-warning" />
-    </div>
-    <h2 className="text-lg font-semibold">Plyometrika</h2>
-    <span className="text-sm text-muted-foreground">
-      ({exercises?.plyometrics.length || 0} cviků)
-    </span>
+// V UI - po výběru typu "Jiné" zobrazit:
+{drinkType === 'other' && (
+  <div className="space-y-2">
+    <Label>Jaký nápoj?</Label>
+    <Input 
+      value={drinkName}
+      onChange={(e) => setDrinkName(e.target.value)}
+      placeholder="např. Limonáda, Mléko, Džus..."
+      maxLength={50}
+    />
   </div>
-  
-  <ExerciseComparisonGrid
-    exercises={exercises?.plyometrics || []}
-    exerciseType="plyometrics"
-    trainerId={trainerId}
-    clientId={clientId}
-    isLoading={exercisesLoading}
-  />
-</motion.section>
-```
-
-**Soubor:** `src/components/client-portal/leaderboard/ExerciseComparisonGrid.tsx`
-
-Přidat podporu pro typ `plyometrics`:
-```typescript
-interface ExerciseComparisonGridProps {
-  exercises: ExerciseWithPercentile[];
-  exerciseType: 'strength' | 'cardio' | 'plyometrics';
-  // ...
-}
-
-// Přidat ikonu pro plyometriku
-{exerciseType === 'plyometrics' && (
-  <Zap className="w-6 h-6 text-warning" />
 )}
 ```
+
+**3. `src/components/client-portal/nutrition/TodayEntries.tsx`**
+- Zobrazit `drink_name` místo "Jiné" pokud existuje
+```typescript
+<span className="text-sm font-medium">
+  {entry.drink_name || DRINK_LABELS[entry.drink_type] || entry.drink_type}
+</span>
+```
+
+**4. `src/components/client-portal/nutrition/EditEntryDialog.tsx`**
+- Přidat state pro `drinkName`
+- Přidat pole pro název nápoje při editaci
+
+**5. `src/pages/client-portal/ClientPortalNutrition.tsx`**
+- Přeorganizovat Quick Actions do přehlednějších sekcí
+- Přidat více tlačítek pro vodu s různým množstvím
+- Přidat rychlé tlačítko pro čaj
+- Přidat progress bar pro denní příjem tekutin
 
 ---
 
@@ -128,10 +170,21 @@ interface ExerciseComparisonGridProps {
 
 Po implementaci:
 
-1. Klient **uvidí pouze cviky, kde má záznamy** - žádné prázdné karty
-2. **Plyometrické cviky** (Skok do dálky, Skok z jedné nohy) budou ve vlastní sekci s ikonou blesku
-3. **Kardio cviky** (Veslo 500m, SkiErg) budou ve správné sekci s měřením času
-4. **Silové cviky** zůstanou v sekci Síla s měřením váhy
+1. **Rychlejší zadávání** - Klient může jedním kliknutím přidat vodu v různých množstvích
+2. **Přehlednější kategorie** - Jídlo, Pití a Káva jsou jasně oddělené
+3. **Možnost specifikovat "Jiné" nápoje** - Při výběru "Jiné" může klient napsat co přesně pil (např. "Limonáda 500ml")
+4. **Lepší vizuální zpětná vazba** - Ikony kontejnerů, progress bar pro vodu
+5. **Motivace** - Série dní, denní cíle
 
-## Poznámka
-Klient Jiří Kokeš (aktuální route) nemá žádné plyometrické ani kardio záznamy, takže tyto sekce pro něj budou prázdné - což je správné chování. Sekce se zobrazí pouze pokud má alespoň jeden záznam.
+---
+
+## Priorita implementace
+
+| Priorita | Funkce | Důvod |
+|----------|--------|-------|
+| 🔴 Vysoká | Pole pro název "Jiného" nápoje | Základní požadavek uživatele |
+| 🔴 Vysoká | Zobrazení názvu nápoje v seznamu | Souvisí s předchozím |
+| 🟡 Střední | Rychlá tlačítka pro různé množství vody | Zrychlení zadávání |
+| 🟡 Střední | Reorganizace Quick Actions | Lepší přehlednost |
+| 🟢 Nízká | Progress bar pro denní pitný režim | Motivační prvek |
+| 🟢 Nízká | Vizuální ikony kontejnerů | Estetické vylepšení |
