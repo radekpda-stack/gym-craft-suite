@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Utensils, Droplets, Coffee, X, Loader2, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { Utensils, Droplets, Coffee, X, Loader2, Calendar, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { format, parseISO, isWithinInterval, startOfDay } from 'date-fns';
@@ -60,6 +61,7 @@ export function FoodLogForm({
 }: FoodLogFormProps) {
   const [activeTab, setActiveTab] = useState<EntryType>('food');
   const [entryDate, setEntryDate] = useState<Date>(initialDate || new Date());
+  const [entryTime, setEntryTime] = useState<string>(format(new Date(), 'HH:mm'));
   
   // Food form state
   const [mealType, setMealType] = useState<MealTypeId>(prefilledMealType || 'lunch');
@@ -84,6 +86,11 @@ export function FoodLogForm({
   // Coffee form state
   const [coffeeType, setCoffeeType] = useState<CoffeeTypeId>('espresso');
   const [coffeeCount, setCoffeeCount] = useState(1);
+  const [isCaffeinated, setIsCaffeinated] = useState(true);
+  const [coffeeAmountMl, setCoffeeAmountMl] = useState<number | null>(null);
+  const [showCoffeeAmount, setShowCoffeeAmount] = useState(false);
+
+  const COFFEE_AMOUNTS = [30, 60, 120, 200, 330];
 
   const addFood = useAddFoodEntry();
   const addDrink = useAddDrinkEntry();
@@ -99,10 +106,18 @@ export function FoodLogForm({
     }
   }, [initialDate]);
 
-  // Update meal type when prefilled changes
+  // Update meal type when prefilled changes and set default time
   useEffect(() => {
     if (prefilledMealType) {
       setMealType(prefilledMealType);
+      // Set default time based on meal type
+      const timeDefaults: Record<MealTypeId, string> = {
+        breakfast: '07:30',
+        lunch: '12:30',
+        dinner: '18:30',
+        snack: format(new Date(), 'HH:mm'),
+      };
+      setEntryTime(timeDefaults[prefilledMealType] || format(new Date(), 'HH:mm'));
     }
   }, [prefilledMealType]);
 
@@ -157,6 +172,7 @@ export function FoodLogForm({
           quality,
           satiation,
           note: note.trim() || undefined,
+          entry_time: entryTime,
         },
       });
       toast.success('Záznam přidán');
@@ -182,6 +198,7 @@ export function FoodLogForm({
           drink_type: drinkType,
           amount_ml: finalAmount,
           drink_name: drinkType === 'other' && drinkName.trim() ? drinkName.trim() : undefined,
+          entry_time: entryTime,
         },
       });
       toast.success('Záznam přidán');
@@ -205,6 +222,9 @@ export function FoodLogForm({
         entry: {
           coffee_type: coffeeType,
           count: coffeeCount,
+          is_caffeinated: isCaffeinated,
+          coffee_amount_ml: coffeeAmountMl || undefined,
+          entry_time: entryTime,
         },
       });
       toast.success('Záznam přidán');
@@ -218,28 +238,47 @@ export function FoodLogForm({
     }
   };
 
-  const renderDatePicker = () => (
-    <div className="space-y-2 pb-3 border-b mb-4">
-      <Label className="text-xs text-muted-foreground">Datum záznamu</Label>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="w-full justify-start text-left font-normal h-9">
-            <Calendar className="mr-2 h-4 w-4" />
-            {format(entryDate, 'd. MMMM yyyy', { locale: cs })}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <CalendarComponent
-            mode="single"
-            selected={entryDate}
-            onSelect={(date) => date && setEntryDate(date)}
-            disabled={isDateDisabled}
-            locale={cs}
-            initialFocus
-            className="pointer-events-auto"
-          />
-        </PopoverContent>
-      </Popover>
+  const renderDateTimePicker = () => (
+    <div className="space-y-3 pb-3 border-b mb-4">
+      <div className="grid grid-cols-2 gap-3">
+        {/* Date */}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Datum</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full justify-start text-left font-normal h-9">
+                <Calendar className="mr-2 h-4 w-4" />
+                {format(entryDate, 'd.M.yyyy', { locale: cs })}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={entryDate}
+                onSelect={(date) => date && setEntryDate(date)}
+                disabled={isDateDisabled}
+                locale={cs}
+                initialFocus
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+        
+        {/* Time */}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Čas konzumace</Label>
+          <div className="relative">
+            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="time"
+              value={entryTime}
+              onChange={(e) => setEntryTime(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -551,6 +590,20 @@ export function FoodLogForm({
         </div>
       </div>
 
+      {/* Caffeinated Toggle */}
+      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+        <div className="flex items-center gap-2">
+          <Coffee className={cn("h-4 w-4", isCaffeinated ? "text-amber-600" : "text-muted-foreground")} />
+          <Label className="text-sm font-medium">
+            {isCaffeinated ? 'S kofeinem' : 'Bez kofeinu'}
+          </Label>
+        </div>
+        <Switch
+          checked={isCaffeinated}
+          onCheckedChange={setIsCaffeinated}
+        />
+      </div>
+
       {/* Count */}
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">Počet</Label>
@@ -573,6 +626,45 @@ export function FoodLogForm({
           </Button>
         </div>
       </div>
+
+      {/* Optional Amount */}
+      <Collapsible open={showCoffeeAmount} onOpenChange={setShowCoffeeAmount}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground h-9">
+            <span className="text-xs">📏 Objem (volitelné)</span>
+            {showCoffeeAmount ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2">
+          <div className="grid grid-cols-6 gap-2">
+            {COFFEE_AMOUNTS.map((amount) => (
+              <button
+                key={amount}
+                onClick={() => setCoffeeAmountMl(coffeeAmountMl === amount ? null : amount)}
+                className={cn(
+                  "p-2 rounded-lg transition-colors text-xs font-medium",
+                  coffeeAmountMl === amount 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-muted/50 hover:bg-muted"
+                )}
+              >
+                {amount}ml
+              </button>
+            ))}
+            <button
+              onClick={() => setCoffeeAmountMl(null)}
+              className={cn(
+                "p-2 rounded-lg transition-colors text-xs",
+                coffeeAmountMl === null 
+                  ? "bg-muted text-muted-foreground" 
+                  : "bg-muted/50 hover:bg-muted"
+              )}
+            >
+              —
+            </button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Submit */}
       <Button onClick={handleSubmitCoffee} disabled={isLoading} className="w-full">
@@ -612,7 +704,7 @@ export function FoodLogForm({
             </TabsTrigger>
           </TabsList>
 
-          {renderDatePicker()}
+          {renderDateTimePicker()}
 
           <TabsContent value="food" className="mt-0">
             {renderFoodForm()}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Utensils, 
@@ -14,6 +14,9 @@ import {
   Send,
   X,
   Loader2,
+  Settings,
+  Ban,
+  Clock,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,16 +24,23 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useClient } from '@/hooks/useClients';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, addDays, subDays, isToday, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, isSameDay } from 'date-fns';
+import { format, addDays, subDays, isToday, parseISO, isSameDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useEffectiveHabitSettings, calculateCaffeineCutoff, isCaffeineAfterCutoff } from '@/hooks/useClientHabitSettings';
+import { useDayNotes, useUpsertDayNote } from '@/hooks/useNutritionDayNotes';
+import { WaterGoalWidget, calculateDailyWaterIntake } from '@/components/client-portal/nutrition/WaterGoalWidget';
+import { CaffeineWindowWidget, analyzeCaffeineForPeriod } from '@/components/client-portal/nutrition/CaffeineWindowWidget';
+import { DayNoteDisplay } from '@/components/client-portal/nutrition/DayNoteInput';
+import { HabitSettingsForm } from '@/components/client-portal/nutrition/HabitSettingsForm';
 
 // Hook to get client's nutrition entries for a date range
 function useClientNutritionEntries(clientId: string | undefined, startDate: Date, endDate: Date) {
@@ -49,24 +59,24 @@ function useClientNutritionEntries(clientId: string | undefined, startDate: Date
           .eq('client_id', clientId)
           .gte('entry_date', start)
           .lte('entry_date', end)
-          .order('entry_date', { ascending: false })
-          .order('entry_time', { ascending: false }),
+          .order('occurred_at', { ascending: true, nullsFirst: false })
+          .order('entry_time', { ascending: true }),
         supabase
           .from('nutrition_drink_entries')
           .select('*')
           .eq('client_id', clientId)
           .gte('entry_date', start)
           .lte('entry_date', end)
-          .order('entry_date', { ascending: false })
-          .order('entry_time', { ascending: false }),
+          .order('occurred_at', { ascending: true, nullsFirst: false })
+          .order('entry_time', { ascending: true }),
         supabase
           .from('nutrition_coffee_entries')
           .select('*')
           .eq('client_id', clientId)
           .gte('entry_date', start)
           .lte('entry_date', end)
-          .order('entry_date', { ascending: false })
-          .order('entry_time', { ascending: false }),
+          .order('occurred_at', { ascending: true, nullsFirst: false })
+          .order('entry_time', { ascending: true }),
       ]);
 
       return {
@@ -159,15 +169,39 @@ export default function NutritionClientDetail() {
   const queryClient = useQueryClient();
   const { data: client, isLoading: clientLoading } = useClient(clientId);
   
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
-  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  // Period selection: 7 or 10 days
+  const [periodDays, setPeriodDays] = useState<7 | 10>(7);
+  
+  // Calculate date range based on period
+  const today = new Date();
+  const periodStart = subDays(today, periodDays - 1);
+  const periodEnd = today;
+  
+  // Generate array of days in the period (most recent first)
+  const periodDates = useMemo(() => {
+    const dates: Date[] = [];
+    for (let i = 0; i < periodDays; i++) {
+      dates.push(subDays(today, i));
+    }
+    return dates;
+  }, [periodDays]);
 
   const { data: entries, isLoading: entriesLoading } = useClientNutritionEntries(
     clientId,
-    weekStart,
-    weekEnd
+    periodStart,
+    periodEnd
   );
+
+  // Habit settings for this client
+  const { settings: habitSettings, isLoading: habitSettingsLoading } = useEffectiveHabitSettings(clientId);
+  
+  // Day notes for the period
+  const { data: dayNotes, isLoading: notesLoading } = useDayNotes(
+    clientId,
+    format(periodStart, 'yyyy-MM-dd'),
+    format(periodEnd, 'yyyy-MM-dd')
+  );
+  const upsertDayNote = useUpsertDayNote();
 
   const trainerComment = useTrainerComment();
 
@@ -179,38 +213,86 @@ export default function NutritionClientDetail() {
   });
   const [commentText, setCommentText] = useState('');
 
-  const goToPreviousWeek = () => setWeekStart(subDays(weekStart, 7));
-  const goToNextWeek = () => setWeekStart(addDays(weekStart, 7));
-  const goToCurrentWeek = () => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
-
   // Group entries by date
-  const entriesByDate = new Map<string, { food: any[]; drinks: any[]; coffee: any[] }>();
-  weekDays.forEach(day => {
-    const dateStr = format(day, 'yyyy-MM-dd');
-    entriesByDate.set(dateStr, { food: [], drinks: [], coffee: [] });
-  });
+  const entriesByDate = useMemo(() => {
+    const map = new Map<string, { food: any[]; drinks: any[]; coffee: any[] }>();
+    periodDates.forEach(day => {
+      const dateStr = format(day, 'yyyy-MM-dd');
+      map.set(dateStr, { food: [], drinks: [], coffee: [] });
+    });
 
-  entries?.food.forEach(f => {
-    const existing = entriesByDate.get(f.entry_date);
-    if (existing) existing.food.push(f);
-  });
-  entries?.drinks.forEach(d => {
-    const existing = entriesByDate.get(d.entry_date);
-    if (existing) existing.drinks.push(d);
-  });
-  entries?.coffee.forEach(c => {
-    const existing = entriesByDate.get(c.entry_date);
-    if (existing) existing.coffee.push(c);
-  });
+    entries?.food.forEach(f => {
+      const existing = map.get(f.entry_date);
+      if (existing) existing.food.push(f);
+    });
+    entries?.drinks.forEach(d => {
+      const existing = map.get(d.entry_date);
+      if (existing) existing.drinks.push(d);
+    });
+    entries?.coffee.forEach(c => {
+      const existing = map.get(c.entry_date);
+      if (existing) existing.coffee.push(c);
+    });
 
-  const isCurrentWeek = isToday(weekStart) || (new Date() >= weekStart && new Date() <= weekEnd);
+    return map;
+  }, [periodDates, entries]);
 
-  // Calculate week stats
-  const weekStats = {
-    totalFood: entries?.food.length || 0,
-    totalDrinks: entries?.drinks.length || 0,
-    totalCoffee: entries?.coffee.length || 0,
-    waterMl: entries?.drinks.filter(d => d.drink_type === 'water').reduce((sum, d) => sum + (d.amount_ml || 0), 0) || 0,
+  // Calculate period stats
+  const periodStats = useMemo(() => {
+    const waterByDay: Record<string, number> = {};
+    const coffeeByDay: Record<string, any[]> = {};
+    let totalWaterMl = 0;
+    let daysWithWaterGoalMet = 0;
+    
+    periodDates.forEach(day => {
+      const dateStr = format(day, 'yyyy-MM-dd');
+      const dayEntries = entriesByDate.get(dateStr);
+      
+      // Water
+      const dayWater = dayEntries?.drinks
+        .filter(d => d.drink_type === 'water')
+        .reduce((sum, d) => sum + (d.amount_ml || 0), 0) || 0;
+      waterByDay[dateStr] = dayWater;
+      totalWaterMl += dayWater;
+      if (dayWater >= habitSettings.water_goal_ml) {
+        daysWithWaterGoalMet++;
+      }
+      
+      // Coffee
+      coffeeByDay[dateStr] = dayEntries?.coffee?.map(c => ({
+        id: c.id,
+        entry_time: c.entry_time || (c.occurred_at ? format(parseISO(c.occurred_at), 'HH:mm') : '12:00'),
+        coffee_type: c.coffee_type,
+        is_caffeinated: c.is_caffeinated !== false,
+        count: c.count,
+      })) || [];
+    });
+
+    const avgWaterMl = Math.round(totalWaterMl / periodDays);
+    
+    // Caffeine analysis
+    const caffeineAnalysis = analyzeCaffeineForPeriod(
+      coffeeByDay,
+      habitSettings.sleep_time,
+      habitSettings.caffeine_cutoff_minutes
+    );
+
+    return {
+      totalFood: entries?.food.length || 0,
+      totalDrinks: entries?.drinks.length || 0,
+      totalCoffee: entries?.coffee.length || 0,
+      totalWaterMl,
+      avgWaterMl,
+      daysWithWaterGoalMet,
+      waterByDay,
+      coffeeByDay,
+      caffeineAnalysis,
+    };
+  }, [entries, periodDates, entriesByDate, habitSettings, periodDays]);
+
+  // Get day note for a specific date
+  const getDayNote = (dateStr: string) => {
+    return dayNotes?.find(n => n.date === dateStr);
   };
 
   const openCommentDialog = (type: 'food' | 'drink' | 'coffee', entryId: string, currentComment: string) => {
@@ -234,36 +316,39 @@ export default function NutritionClientDetail() {
     const doc = new jsPDF();
     
     doc.setFontSize(18);
-    doc.text(`Nutriční deník - ${client.name}`, 14, 20);
+    doc.text(`Deník návyků - ${client.name}`, 14, 20);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Období: ${format(weekStart, 'd.M.', { locale: cs })} - ${format(weekEnd, 'd.M.yyyy', { locale: cs })}`, 14, 28);
+    doc.text(`Období: ${format(periodStart, 'd.M.', { locale: cs })} - ${format(periodEnd, 'd.M.yyyy', { locale: cs })}`, 14, 28);
     doc.text(`Vygenerováno: ${format(new Date(), 'd. MMMM yyyy', { locale: cs })}`, 14, 34);
     
     // Summary
     const summaryData = [
-      ['Celkem jídel', weekStats.totalFood.toString()],
-      ['Celkem nápojů', weekStats.totalDrinks.toString()],
-      ['Celkem kávy', weekStats.totalCoffee.toString()],
-      ['Voda celkem', `${weekStats.waterMl} ml`],
+      ['Celkem jídel', periodStats.totalFood.toString()],
+      ['Celkem nápojů', periodStats.totalDrinks.toString()],
+      ['Celkem kávy', periodStats.totalCoffee.toString()],
+      ['Voda celkem', `${periodStats.totalWaterMl} ml`],
+      ['Průměr vody/den', `${periodStats.avgWaterMl} ml`],
+      ['Dní se splněným cílem vody', `${periodStats.daysWithWaterGoalMet}/${periodDays}`],
+      ['Dní s pozdním kofeinem', `${periodStats.caffeineAnalysis.daysWithLateCaffeine}/${periodDays}`],
     ];
     
     doc.setFontSize(12);
     doc.setTextColor(0);
-    doc.text('Souhrn týdne', 14, 46);
+    doc.text(`Souhrn (${periodDays} dní)`, 14, 46);
     
     autoTable(doc, {
       body: summaryData,
       startY: 52,
       styles: { fontSize: 9 },
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 }, 1: { halign: 'right' } },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 }, 1: { halign: 'right' } },
       theme: 'plain',
     });
 
     let currentY = (doc as any).lastAutoTable.finalY + 15;
 
-    weekDays.forEach(day => {
+    periodDates.forEach(day => {
       const dateStr = format(day, 'yyyy-MM-dd');
       const dayEntries = entriesByDate.get(dateStr);
       if (!dayEntries || (dayEntries.food.length === 0 && dayEntries.drinks.length === 0 && dayEntries.coffee.length === 0)) return;
@@ -335,8 +420,21 @@ export default function NutritionClientDetail() {
       }
     });
 
-    doc.save(`nutricni-denik_${client.name.replace(/\s+/g, '_')}_${format(weekStart, 'yyyy-MM-dd')}.pdf`);
+    doc.save(`denik-navyku_${client.name.replace(/\s+/g, '_')}_${format(periodStart, 'yyyy-MM-dd')}.pdf`);
     toast.success('PDF exportováno');
+  };
+
+  // Helper to get entry time for display
+  const getEntryTime = (entry: any): string => {
+    if (entry.occurred_at) {
+      try {
+        return format(parseISO(entry.occurred_at), 'HH:mm');
+      } catch {}
+    }
+    if (entry.entry_time) {
+      return entry.entry_time.slice(0, 5);
+    }
+    return '--:--';
   };
 
   if (clientLoading) {
@@ -387,51 +485,60 @@ export default function NutritionClientDetail() {
         </Button>
       </div>
 
-      {/* Week Stats */}
-      <div className="grid grid-cols-4 gap-2">
+      {/* Period Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div className="bg-warning/10 rounded-xl p-3 text-center">
-          <div className="text-xl font-bold text-warning">{weekStats.totalFood}</div>
+          <div className="text-xl font-bold text-warning">{periodStats.totalFood}</div>
           <div className="text-[10px] text-muted-foreground uppercase">Jídel</div>
         </div>
-        <div className="bg-accent/10 rounded-xl p-3 text-center">
-          <div className="text-xl font-bold text-accent">{weekStats.totalDrinks}</div>
-          <div className="text-[10px] text-muted-foreground uppercase">Nápojů</div>
+        <div className="bg-blue-500/10 rounded-xl p-3 text-center">
+          <div className="text-xl font-bold text-blue-500">
+            {periodStats.daysWithWaterGoalMet}/{periodDays}
+          </div>
+          <div className="text-[10px] text-muted-foreground uppercase">Dní s cílem vody</div>
         </div>
         <div className="bg-accent/10 rounded-xl p-3 text-center">
-          <div className="text-xl font-bold text-accent">{Math.round(weekStats.waterMl / 1000 * 10) / 10}l</div>
-          <div className="text-[10px] text-muted-foreground uppercase">Vody</div>
+          <div className="text-xl font-bold text-accent">Ø {Math.round(periodStats.avgWaterMl / 100) / 10}l</div>
+          <div className="text-[10px] text-muted-foreground uppercase">Vody/den</div>
         </div>
-        <div className="bg-warning/10 rounded-xl p-3 text-center">
-          <div className="text-xl font-bold text-warning">{weekStats.totalCoffee}</div>
-          <div className="text-[10px] text-muted-foreground uppercase">Kávy</div>
+        <div className={cn(
+          "rounded-xl p-3 text-center",
+          periodStats.caffeineAnalysis.daysWithLateCaffeine > 0 
+            ? "bg-amber-500/10" 
+            : "bg-green-500/10"
+        )}>
+          <div className={cn(
+            "text-xl font-bold",
+            periodStats.caffeineAnalysis.daysWithLateCaffeine > 0 
+              ? "text-amber-500" 
+              : "text-green-500"
+          )}>
+            {periodStats.caffeineAnalysis.daysWithLateCaffeine}/{periodDays}
+          </div>
+          <div className="text-[10px] text-muted-foreground uppercase">Pozdní kofein</div>
         </div>
       </div>
 
-      {/* Week Navigation */}
-      <Card>
-        <CardContent className="py-3">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" size="icon" onClick={goToPreviousWeek}>
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-            
-            <div className="text-center">
-              <p className="font-medium">
-                {format(weekStart, 'd. M.', { locale: cs })} - {format(weekEnd, 'd. M. yyyy', { locale: cs })}
-              </p>
-              {!isCurrentWeek && (
-                <Button variant="link" size="sm" className="text-xs p-0 h-auto" onClick={goToCurrentWeek}>
-                  Aktuální týden
-                </Button>
-              )}
-            </div>
-            
-            <Button variant="ghost" size="icon" onClick={goToNextWeek} disabled={isCurrentWeek}>
-              <ChevronRight className="w-5 h-5" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Period Toggle + Settings */}
+      <div className="flex items-center justify-between gap-3">
+        <Tabs value={periodDays.toString()} onValueChange={(v) => setPeriodDays(parseInt(v) as 7 | 10)}>
+          <TabsList>
+            <TabsTrigger value="7">7 dní</TabsTrigger>
+            <TabsTrigger value="10">10 dní</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {format(periodStart, 'd.M.', { locale: cs })} - {format(periodEnd, 'd.M.yyyy', { locale: cs })}
+          </span>
+          <HabitSettingsForm
+            clientId={clientId!}
+            editedBy="trainer"
+            triggerLabel="Nastavení"
+          />
+        </div>
+      </div>
 
       {/* Days */}
       {entriesLoading ? (
@@ -442,7 +549,7 @@ export default function NutritionClientDetail() {
         </div>
       ) : (
         <div className="space-y-4">
-          {weekDays.map(day => {
+          {periodDates.map(day => {
             const dateStr = format(day, 'yyyy-MM-dd');
             const dayEntries = entriesByDate.get(dateStr);
             const hasEntries = dayEntries && (dayEntries.food.length > 0 || dayEntries.drinks.length > 0 || dayEntries.coffee.length > 0);
@@ -472,6 +579,9 @@ export default function NutritionClientDetail() {
                         </p>
                         {dayEntries.food.map(f => (
                           <div key={f.id} className="flex items-start gap-2 p-2 rounded-lg bg-muted/30 group">
+                            <span className="text-xs text-muted-foreground shrink-0 w-10">
+                              {getEntryTime(f)}
+                            </span>
                             <Badge variant="outline" className="text-[10px] shrink-0">
                               {mealTypeLabels[f.meal_type] || f.meal_type}
                             </Badge>
@@ -482,11 +592,6 @@ export default function NutritionClientDetail() {
                                   Porce: {portionLabels[f.portion_size] || f.portion_size}
                                 </p>
                               )}
-                              {f.note && (
-                                <p className="text-xs text-muted-foreground mt-0.5 italic">
-                                  {f.note}
-                                </p>
-                              )}
                               {f.trainer_comment && (
                                 <div className="flex items-start gap-1 mt-1 p-1.5 rounded bg-primary/10 text-xs text-primary">
                                   <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
@@ -494,19 +599,14 @@ export default function NutritionClientDetail() {
                                 </div>
                               )}
                             </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <span className="text-xs text-muted-foreground">
-                                {f.entry_time?.slice(0, 5)}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => openCommentDialog('food', f.id, f.trainer_comment)}
-                              >
-                                <MessageSquare className="w-3 h-3" />
-                              </Button>
-                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => openCommentDialog('food', f.id, f.trainer_comment)}
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                            </Button>
                           </div>
                         ))}
                       </div>
@@ -522,17 +622,16 @@ export default function NutritionClientDetail() {
                           {dayEntries.drinks.map(d => (
                             <div key={d.id} className="group relative flex items-center gap-1">
                               <span className="text-[10px] text-muted-foreground shrink-0">
-                                {d.entry_time?.slice(0, 5)}
+                                {getEntryTime(d)}
                               </span>
                               <Badge variant="secondary" className="text-xs pr-6">
                                 {d.drink_name || drinkTypeLabels[d.drink_type] || d.drink_type}
-                                {d.amount_ml && ` ${d.amount_ml} ml`}
-                                {d.trainer_comment && <MessageSquare className="w-2.5 h-2.5 ml-1 text-primary" />}
+                                {d.amount_ml && ` ${d.amount_ml}ml`}
                               </Badge>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-5 w-5 absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="h-5 w-5 absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
                                 onClick={() => openCommentDialog('drink', d.id, d.trainer_comment)}
                               >
                                 <MessageSquare className="w-2.5 h-2.5" />
@@ -550,26 +649,33 @@ export default function NutritionClientDetail() {
                           <Coffee className="w-3 h-3" /> Kofein
                         </p>
                         <div className="flex flex-wrap gap-2">
-                          {dayEntries.coffee.map(c => (
-                            <div key={c.id} className="group relative flex items-center gap-1">
-                              <span className="text-[10px] text-muted-foreground shrink-0">
-                                {c.entry_time?.slice(0, 5)}
-                              </span>
-                              <Badge variant="secondary" className="text-xs pr-6">
-                                {coffeeTypeLabels[c.coffee_type] || c.coffee_type}
-                                {c.count > 1 && ` × ${c.count}`}
-                                {c.trainer_comment && <MessageSquare className="w-2.5 h-2.5 ml-1 text-primary" />}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => openCommentDialog('coffee', c.id, c.trainer_comment)}
-                              >
-                                <MessageSquare className="w-2.5 h-2.5" />
-                              </Button>
-                            </div>
-                          ))}
+                          {dayEntries.coffee.map(c => {
+                            const isCaffeinated = c.is_caffeinated !== false;
+                            return (
+                              <div key={c.id} className="group relative flex items-center gap-1">
+                                <span className="text-[10px] text-muted-foreground shrink-0">
+                                  {getEntryTime(c)}
+                                </span>
+                                <Badge 
+                                  variant="secondary" 
+                                  className={cn("text-xs pr-6", !isCaffeinated && "opacity-60")}
+                                >
+                                  {!isCaffeinated && <Ban className="w-2.5 h-2.5 mr-0.5" />}
+                                  {coffeeTypeLabels[c.coffee_type] || c.coffee_type}
+                                  {c.count > 1 && ` ×${c.count}`}
+                                  {c.coffee_amount_ml && ` ${c.coffee_amount_ml}ml`}
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
+                                  onClick={() => openCommentDialog('coffee', c.id, c.trainer_comment)}
+                                >
+                                  <MessageSquare className="w-2.5 h-2.5" />
+                                </Button>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
