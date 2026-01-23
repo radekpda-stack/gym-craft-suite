@@ -76,19 +76,21 @@ export function ClientQuickActions() {
 
   const allActions = [...baseActions, ...smartActions];
   
-  // Dynamic grid columns based on number of actions
-  const gridCols = allActions.length <= 3 
-    ? 'grid-cols-3' 
-    : allActions.length === 4 
-      ? 'grid-cols-4' 
-      : 'grid-cols-5';
+  // Dynamic grid - use 3 cols on mobile, expand on larger screens
+  // If 4+ actions, show 2 rows on mobile (grid-cols-3), single row on sm+ (grid-cols-4 or 5)
+  const getGridClass = () => {
+    const count = allActions.length;
+    if (count <= 3) return 'grid-cols-3';
+    if (count === 4) return 'grid-cols-2 sm:grid-cols-4';
+    return 'grid-cols-3 sm:grid-cols-5'; // 5 items: 3+2 on mobile, 5 on larger
+  };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.05 }}
-      className={cn("grid gap-2", gridCols)}
+      className={cn("grid gap-2", getGridClass())}
     >
       {allActions.map((action, index) => (
         <motion.div
