@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import {
   Collapsible,
   CollapsibleContent,
@@ -805,18 +806,14 @@ function EventRow({
         {/* Client assignment form */}
         {isEditing && (
           <div className="flex items-center gap-2 mt-2">
-            <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-              <SelectTrigger className="w-48 h-8">
-                <SelectValue placeholder="Vybrat klienta..." />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ClientSearchSelect
+              clients={clients}
+              value={selectedClientId}
+              onValueChange={setSelectedClientId}
+              placeholder="Vyhledat klienta..."
+              className="w-56"
+              filterArchived={true}
+            />
             
             <div className="flex items-center gap-1">
               <Checkbox
