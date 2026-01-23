@@ -12,7 +12,7 @@ import { EditEntryDialog } from '@/components/client-portal/nutrition/EditEntryD
 import { WeekStrip } from '@/components/client-portal/nutrition/WeekStrip';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { type MealTypeId, type DrinkTypeId, type CoffeeTypeId } from '@/components/client-portal/nutrition/constants';
+import { type MealTypeId, type DrinkTypeId, type CoffeeTypeId, QUICK_WATER_AMOUNTS } from '@/components/client-portal/nutrition/constants';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -218,17 +218,17 @@ export default function ClientPortalNutrition() {
     trackPageMount();
   }, [trackPageMount]);
 
-  const handleQuickWater = async () => {
+  const handleQuickWater = async (amount: number = 300) => {
     if (!session || !clientId) return;
     
     try {
       await quickWater.mutateAsync({
         sessionId: session.id,
         clientId,
-        amount: 300,
+        amount,
       });
-      toast.success('+300 ml vody');
-      trackPortalEvent('client_portal_quick_water');
+      toast.success(`+${amount} ml vody`);
+      trackPortalEvent('client_portal_quick_water', { amount });
       
       // Calculate XP for the entry
       nutritionXP.mutate({ clientId, date: selectedDateStr, entryType: 'drink' });
@@ -444,18 +444,28 @@ export default function ClientPortalNutrition() {
                 </Button>
               </div>
 
-              {/* Quick Add Row - One Tap Actions */}
+              {/* Quick Water Buttons */}
+              <div className="space-y-2">
+                <span className="text-xs text-muted-foreground">Rychlé přidání vody</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {QUICK_WATER_AMOUNTS.map((item) => (
+                    <Button 
+                      key={item.amount}
+                      variant="secondary"
+                      size="lg"
+                      onClick={() => handleQuickWater(item.amount)}
+                      disabled={quickWater.isPending}
+                      className="h-14 flex-col gap-1"
+                    >
+                      <span className="text-lg">{item.icon}</span>
+                      <span className="text-xs font-medium">{item.amount} ml</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Coffee/Tea */}
               <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  variant="secondary"
-                  size="lg"
-                  onClick={handleQuickWater}
-                  disabled={quickWater.isPending}
-                  className="h-14 gap-2"
-                >
-                  <Droplets className="w-5 h-5 text-blue-500" />
-                  <span className="font-medium">+300ml vody</span>
-                </Button>
                 <Button 
                   variant="secondary"
                   size="lg"
@@ -465,6 +475,26 @@ export default function ClientPortalNutrition() {
                 >
                   <Coffee className="w-5 h-5 text-amber-600" />
                   <span className="font-medium">+1 Káva</span>
+                </Button>
+                <Button 
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => {
+                    if (!session || !clientId) return;
+                    addCoffee.mutateAsync({
+                      sessionId: session.id,
+                      clientId,
+                      entry: { coffee_type: 'tea', count: 1 },
+                    }).then(() => {
+                      toast.success('Čaj přidán');
+                      nutritionXP.mutate({ clientId, date: selectedDateStr, entryType: 'coffee' });
+                    });
+                  }}
+                  disabled={addCoffee.isPending}
+                  className="h-14 gap-2"
+                >
+                  <span className="text-lg">🍵</span>
+                  <span className="font-medium">+1 Čaj</span>
                 </Button>
               </div>
 

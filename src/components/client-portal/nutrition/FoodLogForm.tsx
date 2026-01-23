@@ -77,6 +77,7 @@ export function FoodLogForm({
   const [drinkAmount, setDrinkAmount] = useState<number>(300);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [showCustomAmount, setShowCustomAmount] = useState(false);
+  const [drinkName, setDrinkName] = useState<string>('');
 
   // Coffee form state
   const [coffeeType, setCoffeeType] = useState<CoffeeTypeId>('espresso');
@@ -171,6 +172,7 @@ export function FoodLogForm({
         entry: {
           drink_type: drinkType,
           amount_ml: finalAmount,
+          drink_name: drinkType === 'other' && drinkName.trim() ? drinkName.trim() : undefined,
         },
       });
       toast.success('Záznam přidán');
@@ -179,6 +181,8 @@ export function FoodLogForm({
       const dateStr = format(entryDate, 'yyyy-MM-dd');
       nutritionXP.mutate({ clientId, date: dateStr, entryType: 'drink' });
       
+      // Reset drink name
+      setDrinkName('');
       onClose?.();
     } catch (error) {
       toast.error('Nepodařilo se uložit');
@@ -439,7 +443,10 @@ export function FoodLogForm({
                   {DRINK_TYPES.map((type) => (
                     <button
                       key={type.id}
-                      onClick={() => setDrinkType(type.id)}
+                      onClick={() => {
+                        setDrinkType(type.id);
+                        if (type.id !== 'other') setDrinkName('');
+                      }}
                       className={cn(
                         "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
                         drinkType === type.id 
@@ -453,6 +460,19 @@ export function FoodLogForm({
                   ))}
                 </div>
               </div>
+
+              {/* Drink Name (for "other" type) */}
+              {drinkType === 'other' && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Jaký nápoj?</Label>
+                  <Input
+                    value={drinkName}
+                    onChange={(e) => setDrinkName(e.target.value)}
+                    placeholder="např. Limonáda, Mléko, Džus..."
+                    maxLength={50}
+                  />
+                </div>
+              )}
 
               {/* Amount */}
               <div className="space-y-2">

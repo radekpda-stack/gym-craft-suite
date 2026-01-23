@@ -178,7 +178,7 @@ export function TodayEntries({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">
-                      {DRINK_LABELS[entry.drink_type] || entry.drink_type}
+                      {entry.drink_name || DRINK_LABELS[entry.drink_type] || entry.drink_type}
                     </span>
                     {entry.amount_ml && (
                       <span className="text-xs text-muted-foreground">
@@ -186,6 +186,9 @@ export function TodayEntries({
                       </span>
                     )}
                   </div>
+                  {entry.drink_name && entry.drink_type === 'other' && (
+                    <span className="text-xs text-muted-foreground">(Jiné)</span>
+                  )}
                 </div>
                 <span className="text-xs text-muted-foreground shrink-0">
                   {entry.entry_time?.slice(0, 5)}
