@@ -93,6 +93,47 @@ export const COFFEE_LABELS: Record<string, string> = {
   other: 'Jiné',
 };
 
+// Common Czech foods for autocomplete suggestions
+export const COMMON_FOODS = [
+  // Snídaně
+  { description: 'Ovesná kaše', category: 'breakfast' },
+  { description: 'Ovesná kaše s ovocem', category: 'breakfast' },
+  { description: 'Míchaná vajíčka', category: 'breakfast' },
+  { description: 'Jogurt s müsli', category: 'breakfast' },
+  { description: 'Pečivo s máslem', category: 'breakfast' },
+  { description: 'Cottage cheese s ovocem', category: 'breakfast' },
+  { description: 'Volské oko', category: 'breakfast' },
+  { description: 'Tvaroh s medem', category: 'breakfast' },
+  
+  // Oběd/Večeře
+  { description: 'Kuřecí prsa s rýží', category: 'main' },
+  { description: 'Kuřecí řízek', category: 'main' },
+  { description: 'Kuřecí prsa se zeleninou', category: 'main' },
+  { description: 'Těstoviny s omáčkou', category: 'main' },
+  { description: 'Těstoviny s kuřecím', category: 'main' },
+  { description: 'Salát s tuňákem', category: 'main' },
+  { description: 'Salát se zeleninou', category: 'main' },
+  { description: 'Řízek s bramborovým salátem', category: 'main' },
+  { description: 'Polévka', category: 'main' },
+  { description: 'Hovězí s knedlíkem', category: 'main' },
+  { description: 'Svíčková', category: 'main' },
+  { description: 'Guláš', category: 'main' },
+  { description: 'Ryba s brambory', category: 'main' },
+  { description: 'Losos s rýží', category: 'main' },
+  { description: 'Pizza', category: 'main' },
+  { description: 'Burger', category: 'main' },
+  
+  // Svačiny
+  { description: 'Jablko', category: 'snack' },
+  { description: 'Banán', category: 'snack' },
+  { description: 'Ořechy', category: 'snack' },
+  { description: 'Proteinová tyčinka', category: 'snack' },
+  { description: 'Jogurt', category: 'snack' },
+  { description: 'Tvarohová tyčinka', category: 'snack' },
+  { description: 'Zelenina', category: 'snack' },
+  { description: 'Ovocný salát', category: 'snack' },
+] as const;
+
 // Types
 export type MealTypeId = typeof MEAL_TYPES[number]['id'];
 export type PortionSizeId = typeof PORTION_SIZES[number]['id'];
