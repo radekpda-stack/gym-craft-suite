@@ -1951,6 +1951,60 @@ export type Database = {
           },
         ]
       }
+      client_habit_settings: {
+        Row: {
+          caffeine_cutoff_minutes: number
+          client_id: string
+          created_at: string
+          id: string
+          sleep_time: string | null
+          sleep_time_last_set_at: string | null
+          sleep_time_last_set_by: string
+          updated_at: string
+          wake_time: string | null
+          water_goal_ml: number
+        }
+        Insert: {
+          caffeine_cutoff_minutes?: number
+          client_id: string
+          created_at?: string
+          id?: string
+          sleep_time?: string | null
+          sleep_time_last_set_at?: string | null
+          sleep_time_last_set_by?: string
+          updated_at?: string
+          wake_time?: string | null
+          water_goal_ml?: number
+        }
+        Update: {
+          caffeine_cutoff_minutes?: number
+          client_id?: string
+          created_at?: string
+          id?: string
+          sleep_time?: string | null
+          sleep_time_last_set_at?: string | null
+          sleep_time_last_set_by?: string
+          updated_at?: string
+          wake_time?: string | null
+          water_goal_ml?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_habit_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_habit_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       client_leaderboard_settings: {
         Row: {
           client_id: string
@@ -5816,54 +5870,72 @@ export type Database = {
           after_16: boolean | null
           client_id: string
           client_request_id: string | null
+          coffee_amount_ml: number | null
           coffee_type: string
           count: number
           created_at: string
+          created_from: string | null
           entry_date: string
           entry_time: string
           id: string
+          is_caffeinated: boolean
           milk: string | null
           note: string | null
+          occurred_at: string | null
           session_id: string
           sugar: boolean | null
           sugar_spoons: number | null
           trainer_comment: string | null
+          trainer_edited: boolean
+          trainer_edited_at: string | null
           user_id: string | null
         }
         Insert: {
           after_16?: boolean | null
           client_id: string
           client_request_id?: string | null
+          coffee_amount_ml?: number | null
           coffee_type: string
           count?: number
           created_at?: string
+          created_from?: string | null
           entry_date: string
           entry_time?: string
           id?: string
+          is_caffeinated?: boolean
           milk?: string | null
           note?: string | null
+          occurred_at?: string | null
           session_id: string
           sugar?: boolean | null
           sugar_spoons?: number | null
           trainer_comment?: string | null
+          trainer_edited?: boolean
+          trainer_edited_at?: string | null
           user_id?: string | null
         }
         Update: {
           after_16?: boolean | null
           client_id?: string
           client_request_id?: string | null
+          coffee_amount_ml?: number | null
           coffee_type?: string
           count?: number
           created_at?: string
+          created_from?: string | null
           entry_date?: string
           entry_time?: string
           id?: string
+          is_caffeinated?: boolean
           milk?: string | null
           note?: string | null
+          occurred_at?: string | null
           session_id?: string
           sugar?: boolean | null
           sugar_spoons?: number | null
           trainer_comment?: string | null
+          trainer_edited?: boolean
+          trainer_edited_at?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -5890,6 +5962,51 @@ export type Database = {
           },
         ]
       }
+      nutrition_day_notes: {
+        Row: {
+          client_id: string
+          client_note: string | null
+          created_at: string
+          date: string
+          id: string
+          trainer_note: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          client_note?: string | null
+          created_at?: string
+          date: string
+          id?: string
+          trainer_note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          client_note?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          trainer_note?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_day_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_day_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       nutrition_drink_entries: {
         Row: {
           amount_container_count: number | null
@@ -5898,14 +6015,18 @@ export type Database = {
           client_id: string
           client_request_id: string | null
           created_at: string
+          created_from: string | null
           drink_name: string | null
           drink_type: string
           entry_date: string
           entry_time: string
           id: string
           note: string | null
+          occurred_at: string | null
           session_id: string
           trainer_comment: string | null
+          trainer_edited: boolean
+          trainer_edited_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -5915,14 +6036,18 @@ export type Database = {
           client_id: string
           client_request_id?: string | null
           created_at?: string
+          created_from?: string | null
           drink_name?: string | null
           drink_type: string
           entry_date: string
           entry_time?: string
           id?: string
           note?: string | null
+          occurred_at?: string | null
           session_id: string
           trainer_comment?: string | null
+          trainer_edited?: boolean
+          trainer_edited_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -5932,14 +6057,18 @@ export type Database = {
           client_id?: string
           client_request_id?: string | null
           created_at?: string
+          created_from?: string | null
           drink_name?: string | null
           drink_type?: string
           entry_date?: string
           entry_time?: string
           id?: string
           note?: string | null
+          occurred_at?: string | null
           session_id?: string
           trainer_comment?: string | null
+          trainer_edited?: boolean
+          trainer_edited_at?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -5973,6 +6102,7 @@ export type Database = {
           client_id: string
           client_request_id: string | null
           created_at: string
+          created_from: string | null
           description: string
           energy_after: string | null
           entry_date: string
@@ -5982,6 +6112,7 @@ export type Database = {
           id: string
           meal_type: string | null
           note: string | null
+          occurred_at: string | null
           photo_url: string | null
           portion_estimate: string | null
           portion_mode: string
@@ -5990,6 +6121,8 @@ export type Database = {
           satiation: string | null
           session_id: string
           trainer_comment: string | null
+          trainer_edited: boolean
+          trainer_edited_at: string | null
           units_count: number | null
           units_label: string | null
           user_id: string | null
@@ -6000,6 +6133,7 @@ export type Database = {
           client_id: string
           client_request_id?: string | null
           created_at?: string
+          created_from?: string | null
           description: string
           energy_after?: string | null
           entry_date: string
@@ -6009,6 +6143,7 @@ export type Database = {
           id?: string
           meal_type?: string | null
           note?: string | null
+          occurred_at?: string | null
           photo_url?: string | null
           portion_estimate?: string | null
           portion_mode: string
@@ -6017,6 +6152,8 @@ export type Database = {
           satiation?: string | null
           session_id: string
           trainer_comment?: string | null
+          trainer_edited?: boolean
+          trainer_edited_at?: string | null
           units_count?: number | null
           units_label?: string | null
           user_id?: string | null
@@ -6027,6 +6164,7 @@ export type Database = {
           client_id?: string
           client_request_id?: string | null
           created_at?: string
+          created_from?: string | null
           description?: string
           energy_after?: string | null
           entry_date?: string
@@ -6036,6 +6174,7 @@ export type Database = {
           id?: string
           meal_type?: string | null
           note?: string | null
+          occurred_at?: string | null
           photo_url?: string | null
           portion_estimate?: string | null
           portion_mode?: string
@@ -6044,6 +6183,8 @@ export type Database = {
           satiation?: string | null
           session_id?: string
           trainer_comment?: string | null
+          trainer_edited?: boolean
+          trainer_edited_at?: string | null
           units_count?: number | null
           units_label?: string | null
           user_id?: string | null
