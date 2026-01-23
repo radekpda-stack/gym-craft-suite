@@ -1,176 +1,140 @@
 
-# Plán: Vylepšení kreditní karty v klientském centru
+# Plán: Vylepšení UX v deníku a dashboardu
 
 ## Shrnutí požadavků
 
-1. **Kreditní karta rozkliknutelná** - zobrazí krátkou historii transakcí přímo v rozbalené kartě
-2. **Barevné rozlišení stavu:**
-   - Záporný kredit (dluh) → **červeně**
-   - Nula → **neutrální** (šedá/bílá)
-   - Kladný kredit → **zeleně**
-3. **Odstranit kartu "Série"** z dashboardu
-4. **Zmenšit tréninkový kalendář**
-
----
-
-## Klíčový problém
-
-Petra Bobáková má:
-- Ledger balance: **0 Kč**
-- Nezaplacené tréninky: **1000 Kč**
-- **Skutečný stav: -1000 Kč (dluh)**
-
-Aktuálně dashboard zobrazuje pouze ledger balance (0 Kč), ale nezohledňuje nezaplacené tréninky. Klient by měl vidět **efektivní stav včetně dluhu**.
+1. **Přidat tlačítka pro přidání** v záložce "Tréninky" a "Strava" - aby bylo jasné, že lze zapisovat
+2. **Odstranit SimpleStatsCard** - tabulku s "dní v řadě" a "tento měsíc" a aktivitním gridem
+3. **Přejmenovat "Chat" na "Chat s trenérem"** na dashboardu
 
 ---
 
 ## Technické změny
 
-### 1. Rozšíření `HeroStatsRow.tsx` - kreditní karta s barvami a rozkliknutím
+### 1. Odstranění SimpleStatsCard z deníku
 
-**Změny:**
-- Přidat hook pro nezaplacené tréninky klienta
-- Vypočítat **effectiveBalance = balance - unpaidAmount**
-- Barevné rozlišení podle effectiveBalance:
-  - `< 0` → červená (destructive)
-  - `= 0` → neutrální (šedá)
-  - `> 0` → zelená (success)
-- Přidat collapsible sekci s posledními 3-5 transakcemi
+**Soubor:** `src/pages/client-portal/ClientPortalWorkoutDiary.tsx`
 
+Odstraním řádek 217:
 ```typescript
-// Nový výpočet
-const effectiveBalance = (creditStats?.balance ?? 0) - unpaidAmount;
-
-// Barevné třídy
-const balanceColor = effectiveBalance < 0 
-  ? 'text-destructive' 
-  : effectiveBalance === 0 
-  ? 'text-muted-foreground' 
-  : 'text-success';
-
-const cardBg = effectiveBalance < 0
-  ? 'from-destructive/15 via-destructive/10 to-destructive/5 border-destructive/30'
-  : effectiveBalance === 0
-  ? 'from-muted/20 via-muted/10 to-transparent border-border'
-  : 'from-success/15 via-success/10 to-success/5 border-success/30';
+// ODSTRANIT:
+<SimpleStatsCard workoutDates={workoutDates} />
 ```
 
-**Rozbalovací historie:**
-```typescript
-<Sheet>
-  <SheetTrigger asChild>
-    <Card className={...}>
-      {/* Stávající obsah + indikátor rozkliknutí */}
-    </Card>
-  </SheetTrigger>
-  <SheetContent side="bottom">
-    <SheetHeader>
-      <SheetTitle>Přehled kreditu</SheetTitle>
-    </SheetHeader>
-    {/* Balance, unpaid info, posledních 5 transakcí */}
-  </SheetContent>
-</Sheet>
-```
+A odstraním nepoužívaný import a proměnné:
+- `import { SimpleStatsCard }` (řádek 38)
+- `workoutDates` useMemo (řádky 82-86)
 
-### 2. Přidání hooku pro nezaplacené tréninky klienta
+### 2. Přidání výrazného tlačítka v záložce Tréninky
 
-**Soubor:** `src/hooks/useClientPortalStats.ts`
+**Soubor:** `src/pages/client-portal/ClientPortalWorkoutDiary.tsx`
+
+Přidám nové tlačítko hned pod `<TabsContent value="workouts">`:
 
 ```typescript
-export function useClientUnpaidTrainings(clientId: string | undefined) {
-  return useQuery({
-    queryKey: ['client-portal-unpaid', clientId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('training_sessions')
-        .select('id, date, final_price')
-        .eq('client_id', clientId)
-        .eq('status', 'completed')
-        .eq('payment_status', 'pending');
-      
-      const count = data?.length ?? 0;
-      const amount = data?.reduce((sum, t) => sum + (t.final_price || 0), 0) ?? 0;
-      return { count, amount, sessions: data ?? [] };
-    },
-    enabled: !!clientId,
-  });
-}
+{/* Add Workout Button - Always visible */}
+<Button 
+  onClick={() => setDialogOpen(true)}
+  className="w-full gap-2 h-12"
+  size="lg"
+>
+  <Plus className="w-5 h-5" />
+  Přidat svůj trénink
+</Button>
 ```
 
-### 3. Odstranění karty "Série" z dashboardu
+Toto tlačítko bude vždy viditelné nahoře a jasně ukáže, že lze přidávat tréninky.
 
-**Soubor:** `src/components/client-portal/dashboard/HeroStatsRow.tsx`
+### 3. Přidání výrazného tlačítka v záložce Strava
 
-Změnit grid z 3 sloupců na 2:
-```typescript
-// Před:
-className="grid grid-cols-3 gap-2"
+**Soubor:** `src/pages/client-portal/ClientPortalNutritionTab.tsx`
 
-// Po:
-className="grid grid-cols-2 gap-2"
-```
-
-Odstranit celou sekci "Streak Card" (řádky 89-115).
-
-### 4. Zmenšení tréninkového kalendáře
-
-**Soubor:** `src/components/client-portal/calendar/TrainingCalendar.tsx`
-
-Změny:
-- Zmenšit padding a mezery
-- Kompaktnější header
-- Menší buňky kalendáře
-- Skrýt legendu nebo ji zmenšit
+Přidám prominentní tlačítko hned po WeekStrip:
 
 ```typescript
-// Kompaktnější CardContent
-<CardContent className="p-3 pt-0">
-
-// Menší buňky
-className="aspect-square rounded-md flex flex-col items-center justify-center text-[11px]"
-
-// Menší header
-<CardTitle className="text-sm">Kalendář</CardTitle>
-
-// Skrýt XP badge, nechat pouze počet tréninků
+{/* Add Food Button - Prominent CTA */}
+<Button 
+  onClick={() => {
+    setPrefilledMealType(undefined);
+    setShowAddForm(true);
+  }}
+  className="w-full gap-2 h-12"
+  size="lg"
+>
+  <Plus className="w-5 h-5" />
+  Přidat stravu
+</Button>
 ```
+
+### 4. Přejmenování "Chat" na "Chat s trenérem"
+
+**Soubor:** `src/components/client-portal/dashboard/ClientQuickActions.tsx`
+
+Změním řádek 28:
+```typescript
+// PŘED:
+label: 'Chat',
+
+// PO:
+label: 'S trenérem',
+```
+
+Zkráceno na "S trenérem" aby se tlačítko vešlo do gridu 4 sloupců. Ikona MessageCircle a cesta zůstávají stejné.
 
 ---
 
-## Vizuální ukázka nové kreditní karty
+## Vizuální ukázka změn
 
-### Stav: DLUH (-1000 Kč)
+### Záložka Tréninky (před/po)
+
+**PŘED:**
 ```text
 ┌─────────────────────────────┐
-│  💰  Kredit                 │
-│  ┌───────────────────────┐  │
-│  │ -1 000 Kč             │  │  ← Červeně
-│  │ Dluh za 1 trénink     │  │  ← Upozornění
-│  └───────────────────────┘  │
-│  Klikni pro detail    ▼     │
+│ 🔥 0 dní v řadě | 🏆 3 tento│
+│ [Aktivitní grid 5 týdnů]   │
+├─────────────────────────────┤
+│ Tréninky od trenéra...      │
+│ Moje záznamy...             │
+│         [+ FAB vpravo dole] │
 └─────────────────────────────┘
 ```
 
-### Stav: NULA (0 Kč)
+**PO:**
 ```text
 ┌─────────────────────────────┐
-│  💰  Kredit                 │
-│  ┌───────────────────────┐  │
-│  │ 0 Kč                  │  │  ← Neutrální
-│  └───────────────────────┘  │
-│  Klikni pro detail    ▼     │
+│ [+ Přidat svůj trénink    ] │  ← Nové výrazné tlačítko
+├─────────────────────────────┤
+│ Tréninky od trenéra...      │
+│ Moje záznamy...             │
+│         [+ FAB vpravo dole] │
 └─────────────────────────────┘
 ```
 
-### Stav: KLADNÝ (5000 Kč)
+### Záložka Strava (přidání tlačítka)
+
+**PO:**
 ```text
 ┌─────────────────────────────┐
-│  💰  Kredit                 │
-│  ┌───────────────────────┐  │
-│  │ 5 000 Kč              │  │  ← Zeleně
-│  └───────────────────────┘  │
-│  Klikni pro detail    ▼     │
+│ [Week Strip - Po Út St...] │
+├─────────────────────────────┤
+│ [+ Přidat stravu          ] │  ← Nové výrazné tlačítko
+├─────────────────────────────┤
+│ 3 Jídel | 600ml | 2 Kávy   │
+│ [Snídaně] [Oběd] [Večeře]  │
+│ ...                         │
 └─────────────────────────────┘
+```
+
+### Dashboard Quick Actions (přejmenování)
+
+**PŘED:**
+```text
+[Trénink] [Chat] [Soutěže] [Pokrok]
+```
+
+**PO:**
+```text
+[Trénink] [S trenérem] [Soutěže] [Pokrok]
 ```
 
 ---
@@ -179,17 +143,15 @@ className="aspect-square rounded-md flex flex-col items-center justify-center te
 
 | Soubor | Změna |
 |--------|-------|
-| `src/hooks/useClientPortalStats.ts` | Přidat `useClientUnpaidTrainings` hook |
-| `src/components/client-portal/dashboard/HeroStatsRow.tsx` | Barevné rozlišení, Sheet s historií, odstranit Série |
-| `src/components/client-portal/calendar/TrainingCalendar.tsx` | Zmenšit velikost |
-| `src/pages/client-portal/ClientPortalOverview.tsx` | Případné úpravy layoutu |
+| `src/pages/client-portal/ClientPortalWorkoutDiary.tsx` | Odstranit SimpleStatsCard, přidat tlačítko "Přidat svůj trénink" |
+| `src/pages/client-portal/ClientPortalNutritionTab.tsx` | Přidat tlačítko "Přidat stravu" |
+| `src/components/client-portal/dashboard/ClientQuickActions.tsx` | Změnit "Chat" → "S trenérem" |
 
 ---
 
 ## Výsledek
 
-1. **Klient vidí skutečný stav** včetně nezaplacených tréninků
-2. **Červená barva** upozorní na dluh - motivace zaplatit
-3. **Méně karet** = čistší dashboard (bez Série)
-4. **Kompaktnější kalendář** = více prostoru pro důležité informace
-5. **Rozkliknutí** = rychlý přehled bez přechodu na jinou stránku
+1. **Jasná výzva k akci** - klient okamžitě vidí, že může přidávat záznamy
+2. **Čistší design** - bez statistik, které zabíraly místo
+3. **Srozumitelné tlačítko chatu** - "S trenérem" místo obecného "Chat"
+4. **Konzistence** - obě záložky mají stejný styl tlačítka nahoře
