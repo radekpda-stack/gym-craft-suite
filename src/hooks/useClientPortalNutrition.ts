@@ -68,12 +68,50 @@ export function useAddFoodEntry() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, { sessionId, clientId }) => {
+    onSuccess: async (_, { sessionId, clientId }) => {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-food-entries', sessionId] });
       queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['client-nutrition-completed-days', sessionId] });
+      
+      // Notify trainer about food entry (max 1x per day per client)
+      try {
+        const today = format(new Date(), 'yyyy-MM-dd');
+        
+        // Check if notification already sent today
+        const { data: existingToday } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('client_id', clientId)
+          .eq('type', 'nutrition_entry_added')
+          .gte('created_at', `${today}T00:00:00`)
+          .maybeSingle();
+          
+        if (!existingToday) {
+          // Get trainer_id and client name from session
+          const { data: session } = await supabase
+            .from('nutrition_log_sessions')
+            .select('user_id, clients(name)')
+            .eq('id', sessionId)
+            .single();
+          
+          if (session?.user_id) {
+            const clientName = (session.clients as { name?: string })?.name || 'Klient';
+            await supabase.from('notifications').insert({
+              user_id: session.user_id,
+              client_id: clientId,
+              type: 'nutrition_entry_added',
+              title: 'Klient zapisuje stravu',
+              message: `${clientName} dnes zapisuje stravu.`,
+              entity_type: 'nutrition_session',
+              entity_id: sessionId,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[useAddFoodEntry] Failed to create notification:', error);
+      }
     },
   });
 }
