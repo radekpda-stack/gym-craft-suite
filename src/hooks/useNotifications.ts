@@ -24,7 +24,9 @@ export type NotificationType =
   | 'inactivity_warning'
   | 'training_streak'
   | 'diagnostic_completed'
-  | 'pre_diagnostic_completed';
+  | 'pre_diagnostic_completed'
+  | 'nutrition_entry_added'
+  | 'nutrition_inactive';
 
 export interface Notification {
   id: string;

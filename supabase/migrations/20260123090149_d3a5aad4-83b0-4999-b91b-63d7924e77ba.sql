@@ -1,0 +1,18 @@
+-- Add new nutrition notification types to the constraint
+ALTER TABLE notifications 
+DROP CONSTRAINT IF EXISTS notifications_type_check;
+
+ALTER TABLE notifications 
+ADD CONSTRAINT notifications_type_check 
+CHECK (type IN (
+  'low_credit', 'negative_credit', 'birthday', 
+  'milestone_100', 'milestone_500', 'milestone_1000',
+  'incomplete_training', 'feedback_received', 'feedback_red_flag',
+  'feedback_trend_alert', 'feedback_pending', 'client_anniversary',
+  'client_profile_updated', 'client_nutrition_started',
+  'pr_created', 'pr_updated', 'pr_achieved',
+  'package_low', 'package_expiring', 'inactivity_warning',
+  'training_streak', 'diagnostic_completed', 'pre_diagnostic_completed',
+  'nutrition_entry_added',
+  'nutrition_inactive'
+));
