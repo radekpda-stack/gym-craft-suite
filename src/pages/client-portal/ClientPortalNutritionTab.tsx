@@ -4,8 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { Apple, Plus, Droplets, Coffee, Loader2, MessageSquare, Clock, RotateCcw } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Apple, Plus, Droplets, Coffee, Loader2, MessageSquare } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FoodLogForm } from '@/components/client-portal/nutrition/FoodLogForm';
 import { TodayEntries } from '@/components/client-portal/nutrition/TodayEntries';
@@ -20,7 +19,6 @@ import {
   useQuickAddWater, 
   useDeleteNutritionEntryPortal,
   useAddCoffeeEntry,
-  useAddFoodEntry,
 } from '@/hooks/useClientPortalNutrition';
 import { useNutritionXP } from '@/hooks/useNutritionXP';
 
@@ -148,44 +146,6 @@ function useCompletedDays(sessionId: string | undefined) {
   });
 }
 
-// Hook to get recent unique food entries for quick re-add
-function useRecentFoodEntries(clientId: string | undefined) {
-  return useQuery({
-    queryKey: ['client-recent-food-entries', clientId],
-    queryFn: async () => {
-      if (!clientId) return [];
-
-      const { data, error } = await supabase
-        .from('nutrition_food_entries')
-        .select('description, meal_type, portion_size')
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-
-      // Get unique descriptions (case-insensitive)
-      const seen = new Set<string>();
-      const unique: { description: string; meal_type: string; portion_size: string }[] = [];
-      
-      for (const entry of data || []) {
-        const key = entry.description.toLowerCase().trim();
-        if (!seen.has(key) && unique.length < 5) {
-          seen.add(key);
-          unique.push({
-            description: entry.description,
-            meal_type: entry.meal_type,
-            portion_size: entry.portion_size || 'medium',
-          });
-        }
-      }
-
-      return unique;
-    },
-    enabled: !!clientId,
-  });
-}
-
 export default function ClientPortalNutritionTab() {
   const { clientId, clientAccount } = useClientPortal();
   const trainerId = clientAccount?.trainer_id;
@@ -201,10 +161,8 @@ export default function ClientPortalNutritionTab() {
     selectedDateStr
   );
   const { data: completedDays = [] } = useCompletedDays(session?.id);
-  const { data: recentFoods = [] } = useRecentFoodEntries(clientId ?? undefined);
   const quickWater = useQuickAddWater();
   const addCoffee = useAddCoffeeEntry();
-  const addFood = useAddFoodEntry();
   const deleteEntry = useDeleteNutritionEntryPortal();
   const nutritionXP = useNutritionXP();
   const { trackPortalEvent } = useClientPortalPageTracking('client_portal_nutrition');
@@ -281,35 +239,6 @@ export default function ClientPortalNutritionTab() {
     }
   };
 
-  const handleQuickMeal = (mealType: MealTypeId) => {
-    setPrefilledMealType(mealType);
-    setShowAddForm(true);
-  };
-
-  // Quick re-add recent food
-  const handleQuickReaddFood = async (food: { description: string; meal_type: string; portion_size: string }) => {
-    if (!session || !clientId) return;
-    
-    try {
-      await addFood.mutateAsync({
-        sessionId: session.id,
-        clientId,
-        date: selectedDate,
-        entry: {
-          meal_type: food.meal_type as MealTypeId,
-          description: food.description,
-          portion_size: food.portion_size as any,
-        },
-      });
-      toast.success(`${food.description} přidáno`);
-      trackPortalEvent('client_portal_quick_readd_food');
-      
-      nutritionXP.mutate({ clientId, date: selectedDateStr, entryType: 'food' });
-    } catch (error) {
-      toast.error('Nepodařilo se přidat');
-    }
-  };
-
   const handleStartTracking = async () => {
     try {
       await createSession.mutateAsync();
@@ -370,7 +299,7 @@ export default function ClientPortalNutritionTab() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Week Strip */}
       <WeekStrip
         currentDate={selectedDate}
@@ -378,147 +307,88 @@ export default function ClientPortalNutritionTab() {
         onDaySelect={setSelectedDate}
       />
 
-      {/* Add Food Button - Prominent CTA */}
+      {/* Single Add Button - ONE clear CTA */}
       <Button 
         onClick={() => {
           setPrefilledMealType(undefined);
           setShowAddForm(true);
         }}
-        className="w-full gap-2 h-12"
+        className="w-full gap-2 h-11"
         size="lg"
       >
         <Plus className="w-5 h-5" />
-        Přidat stravu
+        Přidat jídlo nebo nápoj
       </Button>
 
-      {/* Quick Stats Row */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="bg-muted/50 rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold text-primary">{todayFoodCount}</div>
-          <div className="text-[10px] text-muted-foreground uppercase">Jídel</div>
-        </div>
-        <div className="bg-muted/50 rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold text-blue-500">{waterMl}</div>
-          <div className="text-[10px] text-muted-foreground uppercase">ml vody</div>
-        </div>
-        <div className="bg-muted/50 rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold text-amber-600">{todayCoffeeCount}</div>
-          <div className="text-[10px] text-muted-foreground uppercase">Kávy</div>
-        </div>
+      {/* Quick Add - Inline water/coffee buttons */}
+      <div className="flex gap-2">
+        <Button 
+          variant="outline"
+          size="sm"
+          onClick={handleQuickWater}
+          disabled={quickWater.isPending}
+          className="flex-1 h-9 gap-1.5"
+        >
+          <Droplets className="w-4 h-4 text-blue-500" />
+          <span className="text-xs">+300ml</span>
+        </Button>
+        <Button 
+          variant="outline"
+          size="sm"
+          onClick={handleQuickCoffee}
+          disabled={addCoffee.isPending}
+          className="flex-1 h-9 gap-1.5"
+        >
+          <Coffee className="w-4 h-4 text-amber-600" />
+          <span className="text-xs">+1 Káva</span>
+        </Button>
       </div>
 
       {/* Trainer Comment Notice */}
       {hasTrainerComments && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/10 text-primary">
+        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-primary/10 text-primary">
           <MessageSquare className="w-4 h-4 shrink-0" />
-          <span className="text-sm">Trenér komentoval některé záznamy</span>
+          <span className="text-sm">Trenér komentoval záznamy</span>
         </div>
       )}
 
-      {/* Quick Actions - Main Focus */}
-      <Card className="overflow-hidden">
-        <CardContent className="p-4 space-y-4">
-          {/* Quick Meal Buttons - Large and Easy to Tap */}
-          <div className="grid grid-cols-2 gap-2">
-            <Button 
-              variant="outline"
-              size="lg"
-              onClick={() => handleQuickMeal('breakfast')}
-              className="h-16 flex-col gap-1 text-left"
-            >
-              <span className="text-lg">🌅</span>
-              <span className="text-sm font-medium">Snídaně</span>
-            </Button>
-            <Button 
-              variant="outline"
-              size="lg"
-              onClick={() => handleQuickMeal('lunch')}
-              className="h-16 flex-col gap-1 text-left"
-            >
-              <span className="text-lg">☀️</span>
-              <span className="text-sm font-medium">Oběd</span>
-            </Button>
-            <Button 
-              variant="outline"
-              size="lg"
-              onClick={() => handleQuickMeal('dinner')}
-              className="h-16 flex-col gap-1 text-left"
-            >
-              <span className="text-lg">🌙</span>
-              <span className="text-sm font-medium">Večeře</span>
-            </Button>
-            <Button 
-              variant="outline"
-              size="lg"
-              onClick={() => handleQuickMeal('snack')}
-              className="h-16 flex-col gap-1 text-left"
-            >
-              <span className="text-lg">🍎</span>
-              <span className="text-sm font-medium">Svačina</span>
-            </Button>
-          </div>
-
-          {/* Quick Add Row - One Tap Actions */}
-          <div className="grid grid-cols-2 gap-2">
-            <Button 
-              variant="secondary"
-              size="lg"
-              onClick={handleQuickWater}
-              disabled={quickWater.isPending}
-              className="h-14 gap-2"
-            >
-              <Droplets className="w-5 h-5 text-blue-500" />
-              <span className="font-medium">+300ml vody</span>
-            </Button>
-            <Button 
-              variant="secondary"
-              size="lg"
-              onClick={handleQuickCoffee}
-              disabled={addCoffee.isPending}
-              className="h-14 gap-2"
-            >
-              <Coffee className="w-5 h-5 text-amber-600" />
-              <span className="font-medium">+1 Káva</span>
-            </Button>
-          </div>
-
-          {/* Recent Foods - Quick Re-add */}
-          {recentFoods.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Nedávná jídla</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {recentFoods.map((food, idx) => (
-                  <Button
-                    key={idx}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleQuickReaddFood(food)}
-                    disabled={addFood.isPending}
-                    className="h-auto py-1.5 px-3 text-xs bg-muted/50 hover:bg-muted"
-                  >
-                    <RotateCcw className="w-3 h-3 mr-1.5 text-muted-foreground" />
-                    <span className="truncate max-w-[120px]">{food.description}</span>
-                  </Button>
-                ))}
-              </div>
+      {/* Day's Entries with stats in header */}
+      <Card>
+        <CardContent className="p-3">
+          {/* Stats row - compact header */}
+          <div className="flex items-center gap-3 mb-3 pb-2 border-b text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Apple className="w-3.5 h-3.5 text-primary" />
+              <span className="font-medium text-foreground">{todayFoodCount}</span>
+              <span>jídel</span>
             </div>
-          )}
+            <div className="flex items-center gap-1">
+              <Droplets className="w-3.5 h-3.5 text-blue-500" />
+              <span className="font-medium text-foreground">{waterMl}</span>
+              <span>ml</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Coffee className="w-3.5 h-3.5 text-amber-600" />
+              <span className="font-medium text-foreground">{todayCoffeeCount}</span>
+            </div>
+          </div>
 
-          {/* Add Other Button */}
-          <Button 
-            onClick={() => {
-              setPrefilledMealType(undefined);
-              setShowAddForm(true);
-            }} 
-            variant="outline"
-            className="w-full gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Přidat jiný záznam
-          </Button>
+          {/* Entries list */}
+          {dayData && (
+            <TodayEntries
+              food={dayData.food}
+              drinks={dayData.drinks}
+              coffee={dayData.coffee}
+              isLoading={dayLoading}
+              selectedDate={selectedDate}
+              onEditFood={(entry) => setEditingEntry({ type: 'food', entry })}
+              onEditDrink={(entry) => setEditingEntry({ type: 'drink', entry })}
+              onEditCoffee={(entry) => setEditingEntry({ type: 'coffee', entry })}
+              onDeleteFood={(id) => handleDeleteEntry('food', id)}
+              onDeleteDrink={(id) => handleDeleteEntry('drink', id)}
+              onDeleteCoffee={(id) => handleDeleteEntry('coffee', id)}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -535,23 +405,6 @@ export default function ClientPortalNutritionTab() {
             setShowAddForm(false);
             setPrefilledMealType(undefined);
           }}
-        />
-      )}
-
-      {/* Day's Entries */}
-      {dayData && (
-        <TodayEntries
-          food={dayData.food}
-          drinks={dayData.drinks}
-          coffee={dayData.coffee}
-          isLoading={dayLoading}
-          selectedDate={selectedDate}
-          onEditFood={(entry) => setEditingEntry({ type: 'food', entry })}
-          onEditDrink={(entry) => setEditingEntry({ type: 'drink', entry })}
-          onEditCoffee={(entry) => setEditingEntry({ type: 'coffee', entry })}
-          onDeleteFood={(id) => handleDeleteEntry('food', id)}
-          onDeleteDrink={(id) => handleDeleteEntry('drink', id)}
-          onDeleteCoffee={(id) => handleDeleteEntry('coffee', id)}
         />
       )}
 
