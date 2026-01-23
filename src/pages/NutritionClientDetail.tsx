@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Utensils, 
@@ -7,15 +7,12 @@ import {
   Apple,
   Coffee,
   Droplets,
-  ChevronLeft,
-  ChevronRight,
   FileDown,
   MessageSquare,
   Send,
-  X,
   Loader2,
-  Settings,
   Ban,
+  Pencil,
   Clock,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,24 +20,31 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useClient } from '@/hooks/useClients';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, addDays, subDays, isToday, parseISO, isSameDay } from 'date-fns';
+import { format, subDays, isToday, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { useEffectiveHabitSettings, calculateCaffeineCutoff, isCaffeineAfterCutoff } from '@/hooks/useClientHabitSettings';
+import { useEffectiveHabitSettings } from '@/hooks/useClientHabitSettings';
 import { useDayNotes, useUpsertDayNote } from '@/hooks/useNutritionDayNotes';
-import { WaterGoalWidget, calculateDailyWaterIntake } from '@/components/client-portal/nutrition/WaterGoalWidget';
-import { CaffeineWindowWidget, analyzeCaffeineForPeriod } from '@/components/client-portal/nutrition/CaffeineWindowWidget';
-import { DayNoteDisplay } from '@/components/client-portal/nutrition/DayNoteInput';
+import { analyzeCaffeineForPeriod } from '@/components/client-portal/nutrition/CaffeineWindowWidget';
 import { HabitSettingsForm } from '@/components/client-portal/nutrition/HabitSettingsForm';
+import {
+  MEAL_TYPES,
+  PORTION_SIZES,
+  DRINK_TYPES,
+  COFFEE_TYPES,
+} from '@/components/client-portal/nutrition/constants';
 
 // Hook to get client's nutrition entries for a date range
 function useClientNutritionEntries(clientId: string | undefined, startDate: Date, endDate: Date) {
@@ -126,6 +130,53 @@ function useTrainerComment() {
   });
 }
 
+// Hook to update entry (trainer editing)
+function useTrainerUpdateEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      type, 
+      entryId, 
+      updates,
+      entryDate,
+    }: { 
+      type: 'food' | 'drink' | 'coffee'; 
+      entryId: string; 
+      updates: Record<string, unknown>;
+      entryDate?: string;
+    }) => {
+      const table = type === 'food' 
+        ? 'nutrition_food_entries' 
+        : type === 'drink' 
+          ? 'nutrition_drink_entries' 
+          : 'nutrition_coffee_entries';
+
+      // If entry_time is updated, recalculate occurred_at
+      if (updates.entry_time && entryDate) {
+        updates.occurred_at = new Date(`${entryDate}T${updates.entry_time}:00`).toISOString();
+      }
+
+      // Mark as trainer edited
+      updates.trainer_edited = true;
+
+      const { error } = await supabase
+        .from(table)
+        .update(updates)
+        .eq('id', entryId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trainer-client-nutrition'] });
+      toast.success('Záznam upraven');
+    },
+    onError: () => {
+      toast.error('Nepodařilo se upravit záznam');
+    },
+  });
+}
+
 const mealTypeLabels: Record<string, string> = {
   breakfast: 'Snídaně',
   lunch: 'Oběd',
@@ -162,6 +213,18 @@ interface CommentDialogState {
   currentComment: string;
 }
 
+interface EditDialogState {
+  open: boolean;
+  type: 'food' | 'drink' | 'coffee';
+  entry: any;
+}
+
+interface TrainerNoteDialogState {
+  open: boolean;
+  dateStr: string;
+  currentNote: string;
+}
+
 export default function NutritionClientDetail() {
   usePageTracking('nutrition_client_detail');
   const { clientId } = useParams<{ clientId: string }>();
@@ -193,10 +256,10 @@ export default function NutritionClientDetail() {
   );
 
   // Habit settings for this client
-  const { settings: habitSettings, isLoading: habitSettingsLoading } = useEffectiveHabitSettings(clientId);
+  const { settings: habitSettings } = useEffectiveHabitSettings(clientId);
   
   // Day notes for the period
-  const { data: dayNotes, isLoading: notesLoading } = useDayNotes(
+  const { data: dayNotes } = useDayNotes(
     clientId,
     format(periodStart, 'yyyy-MM-dd'),
     format(periodEnd, 'yyyy-MM-dd')
@@ -204,6 +267,7 @@ export default function NutritionClientDetail() {
   const upsertDayNote = useUpsertDayNote();
 
   const trainerComment = useTrainerComment();
+  const trainerUpdate = useTrainerUpdateEntry();
 
   const [commentDialog, setCommentDialog] = useState<CommentDialogState>({
     open: false,
@@ -212,6 +276,19 @@ export default function NutritionClientDetail() {
     currentComment: '',
   });
   const [commentText, setCommentText] = useState('');
+
+  const [editDialog, setEditDialog] = useState<EditDialogState>({
+    open: false,
+    type: 'food',
+    entry: null,
+  });
+
+  const [trainerNoteDialog, setTrainerNoteDialog] = useState<TrainerNoteDialogState>({
+    open: false,
+    dateStr: '',
+    currentNote: '',
+  });
+  const [trainerNoteText, setTrainerNoteText] = useState('');
 
   // Group entries by date
   const entriesByDate = useMemo(() => {
@@ -307,6 +384,25 @@ export default function NutritionClientDetail() {
       comment: commentText.trim(),
     });
     setCommentDialog({ ...commentDialog, open: false });
+  };
+
+  const openEditDialog = (type: 'food' | 'drink' | 'coffee', entry: any) => {
+    setEditDialog({ open: true, type, entry });
+  };
+
+  const openTrainerNoteDialog = (dateStr: string, currentNote: string) => {
+    setTrainerNoteDialog({ open: true, dateStr, currentNote });
+    setTrainerNoteText(currentNote || '');
+  };
+
+  const saveTrainerNote = async () => {
+    if (!clientId) return;
+    await upsertDayNote.mutateAsync({
+      clientId,
+      date: trainerNoteDialog.dateStr,
+      trainerNote: trainerNoteText.trim() || null,
+    });
+    setTrainerNoteDialog({ ...trainerNoteDialog, open: false });
   };
 
   // PDF Export
@@ -554,6 +650,7 @@ export default function NutritionClientDetail() {
             const dayEntries = entriesByDate.get(dateStr);
             const hasEntries = dayEntries && (dayEntries.food.length > 0 || dayEntries.drinks.length > 0 || dayEntries.coffee.length > 0);
             const isTodays = isToday(day);
+            const dayNote = getDayNote(dateStr);
 
             return (
               <Card key={dateStr} className={cn(
@@ -566,121 +663,198 @@ export default function NutritionClientDetail() {
                     {format(day, 'EEEE d. M.', { locale: cs })}
                     {isTodays && <Badge variant="outline" className="text-[10px]">Dnes</Badge>}
                     {!hasEntries && <span className="text-muted-foreground font-normal">(prázdné)</span>}
+                    
+                    {/* Trainer note button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-auto h-7 gap-1 text-xs"
+                      onClick={() => openTrainerNoteDialog(dateStr, dayNote?.trainer_note || '')}
+                    >
+                      <MessageSquare className="w-3 h-3" />
+                      {dayNote?.trainer_note ? 'Upravit poznámku' : 'Přidat poznámku'}
+                    </Button>
                   </CardTitle>
                 </CardHeader>
                 
-                {hasEntries && (
-                  <CardContent className="pt-0 space-y-3">
-                    {/* Food entries */}
-                    {dayEntries.food.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                          <Apple className="w-3 h-3" /> Jídlo
-                        </p>
-                        {dayEntries.food.map(f => (
-                          <div key={f.id} className="flex items-start gap-2 p-2 rounded-lg bg-muted/30 group">
-                            <span className="text-xs text-muted-foreground shrink-0 w-10">
-                              {getEntryTime(f)}
-                            </span>
-                            <Badge variant="outline" className="text-[10px] shrink-0">
-                              {mealTypeLabels[f.meal_type] || f.meal_type}
-                            </Badge>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm">{f.description}</p>
-                              {f.portion_size && (
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  Porce: {portionLabels[f.portion_size] || f.portion_size}
-                                </p>
-                              )}
-                              {f.trainer_comment && (
-                                <div className="flex items-start gap-1 mt-1 p-1.5 rounded bg-primary/10 text-xs text-primary">
-                                  <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
-                                  <span>{f.trainer_comment}</span>
-                                </div>
-                              )}
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => openCommentDialog('food', f.id, f.trainer_comment)}
-                            >
-                              <MessageSquare className="w-3 h-3" />
-                            </Button>
+                <CardContent className="pt-0 space-y-3">
+                  {/* Day Notes Display */}
+                  {(dayNote?.client_note || dayNote?.trainer_note) && (
+                    <div className="space-y-2 border-b pb-3 mb-2">
+                      {dayNote.client_note && (
+                        <div className="flex items-start gap-2 p-2 rounded-lg bg-muted/50">
+                          <span className="text-xs">💬</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-muted-foreground mb-0.5">Klient:</p>
+                            <p className="text-sm">{dayNote.client_note}</p>
                           </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Drinks */}
-                    {dayEntries.drinks.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                          <Droplets className="w-3 h-3" /> Nápoje
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {dayEntries.drinks.map(d => (
-                            <div key={d.id} className="group relative flex items-center gap-1">
-                              <span className="text-[10px] text-muted-foreground shrink-0">
-                                {getEntryTime(d)}
-                              </span>
-                              <Badge variant="secondary" className="text-xs pr-6">
-                                {d.drink_name || drinkTypeLabels[d.drink_type] || d.drink_type}
-                                {d.amount_ml && ` ${d.amount_ml}ml`}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
-                                onClick={() => openCommentDialog('drink', d.id, d.trainer_comment)}
-                              >
-                                <MessageSquare className="w-2.5 h-2.5" />
-                              </Button>
-                            </div>
-                          ))}
                         </div>
-                      </div>
-                    )}
+                      )}
+                      {dayNote.trainer_note && (
+                        <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/5 border border-primary/20">
+                          <span className="text-xs">🏋️</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-muted-foreground mb-0.5">Trenér:</p>
+                            <p className="text-sm">{dayNote.trainer_note}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0"
+                            onClick={() => openTrainerNoteDialog(dateStr, dayNote.trainer_note || '')}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                    {/* Coffee */}
-                    {dayEntries.coffee.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                          <Coffee className="w-3 h-3" /> Kofein
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {dayEntries.coffee.map(c => {
-                            const isCaffeinated = c.is_caffeinated !== false;
-                            return (
-                              <div key={c.id} className="group relative flex items-center gap-1">
-                                <span className="text-[10px] text-muted-foreground shrink-0">
-                                  {getEntryTime(c)}
-                                </span>
-                                <Badge 
-                                  variant="secondary" 
-                                  className={cn("text-xs pr-6", !isCaffeinated && "opacity-60")}
-                                >
-                                  {!isCaffeinated && <Ban className="w-2.5 h-2.5 mr-0.5" />}
-                                  {coffeeTypeLabels[c.coffee_type] || c.coffee_type}
-                                  {c.count > 1 && ` ×${c.count}`}
-                                  {c.coffee_amount_ml && ` ${c.coffee_amount_ml}ml`}
-                                </Badge>
+                  {hasEntries && (
+                    <>
+                      {/* Food entries */}
+                      {dayEntries.food.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                            <Apple className="w-3 h-3" /> Jídlo
+                          </p>
+                          {dayEntries.food.map(f => (
+                            <div key={f.id} className="flex items-start gap-2 p-2 rounded-lg bg-muted/30 group">
+                              <span className="text-xs text-muted-foreground shrink-0 w-10">
+                                {getEntryTime(f)}
+                              </span>
+                              <Badge variant="outline" className="text-[10px] shrink-0">
+                                {mealTypeLabels[f.meal_type] || f.meal_type}
+                              </Badge>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm">{f.description}</p>
+                                {f.portion_size && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    Porce: {portionLabels[f.portion_size] || f.portion_size}
+                                  </p>
+                                )}
+                                {f.trainer_comment && (
+                                  <div className="flex items-start gap-1 mt-1 p-1.5 rounded bg-primary/10 text-xs text-primary">
+                                    <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
+                                    <span>{f.trainer_comment}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-5 w-5 absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
-                                  onClick={() => openCommentDialog('coffee', c.id, c.trainer_comment)}
+                                  className="h-6 w-6"
+                                  onClick={() => openEditDialog('food', f)}
+                                  title="Upravit"
                                 >
-                                  <MessageSquare className="w-2.5 h-2.5" />
+                                  <Pencil className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => openCommentDialog('food', f.id, f.trainer_comment)}
+                                  title="Komentář"
+                                >
+                                  <MessageSquare className="w-3 h-3" />
                                 </Button>
                               </div>
-                            );
-                          })}
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                )}
+                      )}
+
+                      {/* Drinks */}
+                      {dayEntries.drinks.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                            <Droplets className="w-3 h-3" /> Nápoje
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {dayEntries.drinks.map(d => (
+                              <div key={d.id} className="group relative flex items-center gap-1">
+                                <span className="text-[10px] text-muted-foreground shrink-0">
+                                  {getEntryTime(d)}
+                                </span>
+                                <Badge variant="secondary" className="text-xs pr-12">
+                                  {d.drink_name || drinkTypeLabels[d.drink_type] || d.drink_type}
+                                  {d.amount_ml && ` ${d.amount_ml}ml`}
+                                </Badge>
+                                <div className="absolute right-0.5 top-1/2 -translate-y-1/2 flex gap-0.5 opacity-0 group-hover:opacity-100">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5"
+                                    onClick={() => openEditDialog('drink', d)}
+                                  >
+                                    <Pencil className="w-2.5 h-2.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5"
+                                    onClick={() => openCommentDialog('drink', d.id, d.trainer_comment)}
+                                  >
+                                    <MessageSquare className="w-2.5 h-2.5" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Coffee */}
+                      {dayEntries.coffee.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                            <Coffee className="w-3 h-3" /> Kofein
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {dayEntries.coffee.map(c => {
+                              const isCaffeinated = c.is_caffeinated !== false;
+                              return (
+                                <div key={c.id} className="group relative flex items-center gap-1">
+                                  <span className="text-[10px] text-muted-foreground shrink-0">
+                                    {getEntryTime(c)}
+                                  </span>
+                                  <Badge 
+                                    variant="secondary" 
+                                    className={cn("text-xs pr-12", !isCaffeinated && "opacity-60")}
+                                  >
+                                    {!isCaffeinated && <Ban className="w-2.5 h-2.5 mr-0.5" />}
+                                    {coffeeTypeLabels[c.coffee_type] || c.coffee_type}
+                                    {c.count > 1 && ` ×${c.count}`}
+                                    {c.coffee_amount_ml && ` ${c.coffee_amount_ml}ml`}
+                                  </Badge>
+                                  <div className="absolute right-0.5 top-1/2 -translate-y-1/2 flex gap-0.5 opacity-0 group-hover:opacity-100">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-5 w-5"
+                                      onClick={() => openEditDialog('coffee', c)}
+                                    >
+                                      <Pencil className="w-2.5 h-2.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-5 w-5"
+                                      onClick={() => openCommentDialog('coffee', c.id, c.trainer_comment)}
+                                    >
+                                      <MessageSquare className="w-2.5 h-2.5" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
               </Card>
             );
           })}
@@ -726,6 +900,319 @@ export default function NutritionClientDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Trainer Note Dialog */}
+      <Dialog open={trainerNoteDialog.open} onOpenChange={(open) => setTrainerNoteDialog({ ...trainerNoteDialog, open })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Poznámka ke dni
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={trainerNoteText}
+              onChange={(e) => setTrainerNoteText(e.target.value)}
+              placeholder="Napište poznámku k tomuto dni..."
+              className="min-h-[100px]"
+            />
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setTrainerNoteDialog({ ...trainerNoteDialog, open: false })}
+              >
+                Zrušit
+              </Button>
+              <Button 
+                onClick={saveTrainerNote} 
+                disabled={upsertDayNote.isPending}
+                className="gap-2"
+              >
+                {upsertDayNote.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                Uložit
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Entry Dialog */}
+      <TrainerEditDialog
+        open={editDialog.open}
+        onOpenChange={(open) => setEditDialog({ ...editDialog, open })}
+        type={editDialog.type}
+        entry={editDialog.entry}
+        onSave={trainerUpdate.mutateAsync}
+        isLoading={trainerUpdate.isPending}
+      />
     </div>
+  );
+}
+
+// Trainer Edit Dialog Component
+function TrainerEditDialog({
+  open,
+  onOpenChange,
+  type,
+  entry,
+  onSave,
+  isLoading,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  type: 'food' | 'drink' | 'coffee';
+  entry: any;
+  onSave: (params: { type: 'food' | 'drink' | 'coffee'; entryId: string; updates: Record<string, unknown>; entryDate?: string }) => Promise<void>;
+  isLoading: boolean;
+}) {
+  const [entryTime, setEntryTime] = useState('12:00');
+  const [mealType, setMealType] = useState('lunch');
+  const [description, setDescription] = useState('');
+  const [portionSize, setPortionSize] = useState('medium');
+  const [drinkType, setDrinkType] = useState('water');
+  const [drinkAmount, setDrinkAmount] = useState(300);
+  const [drinkName, setDrinkName] = useState('');
+  const [coffeeType, setCoffeeType] = useState('espresso');
+  const [coffeeCount, setCoffeeCount] = useState(1);
+  const [isCaffeinated, setIsCaffeinated] = useState(true);
+  const [coffeeAmountMl, setCoffeeAmountMl] = useState<number | undefined>();
+
+  useEffect(() => {
+    if (entry) {
+      // Get time
+      if (entry.occurred_at) {
+        try {
+          setEntryTime(format(parseISO(entry.occurred_at), 'HH:mm'));
+        } catch {
+          setEntryTime(entry.entry_time?.slice(0, 5) || '12:00');
+        }
+      } else {
+        setEntryTime(entry.entry_time?.slice(0, 5) || '12:00');
+      }
+
+      if (type === 'food') {
+        setMealType(entry.meal_type || 'lunch');
+        setDescription(entry.description || '');
+        setPortionSize(entry.portion_size || 'medium');
+      } else if (type === 'drink') {
+        setDrinkType(entry.drink_type || 'water');
+        setDrinkAmount(entry.amount_ml || 300);
+        setDrinkName(entry.drink_name || '');
+      } else if (type === 'coffee') {
+        setCoffeeType(entry.coffee_type || 'espresso');
+        setCoffeeCount(entry.count || 1);
+        setIsCaffeinated(entry.is_caffeinated !== false);
+        setCoffeeAmountMl(entry.coffee_amount_ml || undefined);
+      }
+    }
+  }, [entry, type]);
+
+  const handleSave = async () => {
+    let updates: Record<string, unknown> = { entry_time: entryTime };
+    
+    if (type === 'food') {
+      updates = { ...updates, meal_type: mealType, description, portion_size: portionSize };
+    } else if (type === 'drink') {
+      updates = { ...updates, drink_type: drinkType, amount_ml: drinkAmount, drink_name: drinkName || null };
+    } else if (type === 'coffee') {
+      updates = { ...updates, coffee_type: coffeeType, count: coffeeCount, is_caffeinated: isCaffeinated, coffee_amount_ml: coffeeAmountMl || null };
+    }
+
+    await onSave({ type, entryId: entry.id, updates, entryDate: entry.entry_date });
+    onOpenChange(false);
+  };
+
+  if (!entry) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="w-5 h-5" />
+            Upravit záznam
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 pt-2">
+          {/* Entry Time */}
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              Čas
+            </Label>
+            <Input
+              type="time"
+              value={entryTime}
+              onChange={(e) => setEntryTime(e.target.value)}
+              className="w-32"
+            />
+          </div>
+
+          {type === 'food' && (
+            <>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Typ jídla</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {MEAL_TYPES.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setMealType(t.id)}
+                      className={cn(
+                        "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
+                        mealType === t.id ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
+                      )}
+                    >
+                      <span>{t.icon}</span>
+                      <span>{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Popis</Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="min-h-[80px] resize-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Porce</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {PORTION_SIZES.map((size) => (
+                    <button
+                      key={size.id}
+                      onClick={() => setPortionSize(size.id)}
+                      className={cn(
+                        "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
+                        portionSize === size.id ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
+                      )}
+                    >
+                      <span>{size.icon}</span>
+                      <span>{size.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {type === 'drink' && (
+            <>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Typ</Label>
+                <div className="grid grid-cols-5 gap-2">
+                  {DRINK_TYPES.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setDrinkType(t.id)}
+                      className={cn(
+                        "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
+                        drinkType === t.id ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
+                      )}
+                    >
+                      <span>{t.icon}</span>
+                      <span className="truncate w-full text-center">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {drinkType === 'other' && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Název</Label>
+                  <Input
+                    value={drinkName}
+                    onChange={(e) => setDrinkName(e.target.value)}
+                    maxLength={50}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Množství (ml)</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[200, 300, 500, 750].map((amount) => (
+                    <button
+                      key={amount}
+                      onClick={() => setDrinkAmount(amount)}
+                      className={cn(
+                        "p-2 rounded-lg transition-colors text-sm font-medium",
+                        drinkAmount === amount ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
+                      )}
+                    >
+                      {amount} ml
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {type === 'coffee' && (
+            <>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Typ</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {COFFEE_TYPES.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setCoffeeType(t.id)}
+                      className={cn(
+                        "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
+                        coffeeType === t.id ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
+                      )}
+                    >
+                      <span>{t.icon}</span>
+                      <span className="truncate w-full text-center">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Počet</Label>
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="icon" onClick={() => setCoffeeCount(Math.max(1, coffeeCount - 1))} disabled={coffeeCount <= 1}>-</Button>
+                  <span className="text-2xl font-bold w-12 text-center">{coffeeCount}</span>
+                  <Button variant="outline" size="icon" onClick={() => setCoffeeCount(coffeeCount + 1)}>+</Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                <Label className="text-sm">Obsahuje kofein</Label>
+                <Switch checked={isCaffeinated} onCheckedChange={setIsCaffeinated} />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Objem (ml)</Label>
+                <Input
+                  type="number"
+                  value={coffeeAmountMl || ''}
+                  onChange={(e) => setCoffeeAmountMl(e.target.value ? parseInt(e.target.value) : undefined)}
+                  placeholder="volitelné"
+                  className="w-24"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading} className="flex-1">Zrušit</Button>
+            <Button onClick={handleSave} disabled={isLoading} className="flex-1">
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Uložit'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
