@@ -98,16 +98,15 @@ export function useUpsertHabitSettings() {
       settings: HabitSettingsInput;
       setBy?: 'client' | 'trainer';
     }) => {
-      const updateData: Record<string, unknown> = {
+      const updateData = {
         client_id: clientId,
         ...settings,
+        // If sleep_time is being updated, track who set it
+        ...(settings.sleep_time !== undefined && {
+          sleep_time_last_set_by: setBy,
+          sleep_time_last_set_at: new Date().toISOString(),
+        }),
       };
-
-      // If sleep_time is being updated, track who set it
-      if (settings.sleep_time !== undefined) {
-        updateData.sleep_time_last_set_by = setBy;
-        updateData.sleep_time_last_set_at = new Date().toISOString();
-      }
 
       // First check if settings exist
       const { data: existing } = await supabase
@@ -118,20 +117,20 @@ export function useUpsertHabitSettings() {
 
       let result;
       if (existing) {
-        // Update existing
+        // Update existing - use updateData which includes sleep_time tracking
         const { data, error } = await supabase
           .from('client_habit_settings')
-          .update(settings)
+          .update(updateData)
           .eq('client_id', clientId)
           .select()
           .single();
         if (error) throw error;
         result = data;
       } else {
-        // Insert new
+        // Insert new - use updateData which includes client_id and sleep_time tracking
         const { data, error } = await supabase
           .from('client_habit_settings')
-          .insert({ client_id: clientId, ...settings })
+          .insert(updateData)
           .select()
           .single();
         if (error) throw error;
