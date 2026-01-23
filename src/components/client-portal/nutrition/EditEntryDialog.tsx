@@ -54,7 +54,8 @@ const DRINK_TYPES = [
 const COFFEE_TYPES = [
   { id: 'espresso', label: 'Espresso', icon: '☕' },
   { id: 'cappuccino', label: 'Cappuccino', icon: '🥛' },
-  { id: 'energy', label: 'Energy drink', icon: '⚡' },
+  { id: 'tea', label: 'Čaj', icon: '🍵' },
+  { id: 'energy', label: 'Energy', icon: '⚡' },
   { id: 'other', label: 'Jiné', icon: '🫖' },
 ] as const;
 
@@ -74,6 +75,7 @@ export function EditEntryDialog({
   // Drink form state
   const [drinkType, setDrinkType] = useState<DrinkEntryInput['drink_type']>('water');
   const [drinkAmount, setDrinkAmount] = useState<number>(300);
+  const [drinkName, setDrinkName] = useState<string>('');
 
   // Coffee form state
   const [coffeeType, setCoffeeType] = useState<CoffeeEntryInput['coffee_type']>('espresso');
@@ -95,6 +97,7 @@ export function EditEntryDialog({
       } else if (type === 'drink') {
         setDrinkType(entry.drink_type || 'water');
         setDrinkAmount(entry.amount_ml || 300);
+        setDrinkName(entry.drink_name || '');
       } else if (type === 'coffee') {
         setCoffeeType(entry.coffee_type || 'espresso');
         setCoffeeCount(entry.count || 1);
@@ -127,6 +130,7 @@ export function EditEntryDialog({
           entry: {
             drink_type: drinkType,
             amount_ml: drinkAmount,
+            drink_name: drinkType === 'other' && drinkName.trim() ? drinkName.trim() : undefined,
           },
         });
       } else if (type === 'coffee') {
@@ -239,7 +243,10 @@ export function EditEntryDialog({
                   {DRINK_TYPES.map((t) => (
                     <button
                       key={t.id}
-                      onClick={() => setDrinkType(t.id)}
+                      onClick={() => {
+                        setDrinkType(t.id);
+                        if (t.id !== 'other') setDrinkName('');
+                      }}
                       className={cn(
                         "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
                         drinkType === t.id 
@@ -253,6 +260,19 @@ export function EditEntryDialog({
                   ))}
                 </div>
               </div>
+
+              {/* Drink Name (for "other" type) */}
+              {drinkType === 'other' && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Jaký nápoj?</Label>
+                  <Input
+                    value={drinkName}
+                    onChange={(e) => setDrinkName(e.target.value)}
+                    placeholder="např. Limonáda, Mléko, Džus..."
+                    maxLength={50}
+                  />
+                </div>
+              )}
 
               {/* Amount */}
               <div className="space-y-2">

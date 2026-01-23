@@ -37,6 +37,12 @@ export const DRINK_TYPES = [
 
 export const DRINK_AMOUNTS = [200, 300, 500, 750] as const;
 
+export const QUICK_WATER_AMOUNTS = [
+  { amount: 200, label: 'Sklenice', icon: '💧' },
+  { amount: 300, label: 'Hrnek', icon: '☕' },
+  { amount: 500, label: 'Láhev', icon: '🍶' },
+] as const;
+
 export const COFFEE_TYPES = [
   { id: 'espresso', label: 'Espresso', icon: '☕' },
   { id: 'cappuccino', label: 'Cappuccino', icon: '🥛' },
