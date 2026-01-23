@@ -83,7 +83,7 @@ export function PerformanceCard({
         </div>
         <div>
           <h4 className="text-sm font-medium text-muted-foreground mb-2">Osobní rekordy</h4>
-          <ClientPRsCard clientId={clientId} />
+          <ClientPRsCard clientId={clientId} clientName={clientName} />
         </div>
         <div>
           <h4 className="text-sm font-medium text-muted-foreground mb-2">Analytika tréninků</h4>

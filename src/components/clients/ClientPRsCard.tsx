@@ -1,14 +1,17 @@
-import { Trophy, Dumbbell, Timer, Repeat, TrendingUp, Zap, Ruler } from 'lucide-react';
+import { useState } from 'react';
+import { Trophy, Dumbbell, Timer, Repeat, TrendingUp, Zap, Ruler, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useClientExercisePRs, ExercisePR } from '@/hooks/useClientExercisePRs';
+import { ExerciseHistorySheet } from '@/components/training-mode/ExerciseHistorySheet';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 interface ClientPRsCardProps {
   clientId: string;
+  clientName?: string;
 }
 
 type MetricType = 'weight' | 'time' | 'reps' | 'distance' | 'power' | 'score';
@@ -51,18 +54,23 @@ function PRItem({
   name, 
   value, 
   metricType, 
-  achievedAt 
+  achievedAt,
+  onClick
 }: { 
   name: string; 
   value: string; 
   metricType: MetricType; 
   achievedAt: string;
+  onClick?: () => void;
 }) {
   const Icon = getMetricIcon(metricType);
   const colorClass = getMetricColor(metricType);
   
   return (
-    <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/50 hover:bg-secondary/80 transition-colors">
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/50 hover:bg-secondary/80 transition-colors text-left group"
+    >
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className={cn("p-2 rounded-lg flex-shrink-0", colorClass)}>
           <Icon className="w-4 h-4" />
@@ -74,14 +82,19 @@ function PRItem({
           </p>
         </div>
       </div>
-      <Badge variant="secondary" className={cn("font-bold text-sm flex-shrink-0", colorClass.replace('/20', '/10'))}>
-        {value}
-      </Badge>
-    </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Badge variant="secondary" className={cn("font-bold text-sm", colorClass.replace('/20', '/10'))}>
+          {value}
+        </Badge>
+        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+    </button>
   );
 }
 
-export function ClientPRsCard({ clientId }: ClientPRsCardProps) {
+export function ClientPRsCard({ clientId, clientName }: ClientPRsCardProps) {
+  const [selectedPR, setSelectedPR] = useState<ExercisePR | null>(null);
+  
   // Fetch only exercise PRs (best performance per exercise)
   const { data: exercisePRs, isLoading } = useClientExercisePRs(clientId);
 
@@ -125,29 +138,41 @@ export function ClientPRsCard({ clientId }: ClientPRsCardProps) {
   const sortedPRs = [...prs].sort((a, b) => b.bestValue - a.bestValue);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Trophy className="w-5 h-5 text-warning" />
-            Osobní rekordy
-          </CardTitle>
-          <Badge variant="outline" className="text-xs">
-            {prs.length} {prs.length === 1 ? 'cvik' : prs.length < 5 ? 'cviky' : 'cviků'}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {sortedPRs.map((pr) => (
-          <PRItem 
-            key={pr.id} 
-            name={pr.exerciseName}
-            value={pr.bestDisplay}
-            metricType={pr.metricType as MetricType}
-            achievedAt={pr.achievedAt}
-          />
-        ))}
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Trophy className="w-5 h-5 text-warning" />
+              Osobní rekordy
+            </CardTitle>
+            <Badge variant="outline" className="text-xs">
+              {prs.length} {prs.length === 1 ? 'cvik' : prs.length < 5 ? 'cviky' : 'cviků'}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {sortedPRs.map((pr) => (
+            <PRItem 
+              key={pr.id} 
+              name={pr.exerciseName}
+              value={pr.bestDisplay}
+              metricType={pr.metricType as MetricType}
+              achievedAt={pr.achievedAt}
+              onClick={() => setSelectedPR(pr)}
+            />
+          ))}
+        </CardContent>
+      </Card>
+      
+      {/* Exercise History Sheet with graph */}
+      <ExerciseHistorySheet
+        open={!!selectedPR}
+        onOpenChange={(open) => !open && setSelectedPR(null)}
+        pr={selectedPR}
+        clientId={clientId}
+        clientName={clientName}
+      />
+    </>
   );
 }

@@ -1,16 +1,19 @@
 /**
  * ExerciseHistorySheet - Shows chronological history of exercise results
  * Displays all entries for a specific exercise with dates and values
+ * Now includes a progress graph for visual trend analysis
  */
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Dumbbell, Timer, Repeat, Ruler, TrendingUp, TrendingDown, Calendar, X } from 'lucide-react';
+import { Dumbbell, Timer, Repeat, Ruler, TrendingUp, TrendingDown, Calendar, BarChart3 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useExerciseHistory, ExerciseHistoryEntry } from '@/hooks/useExerciseHistory';
 import { ExercisePR } from '@/hooks/useClientExercisePRs';
+import { ExerciseProgressGraph } from '@/components/clients/ExerciseProgressGraph';
 import { cn } from '@/lib/utils';
 
 interface ExerciseHistorySheetProps {
@@ -230,18 +233,60 @@ export function ExerciseHistorySheet({
             </p>
           </div>
         ) : (
-          <ScrollArea className="h-[calc(85vh-120px)]">
-            <div className="space-y-2 pb-8">
-              {history.map((entry, index) => (
-                <HistoryRow 
-                  key={entry.id}
-                  entry={entry}
-                  previousEntry={history[index + 1]}
-                  isFirst={entry.id === bestEntryId}
+          <Tabs defaultValue="chart" className="flex-1 flex flex-col">
+            <TabsList className="grid grid-cols-2 w-full max-w-xs mx-auto mb-4">
+              <TabsTrigger value="chart" className="gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Graf
+              </TabsTrigger>
+              <TabsTrigger value="list" className="gap-2">
+                <Calendar className="w-4 h-4" />
+                Historie
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="chart" className="flex-1 mt-0">
+              <div className="px-2">
+                <ExerciseProgressGraph 
+                  history={history} 
+                  metricType={pr?.metricType || 'weight'} 
                 />
-              ))}
-            </div>
-          </ScrollArea>
+              </div>
+              
+              {/* Quick stats */}
+              <div className="grid grid-cols-3 gap-3 mt-6 px-2">
+                <div className="bg-secondary/50 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold">{history.length}</p>
+                  <p className="text-xs text-muted-foreground">záznamů</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold">{pr?.bestDisplay || '–'}</p>
+                  <p className="text-xs text-muted-foreground">aktuální PR</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold">
+                    {history.length > 0 ? format(parseISO(history[0].date), 'd.M', { locale: cs }) : '–'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">poslední</p>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="list" className="flex-1 mt-0">
+              <ScrollArea className="h-[calc(85vh-200px)]">
+                <div className="space-y-2 pb-8">
+                  {history.map((entry, index) => (
+                    <HistoryRow 
+                      key={entry.id}
+                      entry={entry}
+                      previousEntry={history[index + 1]}
+                      isFirst={entry.id === bestEntryId}
+                    />
+                  ))}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
         )}
         
         {/* Stats footer */}
