@@ -1,144 +1,204 @@
 
-# Revize sekce Statistiky - Kompletní audit a úpravy
+# Revize sekce Strava (Nutriční deník) - Audit a návrh vylepšení
 
-## Shrnutí aktuálního stavu
+## Aktuální stav systému
 
-Sekce Statistiky obsahuje 4 záložky: **Kariéra**, **Finance**, **Tréninky**, **Klienti**. Po analýze jsem identifikoval následující problémy:
+Nutriční modul obsahuje 3 hlavní pohledy:
+- **NutritionPage** (`/nutrition`) - Dashboard přehled všech klientů
+- **NutritionClientDetail** (`/nutrition/client/:id`) - Detail nutričního deníku klienta (7/10 dní)
+- **NutritionCampaignDetail** (`/nutrition/campaigns/:id`) - Legacy kampaňový pohled
+
+**Aktuální data v databázi:**
+- 12 nutričních session (11 aktivních, 1 dokončená)
+- 10 klientů s nutrition logem
+- 20 jídel, 10 nápojů, 9 káv
 
 ---
 
 ## Nalezené problémy
 
-### 1. Duplicitní metriky napříč záložkami
+### 1. Duplicitní pohledy na data klienta
 
-| Metrika | Kariéra | Finance | Tréninky | Klienti |
-|---------|---------|---------|----------|---------|
-| Celkem tréninků | ✅ (lifetime) | — | ✅ (období) | — |
-| Průměr za trénink | ✅ (hodinová sazba) | ✅ (skutečná cena) | — | — |
-| Retence klientů | ✅ (v Insights) | — | — | ✅ (KPI + detaily) |
-| Aktivní klienti | ✅ (30d) | — | — | ✅ (30d) |
+| Komponenta | Přístup | Problém |
+|------------|---------|---------|
+| `NutritionClientDetail` | `/nutrition/client/:id` | Zobrazuje 7/10 dní |
+| `NutritionCampaignDetail` | `/nutrition/campaigns/:id` | Zobrazuje kampaň s analýzou |
+| `ClientNutritionTab` | V kartě klienta | Vytváří 7denní logy s vlastním detailem |
+| `NutritionLogDetail` | V `ClientNutritionTab` | Další detail view |
 
-**Problém**: Stejné metriky se zobrazují na více místech s různým kontextem, což může uživatele zmást.
+**Problém**: 4 různé pohledy zobrazují podobná data s různým UI a funkcionalitou. Trenér neví, který pohled použít.
 
-### 2. Nerelevantní nebo nefunkční komponenty
+### 2. Nekonzistentní terminologie
 
-| Komponenta | Problém |
-|------------|---------|
-| `FinanceModeToggle` (performed/received) | V kódu existuje, ale v `FinanceStatsSection` je natvrdo nastaveno `mode="received"` - toggle není zobrazen |
-| `LifetimeFinanceStatsCard` | Zobrazuje se v záložce Finance, ale data jsou lifetime (ignoruje vybrané období) |
-| `GlobalTagDistributionCard` | Zobrazuje tagy tréninků, ale ne všechny tréninky mají tagy - karta je často prázdná |
-| `ClientAnalyticsCard` v sekci Klienti | Duplikuje logiku `ChurnRiskCard` (obě zobrazují "V ohrožení" klienty) |
+- "Kampaň" vs "Session" vs "Log" vs "Deník" - používáno zaměnitelně
+- `NutritionCampaignDetail` používá "kampaň", ale DB tabulka je `nutrition_log_sessions`
+- UI na některých místech říká "7denní log", jinde "Deník návyků"
 
-### 3. Metriky bez kontextu porovnání
+### 3. Chybějící agregované metriky na hlavním přehledu
 
-Dle paměťového záznamu `analytics-philosophy-comparative-non-evaluative` by každá metrika měla odpovídat na otázku "ve srovnání s čím?". Následující karty toto nesplňují:
-- `ClientTenureCard` - délka spolupráce bez trendu
-- `ClientAgeCard` - věk klientů bez kontextu (není jasné, k čemu je to užitečné)
-- `TrainingDurationCard` - délka tréninků bez srovnání s cílem nebo trendem
+`NutritionPage` zobrazuje:
+- Aktivně zapisuje (počet klientů)
+- Záznamů tento týden
+- Dnes zapsáno
+- Průměr/klient
 
-### 4. Chybějící důležité metriky
+**Chybí důležité metriky:**
+- Průměrná kvalita stravy (good/normal/poor distribuce)
+- Dny bez záznamu (varování)
+- Trend vs minulý týden
+- Klienti s pozdním kofeinem (využití CaffeineWindowWidget dat)
 
-| Chybí | Umístění | Popis |
-|-------|----------|-------|
-| Trend tréninků vs minulý měsíc | Tréninky | Graf nebo KPI ukazující, zda trénuji více/méně |
-| Oblíbené hodiny/dny | Tréninky | Data existují v heatmapě, ale chybí sumarizace |
-| Ziskovost jednotlivých klientů | Klienti | LTV existuje, ale chybí poměr cena/čas |
-| Produktová analýza | Finance | Pouze základní příjem z produktů, chybí top produkty a trendy |
+### 4. NutritionCampaignDetail obsahuje hodnotící prvky
+
+Komponenta obsahuje "insights" s hodnotícími texty jako "Kvalitní vedení záznamů" (zelená), "Velmi slabé vedení" (červená), což porušuje filozofii `analytics-philosophy-comparative-non-evaluative`.
+
+### 5. Nepoužité nastavení
+
+`NutritionSettingsTab` umožňuje konfigurovat:
+- Kategorie jídel, nápojů, kávy
+- Úvodní/závěrečné zprávy
+
+**Problém**: Tyto hodnoty se nikde nepoužívají - formulář pro klienty používá hardcoded konstanty z `constants.ts`.
+
+### 6. Chybí hromadné akce
+
+Na `NutritionPage` chybí:
+- Hromadné ukončení neaktivních sessions
+- Export dat více klientů
+- Filtrování podle stavu (prázdné logy, aktivní, dokončené)
+
+### 7. Klientský formulář vs trenérský pohled
+
+Trenér vidí pouze výsledky, ale nemá možnost:
+- Přidat záznam za klienta přímo
+- Upravit čas konzumace
+- Označit záznam jako "kontrolováno"
 
 ---
 
 ## Navrhované změny
 
-### Fáze 1: Odstranění duplicit a nekonzistencí
+### Fáze 1: Konsolidace pohledů
 
-**Záložka Kariéra** - ponechat pouze lifetime metriky:
-- Odebrat `InsightsBlock` s retencí (ta patří do Klientů)
-- Ponechat: Celkem tréninků, Celkem hodin, Unikátních klientů, Hodinová sazba
-- Odebrat: Aktivní klienti (30d) a Vytíženost kapacity - ty patří na dashboard, ne do kariérních statistik
+**Zachovat pouze 2 pohledy:**
+1. `NutritionPage` - přehled všech klientů
+2. `NutritionClientDetail` - detail jednoho klienta (sloučit s funkcemi z NutritionCampaignDetail)
 
-**Záložka Finance**:
-- Odebrat `LifetimeFinanceStatsCard` - duplikuje data z Kariéry
-- Přesunout `mode` toggle do UI, aby uživatel mohl přepínat mezi "Odtrénováno" a "Přijaté"
-- Zjednodušit `FinanceHeroKPI` - ponechat pouze 4 KPI bez duplicitního "Průměr za trénink"
+**Akce:**
+- Odebrat route `/nutrition/campaigns/:id` (legacy)
+- Přesunout analýzu z `NutritionCampaignDetail` do `NutritionClientDetail`
+- Sjednotit `ClientNutritionTab` aby používal stejný detail jako hlavní modul
 
-**Záložka Klienti**:
-- Odebrat `ClientAnalyticsCard` - duplikuje `ChurnRiskCard`
-- Přesunout `ClientAgeCard` do modalního okna (není hlavní metrika)
+### Fáze 2: Sjednocení terminologie
 
-### Fáze 2: Zlepšení relevance dat
+Používat konzistentně:
+- **"Deník"** místo "kampaň", "log", "session"
+- **"Záznam"** místo "entry"
+- **"Období"** místo "7denní log"
 
-**Záložka Tréninky**:
-- Přidat sumarizaci z heatmapy: "Nejčastější den: Pondělí (23%)", "Nejčastější hodina: 17:00"
-- Přidat trend vs minulé období do `TrainingHeroKPI`
-- Zkontrolovat, zda `GlobalTagDistributionCard` zobrazuje prázdnou kartu pokud nejsou tagy - přidat fallback
+Upravit názvy v UI:
+- "Vytvořit nový log" → "Zahájit deník"
+- "Session" badge → "Aktivní období"
 
-**Záložka Finance**:
-- Přidat `TopProductsCard` se seznamem nejprodávanějších produktů
-- Zobrazit margin (příjem - náklady) pokud jsou náklady sledovány
+### Fáze 3: Rozšíření přehledu (NutritionPage)
 
-### Fáze 3: Přidání kontextu porovnání
+Přidat nové metriky do dashboard:
+```text
+[Existující]
+- Aktivně zapisuje
+- Záznamů tento týden
+- Dnes zapsáno
+- Průměr/klient
 
-Upravit komponenty, aby splňovaly princip "ve srovnání s čím":
-- `ClientTenureCard`: přidat trend (průměrná délka se zvyšuje/snižuje)
-- `TrainingDurationCard`: přidat srovnání s cílovou délkou nebo průměrem za období
-- Všechny KPI: pokud je vybráno období, zobrazit srovnání s předchozím obdobím
+[Nové - pod existující]
+- Kvalita stravy (koláč: good/normal/poor %)
+- Klienti s varováním (pozdní kofein, prázdné dny)
+```
+
+Přidat filtry:
+- "Vyžaduje pozornost" (prázdné dny > 2, pozdní kofein)
+- "Aktivní" / "Dokončeno" / "Vše"
+
+### Fáze 4: Odstranění hodnotících prvků
+
+V `NutritionCampaignDetail` (resp. sloučeném detailu):
+- Odstranit barevné hodnocení (zelená/červená)
+- Odstranit texty jako "Kvalitní vedení", "Slabé vedení"
+- Nahradit neutrálními fakty: "Záznamy: 6/7 dní", "Kofein po 18:00: 2× za týden"
+
+### Fáze 5: Propojení nastavení s formulářem
+
+Upravit `FoodLogForm` a `constants.ts`:
+- Načítat kategorie z `app_settings.nutrition_settings`
+- Fallback na výchozí hodnoty pokud není nastaveno
+- Zobrazovat vlastní texty (intro/thank you) na veřejném formuláři
+
+### Fáze 6: Přidání trenérských akcí
+
+Do `NutritionClientDetail` přidat:
+- Tlačítko "Přidat záznam za klienta" (otevře FoodLogForm s flag `addedByTrainer`)
+- Možnost označit den jako "Zkontrolováno" (nový sloupec v day_notes)
+- Hromadný export do PDF s vybranými dny
 
 ---
 
 ## Technické kroky implementace
 
-### Krok 1: Úprava CareerStatsSection.tsx
+### Krok 1: Sloučení pohledů
 ```text
-- Odebrat KPICard "Aktivní klienti (30d)" (řádek 239-245)
-- Odebrat KPICard "Vytíženost kapacity" (řádek 246-252)
-- Odebrat InsightsBlock s retencí (přesunout do Klientů)
-- Přidat nový KPI: "Průměrný příjem/měsíc" (relevantní pro kariéru)
+- Přesunout logiku insights z NutritionCampaignDetail do NutritionClientDetail
+- Odstranit hodnotící prvky, ponechat pouze fakta
+- Smazat route /nutrition/campaigns/:id z App.tsx
+- Upravit ClientNutritionTab aby odkazoval na /nutrition/client/:id
 ```
 
-### Krok 2: Úprava FinanceStatsSection.tsx
+### Krok 2: Rozšíření NutritionPage
 ```text
-- Odebrat <LifetimeFinanceStatsCard /> (řádek 146)
-- Přidat FinanceModeToggle do UI (vrátit toggle zpět)
-- Přidat TopProductsCard pod FinanceChartsSection
+- Přidat useQuery pro agregované metriky kvality
+- Přidat filter dropdown (Vše/Aktivní/Varování)
+- Přidat kartu "Vyžaduje pozornost" se seznamem klientů
 ```
 
-### Krok 3: Úprava ClientStatsSection.tsx
+### Krok 3: Propojení nastavení
 ```text
-- Odebrat <ClientAnalyticsCard /> (řádek 91) - duplikuje ChurnRiskCard
-- Přesunout ClientAgeCard do modalu přístupného z ClientHeroKPI
-- Zjednodušit grid na 3 karty místo 4
+- Upravit constants.ts aby exportoval funkci getCategories(settings)
+- V FoodLogForm načítat app_settings a používat custom kategorie
+- V PublicNutritionLog zobrazovat custom intro/thank you texty
 ```
 
-### Krok 4: Úprava TrainingStatsSection.tsx
+### Krok 4: Trenérské akce
 ```text
-- Přidat trend vs minulé období do TrainingHeroKPI
-- Přidat sumarizační řádek nad InteractiveHeatmapCard
-- Opravit GlobalTagDistributionCard - zobrazit fallback pokud žádné tagy
-```
-
-### Krok 5: Validace dat v hooks
-```text
-- Ověřit useAnnualStats respektuje vybrané období konzistentně
-- Sjednotit výpočet retence (useBusinessAnalytics vs useAnnualStats)
-- Přidat null checks pro prázdná data
+- Přidat tlačítko "+ Záznam" do NutritionClientDetail header
+- Vytvořit TrainerAddEntryDialog s FoodLogForm
+- Přidat checkbox "Zkontrolováno" k day notes
+- Rozšířit PDF export o výběr období
 ```
 
 ---
 
 ## Výsledek po úpravách
 
-| Záložka | Před | Po |
-|---------|------|-----|
-| Kariéra | 6 KPI + Insights + Typy | 4 KPI (lifetime) + Typy |
-| Finance | Hero KPI + Grafy + 4 karty + Lifetime | Hero KPI + Mode toggle + Grafy + 3 karty |
-| Tréninky | Hero KPI + 2 grafy + Heatmapa + Tagy | Hero KPI s trendem + 2 grafy + Heatmapa se sumarizací |
-| Klienti | Hero KPI + LTV + 2 retence karty + Analytika + 4 malé | Hero KPI + LTV + 2 retence karty + 3 malé |
+| Oblast | Před | Po |
+|--------|------|-----|
+| Počet pohledů | 4 | 2 |
+| Terminologie | Nekonzistentní | "Deník", "Záznam", "Období" |
+| Dashboard metriky | 4 základní | 6 + filtry |
+| Hodnotící prvky | Ano (zelená/červená) | Ne (pouze fakta) |
+| Nastavení kategorií | Nepoužíváno | Propojeno s formulářem |
+| Trenérské akce | Pouze prohlížení | Přidávání, kontrola, export |
 
 ---
 
-## Bezpečnostní pravidla
+## Prioritizace
 
-1. Nemazat hooky - pouze upravit komponenty
-2. Zachovat všechny modální okna a jejich funkcionalitu
-3. Testovat s prázdnými daty - každá karta musí mít fallback stav
-4. Respektovat filozofii "analytics-philosophy-comparative-non-evaluative" - žádné hodnotící barvy/texty
+**Vysoká priorita (okamžitě):**
+1. Odstranění hodnotících prvků (porušuje design filozofii)
+2. Sjednocení terminologie v UI
+
+**Střední priorita:**
+3. Konsolidace pohledů (sloučení do 2)
+4. Rozšíření NutritionPage o metriky a filtry
+
+**Nižší priorita:**
+5. Propojení nastavení s formulářem
+6. Trenérské akce (přidávání za klienta)
