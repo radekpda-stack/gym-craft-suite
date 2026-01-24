@@ -1,169 +1,156 @@
 
-# Plán: Přidání tabu "Média" do karty klienta
+# Kompletní údržba databáze cviků
 
-## Přehled
+## Shrnutí aktuálního stavu
 
-Přidám nový tab **"Média"** vedle tabu "Profil" v kartě klienta. Tento tab umožní:
-- Nahrávat fotografie, videa a dokumenty (PDF, DOC)
-- Prohlížet galerii médií s filtrováním
-- **Srovnávat fotografie** (před/po) pomocí existující komponenty `PhotoCompare`
+| Metrika | Hodnota |
+|---------|---------|
+| Celkem cviků | 196 |
+| Aktivních | 193 |
+| Archivovaných | 3 |
+| Chybí equipment | 83 |
+| Chybí movement_pattern | 70 |
+| Cviků s využitím | 34 |
 
----
+## Fáze 1: Oprava duplicit
 
-## Technické řešení
+Nalezeno **5 duplicitních párů**:
 
-### 1. Rozšíření databáze
+| Cvik | Varianta 1 | Varianta 2 | Akce |
+|------|------------|------------|------|
+| Plank | `e70e202b` (0 použití) | `f07f9128` (0 použití) | Smazat jeden |
+| Lat Pulldown | `25c7282f` - "Přítah horní kladky" | `c647ac2e` - "Lat Pulldown" | Sloučit, ponechat CZ název |
+| Chin-up | `95861643` - "Shyb podhmatem" | `cb080864` - "Shyby nadhmatem" | Opravit - jsou to různé cviky! |
+| Thruster | `dd1c6829` (0 použití) | `ea4fad10` (0 použití) | Smazat jeden |
+| Zapažování na kladce | `5a01395c` - Tricep Kickback | `da322d40` - Rear Delt Fly | Opravit názvy - jsou to různé cviky! |
 
-Aktuální tabulka `client_media` podporuje typy `photo` a `audio`. Rozšířím o:
-- **`video`** - pro video soubory
-- **`document`** - pro PDF, DOC a další dokumenty
+**Důležité**: Chin-up (podhmat) a Pull-up (nadhmat) jsou různé cviky - toto není duplicita, ale chyba v názvu.
 
-```sql
--- Přidat nové typy médií
-ALTER TABLE client_media 
-DROP CONSTRAINT IF EXISTS client_media_type_check;
+## Fáze 2: Sjednocení kategorií
 
-ALTER TABLE client_media 
-ADD CONSTRAINT client_media_type_check 
-CHECK (type IN ('photo', 'audio', 'video', 'document'));
+Přesun cviků z nestandardních kategorií do standardních:
+
+| Původní kategorie | Počet | Nová kategorie |
+|-------------------|-------|----------------|
+| Nohy | 2 | Dolní tělo |
+| Záda | 2 | Horní tělo |
+| Paže | 2 | Horní tělo |
+| Ramena | 1 | Horní tělo |
+| Hrudník | 1 (archivováno) | - ponechat |
+| Síla | 6 | Full Body nebo Horní/Dolní tělo |
+| plyometrics | 11 | Dolní tělo (+ přidat tag "plyometrie") |
+| conditioning | 1 | Kardio |
+
+## Fáze 3: Doplnění equipment tagů
+
+83 cviků nemá equipment. Přidám podle typu:
+
+| Kategorie equipment | Cviky k aktualizaci |
+|--------------------|---------------------|
+| kettlebell | Kettlebell Swing, Turkish Get Up, Goblet dřep (opravit) |
+| barbell | Bench press, Dřep, Mrtvý tah, Přední dřep, Přítahy v předklonu |
+| dumbbells | Arnold Press, Bicepsové zdvihy, Rozpažování, Bench press na šikmé |
+| bodyweight | Burpee, Kliky, Shyby, Dipy, Výpady, Výstupy |
+| pull-up bar | Muscle-up, Shyby (všechny varianty), Přednožování ve visu |
+| dip bars | Dipy na bradlech, Tricepsové kliky |
+| bench | Bench press varianty, Hip Thrust |
+
+## Fáze 4: Přidání chybějících cviků
+
+Na základě vybavení (hrazda, bradla, bodyweight, běžecký pás, veslo, skierg, činky, kettlebelly):
+
+### Kettlebell (chybí většina)
+- Kettlebell Clean
+- Kettlebell Snatch  
+- Kettlebell Windmill
+- Kettlebell Halo
+- Kettlebell Press
+- Kettlebell Row
+- Kettlebell Lunge
+
+### Hrazda/Bradla (rozšíření)
+- Australian Pull-ups (horizontální přítahy)
+- Dead Hang (vis)
+- Scapular Pull-ups (aktivace lopatek)
+- Toes to Bar
+- Knee Raises
+
+### Jednoručky (doplnění)
+- Dumbbell Pullover
+- Renegade Row
+- Dumbbell Snatch
+- Farmer Walk / Farmer's Carry
+
+### Bodyweight (doplnění)
+- Bear Crawl (medvědí chůze)
+- Mountain Climbers (horolezci)
+- Hollow Body Hold
+- Superman Hold
+- Glute Bridge
+
+### Kardio - rozšíření běžeckého pásu
+- Běh - 400m sprint
+- Běh - 3000m
+- Běh - Tempo run
+
+## Fáze 5: Oprava movement_pattern
+
+70 cviků nemá movement_pattern. Přiřadím:
+
+| Movement Pattern | Příklady cviků |
+|-----------------|----------------|
+| push_horizontal | Bench press, Kliky, Dips |
+| push_vertical | Tlak nad hlavu, Pike Push-up |
+| pull_horizontal | Přítahy v předklonu, Cable Row |
+| pull_vertical | Shyby, Lat Pulldown |
+| squat | Dřepy, Goblet squat |
+| hinge | Mrtvý tah, RDL, Kettlebell Swing |
+| lunge | Výpady, Bulharský dřep |
+| carry | Farmer Walk, Suitcase Carry |
+| core_anti_extension | Plank, Dead Bug |
+| core_anti_rotation | Pallof Press |
+| conditioning | Burpee, Kardio cviky |
+
+## Bezpečnostní pravidla
+
+1. **NIKDY nesmazat** cviky s `usage_count > 0` (34 cviků má záznamy)
+2. Duplicity řešit **archivací**, ne mazáním
+3. Při sloučení přesunout všechny `workout_entries` na primární cvik
+4. Zálohovat ID původních cviků pro audit
+
+## Technické kroky implementace
+
+### Krok 1: Databázové migrace
+```text
+1. UPDATE exercises - sjednocení kategorií
+2. UPDATE exercises - doplnění equipment arrays
+3. UPDATE exercises - doplnění movement_pattern
+4. INSERT exercises - nové cviky pro kettlebell, bodyweight, atd.
+5. UPDATE exercises - archivace duplicit (is_archived = true)
 ```
 
-### 2. Rozšíření storage bucketů
+### Krok 2: Standardizace equipment hodnot
+Sjednotit na anglické hodnoty:
+- "Činka" → "barbell"
+- "Jednoručky" → "dumbbells"  
+- "Hrazda" → "pull-up bar"
+- "Bradla" → "dip bars"
+- "Vlastní váha" → "bodyweight"
 
-Vytvořím dva nové buckety pro videa a dokumenty:
+### Krok 3: Přidání nových cviků
+Celkem cca **25 nových cviků** pro pokrytí vybavení:
+- 7 kettlebell cviků
+- 5 hrazda/bradla cviků
+- 4 jednoručkové cviky
+- 5 bodyweight cviků
+- 3 běžecký pás varianty
 
-```sql
-INSERT INTO storage.buckets (id, name, public) VALUES 
-  ('client-videos', 'client-videos', false),
-  ('client-documents', 'client-documents', false);
+## Výsledek po údržbě
 
--- RLS policies pro přístup
-CREATE POLICY "Users can view own client videos"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'client-videos' AND auth.uid()::text = (storage.foldername(name))[1]);
-
-CREATE POLICY "Users can upload client videos"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'client-videos' AND auth.uid()::text = (storage.foldername(name))[1]);
-
--- Stejné pro client-documents
-```
-
-### 3. Přidání tabu "Média" do ClientDetailTabs
-
-V souboru `src/components/clients/ClientDetailTabs.tsx`:
-
-```typescript
-// Import ikony
-import { Image } from 'lucide-react';
-
-// Přidat do pole tabs (za 'profile')
-{
-  id: 'media',
-  label: 'Média',
-  icon: Image,
-  badge: totalMediaCount > 0 ? totalMediaCount : undefined,
-},
-
-// Přidat nový TabsContent
-<TabsContent value="media" className="mt-0 space-y-4">
-  <ClientMediaTab clientId={client.id} />
-</TabsContent>
-```
-
-### 4. Rozšíření ClientMediaTab o videa a dokumenty
-
-V souboru `src/components/media/ClientMediaTab.tsx`:
-
-```typescript
-// Přidat nové subtaby
-<TabsTrigger value="photos">
-  Fotografie ({photos?.length || 0})
-</TabsTrigger>
-<TabsTrigger value="videos">
-  Videa ({videos?.length || 0})
-</TabsTrigger>
-<TabsTrigger value="documents">
-  Dokumenty ({documents?.length || 0})
-</TabsTrigger>
-<TabsTrigger value="audio">
-  Nahrávky ({audioNotes?.length || 0})
-</TabsTrigger>
-```
-
-### 5. Nová komponenta DocumentUpload
-
-Vytvoření nové komponenty `src/components/media/DocumentUpload.tsx`:
-- Podpora PDF, DOC, DOCX, XLS, XLSX
-- Náhled ikony podle typu souboru
-- Metadata: název, popis, kategorie, datum
-
-### 6. Nová komponenta VideoUpload
-
-Vytvoření nové komponenty `src/components/media/VideoUpload.tsx`:
-- Podpora MP4, MOV, WebM
-- Thumbnail náhled
-- Limit velikosti (např. 100MB)
-
-### 7. Rozšíření useClientMedia hooku
-
-V souboru `src/hooks/useClientMedia.ts`:
-
-```typescript
-export type MediaType = 'photo' | 'audio' | 'video' | 'document';
-
-// Přidat bucket mapping
-const BUCKET_MAP: Record<MediaType, string> = {
-  photo: 'client-photos',
-  audio: 'client-audio',
-  video: 'client-videos',
-  document: 'client-documents',
-};
-
-// Přidat nové category options
-export const DOCUMENT_CATEGORY_OPTIONS = [
-  { value: 'contract', label: 'Smlouva' },
-  { value: 'medical', label: 'Lékařská zpráva' },
-  { value: 'training_plan', label: 'Tréninkový plán' },
-  { value: 'diet', label: 'Stravovací plán' },
-  { value: 'other', label: 'Ostatní' },
-];
-```
-
----
-
-## Struktura souborů
-
-| Soubor | Změna |
-|--------|-------|
-| `src/components/clients/ClientDetailTabs.tsx` | Přidat tab "Média" s ikonou |
-| `src/components/media/ClientMediaTab.tsx` | Rozšířit o videa a dokumenty |
-| `src/components/media/VideoUpload.tsx` | **Nový** - nahrávání videí |
-| `src/components/media/VideoGallery.tsx` | **Nový** - přehrávač videí |
-| `src/components/media/DocumentUpload.tsx` | **Nový** - nahrávání dokumentů |
-| `src/components/media/DocumentList.tsx` | **Nový** - seznam dokumentů |
-| `src/hooks/useClientMedia.ts` | Rozšířit typy a bucket mapping |
-| SQL migrace | Přidat constraint a buckety |
-
----
-
-## Funkcionalita srovnání fotografií (Před/Po)
-
-Existující komponenta `PhotoCompare` již podporuje:
-- **Režim vedle sebe** - dvě fotky vedle sebe
-- **Režim posuvníku** - překrývání s posuvným rozhraním
-- Zoom a rotace jednotlivých fotografií
-- Zobrazení data pořízení
-
-Uživatel vybere 2 fotografie v galerii (tlačítko "Srovnat fotky") a zobrazí se dialog s porovnáním.
-
----
-
-## Očekávaný výsledek
-
-Po implementaci:
-- V kartě klienta bude nový tab **"Média"** vedle "Profil"
-- Trenér může nahrávat fotografie, videa i dokumenty
-- Fotografie lze srovnávat před/po pomocí posuvníku
-- Všechna média jsou organizována podle kategorií a tagů
-- Podpora vyhledávání a filtrování
+| Metrika | Před | Po |
+|---------|------|-----|
+| Aktivních cviků | 193 | ~215 |
+| S equipment | 110 | ~215 |
+| S movement_pattern | 126 | ~215 |
+| Duplicit | 5 | 0 |
+| Nestandardních kategorií | 25 | 0 |
