@@ -1,101 +1,140 @@
 
-# Plán opravy automatického párování klientů v kalendáři
+# Plán opravy kalendářového importu - Komplexní audit
 
-## Diagnostika problému
+## Zjištěné problémy
 
-Provedl jsem analýzu a identifikoval jsem **3 hlavní příčiny** proč automatické párování nefunguje:
+### Problém 1: Smart Import NEVYTVÁŘÍ tréninky (KRITICKÝ)
+**Příčina:** V edge function `sync-ics-calendar/index.ts` (řádky 2284-2290) je explicitně napsáno:
+```
+// Sessions are created by create_approved_sessions action, not here
+// This keeps smart_import fast and within CPU limits
+```
 
-### 1. FastMode přeskakuje párování při velkých kalendářích
-Když kalendář obsahuje více než 200 událostí, systém aktivuje "rychlý režim" (`fastMode`), který **zcela přeskakuje párování klientů**. Události se ukládají bez jakékoliv asociace s klientem.
+Smart Import pouze:
+- ✅ Synchronizuje události z kalendáře
+- ✅ Páruje klienty (exact match)
+- ✅ Učí se aliasy
+- ❌ **NEVYTVÁŘÍ tréninky!**
 
-V databázi je aktuálně přes 1000 událostí jako "Parezová Martina #tr" bez spárování, přestože klientka "Parezová Martina" existuje.
+### Problém 2: UI nezavolá druhou akci
+**Příčina:** V `CalendarQuickImport.tsx` (řádky 40-67) se po úspěšném Smart Import jen zobrazí výsledky, ale **nikdy se nezavolá** `create_approved_sessions`:
 
-### 2. Rematch selhává na velkých kalendářích
-Při pokusu o ruční "Přepárovat" (1000+ událostí) dochází k **timeout CPU** - operace se nedokončí a události zůstanou nespárované.
+```typescript
+const handleSmartImport = async () => {
+  const importResult = await smartImport.mutateAsync({...});
+  setResult(importResult);  // Pouze uložení výsledku
+  // ❌ CHYBÍ: await createSessions.mutateAsync(feedId);
+};
+```
 
-### 3. Učení aliasů nefunguje na přesné shody
-Systém ukládá pouze **nové tokeny** jako aliasy (např. přezdívky). Když je jméno v kalendáři "Parezová Martina #tr" a klient se jmenuje "Parezová Martina", systém neukládá žádný alias, protože tokeny už jsou součástí jména.
+### Problém 3: Statistika v databázi
+Aktuální stav (z dotazu):
+| Metrika | Počet |
+|---------|-------|
+| Celkem událostí | 2944 |
+| Spárované s klientem | 2314 |
+| Schválené | 698 |
+| S vytvořeným tréninkem | 188 |
+
+**2126 událostí** je spárováno, ale nemá vytvořený trénink!
 
 ---
 
 ## Navrhované řešení
 
-### Krok 1: Optimalizovat párování při syncu
+### Změna 1: Rozšířit `useSmartImport` hook o automatické vytvoření tréninků
 
-Místo přeskakování párování v `fastMode` změním logiku:
+Po úspěšném smart_import volat `create_approved_sessions` v rámci mutace:
 
-- **Vytvořit lookup mapu** ze všech jmen klientů (normalizovaných) na jejich ID
-- Provádět **rychlé přímé porovnání** (exact match) i v fast mode
-- Plný fuzzy matching ponechat pouze pro small sync
+**Soubor:** `src/hooks/useSmartImport.ts`
 
-**Změny v souboru:** `supabase/functions/sync-ics-calendar/index.ts`
-- Přidat funkci `buildClientNameLookupMap()` 
-- V `fastMode` provádět rychlé exact-match porovnání
-- Zachovat fuzzy matching pro případy bez přímé shody
-
-### Krok 2: Opravit rematch pro velké kalendáře
-
-Změnit `rematch_clients` akci:
-- Zpracovávat události ve **stránkovaných dávkách** (např. 200 najednou)
-- Používat **hromadné UPDATE** místo jednotlivých dotazů
-- Přidat **timeout-resilient** logiku
-
-**Změny v souboru:** `supabase/functions/sync-ics-calendar/index.ts`
-- Přepsat `rematch_clients` s batch processing
-- Použít single UPDATE s CASE WHEN pro hromadné aktualizace
-
-### Krok 3: Ukládat celý summary jako alias
-
-Při manuálním přiřazení ukládat **celý normalizovaný summary** jako alias (ne jen tokeny):
-
+```typescript
+export function useSmartImport() {
+  return useMutation({
+    mutationFn: async (options: SmartImportOptions): Promise<SmartImportResult> => {
+      const { feedId, autoCreateSessions = true, ... } = options;
+      
+      // Krok 1: Smart Import (sync + match)
+      const response = await supabase.functions.invoke('sync-ics-calendar', {
+        body: { action: 'smart_import', feedId, ... },
+      });
+      
+      // Krok 2: Vytvořit tréninky (pokud povoleno)
+      let sessionsResult = { sessions_created: 0, duplicates_skipped: 0 };
+      if (autoCreateSessions) {
+        const sessionsResponse = await supabase.functions.invoke('sync-ics-calendar', {
+          body: { action: 'create_approved_sessions', feedId },
+        });
+        if (!sessionsResponse.error) {
+          sessionsResult = sessionsResponse.data;
+        }
+      }
+      
+      return {
+        ...response.data,
+        imported: sessionsResult.sessions_created,
+        duplicates_skipped: sessionsResult.duplicates_skipped,
+      };
+    },
+  });
+}
 ```
-Událost: "Parezová Martina #tr"
-Alias:   "parezova martina #tr" → uložit pro klienta
+
+### Změna 2: Opravit párování přímých shod v fast mode
+
+V edge function není správně prováděno exact-match párování při velkém počtu událostí. Lookup mapa existuje, ale párování se může přeskočit.
+
+**Soubor:** `supabase/functions/sync-ics-calendar/index.ts`
+
+Logika v kroku 4 smart_import:
+1. Přidat robustnější čištění summary (odstranit #tr, časy, speciální znaky)
+2. Zajistit, že lookup mapa obsahuje i kombinace "příjmení křestní"
+3. Přidat fallback na fuzzy matching pro přímé shody s diakritikou
+
+### Změna 3: Opravit learn_alias pro celý summary
+
+Aktuální logika ukládá pouze tokeny. Přidat ukládání celého normalizovaného summary:
+
+```typescript
+// Aktuální (špatné):
+aliases: ["parezova", "martina"]  // jednotlivé tokeny
+
+// Nové (správné):
+aliases: ["parezova martina #tr", "parezova martina"]  // celý vzor
 ```
 
-Tím se příští události se stejným názvem automaticky spárují.
+### Změna 4: Přidat tlačítko "Vytvořit tréninky" do Smart Import UI
 
-**Změny v souboru:** `supabase/functions/sync-ics-calendar/index.ts`
-- V akci `learn_alias` přidat ukládání celého summary jako alias
-- Filtrovat pouze #tr a podobné tagy
+**Soubor:** `src/components/settings/CalendarQuickImport.tsx`
 
-### Krok 4: Přidat "Spárovat vše najednou" tlačítko
+Po zobrazení výsledků přidat tlačítko pro manuální vytvoření tréninků (pro případ, že automatická session creation byla přeskočena kvůli timeoutu):
 
-Přidat nové UI tlačítko do CalendarImportReview, které:
-- Spáruje všechny události s přímou shodou jména jedním kliknutím
-- Zobrazí progress a výsledky
-
-**Změny v souboru:** `src/components/settings/CalendarImportReview.tsx`
-- Přidat tlačítko "Auto-párovat přímé shody"
-- Volat novou backend akci
+```tsx
+{result && result.matched > result.imported && (
+  <Button onClick={handleCreateSessions}>
+    Vytvořit zbývající tréninky ({result.matched - result.imported})
+  </Button>
+)}
+```
 
 ---
 
-## Technické detaily implementace
-
-### Nová logika pro rychlé párování (exact match)
+## Technický detail: Optimalizovaná lookup mapa
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│  Při syncu:                                         │
-│                                                     │
-│  1. Vytvořit mapu: normalized_name → client_id     │
-│     "parezova martina" → "ddcb744f-..."            │
-│     "milkova alena" → "abc123..."                  │
-│                                                     │
-│  2. Pro každou událost:                            │
-│     summary = "Parezová Martina #tr"               │
-│     clean = odstranit #tr, časy, speciální znaky   │
-│     normalized = "parezova martina"                │
-│                                                     │
-│  3. Lookup: map.get(normalized) → client_id        │
-└─────────────────────────────────────────────────────┘
+Událost:   "Parezová Martina #tr"
+           ↓ normalize
+Cleaned:   "parezova martina"
+           ↓ lookup
+Mapa:      { "parezova martina" → "client-uuid-123" }
+           → MATCH!
 ```
 
-### Výkon
-- Lookup mapa: O(1) pro každou událost
-- 1500 událostí × O(1) = velmi rychlé
-- Žádný fuzzy matching v rychlém režimu
+Mapa obsahuje:
+- Celé normalizované jméno klienta
+- Jednotlivé části jména (příjmení, křestní)
+- Uložené aliasy z databáze
+- Kombinace přeházených jmen ("martina parezova")
 
 ---
 
@@ -103,14 +142,15 @@ Přidat nové UI tlačítko do CalendarImportReview, které:
 
 | Soubor | Změna |
 |--------|-------|
-| `supabase/functions/sync-ics-calendar/index.ts` | Přidat exact-match v fastMode, opravit rematch batching, ukládat celý summary jako alias |
-| `src/components/settings/CalendarImportReview.tsx` | Přidat tlačítko pro hromadné párování přímých shod |
-| `src/hooks/useCalendarSync.ts` | Přidat hook pro novou akci |
+| `src/hooks/useSmartImport.ts` | Přidat volání `create_approved_sessions` po úspěšném smart_import |
+| `src/components/settings/CalendarQuickImport.tsx` | Přidat tlačítko pro ruční vytvoření tréninků |
+| `supabase/functions/sync-ics-calendar/index.ts` | Vylepšit lookup mapu o reversed name patterns, opravit learn_alias |
 
 ## Očekávaný výsledek
 
 Po implementaci:
-- ✅ Události jako "Parezová Martina #tr" se **automaticky spárují** při syncu
-- ✅ Rematch nebude selhávat na velkých kalendářích  
+- ✅ Smart Import bude **skutečně vytvářet tréninky** do kalendáře
+- ✅ Události jako "Parezová Martina #tr" se automaticky spárují a importují
 - ✅ Po manuálním přiřazení se naučí celý formát události
-- ✅ Budoucí události se stejným názvem se automaticky spárují
+- ✅ UI zobrazí správný počet importovaných tréninků
+- ✅ Možnost ručně dokončit import, pokud automatický proces vyprší
