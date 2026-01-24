@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSmartImport, SmartImportResult, useQuickAssignClient } from '@/hooks/useSmartImport';
+import { useSmartImport, SmartImportResult, useQuickAssignClient, useCreateApprovedSessions } from '@/hooks/useSmartImport';
 import { useImportStats, useImportableEvents } from '@/hooks/useCalendarImport';
 import { useClients } from '@/hooks/useClients';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Zap, Settings2, Users, Calendar, CheckCircle2, AlertCircle, Loader2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Zap, Settings2, Users, Calendar, CheckCircle2, AlertCircle, Loader2, ChevronDown, ChevronUp, Sparkles, CalendarPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -33,6 +33,7 @@ export function CalendarQuickImport({ feedId, feedName, onClose }: CalendarQuick
   
   const smartImport = useSmartImport();
   const quickAssign = useQuickAssignClient();
+  const createSessions = useCreateApprovedSessions();
   const { data: stats, isLoading: statsLoading } = useImportStats(feedId);
   const { data: events, isLoading: eventsLoading } = useImportableEvents(feedId);
   const { data: clients } = useClients();
@@ -81,6 +82,29 @@ export function CalendarQuickImport({ feedId, feedName, onClose }: CalendarQuick
       }
     } catch (error) {
       toast.error('Přiřazení selhalo');
+    }
+  };
+
+  // Manual session creation for events that were matched but not yet converted to sessions
+  const handleCreateRemainingSessions = async () => {
+    try {
+      const result = await createSessions.mutateAsync(feedId);
+      if (result.sessions_created > 0) {
+        toast.success(`Vytvořeno ${result.sessions_created} tréninků`);
+        // Update the result to reflect new sessions
+        if (result) {
+          setResult(prev => prev ? {
+            ...prev,
+            imported: (prev.imported || 0) + result.sessions_created,
+          } : prev);
+        }
+      } else {
+        toast.info('Žádné další tréninky k vytvoření');
+      }
+    } catch (error) {
+      toast.error('Vytváření tréninků selhalo', {
+        description: error instanceof Error ? error.message : 'Neznámá chyba',
+      });
     }
   };
 
@@ -299,11 +323,38 @@ export function CalendarQuickImport({ feedId, feedName, onClose }: CalendarQuick
           </div>
         )}
 
+        {/* Manual Create Sessions Button - shown when matched > imported */}
+        {result && result.accepted > result.imported && (
+          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <CalendarPlus className="w-4 h-4 text-amber-600" />
+                <span className="text-sm text-amber-700 dark:text-amber-400">
+                  {result.accepted - result.imported} schválených událostí čeká na vytvoření tréninků
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCreateRemainingSessions}
+                disabled={createSessions.isPending}
+                className="shrink-0 border-amber-500/30 hover:bg-amber-500/10"
+              >
+                {createSessions.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>Vytvořit tréninky</>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex gap-2">
           <Button
             onClick={handleSmartImport}
-            disabled={isImporting || isLoading}
+            disabled={isImporting || isLoading || createSessions.isPending}
             className="flex-1 h-12"
             size="lg"
           >

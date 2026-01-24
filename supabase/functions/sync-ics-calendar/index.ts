@@ -2088,7 +2088,7 @@ serve(async (req) => {
         aliasMap.set(aliasRow.client_id, existing);
       }
 
-      // Build fast O(1) lookup map (like in processEvents)
+      // Build fast O(1) lookup map with reversed name patterns
       const clientNameLookupMap = new Map<string, string>();
       const clientIdToName = new Map<string, string>();
       for (const client of clients || []) {
@@ -2097,12 +2097,23 @@ serve(async (req) => {
         clientNameLookupMap.set(normalizedName, client.id);
         
         const nameParts = normalizedName.split(/\s+/);
+        
+        // Add reversed name pattern (e.g., "Novak Jan" -> "jan novak")
+        if (nameParts.length >= 2) {
+          const reversedName = [...nameParts].reverse().join(' ');
+          if (!clientNameLookupMap.has(reversedName)) {
+            clientNameLookupMap.set(reversedName, client.id);
+          }
+        }
+        
+        // Add individual name parts (first/last name)
         for (const part of nameParts) {
           if (part.length >= 3 && !clientNameLookupMap.has(part)) {
             clientNameLookupMap.set(part, client.id);
           }
         }
         
+        // Add all aliases from database
         const aliases = aliasMap.get(client.id) || [];
         for (const alias of aliases) {
           clientNameLookupMap.set(normalizeText(alias), client.id);
@@ -2157,17 +2168,29 @@ serve(async (req) => {
             .replace(/#\w+/g, '')
             .replace(/\d{1,2}[.:]\d{2}/g, '')
             .replace(/[&,+\/]/g, ' ')
+            .replace(/\s+/g, ' ')
             .trim();
           
           const normalizedSummary = normalizeText(cleanSummary);
           let matchedClientId: string | null = null;
 
-          // Try full cleaned summary
+          // Try full cleaned summary first
           if (clientNameLookupMap.has(normalizedSummary)) {
             matchedClientId = clientNameLookupMap.get(normalizedSummary)!;
           }
 
-          // Try parts (first/last name)
+          // Try reversed name pattern (e.g., "Parezova Martina" -> "martina parezova")
+          if (!matchedClientId) {
+            const parts = normalizedSummary.split(/\s+/).filter(p => p.length >= 2);
+            if (parts.length >= 2) {
+              const reversedPattern = [...parts].reverse().join(' ');
+              if (clientNameLookupMap.has(reversedPattern)) {
+                matchedClientId = clientNameLookupMap.get(reversedPattern)!;
+              }
+            }
+          }
+
+          // Try individual name parts (first/last name)
           if (!matchedClientId) {
             const parts = normalizedSummary.split(/\s+/).filter(p => p.length >= 3);
             for (const part of parts) {
@@ -2197,12 +2220,15 @@ serve(async (req) => {
             results.accepted++;
             eventsToApprove.push(event.id);
 
-            // Learn alias if enabled and summary is new
+            // Learn alias if enabled - save FULL cleaned summary as alias (not just tokens)
             if (learnAliases && normalizedSummary.length >= 3) {
               if (!processedSummaries.has(normalizedSummary)) {
                 processedSummaries.add(normalizedSummary);
                 const clientNameNorm = normalizeText(clientName);
-                if (normalizedSummary !== clientNameNorm) {
+                const clientNameReversed = clientNameNorm.split(/\s+/).reverse().join(' ');
+                
+                // Only add as alias if it's different from the client name (both orders)
+                if (normalizedSummary !== clientNameNorm && normalizedSummary !== clientNameReversed) {
                   aliasesToLearn.push({ clientId: matchedClientId, alias: normalizedSummary });
                 }
               }
