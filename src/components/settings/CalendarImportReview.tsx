@@ -45,6 +45,7 @@ import {
   useDeleteUnfilteredEvents,
   useAcceptAllSuggestions,
   useAutoImportReady,
+  useBulkAutoMatch,
   ImportableEvent,
 } from '@/hooks/useCalendarImport';
 import { useSyncICSFeed, useRematchClients } from '@/hooks/useCalendarSync';
@@ -78,6 +79,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
   const deleteUnfiltered = useDeleteUnfilteredEvents();
   const acceptAllSuggestions = useAcceptAllSuggestions();
   const autoImportReady = useAutoImportReady();
+  const bulkAutoMatch = useBulkAutoMatch();
 
   // Categorize events
   const categorizedEvents = useMemo(() => {
@@ -166,6 +168,21 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
       }
     } catch (error) {
       toast.error('Nepodařilo se přepárovat');
+    }
+  };
+
+  const handleBulkAutoMatch = async () => {
+    try {
+      const result = await bulkAutoMatch.mutateAsync(feedId);
+      await refetchEvents();
+      await refetchStats();
+      if (result.matched_count > 0) {
+        toast.success(`Automaticky spárováno ${result.matched_count} z ${result.total_unmatched} událostí`);
+      } else {
+        toast.info('Žádné přímé shody nenalezeny - zkuste přiřadit klienty ručně');
+      }
+    } catch (error) {
+      toast.error('Nepodařilo se automaticky spárovat');
     }
   };
 
@@ -298,7 +315,7 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
     }
   };
 
-  const isProcessing = syncFeed.isPending || rematchClients.isPending || approveEvents.isPending || skipEvents.isPending || createSessions.isPending || deleteUnfiltered.isPending || acceptAllSuggestions.isPending || autoImportReady.isPending;
+  const isProcessing = syncFeed.isPending || rematchClients.isPending || approveEvents.isPending || skipEvents.isPending || createSessions.isPending || deleteUnfiltered.isPending || acceptAllSuggestions.isPending || autoImportReady.isPending || bulkAutoMatch.isPending;
 
   return (
     <Dialog open={isOpen} onOpenChange={() => !isProcessing && onClose()}>
@@ -383,17 +400,35 @@ export function CalendarImportReview({ feedId, feedName, isOpen, onClose }: Cale
             )}
             <span className="ml-2 hidden sm:inline">Sync</span>
           </Button>
+          {/* NEW: Auto-pair direct matches button - prominent when there are unassigned events */}
+          {categorizedEvents.needs_assignment.length > 0 && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleBulkAutoMatch}
+              disabled={isProcessing}
+              title="Automaticky spárovat všechny události kde jméno přesně odpovídá klientovi v databázi"
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {bulkAutoMatch.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              <span className="ml-2">Auto-párovat ({categorizedEvents.needs_assignment.length})</span>
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
             onClick={handleRematch}
             disabled={isProcessing || categorizedEvents.needs_assignment.length === 0}
-            title="Zkusit znovu spárovat nespárované události s klienty"
+            title="Zkusit znovu spárovat nespárované události s klienty (fuzzy matching)"
           >
             {rematchClients.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Sparkles className="h-4 w-4" />
+              <RotateCcw className="h-4 w-4" />
             )}
             <span className="ml-2 hidden sm:inline">Přepárovat</span>
           </Button>

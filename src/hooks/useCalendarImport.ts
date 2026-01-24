@@ -415,3 +415,35 @@ export function useAutoImportReady() {
     },
   });
 }
+
+/**
+ * Force rematch all unmatched events using exact-match + fuzzy algorithms
+ * This is useful after adding new clients or when events weren't matched on initial sync
+ */
+export function useBulkAutoMatch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (feedId: string) => {
+      const response = await supabase.functions.invoke('sync-ics-calendar', {
+        body: {
+          action: 'rematch_clients',
+          feedId,
+        },
+      });
+
+      if (response.error) throw response.error;
+      return response.data as { 
+        success: boolean; 
+        matched_count: number; 
+        total_unmatched: number;
+        processed_count?: number;
+      };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['importable-events'] });
+      queryClient.invalidateQueries({ queryKey: ['import-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['ics-events'] });
+    },
+  });
+}

@@ -873,11 +873,15 @@ async function processEvents(
   recurring_instances: number;
   sync_log: any;
 }> {
-  // Performance mode: for large syncs, skip client matching but STILL do duplicate detection
+  // Performance mode: for large syncs, use fast exact-match instead of fuzzy matching
   const fastMode = expandedEvents.length > 200;
 
   let clients: Array<{ id: string; name: string }> | null = null;
   let aliasMap = new Map<string, string[]>();
+  
+  // NEW: Client name lookup map for O(1) exact matching in fastMode
+  // Maps normalized client name and aliases to client ID
+  const clientNameLookupMap = new Map<string, string>();
   
   // Always fetch existing sessions for duplicate detection - this is critical to prevent duplicates!
   // Build a time-based lookup map for efficient duplicate detection
@@ -910,25 +914,52 @@ async function processEvents(
   
   console.log(`[ICS Sync] Loaded ${existingSessions.length} existing sessions for duplicate detection`);
 
-  if (!fastMode) {
-    const { data: clientsData } = await supabase
-      .from('clients')
-      .select('id, name')
-      .eq('user_id', userId)
-      .eq('is_archived', false);
-    clients = clientsData || null;
+  // ALWAYS fetch clients and aliases - needed for both fastMode (exact) and normal (fuzzy) matching
+  const { data: clientsData } = await supabase
+    .from('clients')
+    .select('id, name')
+    .eq('user_id', userId)
+    .eq('is_archived', false);
+  clients = clientsData || null;
 
-    const { data: aliasesData } = await supabase
-      .from('client_name_aliases')
-      .select('client_id, alias')
-      .eq('user_id', userId);
+  const { data: aliasesData } = await supabase
+    .from('client_name_aliases')
+    .select('client_id, alias')
+    .eq('user_id', userId);
 
-    aliasMap = new Map<string, string[]>();
-    for (const aliasRow of aliasesData || []) {
-      const existing = aliasMap.get(aliasRow.client_id) || [];
-      existing.push(aliasRow.alias);
-      aliasMap.set(aliasRow.client_id, existing);
+  aliasMap = new Map<string, string[]>();
+  for (const aliasRow of aliasesData || []) {
+    const existing = aliasMap.get(aliasRow.client_id) || [];
+    existing.push(aliasRow.alias);
+    aliasMap.set(aliasRow.client_id, existing);
+  }
+
+  // Build fast lookup map for exact matching (used in fastMode)
+  if (clients) {
+    for (const client of clients) {
+      // Add normalized full name
+      const normalizedName = normalizeText(client.name);
+      clientNameLookupMap.set(normalizedName, client.id);
+      
+      // Add individual name parts (first name, last name)
+      const nameParts = normalizedName.split(/\s+/);
+      for (const part of nameParts) {
+        if (part.length >= 3) {
+          // Only set if not already taken (avoid conflicts)
+          if (!clientNameLookupMap.has(part)) {
+            clientNameLookupMap.set(part, client.id);
+          }
+        }
+      }
+      
+      // Add all aliases for this client
+      const aliases = aliasMap.get(client.id) || [];
+      for (const alias of aliases) {
+        const normalizedAlias = normalizeText(alias);
+        clientNameLookupMap.set(normalizedAlias, client.id);
+      }
     }
+    console.log(`[ICS Sync] Built lookup map with ${clientNameLookupMap.size} entries for ${clients.length} clients`);
   }
 
   let syncedCount = 0;
@@ -955,23 +986,80 @@ async function processEvents(
       if (event.isRecurringInstance) recurringInstancesCount++;
 
       if (fastMode) {
-        // Fast mode: skip client matching but STILL detect duplicates by time
-        // This uses the efficient time-based lookup map
+        // Fast mode: use O(1) exact-match lookup instead of fuzzy matching
+        // This is much faster but still provides client matching for known names
         const eventTime = event.dtstart.getTime();
         const roundedTime = Math.floor(eventTime / THIRTY_MINUTES) * THIRTY_MINUTES;
         const potentialSessions = sessionTimeMap.get(roundedTime) || [];
         
-        // Find any session within 30 minutes of this event (regardless of client)
-        // We'll show these as potential duplicates for manual review
-        let potentialDuplicateId: string | null = null;
-        for (const session of potentialSessions) {
-          const sessionTime = new Date(session.date).getTime();
-          if (Math.abs(sessionTime - eventTime) <= THIRTY_MINUTES) {
-            potentialDuplicateId = session.id;
-            duplicatesCount++;
-            break;
+        // Try to find client using fast exact-match lookup
+        let matchedClientId: string | null = null;
+        let matchedClientName: string | null = null;
+        
+        // Clean the summary: remove #tr, times, and special characters
+        const cleanSummary = (event.summary || '')
+          .replace(/#\w+/g, '')  // Remove hashtags like #tr
+          .replace(/\d{1,2}[.:]\d{2}/g, '')  // Remove times like 8:00 or 14.30
+          .replace(/[&,+\/]/g, ' ')  // Replace separators with spaces
+          .trim();
+        
+        const normalizedSummary = normalizeText(cleanSummary);
+        
+        // Try exact match on full cleaned summary
+        if (clientNameLookupMap.has(normalizedSummary)) {
+          matchedClientId = clientNameLookupMap.get(normalizedSummary)!;
+        }
+        
+        // If no match, try matching on parts (first/last name)
+        if (!matchedClientId) {
+          const parts = normalizedSummary.split(/\s+/).filter(p => p.length >= 3);
+          for (const part of parts) {
+            if (clientNameLookupMap.has(part)) {
+              matchedClientId = clientNameLookupMap.get(part)!;
+              break;
+            }
           }
         }
+        
+        // Get client name for suggestions if matched
+        if (matchedClientId && clients) {
+          const client = clients.find(c => c.id === matchedClientId);
+          matchedClientName = client?.name || null;
+        }
+        
+        // Detect duplicates
+        let potentialDuplicateId: string | null = null;
+        if (matchedClientId) {
+          for (const session of potentialSessions) {
+            if (session.client_id !== matchedClientId) continue;
+            const sessionTime = new Date(session.date).getTime();
+            if (Math.abs(sessionTime - eventTime) <= THIRTY_MINUTES) {
+              potentialDuplicateId = session.id;
+              duplicatesCount++;
+              break;
+            }
+          }
+          matchedCount++;
+        } else {
+          // No match - check for any time-based duplicate for review
+          for (const session of potentialSessions) {
+            const sessionTime = new Date(session.date).getTime();
+            if (Math.abs(sessionTime - eventTime) <= THIRTY_MINUTES) {
+              potentialDuplicateId = session.id;
+              duplicatesCount++;
+              break;
+            }
+          }
+          unmatchedCount++;
+        }
+        
+        // Build suggestion if we have a match
+        const suggestions = matchedClientId && matchedClientName ? [{
+          client_id: matchedClientId,
+          name: matchedClientName,
+          score: 100,  // Exact match
+          match_type: 'exact_full',
+        }] : null;
 
         eventsToUpsert.push({
           feed_id: feedId,
@@ -981,9 +1069,9 @@ async function processEvents(
           start_at: event.dtstart.toISOString(),
           end_at: event.dtend?.toISOString() || null,
           location: event.location || null,
-          matched_client_id: null,
+          matched_client_id: matchedClientId,
           additional_matched_client_ids: null,
-          match_suggestions: null,
+          match_suggestions: suggestions,
           potential_duplicate_session_id: potentialDuplicateId,
           rrule: event.rrule || null,
           master_event_uid: event.masterEventUid || null,
@@ -1378,6 +1466,35 @@ serve(async (req) => {
       const forbiddenAliases = ['#tr', 'tr', '#trenink', 'trenink', '#training', 'training', 
                                 '#cviceni', 'cviceni', '#workout', 'workout', 'platit', 'zaplaceno'];
       
+      // NEW: Also save the ENTIRE cleaned summary as an alias for perfect future matching
+      // This ensures "Parezová Martina #tr" will always match next time
+      const cleanedSummary = (event.summary || '')
+        .replace(/#\w+/g, '')  // Remove hashtags like #tr
+        .replace(/\d{1,2}[.:]\d{2}/g, '')  // Remove times
+        .replace(/[&,+\/]/g, ' ')  // Replace separators
+        .trim();
+      const normalizedCleanSummary = normalizeText(cleanedSummary);
+      
+      // Only add if it's different from the client name (not redundant)
+      if (normalizedCleanSummary.length >= 3 && normalizedCleanSummary !== normalizeText(client.name)) {
+        const { error: summaryAliasError } = await supabase
+          .from('client_name_aliases')
+          .upsert({
+            client_id: clientId,
+            alias: normalizedCleanSummary,
+            source: 'learned_summary',
+            user_id: feed.user_id,
+          }, {
+            onConflict: 'client_id,alias',
+          });
+        
+        if (!summaryAliasError) {
+          learnedAliases.push(normalizedCleanSummary);
+          console.log(`[ICS Sync] Learned full summary alias: "${normalizedCleanSummary}" for client ${client.name}`);
+        }
+      }
+      
+      // Also learn individual tokens (for backwards compatibility)
       for (const token of [...new Set(tokens)]) {
         if (clientNameParts.includes(token)) continue;
         if (token.length < 2) continue;
@@ -1593,6 +1710,7 @@ serve(async (req) => {
 
     // ===========================================
     // ACTION: rematch_clients - Run client matching on unmatched events
+    // Optimized for large calendars with batch processing
     // ===========================================
     if (action === 'rematch_clients') {
       const { data: feed, error: feedError } = await supabase
@@ -1608,23 +1726,16 @@ serve(async (req) => {
         );
       }
 
-      // Get unmatched events for this feed
-      const { data: unmatchedEvents, error: eventsError } = await supabase
+      // Get count of unmatched events first
+      const { count: unmatchedCount } = await supabase
         .from('calendar_ics_events')
-        .select('id, summary')
+        .select('id', { count: 'exact', head: true })
         .eq('feed_id', feedId)
         .is('matched_client_id', null)
         .eq('is_processed', false)
         .eq('skip_import', false);
 
-      if (eventsError) {
-        return new Response(
-          JSON.stringify({ error: 'fetch_events_failed', details: eventsError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (!unmatchedEvents || unmatchedEvents.length === 0) {
+      if (!unmatchedCount || unmatchedCount === 0) {
         return new Response(
           JSON.stringify({ success: true, matched_count: 0, message: 'No unmatched events' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -1653,49 +1764,156 @@ serve(async (req) => {
         aliasMap.set(aliasRow.client_id, existing);
       }
 
-      let matchedCount = 0;
-      const BATCH_SIZE = 50;
-
-      console.log(`[ICS Sync] Re-matching ${unmatchedEvents.length} unmatched events`);
-
-      for (let i = 0; i < unmatchedEvents.length; i += BATCH_SIZE) {
-        const batch = unmatchedEvents.slice(i, i + BATCH_SIZE);
+      // Build fast lookup map for exact matching (like in processEvents)
+      const clientNameLookupMap = new Map<string, string>();
+      for (const client of clients) {
+        const normalizedName = normalizeText(client.name);
+        clientNameLookupMap.set(normalizedName, client.id);
         
-        for (const event of batch) {
-          const { primary, additional } = findMultipleClientMatches(event.summary, clients, aliasMap, 70);
-          const allMatches = findClientMatches(event.summary, clients, aliasMap);
-          const suggestions = allMatches.slice(0, 3).map((m) => ({
-            client_id: m.clientId,
-            name: m.clientName,
-            score: m.score,
-            match_type: m.matchType,
-          }));
-
-          if (primary || suggestions.length > 0) {
-            const additionalClientIds = additional.map((m) => m.clientId);
-
-            await supabase
-              .from('calendar_ics_events')
-              .update({
-                matched_client_id: primary?.clientId || null,
-                additional_matched_client_ids: additionalClientIds.length > 0 ? additionalClientIds : null,
-                match_suggestions: suggestions.length > 0 ? suggestions : null,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', event.id);
-
-            if (primary) matchedCount++;
+        const nameParts = normalizedName.split(/\s+/);
+        for (const part of nameParts) {
+          if (part.length >= 3 && !clientNameLookupMap.has(part)) {
+            clientNameLookupMap.set(part, client.id);
           }
+        }
+        
+        const aliases = aliasMap.get(client.id) || [];
+        for (const alias of aliases) {
+          clientNameLookupMap.set(normalizeText(alias), client.id);
         }
       }
 
-      console.log(`[ICS Sync] Re-matched ${matchedCount} events`);
+      console.log(`[ICS Sync] Re-matching ${unmatchedCount} unmatched events with ${clientNameLookupMap.size} lookup entries`);
+
+      let matchedCount = 0;
+      let processedCount = 0;
+      const BATCH_SIZE = 100;  // Increased from 50
+      const PAGE_LIMIT = 200;  // Process 200 events per page to avoid timeout
+
+      // Process in pages to handle large datasets
+      let offset = 0;
+      const startTime = Date.now();
+      const MAX_PROCESSING_TIME = 25000; // 25 seconds max to leave margin
+
+      while (processedCount < unmatchedCount) {
+        // Check if we're running out of time
+        if (Date.now() - startTime > MAX_PROCESSING_TIME) {
+          console.log(`[ICS Sync] Approaching timeout, stopping after ${processedCount}/${unmatchedCount} events`);
+          break;
+        }
+
+        // Fetch a page of unmatched events
+        const { data: unmatchedEvents, error: eventsError } = await supabase
+          .from('calendar_ics_events')
+          .select('id, summary')
+          .eq('feed_id', feedId)
+          .is('matched_client_id', null)
+          .eq('is_processed', false)
+          .eq('skip_import', false)
+          .range(offset, offset + PAGE_LIMIT - 1);
+
+        if (eventsError || !unmatchedEvents || unmatchedEvents.length === 0) {
+          break;
+        }
+
+        // Prepare bulk updates
+        const updates: Array<{ id: string; matched_client_id: string | null; match_suggestions: any }> = [];
+
+        for (const event of unmatchedEvents) {
+          // First try fast exact-match lookup
+          let matchedClientId: string | null = null;
+          
+          const cleanSummary = (event.summary || '')
+            .replace(/#\w+/g, '')
+            .replace(/\d{1,2}[.:]\d{2}/g, '')
+            .replace(/[&,+\/]/g, ' ')
+            .trim();
+          
+          const normalizedSummary = normalizeText(cleanSummary);
+          
+          if (clientNameLookupMap.has(normalizedSummary)) {
+            matchedClientId = clientNameLookupMap.get(normalizedSummary)!;
+          }
+          
+          if (!matchedClientId) {
+            const parts = normalizedSummary.split(/\s+/).filter(p => p.length >= 3);
+            for (const part of parts) {
+              if (clientNameLookupMap.has(part)) {
+                matchedClientId = clientNameLookupMap.get(part)!;
+                break;
+              }
+            }
+          }
+
+          // If no exact match, try fuzzy matching
+          let suggestions: any[] = [];
+          if (!matchedClientId) {
+            const { primary, additional } = findMultipleClientMatches(event.summary, clients, aliasMap, 70);
+            const allMatches = findClientMatches(event.summary, clients, aliasMap);
+            suggestions = allMatches.slice(0, 3).map((m) => ({
+              client_id: m.clientId,
+              name: m.clientName,
+              score: m.score,
+              match_type: m.matchType,
+            }));
+            matchedClientId = primary?.clientId || null;
+          } else {
+            // Exact match - add as suggestion
+            const client = clients.find(c => c.id === matchedClientId);
+            if (client) {
+              suggestions = [{
+                client_id: matchedClientId,
+                name: client.name,
+                score: 100,
+                match_type: 'exact_full',
+              }];
+            }
+          }
+
+          if (matchedClientId || suggestions.length > 0) {
+            updates.push({
+              id: event.id,
+              matched_client_id: matchedClientId,
+              match_suggestions: suggestions.length > 0 ? suggestions : null,
+            });
+            if (matchedClientId) matchedCount++;
+          }
+        }
+
+        // Execute batch updates
+        for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+          const batch = updates.slice(i, i + BATCH_SIZE);
+          
+          // Use parallel updates for better performance
+          await Promise.all(batch.map(update => 
+            supabase
+              .from('calendar_ics_events')
+              .update({
+                matched_client_id: update.matched_client_id,
+                match_suggestions: update.match_suggestions,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', update.id)
+          ));
+        }
+
+        processedCount += unmatchedEvents.length;
+        offset += PAGE_LIMIT;
+
+        // If we got fewer events than the limit, we're done
+        if (unmatchedEvents.length < PAGE_LIMIT) {
+          break;
+        }
+      }
+
+      console.log(`[ICS Sync] Re-matched ${matchedCount}/${processedCount} events in ${Date.now() - startTime}ms`);
 
       return new Response(
         JSON.stringify({ 
           success: true, 
           matched_count: matchedCount,
-          total_unmatched: unmatchedEvents.length,
+          total_unmatched: unmatchedCount,
+          processed_count: processedCount,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
