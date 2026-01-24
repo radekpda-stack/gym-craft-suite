@@ -2,7 +2,7 @@
  * HabitSettingsForm - form for configuring client habit settings
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,36 +54,65 @@ export function HabitSettingsForm({
   const { settings, isLoading } = useEffectiveHabitSettings(clientId);
   const upsertSettings = useUpsertHabitSettings();
 
+  const initialFormState = useMemo(
+    () => ({
+      waterGoal: settings.water_goal_ml,
+      sleepTime: settings.sleep_time || '',
+      wakeTime: settings.wake_time || '',
+      cutoffMinutes: settings.caffeine_cutoff_minutes,
+    }),
+    [settings]
+  );
+
   // Support both controlled and uncontrolled dialog modes
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
   const isOpen = isControlled ? controlledOpen : internalOpen;
   const setIsOpen = isControlled ? (controlledOnOpenChange ?? (() => {})) : setInternalOpen;
-  const [waterGoal, setWaterGoal] = useState(settings.water_goal_ml);
-  const [sleepTime, setSleepTime] = useState(settings.sleep_time || '');
-  const [wakeTime, setWakeTime] = useState(settings.wake_time || '');
-  const [cutoffMinutes, setCutoffMinutes] = useState(settings.caffeine_cutoff_minutes);
+  const [isDirty, setIsDirty] = useState(false);
+  const [waterGoal, setWaterGoal] = useState(initialFormState.waterGoal);
+  const [sleepTime, setSleepTime] = useState(initialFormState.sleepTime);
+  const [wakeTime, setWakeTime] = useState(initialFormState.wakeTime);
+  const [cutoffMinutes, setCutoffMinutes] = useState(initialFormState.cutoffMinutes);
 
-  // Sync form with settings when they load
+  // Prevent background refetch from overwriting in-progress edits.
+  // - dialog mode: hydrate only when opened AND user hasn't edited
+  // - card mode: hydrate on settings change, but only if user hasn't edited
   useEffect(() => {
-    setWaterGoal(settings.water_goal_ml);
-    setSleepTime(settings.sleep_time || '');
-    setWakeTime(settings.wake_time || '');
-    setCutoffMinutes(settings.caffeine_cutoff_minutes);
-  }, [settings]);
+    if (mode === 'dialog') {
+      if (!isOpen) {
+        // When dialog closes, reset dirty so next open hydrates cleanly.
+        setIsDirty(false);
+        return;
+      }
+      if (isDirty) return;
+    } else {
+      if (isDirty) return;
+    }
+
+    setWaterGoal(initialFormState.waterGoal);
+    setSleepTime(initialFormState.sleepTime);
+    setWakeTime(initialFormState.wakeTime);
+    setCutoffMinutes(initialFormState.cutoffMinutes);
+  }, [initialFormState, isDirty, isOpen, mode]);
 
   const handleSave = async () => {
-    await upsertSettings.mutateAsync({
-      clientId,
-      settings: {
-        water_goal_ml: waterGoal,
-        sleep_time: sleepTime || null,
-        wake_time: wakeTime || null,
-        caffeine_cutoff_minutes: cutoffMinutes,
-      },
-      setBy: editedBy,
-    });
-    setIsOpen(false);
+    try {
+      await upsertSettings.mutateAsync({
+        clientId,
+        settings: {
+          water_goal_ml: waterGoal,
+          sleep_time: sleepTime || null,
+          wake_time: wakeTime || null,
+          caffeine_cutoff_minutes: cutoffMinutes,
+        },
+        setBy: editedBy,
+      });
+      setIsDirty(false);
+      setIsOpen(false);
+    } catch {
+      // toast is handled in the mutation; keep dialog open so user can retry.
+    }
   };
 
   const formContent = (
@@ -100,7 +129,11 @@ export function HabitSettingsForm({
               key={preset}
               variant={waterGoal === preset ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setWaterGoal(preset)}
+              type="button"
+              onClick={() => {
+                setIsDirty(true);
+                setWaterGoal(preset);
+              }}
             >
               {preset / 1000}L
             </Button>
@@ -110,7 +143,17 @@ export function HabitSettingsForm({
           <Input
             type="number"
             value={waterGoal}
-            onChange={(e) => setWaterGoal(parseInt(e.target.value) || 2000)}
+            onChange={(e) => {
+              setIsDirty(true);
+              // Allow empty while typing; fall back on blur.
+              const next = e.target.value;
+              setWaterGoal(next === '' ? 0 : Number(next));
+            }}
+            onBlur={() => {
+              // Clamp and normalize
+              const clamped = Math.min(5000, Math.max(500, waterGoal || 2000));
+              if (clamped !== waterGoal) setWaterGoal(clamped);
+            }}
             className="w-24"
             min={500}
             max={5000}
@@ -129,7 +172,10 @@ export function HabitSettingsForm({
         <Input
           type="time"
           value={sleepTime}
-          onChange={(e) => setSleepTime(e.target.value)}
+          onChange={(e) => {
+            setIsDirty(true);
+            setSleepTime(e.target.value);
+          }}
           className="w-32"
         />
         <p className="text-xs text-muted-foreground">
@@ -146,7 +192,10 @@ export function HabitSettingsForm({
         <Input
           type="time"
           value={wakeTime}
-          onChange={(e) => setWakeTime(e.target.value)}
+          onChange={(e) => {
+            setIsDirty(true);
+            setWakeTime(e.target.value);
+          }}
           className="w-32"
         />
       </div>
@@ -163,7 +212,11 @@ export function HabitSettingsForm({
               key={preset.value}
               variant={cutoffMinutes === preset.value ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setCutoffMinutes(preset.value)}
+              type="button"
+              onClick={() => {
+                setIsDirty(true);
+                setCutoffMinutes(preset.value);
+              }}
             >
               {preset.label}
             </Button>
