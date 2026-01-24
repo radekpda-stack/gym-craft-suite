@@ -1,102 +1,144 @@
 
-# Oprava notifikačního systému - Kompletní propojení
+# Revize sekce Statistiky - Kompletní audit a úpravy
 
-## Přehled nalezených problémů
+## Shrnutí aktuálního stavu
 
-### 1. Výročí spolupráce (client_anniversary)
-**Problém**: Hook `useClientAnniversaryNotifier` používá `created_at` (datum přidání klienta do systému), nikoli `training_start_date` (skutečný začátek spolupráce).
-
-**Dopad**: Většina klientů má `training_start_date` odlišné od `created_at`, takže výročí se nikdy nespustí správně.
-
-### 2. Klient zapisuje stravu (nutrition_entry_added)
-**Problém**: Logika v `useClientPortalNutrition.ts` existuje, ale notifikace se do DB nedostávají (0 záznamů).
-
-**Možná příčina**: Chyba v kontrole duplicit nebo RLS blokuje insert.
-
-### 3. Klient přidal váhu (client_weight_added)
-**Problém**: Migrace definuje funkci `notify_trainer_on_client_weight()`, ale trigger není připojen k tabulce `measurements`.
-
-**Dopad**: Váha se nenotifikuje vůbec.
-
-### 4. Klient zapsal vlastní trénink
-**Problém**: Hook `useCreateWorkoutLog` neobsahuje žádnou notifikační logiku pro trenéra.
-
-**Dopad**: Trenér neví, že klient cvičil sám.
-
-### 5. Závislost na načtení aplikace
-**Problém**: Narozeniny a výročí se kontrolují pouze při načtení `Layout.tsx` - pokud trenér neotevře aplikaci v daný den, notifikace se nevytvoří.
+Sekce Statistiky obsahuje 4 záložky: **Kariéra**, **Finance**, **Tréninky**, **Klienti**. Po analýze jsem identifikoval následující problémy:
 
 ---
 
-## Implementační plán
+## Nalezené problémy
 
-### Fáze 1: Oprava výročí spolupráce
-Upravit `useClientAnniversaryNotifier` aby používal `training_start_date` jako prioritní datum:
+### 1. Duplicitní metriky napříč záložkami
 
-```typescript
-// Změna v src/hooks/useClientAnniversaries.ts
-const startDate = client.training_start_date 
-  ? parseISO(client.training_start_date)
-  : parseISO(client.created_at);
-```
+| Metrika | Kariéra | Finance | Tréninky | Klienti |
+|---------|---------|---------|----------|---------|
+| Celkem tréninků | ✅ (lifetime) | — | ✅ (období) | — |
+| Průměr za trénink | ✅ (hodinová sazba) | ✅ (skutečná cena) | — | — |
+| Retence klientů | ✅ (v Insights) | — | — | ✅ (KPI + detaily) |
+| Aktivní klienti | ✅ (30d) | — | — | ✅ (30d) |
 
-### Fáze 2: Oprava notifikace o váze
-Vytvořit databázový trigger na tabulce `measurements`:
+**Problém**: Stejné metriky se zobrazují na více místech s různým kontextem, což může uživatele zmást.
 
-```sql
-CREATE TRIGGER on_measurement_weight_added
-AFTER INSERT OR UPDATE ON public.measurements
-FOR EACH ROW
-EXECUTE FUNCTION public.notify_trainer_on_client_weight();
-```
+### 2. Nerelevantní nebo nefunkční komponenty
 
-### Fáze 3: Přidat notifikaci pro klientský trénink
-Upravit `useCreateWorkoutLog` v `useClientWorkoutLogs.ts`:
-- Po úspěšném vytvoření záznamu odeslat notifikaci trenérovi
-- Typ: `client_workout_logged` (nový typ)
-- Přidat typ do DB constraintu
+| Komponenta | Problém |
+|------------|---------|
+| `FinanceModeToggle` (performed/received) | V kódu existuje, ale v `FinanceStatsSection` je natvrdo nastaveno `mode="received"` - toggle není zobrazen |
+| `LifetimeFinanceStatsCard` | Zobrazuje se v záložce Finance, ale data jsou lifetime (ignoruje vybrané období) |
+| `GlobalTagDistributionCard` | Zobrazuje tagy tréninků, ale ne všechny tréninky mají tagy - karta je často prázdná |
+| `ClientAnalyticsCard` v sekci Klienti | Duplikuje logiku `ChurnRiskCard` (obě zobrazují "V ohrožení" klienty) |
 
-### Fáze 4: Debug nutrition_entry_added
-Prověřit hook `useClientPortalNutrition.ts`:
-- Zkontrolovat RLS na tabulce notifications
-- Ověřit, že session obsahuje správné `user_id`
-- Přidat lepší error logging
+### 3. Metriky bez kontextu porovnání
 
-### Fáze 5: Přidat scheduled job pro narozeniny/výročí
-Vytvořit edge function pro kontrolu narozenin/výročí jednou denně:
-- Nezávisí na načtení aplikace trenérem
-- Běží každý den v 6:00
+Dle paměťového záznamu `analytics-philosophy-comparative-non-evaluative` by každá metrika měla odpovídat na otázku "ve srovnání s čím?". Následující karty toto nesplňují:
+- `ClientTenureCard` - délka spolupráce bez trendu
+- `ClientAgeCard` - věk klientů bez kontextu (není jasné, k čemu je to užitečné)
+- `TrainingDurationCard` - délka tréninků bez srovnání s cílem nebo trendem
+
+### 4. Chybějící důležité metriky
+
+| Chybí | Umístění | Popis |
+|-------|----------|-------|
+| Trend tréninků vs minulý měsíc | Tréninky | Graf nebo KPI ukazující, zda trénuji více/méně |
+| Oblíbené hodiny/dny | Tréninky | Data existují v heatmapě, ale chybí sumarizace |
+| Ziskovost jednotlivých klientů | Klienti | LTV existuje, ale chybí poměr cena/čas |
+| Produktová analýza | Finance | Pouze základní příjem z produktů, chybí top produkty a trendy |
 
 ---
 
-## Technické detaily
+## Navrhované změny
 
-### Nový typ notifikace
-```sql
-ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
-ALTER TABLE notifications ADD CONSTRAINT notifications_type_check 
-CHECK (type IN (
-  -- existující typy...
-  'client_workout_logged'  -- nový typ
-));
+### Fáze 1: Odstranění duplicit a nekonzistencí
+
+**Záložka Kariéra** - ponechat pouze lifetime metriky:
+- Odebrat `InsightsBlock` s retencí (ta patří do Klientů)
+- Ponechat: Celkem tréninků, Celkem hodin, Unikátních klientů, Hodinová sazba
+- Odebrat: Aktivní klienti (30d) a Vytíženost kapacity - ty patří na dashboard, ne do kariérních statistik
+
+**Záložka Finance**:
+- Odebrat `LifetimeFinanceStatsCard` - duplikuje data z Kariéry
+- Přesunout `mode` toggle do UI, aby uživatel mohl přepínat mezi "Odtrénováno" a "Přijaté"
+- Zjednodušit `FinanceHeroKPI` - ponechat pouze 4 KPI bez duplicitního "Průměr za trénink"
+
+**Záložka Klienti**:
+- Odebrat `ClientAnalyticsCard` - duplikuje `ChurnRiskCard`
+- Přesunout `ClientAgeCard` do modalního okna (není hlavní metrika)
+
+### Fáze 2: Zlepšení relevance dat
+
+**Záložka Tréninky**:
+- Přidat sumarizaci z heatmapy: "Nejčastější den: Pondělí (23%)", "Nejčastější hodina: 17:00"
+- Přidat trend vs minulé období do `TrainingHeroKPI`
+- Zkontrolovat, zda `GlobalTagDistributionCard` zobrazuje prázdnou kartu pokud nejsou tagy - přidat fallback
+
+**Záložka Finance**:
+- Přidat `TopProductsCard` se seznamem nejprodávanějších produktů
+- Zobrazit margin (příjem - náklady) pokud jsou náklady sledovány
+
+### Fáze 3: Přidání kontextu porovnání
+
+Upravit komponenty, aby splňovaly princip "ve srovnání s čím":
+- `ClientTenureCard`: přidat trend (průměrná délka se zvyšuje/snižuje)
+- `TrainingDurationCard`: přidat srovnání s cílovou délkou nebo průměrem za období
+- Všechny KPI: pokud je vybráno období, zobrazit srovnání s předchozím obdobím
+
+---
+
+## Technické kroky implementace
+
+### Krok 1: Úprava CareerStatsSection.tsx
+```text
+- Odebrat KPICard "Aktivní klienti (30d)" (řádek 239-245)
+- Odebrat KPICard "Vytíženost kapacity" (řádek 246-252)
+- Odebrat InsightsBlock s retencí (přesunout do Klientů)
+- Přidat nový KPI: "Průměrný příjem/měsíc" (relevantní pro kariéru)
 ```
 
-### Soubory k úpravě
-1. `src/hooks/useClientAnniversaries.ts` - oprava výročí
-2. `src/hooks/useClientWorkoutLogs.ts` - přidání notifikace
-3. `src/hooks/useClientPortalNutrition.ts` - debug + oprava
-4. `src/components/notifications/NotificationCenter.tsx` - přidat ikonu pro nový typ
-5. `src/hooks/useNotifications.ts` - přidat nový typ
-6. Nová migrace - trigger pro váhu + constraint update
-7. Nová edge function - `check-birthdays-anniversaries`
+### Krok 2: Úprava FinanceStatsSection.tsx
+```text
+- Odebrat <LifetimeFinanceStatsCard /> (řádek 146)
+- Přidat FinanceModeToggle do UI (vrátit toggle zpět)
+- Přidat TopProductsCard pod FinanceChartsSection
+```
 
-### Výsledek po opravě
-| Typ notifikace | Stav | Trigger |
-|----------------|------|---------|
-| Narozeniny | ✅ Funkční + backup cron | Daily cron + frontend hook |
-| Výročí | ✅ Opraveno | Daily cron + frontend hook |
-| Klient přidal váhu | ✅ Opraveno | DB trigger na measurements |
-| Klient zapisuje stravu | ✅ Opraveno | Frontend hook |
-| Klient zapsal trénink | ✅ Nové | Frontend hook |
-| PR záznamy | ✅ Beze změny | Frontend hook |
-| Feedback | ✅ Beze změny | Edge function |
+### Krok 3: Úprava ClientStatsSection.tsx
+```text
+- Odebrat <ClientAnalyticsCard /> (řádek 91) - duplikuje ChurnRiskCard
+- Přesunout ClientAgeCard do modalu přístupného z ClientHeroKPI
+- Zjednodušit grid na 3 karty místo 4
+```
+
+### Krok 4: Úprava TrainingStatsSection.tsx
+```text
+- Přidat trend vs minulé období do TrainingHeroKPI
+- Přidat sumarizační řádek nad InteractiveHeatmapCard
+- Opravit GlobalTagDistributionCard - zobrazit fallback pokud žádné tagy
+```
+
+### Krok 5: Validace dat v hooks
+```text
+- Ověřit useAnnualStats respektuje vybrané období konzistentně
+- Sjednotit výpočet retence (useBusinessAnalytics vs useAnnualStats)
+- Přidat null checks pro prázdná data
+```
+
+---
+
+## Výsledek po úpravách
+
+| Záložka | Před | Po |
+|---------|------|-----|
+| Kariéra | 6 KPI + Insights + Typy | 4 KPI (lifetime) + Typy |
+| Finance | Hero KPI + Grafy + 4 karty + Lifetime | Hero KPI + Mode toggle + Grafy + 3 karty |
+| Tréninky | Hero KPI + 2 grafy + Heatmapa + Tagy | Hero KPI s trendem + 2 grafy + Heatmapa se sumarizací |
+| Klienti | Hero KPI + LTV + 2 retence karty + Analytika + 4 malé | Hero KPI + LTV + 2 retence karty + 3 malé |
+
+---
+
+## Bezpečnostní pravidla
+
+1. Nemazat hooky - pouze upravit komponenty
+2. Zachovat všechny modální okna a jejich funkcionalitu
+3. Testovat s prázdnými daty - každá karta musí mít fallback stav
+4. Respektovat filozofii "analytics-philosophy-comparative-non-evaluative" - žádné hodnotící barvy/texty
