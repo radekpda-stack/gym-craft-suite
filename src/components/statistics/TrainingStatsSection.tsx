@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useGlobalTrainingTagStats, GlobalDateRange } from '@/hooks/useGlobalTrainingTagStats';
+import { useTrainingHeatmap } from '@/hooks/useTrainingHeatmap';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 import { TrainingHeroKPI } from './TrainingHeroKPI';
@@ -7,8 +8,9 @@ import { TrainingTypeDistributionCard } from './TrainingTypeDistributionCard';
 import { TrainingDurationCard } from './TrainingDurationCard';
 import { GlobalTagDistributionCard } from './GlobalTagDistributionCard';
 import { InteractiveHeatmapCard } from './InteractiveHeatmapCard';
+import { HeatmapSummary } from './HeatmapSummary';
 import type { StatsPeriodRange } from './StatsPeriodSelector';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, subMonths } from 'date-fns';
 
 interface TrainingStatsSectionProps {
   periodRange?: StatsPeriodRange;
@@ -26,6 +28,25 @@ export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps)
   }, [periodRange]);
   
   const stats = useGlobalTrainingTagStats(dateRange);
+  
+  // Get heatmap data for summary
+  const { data: heatmapData } = useTrainingHeatmap('3months');
+
+  // Calculate trend vs previous period (simplified: vs previous month)
+  const trendVsPrevious = useMemo(() => {
+    if (!stats.trainingsThisMonth) return undefined;
+    
+    // For now, we estimate previous month from avg per week * 4
+    const estimatedPreviousMonth = stats.avgTrainingsPerWeek * 4;
+    if (estimatedPreviousMonth === 0) return undefined;
+    
+    const change = Math.round(((stats.trainingsThisMonth - estimatedPreviousMonth) / estimatedPreviousMonth) * 100);
+    
+    return {
+      value: change,
+      label: 'vs průměr'
+    };
+  }, [stats.trainingsThisMonth, stats.avgTrainingsPerWeek]);
 
   if (stats.isLoading) {
     return (
@@ -44,12 +65,13 @@ export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps)
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Hero KPI Cards */}
+      {/* Hero KPI Cards with trend */}
       <TrainingHeroKPI
         totalTrainings={stats.totalTrainings}
         trainingsThisMonth={stats.trainingsThisMonth}
         avgPerWeek={stats.avgTrainingsPerWeek}
         mostFrequentType={stats.mostFrequentType}
+        trendVsPrevious={trendVsPrevious}
       />
 
       {/* Training Type Distribution and Duration */}
@@ -57,6 +79,14 @@ export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps)
         <TrainingTypeDistributionCard distribution={stats.trainingTypeDistribution} />
         <TrainingDurationCard />
       </div>
+
+      {/* Heatmap Summary - extracted insights */}
+      {heatmapData && (
+        <HeatmapSummary 
+          busiestSlot={heatmapData.busiestSlot} 
+          totalTrainings={heatmapData.totalTrainings} 
+        />
+      )}
 
       {/* Interactive Heatmap */}
       <InteractiveHeatmapCard />
