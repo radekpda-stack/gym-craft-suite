@@ -1,5 +1,5 @@
 import { Card } from '@/components/ui/card';
-import { CalendarDays, TrendingUp, Dumbbell, Target } from 'lucide-react';
+import { CalendarDays, TrendingUp, TrendingDown, Dumbbell, Target } from 'lucide-react';
 import { StatInfoTooltip } from './StatInfoTooltip';
 import { cn } from '@/lib/utils';
 
@@ -8,6 +8,11 @@ interface TrainingHeroKPIProps {
   trainingsThisMonth: number;
   avgPerWeek: number;
   mostFrequentType: string | null;
+  // New: trend vs previous period
+  trendVsPrevious?: {
+    value: number; // percentage change
+    label: string; // e.g. "vs minulý měsíc"
+  };
 }
 
 const TOOLTIPS = {
@@ -38,6 +43,7 @@ export function TrainingHeroKPI({
   trainingsThisMonth,
   avgPerWeek,
   mostFrequentType,
+  trendVsPrevious,
 }: TrainingHeroKPIProps) {
   const kpis = [
     {
@@ -48,6 +54,7 @@ export function TrainingHeroKPI({
       bgColor: 'bg-primary/10',
       borderColor: 'border-primary/20',
       tooltip: TOOLTIPS.total,
+      trend: trendVsPrevious,
     },
     {
       label: 'Tento měsíc',
@@ -108,12 +115,31 @@ export function TrainingHeroKPI({
             />
           </div>
           
-          <p className={cn(
-            "relative text-2xl sm:text-3xl font-bold truncate max-w-full",
-            kpi.isText ? 'text-base sm:text-lg' : ''
-          )}>
-            {kpi.value}
-          </p>
+          <div className="relative">
+            <p className={cn(
+              "text-2xl sm:text-3xl font-bold truncate max-w-full",
+              kpi.isText ? 'text-base sm:text-lg' : ''
+            )}>
+              {kpi.value}
+            </p>
+            
+            {/* Trend indicator */}
+            {kpi.trend && kpi.trend.value !== 0 && (
+              <div className={cn(
+                "flex items-center gap-1 text-xs mt-1",
+                kpi.trend.value > 0 ? "text-success" : "text-destructive"
+              )}>
+                {kpi.trend.value > 0 ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+                <span>
+                  {kpi.trend.value > 0 ? '+' : ''}{kpi.trend.value}% {kpi.trend.label}
+                </span>
+              </div>
+            )}
+          </div>
         </Card>
       ))}
     </div>

@@ -17,9 +17,7 @@ import {
   Calendar,
   Banknote,
   TrendingUp,
-  UserCheck,
   Activity,
-  Gauge,
   AlertTriangle,
   CheckCircle,
 } from "lucide-react";
@@ -132,18 +130,11 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
 
   const isLoading = statsLoading || analyticsLoading;
 
-  // Generate insights based on data
+  // Generate insights based on data - career focused only (no retention, that's in Clients tab)
   const insights = useMemo(() => {
     if (!stats || !analytics) return [];
     
     const result: { type: 'success' | 'warning' | 'info'; message: string }[] = [];
-
-    // Capacity insight
-    if (analytics.capacityUtilization > 85) {
-      result.push({ type: 'success', message: `Vysoká vytíženost ${analytics.capacityUtilization}%! Zvažte rozšíření kapacity.` });
-    } else if (analytics.capacityUtilization < 50) {
-      result.push({ type: 'info', message: `Volná kapacita ${100 - analytics.capacityUtilization}% - prostor pro nové klienty.` });
-    }
 
     // Revenue trend
     if (analytics.vsLastMonth.revenue > 10) {
@@ -152,14 +143,11 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
       result.push({ type: 'warning', message: `Příjem poklesl o ${Math.abs(analytics.vsLastMonth.revenue)}% - zkontrolujte nezaplacené lekce.` });
     }
 
-    // Client trend
-    if (analytics.vsLastMonth.clients < -15) {
-      result.push({ type: 'warning', message: `Počet aktivních klientů poklesl o ${Math.abs(analytics.vsLastMonth.clients)}%.` });
-    }
-
-    // Retention
-    if (analytics.retentionRate > 85) {
-      result.push({ type: 'success', message: `Skvělá retence klientů: ${analytics.retentionRate}%` });
+    // Milestone achievements
+    if (stats.totalTrainings >= 1000 && stats.totalTrainings < 1010) {
+      result.push({ type: 'success', message: `🎉 Dosáhli jste 1000 tréninků!` });
+    } else if (stats.totalTrainings >= 500 && stats.totalTrainings < 510) {
+      result.push({ type: 'success', message: `🎉 Dosáhli jste 500 tréninků!` });
     }
 
     return result;
@@ -211,8 +199,8 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
         </CardContent>
       </Card>
 
-      {/* KPI Grid - 6 cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      {/* KPI Grid - 4 cards (lifetime metrics only) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KPICard
           icon={Dumbbell}
           label="Celkem tréninků"
@@ -236,22 +224,6 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
           iconBg="bg-primary/10"
         />
         <KPICard
-          icon={UserCheck}
-          label="Aktivní klienti (30d)"
-          value={analytics?.activeClients30Days || 0}
-          trend={analytics?.vsLastMonth ? { value: analytics.vsLastMonth.clients, label: 'vs minulý měsíc' } : undefined}
-          iconColor="text-success"
-          iconBg="bg-success/10"
-        />
-        <KPICard
-          icon={Gauge}
-          label="Vytíženost kapacity"
-          value={`${analytics?.capacityUtilization || 0}%`}
-          subValue="max 6h/den"
-          iconColor="text-warning"
-          iconBg="bg-warning/10"
-        />
-        <KPICard
           icon={Banknote}
           label="Hodinová sazba"
           value={formatCurrency(stats.avgHourlyRate)}
@@ -261,8 +233,8 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
         />
       </div>
 
-      {/* Insights */}
-      <InsightsBlock insights={insights} />
+      {/* Insights - career focused only */}
+      {insights.length > 0 && <InsightsBlock insights={insights} />}
 
       {/* Training types breakdown */}
       <Card>

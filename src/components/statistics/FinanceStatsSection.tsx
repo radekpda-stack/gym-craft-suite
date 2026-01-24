@@ -8,7 +8,7 @@ import { CancellationStatsCard } from './CancellationStatsCard';
 import { FinanceHeroKPI } from './FinanceHeroKPI';
 import { MonthlyIncomeCard } from './MonthlyIncomeCard';
 import { FinanceChartsSection } from './FinanceChartsSection';
-import { LifetimeFinanceStatsCard } from './LifetimeFinanceStatsCard';
+// LifetimeFinanceStatsCard removed - duplicates Career tab
 import { formatCurrency } from '@/lib/formatters';
 import { MetricCard } from '@/components/charts';
 import { 
@@ -142,8 +142,7 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
           <CancellationStatsCard periodRange={periodRange} onClick={() => setActiveModal('cancellation')} />
         </div>
 
-        {/* Lifetime Stats Card */}
-        <LifetimeFinanceStatsCard />
+        {/* Removed LifetimeFinanceStatsCard - duplicates Career tab data */}
 
         {/* Modals */}
         <TotalIncomeModal 

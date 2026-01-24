@@ -7,7 +7,7 @@ import { ClientTenureCard } from './ClientTenureCard';
 import { ClientAgeCard } from './ClientAgeCard';
 import { ClientFeedbackCard } from './ClientFeedbackCard';
 import { ClientTagsCard } from './ClientTagsCard';
-import { ClientAnalyticsCard } from '@/components/dashboard/ClientAnalyticsCard';
+// ClientAnalyticsCard removed - duplicates ChurnRiskCard
 import { CohortRetentionCard } from './CohortRetentionCard';
 import { ChurnRiskCard } from './ChurnRiskCard';
 import { Loader2 } from 'lucide-react';
@@ -87,8 +87,7 @@ export function ClientStatsSection({ periodRange }: ClientStatsSectionProps) {
         <ChurnRiskCard />
       </div>
 
-      {/* Active vs At Risk clients */}
-      <ClientAnalyticsCard />
+      {/* Removed ClientAnalyticsCard - duplicates ChurnRiskCard logic */}
 
       {/* Stats Grid - tenure, age, feedback, tags */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
