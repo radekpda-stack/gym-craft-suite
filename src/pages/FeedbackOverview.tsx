@@ -70,6 +70,9 @@ import { FeedbackStatusCards } from '@/components/feedback/FeedbackStatusCards';
 import { FeedbackActivityTimeline } from '@/components/feedback/FeedbackActivityTimeline';
 import { FeedbackAttentionInbox } from '@/components/feedback/FeedbackAttentionInbox';
 import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
+import { TrainingFeedbackCorrelationCard } from '@/components/feedback/TrainingFeedbackCorrelationCard';
+import { FeedbackTagCorrelation } from '@/components/feedback/FeedbackTagCorrelation';
+import { FeedbackPeriodComparison } from '@/components/feedback/FeedbackPeriodComparison';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 type PeriodOption = '7' | '30' | '90' | 'all';
@@ -504,8 +507,18 @@ export default function FeedbackOverview() {
             </TabsList>
 
             {/* Tab: Analytics */}
-            <TabsContent value="analytics" className="space-y-4">
+            <TabsContent value="analytics" className="space-y-6">
+              {/* Period Comparison */}
+              <FeedbackPeriodComparison />
+              
+              {/* Existing trends */}
               <FeedbackTrendsOverview days={parseInt(period) || 30} />
+              
+              {/* Training-Feedback Correlation */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <TrainingFeedbackCorrelationCard days={90} />
+                <FeedbackTagCorrelation days={90} />
+              </div>
             </TabsContent>
 
             {/* Tab: To Send */}
