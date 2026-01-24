@@ -1,177 +1,178 @@
 
-# Revize sekce Strava (Nutriční deník) - Audit a návrh vylepšení
+# Revize sekce Klientský portál - Audit UI a návrh vylepšení
 
-## Aktuální stav systému
+## Aktuální stav
 
-Nutriční modul obsahuje 3 hlavní pohledy:
-- **NutritionPage** (`/nutrition`) - Dashboard přehled všech klientů
-- **NutritionClientDetail** (`/nutrition/client/:id`) - Detail nutričního deníku klienta (7/10 dní)
-- **NutritionCampaignDetail** (`/nutrition/campaigns/:id`) - Legacy kampaňový pohled
+Sekce obsahuje 4 záložky: **Přehled**, **Klienti**, **Deníky**, **Nastavení**
 
-**Aktuální data v databázi:**
-- 12 nutričních session (11 aktivních, 1 dokončená)
-- 10 klientů s nutrition logem
-- 20 jídel, 10 nápojů, 9 káv
+### Přehled záložek
+
+| Záložka | Komponenty | Obsah |
+|---------|------------|-------|
+| **Přehled** | `PortalUsageStats` + `ClientPortalQuickSearch` + `PortalRecentActivity` | 4 KPI karty, vyhledávání, posledních 20 aktivit |
+| **Klienti** | `ClientAccessList` | Tabulka/karty klientů s přístupem, hromadné akce |
+| **Deníky** | `ClientWorkoutLogsOverview` | Tréninkové záznamy od klientů s komentáři |
+| **Nastavení** | `PortalVisibilitySettings` + `ClientPortalSettingsPage` | Globální a per-klient nastavení |
 
 ---
 
 ## Nalezené problémy
 
-### 1. Duplicitní pohledy na data klienta
+### 1. Duplikace funkcí mezi Přehledem a Klienty
 
-| Komponenta | Přístup | Problém |
-|------------|---------|---------|
-| `NutritionClientDetail` | `/nutrition/client/:id` | Zobrazuje 7/10 dní |
-| `NutritionCampaignDetail` | `/nutrition/campaigns/:id` | Zobrazuje kampaň s analýzou |
-| `ClientNutritionTab` | V kartě klienta | Vytváří 7denní logy s vlastním detailem |
-| `NutritionLogDetail` | V `ClientNutritionTab` | Další detail view |
+| Funkce | Přehled | Klienti |
+|--------|---------|---------|
+| Vyhledávání klientů | ✅ `ClientPortalQuickSearch` | ✅ `ClientAccessList` s filtrem |
+| Tlačítko "Přidat klienta" | ✅ | ✅ |
+| Zobrazení statusu | ✅ Badge | ✅ Badge + tabulka |
+| Detail klienta | ✅ Sheet | ✅ Sheet |
 
-**Problém**: 4 různé pohledy zobrazují podobná data s různým UI a funkcionalitou. Trenér neví, který pohled použít.
+**Problém**: Uživatel má dvě místa pro stejnou akci (vyhledání a správu klienta).
 
-### 2. Nekonzistentní terminologie
+### 2. Neefektivní využití prostoru v záložce Přehled
 
-- "Kampaň" vs "Session" vs "Log" vs "Deník" - používáno zaměnitelně
-- `NutritionCampaignDetail` používá "kampaň", ale DB tabulka je `nutrition_log_sessions`
-- UI na některých místech říká "7denní log", jinde "Deník návyků"
+Aktuální layout:
+```text
+[--- 4 KPI karty (2x2 na mobilu, 4x1 na desktopu) ---]
+[--- Vyhledávání klientů (celá šířka) ---]
+[--- Poslední aktivita (celá šířka, 350px výška) ---]
+```
 
-### 3. Chybějící agregované metriky na hlavním přehledu
+**Problém**: Vyhledávání zabírá celou šířku, ale často je prázdné. Aktivita také zabírá celou šířku, přestože by mohla být vedle vyhledávání.
 
-`NutritionPage` zobrazuje:
-- Aktivně zapisuje (počet klientů)
-- Záznamů tento týden
-- Dnes zapsáno
-- Průměr/klient
+### 3. KPI karty bez kontextu porovnání
 
-**Chybí důležité metriky:**
-- Průměrná kvalita stravy (good/normal/poor distribuce)
-- Dny bez záznamu (varování)
-- Trend vs minulý týden
-- Klienti s pozdním kofeinem (využití CaffeineWindowWidget dat)
+Aktuální metriky:
+- Celkem klientů (absolutní číslo)
+- Aktivní dnes (absolutní číslo)
+- Aktivní tento týden (absolutní číslo)
+- Ø návštěv / klient (průměr)
 
-### 4. NutritionCampaignDetail obsahuje hodnotící prvky
+**Chybí**:
+- Trend vs minulý týden/měsíc
+- % aktivních vs celkem (poměr)
+- Klienti bez přihlášení 7+ dní (varování)
 
-Komponenta obsahuje "insights" s hodnotícími texty jako "Kvalitní vedení záznamů" (zelená), "Velmi slabé vedení" (červená), což porušuje filozofii `analytics-philosophy-comparative-non-evaluative`.
+### 4. Záložka Deníky - chybí filtry a řazení
 
-### 5. Nepoužité nastavení
+`ClientWorkoutLogsOverview` zobrazuje všechny záznamy bez možnosti:
+- Filtrovat pouze nezkontrolované
+- Seřadit podle data/klienta
+- Zobrazit pouze tréninky s PR
 
-`NutritionSettingsTab` umožňuje konfigurovat:
-- Kategorie jídel, nápojů, kávy
-- Úvodní/závěrečné zprávy
+### 5. Nastavení rozděleno na dvě karty
 
-**Problém**: Tyto hodnoty se nikde nepoužívají - formulář pro klienty používá hardcoded konstanty z `constants.ts`.
+- `PortalVisibilitySettings` - globální nastavení (max-w-2xl)
+- `ClientPortalSettingsPage` - per-klient nastavení
 
-### 6. Chybí hromadné akce
+**Problém**: Není jasné, co ovlivňuje co. Uživatel neví, zda globální nastavení přepisuje per-klient nastavení.
 
-Na `NutritionPage` chybí:
-- Hromadné ukončení neaktivních sessions
-- Export dat více klientů
-- Filtrování podle stavu (prázdné logy, aktivní, dokončené)
+### 6. Quick copy link bar nahoře
 
-### 7. Klientský formulář vs trenérský pohled
+```text
+[--- URL odkaz + Kopírovat + QR kód ---]
+```
 
-Trenér vidí pouze výsledky, ale nemá možnost:
-- Přidat záznam za klienta přímo
-- Upravit čas konzumace
-- Označit záznam jako "kontrolováno"
+**Problém**: Zabírá místo a je viditelný i když uživatel nehledá odkaz. Mohl by být součástí headeru nebo v dropdown menu.
 
 ---
 
 ## Navrhované změny
 
-### Fáze 1: Konsolidace pohledů
+### Fáze 1: Zjednodušení záložky Přehled
 
-**Zachovat pouze 2 pohledy:**
-1. `NutritionPage` - přehled všech klientů
-2. `NutritionClientDetail` - detail jednoho klienta (sloučit s funkcemi z NutritionCampaignDetail)
-
-**Akce:**
-- Odebrat route `/nutrition/campaigns/:id` (legacy)
-- Přesunout analýzu z `NutritionCampaignDetail` do `NutritionClientDetail`
-- Sjednotit `ClientNutritionTab` aby používal stejný detail jako hlavní modul
-
-### Fáze 2: Sjednocení terminologie
-
-Používat konzistentně:
-- **"Deník"** místo "kampaň", "log", "session"
-- **"Záznam"** místo "entry"
-- **"Období"** místo "7denní log"
-
-Upravit názvy v UI:
-- "Vytvořit nový log" → "Zahájit deník"
-- "Session" badge → "Aktivní období"
-
-### Fáze 3: Rozšíření přehledu (NutritionPage)
-
-Přidat nové metriky do dashboard:
+**Nový layout**:
 ```text
-[Existující]
-- Aktivně zapisuje
-- Záznamů tento týden
-- Dnes zapsáno
-- Průměr/klient
-
-[Nové - pod existující]
-- Kvalita stravy (koláč: good/normal/poor %)
-- Klienti s varováním (pozdní kofein, prázdné dny)
+[--- 4 KPI karty s trendy (2x2 na mobilu) ---]
+[--- 2 sloupce na desktopu ---]
+[Vyhledávání + rychlé akce] | [Poslední aktivita]
 ```
 
-Přidat filtry:
-- "Vyžaduje pozornost" (prázdné dny > 2, pozdní kofein)
-- "Aktivní" / "Dokončeno" / "Vše"
+**Změny v KPI**:
+- Přidat trend šipky (+/- vs minulý týden)
+- "Aktivní tento týden" → zobrazit jako % z celkem
+- Přidat 5. KPI: "Vyžaduje pozornost" (nepřihlášeni 7+ dní)
 
-### Fáze 4: Odstranění hodnotících prvků
+### Fáze 2: Sloučení quick copy linku do headeru
 
-V `NutritionCampaignDetail` (resp. sloučeném detailu):
-- Odstranit barevné hodnocení (zelená/červená)
-- Odstranit texty jako "Kvalitní vedení", "Slabé vedení"
-- Nahradit neutrálními fakty: "Záznamy: 6/7 dní", "Kofein po 18:00: 2× za týden"
+Místo:
+```text
+[--- Odkaz + Kopírovat + QR ---]
+[Nadpis + PortalPreviewButton]
+```
 
-### Fáze 5: Propojení nastavení s formulářem
+Nový design:
+```text
+[Nadpis] [Kopírovat odkaz ▾] [Náhled portálu]
+         └─ Dropdown s URL, tlačítkem a QR kódem
+```
 
-Upravit `FoodLogForm` a `constants.ts`:
-- Načítat kategorie z `app_settings.nutrition_settings`
-- Fallback na výchozí hodnoty pokud není nastaveno
-- Zobrazovat vlastní texty (intro/thank you) na veřejném formuláři
+### Fáze 3: Přidání filtrů do Deníků
 
-### Fáze 6: Přidání trenérských akcí
+Přidat nad seznam deníků:
+```text
+[Vše] [Ke kontrole (3)] [S PR] [Tento týden]
+```
 
-Do `NutritionClientDetail` přidat:
-- Tlačítko "Přidat záznam za klienta" (otevře FoodLogForm s flag `addedByTrainer`)
-- Možnost označit den jako "Zkontrolováno" (nový sloupec v day_notes)
-- Hromadný export do PDF s vybranými dny
+A řazení:
+```text
+[Řadit: Nejnovější ▾]
+```
+
+### Fáze 4: Sjednocení Nastavení
+
+Nahradit dvě oddělené sekce jednou kartou s tabbed interface:
+```text
+[Globální nastavení] | [Nastavení pro klienta]
+```
+
+S vysvětlením: "Globální nastavení platí pro všechny klienty. Individuální nastavení přepisuje globální."
+
+### Fáze 5: Přidání "Action Required" sekce
+
+Na záložku Přehled přidat kartu s okamžitými úkoly:
+- Nezkontrolované tréninky (badge s počtem)
+- Klienti bez přihlášení 7+ dní
+- Nově zaregistrovaní klienti (čekají na aktivaci)
 
 ---
 
 ## Technické kroky implementace
 
-### Krok 1: Sloučení pohledů
+### Krok 1: Úprava ClientPortalAdmin.tsx - header redesign
 ```text
-- Přesunout logiku insights z NutritionCampaignDetail do NutritionClientDetail
-- Odstranit hodnotící prvky, ponechat pouze fakta
-- Smazat route /nutrition/campaigns/:id z App.tsx
-- Upravit ClientNutritionTab aby odkazoval na /nutrition/client/:id
+- Přesunout quick copy link do dropdown v headeru
+- Vytvořit PortalLinkDropdown komponentu
+- Odstranit horní pruh s URL
 ```
 
-### Krok 2: Rozšíření NutritionPage
+### Krok 2: Rozšíření PortalUsageStats.tsx
 ```text
-- Přidat useQuery pro agregované metriky kvality
-- Přidat filter dropdown (Vše/Aktivní/Varování)
-- Přidat kartu "Vyžaduje pozornost" se seznamem klientů
+- Přidat trend vs minulý týden do každé metriky
+- Přidat 5. KPI "Vyžaduje pozornost" 
+- Změnit layout na 5 karet (3+2 na mobilu)
 ```
 
-### Krok 3: Propojení nastavení
+### Krok 3: Úprava layoutu záložky Přehled
 ```text
-- Upravit constants.ts aby exportoval funkci getCategories(settings)
-- V FoodLogForm načítat app_settings a používat custom kategorie
-- V PublicNutritionLog zobrazovat custom intro/thank you texty
+- Změnit vertikální stack na 2-column grid
+- ClientPortalQuickSearch vlevo
+- PortalRecentActivity vpravo
+- Přidat ActionRequired kartu nad grid
 ```
 
-### Krok 4: Trenérské akce
+### Krok 4: Přidání filtrů do ClientWorkoutLogsOverview
 ```text
-- Přidat tlačítko "+ Záznam" do NutritionClientDetail header
-- Vytvořit TrainerAddEntryDialog s FoodLogForm
-- Přidat checkbox "Zkontrolováno" k day notes
-- Rozšířit PDF export o výběr období
+- Přidat filter chips (Vše/Ke kontrole/S PR)
+- Přidat sort dropdown
+- Počítat badge pro "Ke kontrole"
+```
+
+### Krok 5: Refaktor záložky Nastavení
+```text
+- Vytvořit PortalSettingsTabs komponentu
+- Sloučit PortalVisibilitySettings a ClientPortalSettingsPage
+- Přidat vysvětlující text o prioritě nastavení
 ```
 
 ---
@@ -180,25 +181,54 @@ Do `NutritionClientDetail` přidat:
 
 | Oblast | Před | Po |
 |--------|------|-----|
-| Počet pohledů | 4 | 2 |
-| Terminologie | Nekonzistentní | "Deník", "Záznam", "Období" |
-| Dashboard metriky | 4 základní | 6 + filtry |
-| Hodnotící prvky | Ano (zelená/červená) | Ne (pouze fakta) |
-| Nastavení kategorií | Nepoužíváno | Propojeno s formulářem |
-| Trenérské akce | Pouze prohlížení | Přidávání, kontrola, export |
+| Header | URL bar + nadpis | Kompaktní header s dropdown |
+| Přehled layout | Vertikální stack | 2-column + action required |
+| KPI metriky | 4 bez kontextu | 5 s trendy |
+| Deníky | Bez filtrů | Filtry + řazení |
+| Nastavení | 2 oddělené sekce | Tabbed interface |
+
+---
+
+## Vizuální návrh nového layoutu
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ Klientský portál ⓘ          [Odkaz ▾] [Náhled portálu]      │
+│ Spravujte přístup klientů...                                 │
+├─────────────────────────────────────────────────────────────┤
+│ [Přehled] [Klienti] [Deníky] [Nastavení]                     │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐               │
+│  │ 12   │ │ 3    │ │ 25%  │ │ 2.4  │ │ ⚠ 2  │               │
+│  │Klient│ │Dnes  │ │Aktivn│ │Ø/kli│ │Pozor │               │
+│  └──────┘ └──────┘ └──────┘ └──────┘ └──────┘               │
+│                                                              │
+│  ┌─ Vyžaduje pozornost ─────────────────────────────────┐   │
+│  │ 3 tréninky ke kontrole • 2 klienti nepřihlášeni 7d   │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌─ Vyhledat klienta ───────┐  ┌─ Poslední aktivita ────┐   │
+│  │ [🔍 Zadejte jméno...]    │  │ Jan Novák - Přihlášení │   │
+│  │ [+ Přidat]               │  │ Petra K. - Váha 82kg   │   │
+│  │                          │  │ ...                    │   │
+│  └──────────────────────────┘  └─────────────────────────┘   │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Prioritizace
 
-**Vysoká priorita (okamžitě):**
-1. Odstranění hodnotících prvků (porušuje design filozofii)
-2. Sjednocení terminologie v UI
+**Vysoká priorita:**
+1. Přesun quick copy link do dropdown (zbytečně zabírá místo)
+2. Rozšíření KPI o trendy (kontext porovnání)
+3. Přidání filtrů do Deníků (rychlejší workflow)
 
 **Střední priorita:**
-3. Konsolidace pohledů (sloučení do 2)
-4. Rozšíření NutritionPage o metriky a filtry
+4. 2-column layout v Přehledu
+5. Action Required sekce
 
 **Nižší priorita:**
-5. Propojení nastavení s formulářem
-6. Trenérské akce (přidávání za klienta)
+6. Refaktor Nastavení do tabs
