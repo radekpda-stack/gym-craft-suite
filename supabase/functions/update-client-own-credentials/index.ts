@@ -14,7 +14,6 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
     // Get auth token from request
     const authHeader = req.headers.get('Authorization');
@@ -25,37 +24,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create client with user's token to verify and get their identity
-    const supabaseAnon = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } }
+    // Create admin client for operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // Verify the JWT token and get claims
+    // Verify the JWT token and get user
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseAnon.auth.getClaims(token);
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
-    if (claimsError || !claimsData?.claims) {
-      console.error('Token verification failed:', claimsError);
+    if (userError || !user) {
+      console.error('Token verification failed:', userError);
       return new Response(
         JSON.stringify({ error: 'Neplatný token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const userId = claimsData.claims.sub;
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'Nepodařilo se ověřit uživatele' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Get user details
-    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser();
-    if (userError || !user) {
-      console.error('Get user error:', userError);
-      return new Response(
-        JSON.stringify({ error: 'Nepodařilo se načíst uživatele' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -84,12 +65,6 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Create service role client for admin operations
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
-
     // Get client account for this user
     const { data: clientAccount, error: accountError } = await supabaseAdmin
       .from('client_accounts')
