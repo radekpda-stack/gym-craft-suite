@@ -484,6 +484,11 @@ export function TrainingDetailView({
         />
       )}
 
+      {/* PREVIOUS TRAINING - collapsible, between participants and PRs */}
+      {training.status === 'scheduled' && (
+        <PreviousTrainingPreview clientId={training.client_id} />
+      )}
+
       {/* PARTICIPANTS PRs - show for scheduled/in_progress trainings with participants */}
       {(training.status === 'scheduled' || training.status === 'in_progress') && participants.length > 0 && (
         <ParticipantsPRsSection participants={participants} />
@@ -556,10 +561,6 @@ export function TrainingDetailView({
         />
       </div>
 
-      {/* PREVIOUS TRAINING - collapsible, no copy function */}
-      {training.status === 'scheduled' && (
-        <PreviousTrainingPreview clientId={training.client_id} />
-      )}
 
       {/* PAYMENT INFO - only for completed */}
       {training.status === 'completed' && (
