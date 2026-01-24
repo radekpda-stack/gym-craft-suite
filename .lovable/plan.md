@@ -1,156 +1,169 @@
 
-# Plán opravy kalendářového importu - Komplexní audit
+# Plán: Přidání tabu "Média" do karty klienta
 
-## Zjištěné problémy
+## Přehled
 
-### Problém 1: Smart Import NEVYTVÁŘÍ tréninky (KRITICKÝ)
-**Příčina:** V edge function `sync-ics-calendar/index.ts` (řádky 2284-2290) je explicitně napsáno:
+Přidám nový tab **"Média"** vedle tabu "Profil" v kartě klienta. Tento tab umožní:
+- Nahrávat fotografie, videa a dokumenty (PDF, DOC)
+- Prohlížet galerii médií s filtrováním
+- **Srovnávat fotografie** (před/po) pomocí existující komponenty `PhotoCompare`
+
+---
+
+## Technické řešení
+
+### 1. Rozšíření databáze
+
+Aktuální tabulka `client_media` podporuje typy `photo` a `audio`. Rozšířím o:
+- **`video`** - pro video soubory
+- **`document`** - pro PDF, DOC a další dokumenty
+
+```sql
+-- Přidat nové typy médií
+ALTER TABLE client_media 
+DROP CONSTRAINT IF EXISTS client_media_type_check;
+
+ALTER TABLE client_media 
+ADD CONSTRAINT client_media_type_check 
+CHECK (type IN ('photo', 'audio', 'video', 'document'));
 ```
-// Sessions are created by create_approved_sessions action, not here
-// This keeps smart_import fast and within CPU limits
+
+### 2. Rozšíření storage bucketů
+
+Vytvořím dva nové buckety pro videa a dokumenty:
+
+```sql
+INSERT INTO storage.buckets (id, name, public) VALUES 
+  ('client-videos', 'client-videos', false),
+  ('client-documents', 'client-documents', false);
+
+-- RLS policies pro přístup
+CREATE POLICY "Users can view own client videos"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'client-videos' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can upload client videos"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'client-videos' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+-- Stejné pro client-documents
 ```
 
-Smart Import pouze:
-- ✅ Synchronizuje události z kalendáře
-- ✅ Páruje klienty (exact match)
-- ✅ Učí se aliasy
-- ❌ **NEVYTVÁŘÍ tréninky!**
+### 3. Přidání tabu "Média" do ClientDetailTabs
 
-### Problém 2: UI nezavolá druhou akci
-**Příčina:** V `CalendarQuickImport.tsx` (řádky 40-67) se po úspěšném Smart Import jen zobrazí výsledky, ale **nikdy se nezavolá** `create_approved_sessions`:
+V souboru `src/components/clients/ClientDetailTabs.tsx`:
 
 ```typescript
-const handleSmartImport = async () => {
-  const importResult = await smartImport.mutateAsync({...});
-  setResult(importResult);  // Pouze uložení výsledku
-  // ❌ CHYBÍ: await createSessions.mutateAsync(feedId);
+// Import ikony
+import { Image } from 'lucide-react';
+
+// Přidat do pole tabs (za 'profile')
+{
+  id: 'media',
+  label: 'Média',
+  icon: Image,
+  badge: totalMediaCount > 0 ? totalMediaCount : undefined,
+},
+
+// Přidat nový TabsContent
+<TabsContent value="media" className="mt-0 space-y-4">
+  <ClientMediaTab clientId={client.id} />
+</TabsContent>
+```
+
+### 4. Rozšíření ClientMediaTab o videa a dokumenty
+
+V souboru `src/components/media/ClientMediaTab.tsx`:
+
+```typescript
+// Přidat nové subtaby
+<TabsTrigger value="photos">
+  Fotografie ({photos?.length || 0})
+</TabsTrigger>
+<TabsTrigger value="videos">
+  Videa ({videos?.length || 0})
+</TabsTrigger>
+<TabsTrigger value="documents">
+  Dokumenty ({documents?.length || 0})
+</TabsTrigger>
+<TabsTrigger value="audio">
+  Nahrávky ({audioNotes?.length || 0})
+</TabsTrigger>
+```
+
+### 5. Nová komponenta DocumentUpload
+
+Vytvoření nové komponenty `src/components/media/DocumentUpload.tsx`:
+- Podpora PDF, DOC, DOCX, XLS, XLSX
+- Náhled ikony podle typu souboru
+- Metadata: název, popis, kategorie, datum
+
+### 6. Nová komponenta VideoUpload
+
+Vytvoření nové komponenty `src/components/media/VideoUpload.tsx`:
+- Podpora MP4, MOV, WebM
+- Thumbnail náhled
+- Limit velikosti (např. 100MB)
+
+### 7. Rozšíření useClientMedia hooku
+
+V souboru `src/hooks/useClientMedia.ts`:
+
+```typescript
+export type MediaType = 'photo' | 'audio' | 'video' | 'document';
+
+// Přidat bucket mapping
+const BUCKET_MAP: Record<MediaType, string> = {
+  photo: 'client-photos',
+  audio: 'client-audio',
+  video: 'client-videos',
+  document: 'client-documents',
 };
-```
 
-### Problém 3: Statistika v databázi
-Aktuální stav (z dotazu):
-| Metrika | Počet |
-|---------|-------|
-| Celkem událostí | 2944 |
-| Spárované s klientem | 2314 |
-| Schválené | 698 |
-| S vytvořeným tréninkem | 188 |
-
-**2126 událostí** je spárováno, ale nemá vytvořený trénink!
-
----
-
-## Navrhované řešení
-
-### Změna 1: Rozšířit `useSmartImport` hook o automatické vytvoření tréninků
-
-Po úspěšném smart_import volat `create_approved_sessions` v rámci mutace:
-
-**Soubor:** `src/hooks/useSmartImport.ts`
-
-```typescript
-export function useSmartImport() {
-  return useMutation({
-    mutationFn: async (options: SmartImportOptions): Promise<SmartImportResult> => {
-      const { feedId, autoCreateSessions = true, ... } = options;
-      
-      // Krok 1: Smart Import (sync + match)
-      const response = await supabase.functions.invoke('sync-ics-calendar', {
-        body: { action: 'smart_import', feedId, ... },
-      });
-      
-      // Krok 2: Vytvořit tréninky (pokud povoleno)
-      let sessionsResult = { sessions_created: 0, duplicates_skipped: 0 };
-      if (autoCreateSessions) {
-        const sessionsResponse = await supabase.functions.invoke('sync-ics-calendar', {
-          body: { action: 'create_approved_sessions', feedId },
-        });
-        if (!sessionsResponse.error) {
-          sessionsResult = sessionsResponse.data;
-        }
-      }
-      
-      return {
-        ...response.data,
-        imported: sessionsResult.sessions_created,
-        duplicates_skipped: sessionsResult.duplicates_skipped,
-      };
-    },
-  });
-}
-```
-
-### Změna 2: Opravit párování přímých shod v fast mode
-
-V edge function není správně prováděno exact-match párování při velkém počtu událostí. Lookup mapa existuje, ale párování se může přeskočit.
-
-**Soubor:** `supabase/functions/sync-ics-calendar/index.ts`
-
-Logika v kroku 4 smart_import:
-1. Přidat robustnější čištění summary (odstranit #tr, časy, speciální znaky)
-2. Zajistit, že lookup mapa obsahuje i kombinace "příjmení křestní"
-3. Přidat fallback na fuzzy matching pro přímé shody s diakritikou
-
-### Změna 3: Opravit learn_alias pro celý summary
-
-Aktuální logika ukládá pouze tokeny. Přidat ukládání celého normalizovaného summary:
-
-```typescript
-// Aktuální (špatné):
-aliases: ["parezova", "martina"]  // jednotlivé tokeny
-
-// Nové (správné):
-aliases: ["parezova martina #tr", "parezova martina"]  // celý vzor
-```
-
-### Změna 4: Přidat tlačítko "Vytvořit tréninky" do Smart Import UI
-
-**Soubor:** `src/components/settings/CalendarQuickImport.tsx`
-
-Po zobrazení výsledků přidat tlačítko pro manuální vytvoření tréninků (pro případ, že automatická session creation byla přeskočena kvůli timeoutu):
-
-```tsx
-{result && result.matched > result.imported && (
-  <Button onClick={handleCreateSessions}>
-    Vytvořit zbývající tréninky ({result.matched - result.imported})
-  </Button>
-)}
+// Přidat nové category options
+export const DOCUMENT_CATEGORY_OPTIONS = [
+  { value: 'contract', label: 'Smlouva' },
+  { value: 'medical', label: 'Lékařská zpráva' },
+  { value: 'training_plan', label: 'Tréninkový plán' },
+  { value: 'diet', label: 'Stravovací plán' },
+  { value: 'other', label: 'Ostatní' },
+];
 ```
 
 ---
 
-## Technický detail: Optimalizovaná lookup mapa
-
-```text
-Událost:   "Parezová Martina #tr"
-           ↓ normalize
-Cleaned:   "parezova martina"
-           ↓ lookup
-Mapa:      { "parezova martina" → "client-uuid-123" }
-           → MATCH!
-```
-
-Mapa obsahuje:
-- Celé normalizované jméno klienta
-- Jednotlivé části jména (příjmení, křestní)
-- Uložené aliasy z databáze
-- Kombinace přeházených jmen ("martina parezova")
-
----
-
-## Shrnutí změn
+## Struktura souborů
 
 | Soubor | Změna |
 |--------|-------|
-| `src/hooks/useSmartImport.ts` | Přidat volání `create_approved_sessions` po úspěšném smart_import |
-| `src/components/settings/CalendarQuickImport.tsx` | Přidat tlačítko pro ruční vytvoření tréninků |
-| `supabase/functions/sync-ics-calendar/index.ts` | Vylepšit lookup mapu o reversed name patterns, opravit learn_alias |
+| `src/components/clients/ClientDetailTabs.tsx` | Přidat tab "Média" s ikonou |
+| `src/components/media/ClientMediaTab.tsx` | Rozšířit o videa a dokumenty |
+| `src/components/media/VideoUpload.tsx` | **Nový** - nahrávání videí |
+| `src/components/media/VideoGallery.tsx` | **Nový** - přehrávač videí |
+| `src/components/media/DocumentUpload.tsx` | **Nový** - nahrávání dokumentů |
+| `src/components/media/DocumentList.tsx` | **Nový** - seznam dokumentů |
+| `src/hooks/useClientMedia.ts` | Rozšířit typy a bucket mapping |
+| SQL migrace | Přidat constraint a buckety |
+
+---
+
+## Funkcionalita srovnání fotografií (Před/Po)
+
+Existující komponenta `PhotoCompare` již podporuje:
+- **Režim vedle sebe** - dvě fotky vedle sebe
+- **Režim posuvníku** - překrývání s posuvným rozhraním
+- Zoom a rotace jednotlivých fotografií
+- Zobrazení data pořízení
+
+Uživatel vybere 2 fotografie v galerii (tlačítko "Srovnat fotky") a zobrazí se dialog s porovnáním.
+
+---
 
 ## Očekávaný výsledek
 
 Po implementaci:
-- ✅ Smart Import bude **skutečně vytvářet tréninky** do kalendáře
-- ✅ Události jako "Parezová Martina #tr" se automaticky spárují a importují
-- ✅ Po manuálním přiřazení se naučí celý formát události
-- ✅ UI zobrazí správný počet importovaných tréninků
-- ✅ Možnost ručně dokončit import, pokud automatický proces vyprší
+- V kartě klienta bude nový tab **"Média"** vedle "Profil"
+- Trenér může nahrávat fotografie, videa i dokumenty
+- Fotografie lze srovnávat před/po pomocí posuvníku
+- Všechna média jsou organizována podle kategorií a tagů
+- Podpora vyhledávání a filtrování
