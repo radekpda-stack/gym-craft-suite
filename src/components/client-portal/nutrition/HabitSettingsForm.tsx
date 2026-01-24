@@ -164,7 +164,7 @@ export function HabitSettingsForm({
       </div>
 
       {/* Sleep Time */}
-      <div className="space-y-3">
+      <div className="space-y-3 overflow-hidden">
         <div className="flex items-center gap-2">
           <Moon className="h-4 w-4 text-indigo-500" />
           <Label className="font-medium">Čas spánku</Label>
@@ -176,7 +176,7 @@ export function HabitSettingsForm({
             setIsDirty(true);
             setSleepTime(e.target.value);
           }}
-          className="w-32"
+          className="w-full max-w-[140px]"
         />
         <p className="text-xs text-muted-foreground">
           Používá se pro výpočet kofeinového okna
@@ -184,7 +184,7 @@ export function HabitSettingsForm({
       </div>
 
       {/* Wake Time (optional) */}
-      <div className="space-y-3">
+      <div className="space-y-3 overflow-hidden">
         <div className="flex items-center gap-2">
           <Moon className="h-4 w-4 text-amber-500" />
           <Label className="font-medium">Čas probuzení (volitelné)</Label>
@@ -196,7 +196,7 @@ export function HabitSettingsForm({
             setIsDirty(true);
             setWakeTime(e.target.value);
           }}
-          className="w-32"
+          className="w-full max-w-[140px]"
         />
       </div>
 

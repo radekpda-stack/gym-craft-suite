@@ -1039,7 +1039,7 @@ function TrainerEditDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 pt-2">
+        <div className="space-y-4 pt-2 overflow-hidden">
           {/* Entry Time */}
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground flex items-center gap-1">
@@ -1050,7 +1050,7 @@ function TrainerEditDialog({
               type="time"
               value={entryTime}
               onChange={(e) => setEntryTime(e.target.value)}
-              className="w-32"
+              className="w-full max-w-[140px]"
             />
           </div>
 
