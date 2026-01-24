@@ -11,6 +11,7 @@ import {
   Calendar,
   Droplets,
   Coffee,
+  AlertTriangle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,7 +22,7 @@ import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useClients } from '@/hooks/useClients';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, differenceInDays, isToday, isYesterday, subDays } from 'date-fns';
+import { format, differenceInDays, isToday, isYesterday, subDays, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +36,11 @@ interface ClientNutritionStats {
   recentDrinkCount: number;
   recentCoffeeCount: number;
   weekEntries: number;
+  // New fields for quality and warnings
+  qualityDistribution: { good: number; normal: number; poor: number };
+  emptyDays: number;
+  lateCaffeineCount: number;
+  hasWarning: boolean;
 }
 
 interface DashboardStats {
@@ -43,6 +49,9 @@ interface DashboardStats {
   avgEntriesPerClient: number;
   mostActiveClient: string | null;
   todayEntries: number;
+  // New aggregated quality stats
+  qualityDistribution: { good: number; normal: number; poor: number };
+  clientsWithWarnings: number;
 }
 
 // Hook to get nutrition stats for all clients
@@ -53,7 +62,18 @@ function useClientsNutritionStats() {
     queryKey: ['trainer-clients-nutrition-stats'],
     queryFn: async (): Promise<{ stats: ClientNutritionStats[]; dashboard: DashboardStats }> => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { stats: [], dashboard: { totalActiveClients: 0, totalEntriesThisWeek: 0, avgEntriesPerClient: 0, mostActiveClient: null, todayEntries: 0 } };
+      if (!user) return { 
+        stats: [], 
+        dashboard: { 
+          totalActiveClients: 0, 
+          totalEntriesThisWeek: 0, 
+          avgEntriesPerClient: 0, 
+          mostActiveClient: null, 
+          todayEntries: 0,
+          qualityDistribution: { good: 0, normal: 0, poor: 0 },
+          clientsWithWarnings: 0,
+        } 
+      };
 
       // Get all sessions for this trainer's clients
       const { data: sessions } = await supabase
@@ -73,8 +93,20 @@ function useClientsNutritionStats() {
             recentDrinkCount: 0,
             recentCoffeeCount: 0,
             weekEntries: 0,
+            qualityDistribution: { good: 0, normal: 0, poor: 0 },
+            emptyDays: 0,
+            lateCaffeineCount: 0,
+            hasWarning: false,
           })),
-          dashboard: { totalActiveClients: 0, totalEntriesThisWeek: 0, avgEntriesPerClient: 0, mostActiveClient: null, todayEntries: 0 }
+          dashboard: { 
+            totalActiveClients: 0, 
+            totalEntriesThisWeek: 0, 
+            avgEntriesPerClient: 0, 
+            mostActiveClient: null, 
+            todayEntries: 0,
+            qualityDistribution: { good: 0, normal: 0, poor: 0 },
+            clientsWithWarnings: 0,
+          }
         };
       }
 
@@ -83,11 +115,11 @@ function useClientsNutritionStats() {
       const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
       const weekAgo = format(subDays(new Date(), 7), 'yyyy-MM-dd');
 
-      // Get all entries
+      // Get all entries with quality field
       const [foodResult, drinksResult, coffeeResult] = await Promise.all([
         supabase
           .from('nutrition_food_entries')
-          .select('id, session_id, client_id, entry_date')
+          .select('id, session_id, client_id, entry_date, quality')
           .in('session_id', sessionIds)
           .gte('entry_date', weekAgo),
         supabase
@@ -97,7 +129,7 @@ function useClientsNutritionStats() {
           .gte('entry_date', weekAgo),
         supabase
           .from('nutrition_coffee_entries')
-          .select('id, session_id, client_id, entry_date')
+          .select('id, session_id, client_id, entry_date, occurred_at')
           .in('session_id', sessionIds)
           .gte('entry_date', weekAgo),
       ]);
@@ -110,6 +142,13 @@ function useClientsNutritionStats() {
       const statsMap = new Map<string, ClientNutritionStats>();
       let totalWeekEntries = 0;
       let todayEntriesCount = 0;
+      let totalQuality = { good: 0, normal: 0, poor: 0 };
+      let clientsWithWarningsCount = 0;
+
+      // Get all dates in the week for empty days calculation
+      const weekDates = Array.from({ length: 7 }, (_, i) => 
+        format(subDays(new Date(), i), 'yyyy-MM-dd')
+      );
 
       clients.forEach(client => {
         const clientSessions = sessions.filter(s => s.client_id === client.id);
@@ -137,6 +176,38 @@ function useClientsNutritionStats() {
         const todayCoffee = clientCoffee.filter(e => e.entry_date === today).length;
         todayEntriesCount += todayFood + todayDrinks + todayCoffee;
 
+        // Calculate quality distribution for this client
+        const clientQuality = { good: 0, normal: 0, poor: 0 };
+        clientFood.forEach(entry => {
+          if (entry.quality === 'good') clientQuality.good++;
+          else if (entry.quality === 'poor') clientQuality.poor++;
+          else clientQuality.normal++;
+        });
+        
+        // Aggregate to total
+        totalQuality.good += clientQuality.good;
+        totalQuality.normal += clientQuality.normal;
+        totalQuality.poor += clientQuality.poor;
+
+        // Calculate empty days (days in active period without entries)
+        const activeDatesSet = new Set(allDates);
+        const emptyDays = hasActive ? weekDates.filter(d => !activeDatesSet.has(d)).length : 0;
+
+        // Calculate late caffeine (coffee after 18:00)
+        const lateCaffeineCount = clientCoffee.filter(entry => {
+          if (!entry.occurred_at) return false;
+          try {
+            const hour = parseISO(entry.occurred_at).getHours();
+            return hour >= 18;
+          } catch {
+            return false;
+          }
+        }).length;
+
+        // Determine if client has warning
+        const hasWarning = hasActive && (emptyDays >= 3 || lateCaffeineCount >= 2);
+        if (hasWarning) clientsWithWarningsCount++;
+
         statsMap.set(client.id, {
           clientId: client.id,
           clientName: client.name,
@@ -147,6 +218,10 @@ function useClientsNutritionStats() {
           recentDrinkCount: recentDrinks.length,
           recentCoffeeCount: recentCoffee.length,
           weekEntries,
+          qualityDistribution: clientQuality,
+          emptyDays,
+          lateCaffeineCount,
+          hasWarning,
         });
       });
 
@@ -167,6 +242,8 @@ function useClientsNutritionStats() {
             : 0,
           mostActiveClient: mostActive,
           todayEntries: todayEntriesCount,
+          qualityDistribution: totalQuality,
+          clientsWithWarnings: clientsWithWarningsCount,
         }
       };
     },
@@ -174,7 +251,7 @@ function useClientsNutritionStats() {
   });
 }
 
-type FilterType = 'all' | 'active' | 'recent';
+type FilterType = 'all' | 'active' | 'attention' | 'recent';
 
 export default function NutritionPage() {
   usePageTracking('nutrition');
@@ -184,7 +261,23 @@ export default function NutritionPage() {
   
   const { data, isLoading } = useClientsNutritionStats();
   const stats = data?.stats || [];
-  const dashboard = data?.dashboard || { totalActiveClients: 0, totalEntriesThisWeek: 0, avgEntriesPerClient: 0, mostActiveClient: null, todayEntries: 0 };
+  const dashboard = data?.dashboard || { 
+    totalActiveClients: 0, 
+    totalEntriesThisWeek: 0, 
+    avgEntriesPerClient: 0, 
+    mostActiveClient: null, 
+    todayEntries: 0,
+    qualityDistribution: { good: 0, normal: 0, poor: 0 },
+    clientsWithWarnings: 0,
+  };
+
+  // Calculate quality percentages
+  const totalQualityEntries = dashboard.qualityDistribution.good + dashboard.qualityDistribution.normal + dashboard.qualityDistribution.poor;
+  const qualityPercentages = totalQualityEntries > 0 ? {
+    good: Math.round((dashboard.qualityDistribution.good / totalQualityEntries) * 100),
+    normal: Math.round((dashboard.qualityDistribution.normal / totalQualityEntries) * 100),
+    poor: Math.round((dashboard.qualityDistribution.poor / totalQualityEntries) * 100),
+  } : { good: 0, normal: 0, poor: 0 };
 
   // Filter and search
   const filteredStats = stats.filter(s => {
@@ -192,14 +285,20 @@ export default function NutritionPage() {
       return false;
     }
     if (filter === 'active' && !s.hasActiveSession) return false;
+    if (filter === 'attention' && !s.hasWarning) return false;
     if (filter === 'recent' && s.totalEntries === 0) return false;
     return true;
   });
 
-  // Sort: clients with recent activity first
+  // Sort: clients with warnings first, then active, then by last entry
   const sortedStats = [...filteredStats].sort((a, b) => {
+    // Warnings first
+    if (a.hasWarning && !b.hasWarning) return -1;
+    if (!a.hasWarning && b.hasWarning) return 1;
+    // Then active
     if (a.hasActiveSession && !b.hasActiveSession) return -1;
     if (!a.hasActiveSession && b.hasActiveSession) return 1;
+    // Then by last entry
     if (a.lastEntryDate && b.lastEntryDate) {
       return b.lastEntryDate.localeCompare(a.lastEntryDate);
     }
@@ -218,7 +317,8 @@ export default function NutritionPage() {
     return format(date, 'd. M.', { locale: cs });
   };
 
-  const getActivityColor = (lastEntryDate: string | null) => {
+  const getActivityColor = (lastEntryDate: string | null, hasWarning: boolean) => {
+    if (hasWarning) return 'bg-destructive/10 text-destructive';
     if (!lastEntryDate) return 'bg-muted text-muted-foreground';
     const date = new Date(lastEntryDate);
     if (isToday(date)) return 'bg-success/10 text-success';
@@ -239,7 +339,7 @@ export default function NutritionPage() {
         </p>
       </div>
 
-      {/* Dashboard Stats */}
+      {/* Dashboard Stats - Row 1: Basic metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card>
           <CardContent className="pt-4 pb-3">
@@ -295,6 +395,87 @@ export default function NutritionPage() {
         </Card>
       </div>
 
+      {/* Dashboard Stats - Row 2: Quality and warnings */}
+      {totalQualityEntries > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Quality distribution card */}
+          <Card>
+            <CardContent className="pt-4 pb-3">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Kvalita stravy tento týden</p>
+                <div className="flex items-center gap-2 h-2 rounded-full overflow-hidden bg-muted">
+                  {qualityPercentages.good > 0 && (
+                    <div 
+                      className="h-full bg-emerald-500/70" 
+                      style={{ width: `${qualityPercentages.good}%` }}
+                    />
+                  )}
+                  {qualityPercentages.normal > 0 && (
+                    <div 
+                      className="h-full bg-amber-500/70" 
+                      style={{ width: `${qualityPercentages.normal}%` }}
+                    />
+                  )}
+                  {qualityPercentages.poor > 0 && (
+                    <div 
+                      className="h-full bg-rose-500/70" 
+                      style={{ width: `${qualityPercentages.poor}%` }}
+                    />
+                  )}
+                </div>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500/70" />
+                    {qualityPercentages.good}% kvalitní
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-amber-500/70" />
+                    {qualityPercentages.normal}% běžná
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-rose-500/70" />
+                    {qualityPercentages.poor}% nezdravá
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Warnings card */}
+          <Card className={cn(
+            dashboard.clientsWithWarnings > 0 && "border-destructive/30"
+          )}>
+            <CardContent className="pt-4 pb-3">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+                  dashboard.clientsWithWarnings > 0 ? "bg-destructive/10" : "bg-muted"
+                )}>
+                  <AlertTriangle className={cn(
+                    "w-5 h-5",
+                    dashboard.clientsWithWarnings > 0 ? "text-destructive" : "text-muted-foreground"
+                  )} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-2xl font-bold">{dashboard.clientsWithWarnings}</p>
+                  <p className="text-xs text-muted-foreground truncate">Vyžaduje pozornost</p>
+                </div>
+                {dashboard.clientsWithWarnings > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-xs"
+                    onClick={() => setFilter('attention')}
+                  >
+                    Zobrazit
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Most Active Client */}
       {dashboard.mostActiveClient && (
         <div className="px-1">
@@ -315,7 +496,7 @@ export default function NutritionPage() {
             className="pl-9"
           />
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           <Button 
             variant={filter === 'all' ? 'default' : 'outline'} 
             size="sm"
@@ -329,6 +510,17 @@ export default function NutritionPage() {
             onClick={() => setFilter('active')}
           >
             Aktivní
+          </Button>
+          <Button 
+            variant={filter === 'attention' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setFilter('attention')}
+            className={cn(
+              filter === 'attention' && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            )}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 mr-1" />
+            Pozornost
           </Button>
         </div>
       </div>
@@ -364,7 +556,7 @@ export default function NutritionPage() {
                   {/* Avatar with activity color */}
                   <div className={cn(
                     "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium shrink-0",
-                    getActivityColor(stat.lastEntryDate)
+                    getActivityColor(stat.lastEntryDate, stat.hasWarning)
                   )}>
                     {stat.clientName.charAt(0).toUpperCase()}
                   </div>
@@ -373,7 +565,13 @@ export default function NutritionPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">{stat.clientName}</span>
-                      {stat.hasActiveSession && (
+                      {stat.hasWarning && (
+                        <Badge variant="outline" className="text-destructive border-destructive/30 text-[10px] px-1.5 shrink-0">
+                          <AlertTriangle className="w-3 h-3 mr-0.5" />
+                          Pozornost
+                        </Badge>
+                      )}
+                      {stat.hasActiveSession && !stat.hasWarning && (
                         <Badge variant="outline" className="text-success border-success/30 text-[10px] px-1.5 shrink-0">
                           Aktivní
                         </Badge>
@@ -388,6 +586,17 @@ export default function NutritionPage() {
                         <span className="flex items-center gap-1">
                           <Apple className="w-3 h-3" />
                           {stat.weekEntries} tento týden
+                        </span>
+                      )}
+                      {stat.emptyDays > 0 && stat.hasActiveSession && (
+                        <span className="flex items-center gap-1 text-destructive/70">
+                          {stat.emptyDays} prázdných dnů
+                        </span>
+                      )}
+                      {stat.lateCaffeineCount > 0 && (
+                        <span className="flex items-center gap-1 text-destructive/70">
+                          <Coffee className="w-3 h-3" />
+                          {stat.lateCaffeineCount}× po 18:00
                         </span>
                       )}
                     </div>
