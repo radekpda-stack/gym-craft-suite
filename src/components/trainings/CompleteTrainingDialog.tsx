@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -202,6 +203,29 @@ export function CompleteTrainingDialog({
     });
   };
 
+  // Handle total price change - distribute proportionally
+  const handleTotalPriceChange = (newTotal: number) => {
+    setParticipantPayments(prev => {
+      const currentTotal = prev.reduce((sum, p) => sum + p.price_share, 0);
+      if (currentTotal === 0 || prev.length === 0) return prev;
+
+      // Calculate the ratio for proportional distribution
+      const ratio = newTotal / currentTotal;
+
+      // Distribute proportionally, keeping the last participant to absorb rounding
+      let distributed = 0;
+      return prev.map((p, index) => {
+        if (index === prev.length - 1) {
+          // Last participant gets the remainder
+          return { ...p, price_share: newTotal - distributed };
+        }
+        const share = Math.round(p.price_share * ratio);
+        distributed += share;
+        return { ...p, price_share: share };
+      });
+    });
+  };
+
   const handleComplete = async () => {
     if (!session || isSubmitting || completeTrainingAtomic.isPending) return;
     setIsSubmitting(true);
@@ -287,7 +311,21 @@ export function CompleteTrainingDialog({
               })}
               <div className="border-t pt-2 mt-2 flex items-center justify-between">
                 <span className="font-medium">Celkem:</span>
-                <span className="text-lg font-bold text-primary">{getExpectedPrice()} Kč</span>
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    value={getExpectedPrice()}
+                    onChange={(e) => {
+                      const newTotal = Math.max(0, parseInt(e.target.value) || 0);
+                      handleTotalPriceChange(newTotal);
+                    }}
+                    className="w-24 h-9 text-right text-lg font-bold"
+                    min={0}
+                    step={100}
+                    disabled={isLoading}
+                  />
+                  <span className="text-sm text-muted-foreground">Kč</span>
+                </div>
               </div>
             </div>
           )}
