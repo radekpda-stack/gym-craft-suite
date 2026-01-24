@@ -64,7 +64,11 @@ function buildMobileNavItems(base: string): NavItem[] {
     { to: `${base}/diary`, icon: BookOpen, label: 'Deník', trackName: 'diary' },
     { to: `${base}/progress`, icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
     { to: `${base}/chat`, icon: MessageCircle, label: 'Chat', trackName: 'chat' },
-    { to: `${base}/settings`, icon: Settings, label: 'Více', trackName: 'settings' },
+    { to: `${base}/leaderboard`, icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
+    { to: `${base}/challenges`, icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
+    { to: `${base}/badges`, icon: Award, label: 'Odznaky', trackName: 'badges' },
+    { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
+    { to: `${base}/settings`, icon: Settings, label: 'Nastavení', trackName: 'settings' },
   ];
 }
 
@@ -281,9 +285,9 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         </motion.div>
       </main>
 
-      {/* Mobile Bottom Navigation - Floating style for iOS safe area */}
+      {/* Mobile Bottom Navigation - Scrollable floating bar with all items */}
       <nav className="fixed bottom-4 left-4 right-4 bg-card/95 backdrop-blur-md border rounded-[20px] shadow-lg z-50 md:hidden">
-        <div className="flex items-center justify-around h-14 px-1">
+        <div className="flex items-center h-14 px-2 overflow-x-auto scrollbar-hide">
           {mobileNavItems.map((item) => {
             const isActive = location.pathname === item.to || 
               (item.to !== '/client' && item.to !== '/zona' && location.pathname.startsWith(item.to));
@@ -293,7 +297,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-1.5 rounded-xl transition-all relative",
+                  "flex flex-col items-center justify-center gap-0.5 min-w-[56px] py-1.5 px-2 rounded-xl transition-all relative shrink-0",
                   isActive 
                     ? "text-primary" 
                     : "text-muted-foreground"
@@ -303,7 +307,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
                   "w-5 h-5 transition-transform shrink-0",
                   isActive && "scale-110"
                 )} />
-                <span className="text-[9px] font-medium truncate max-w-full px-0.5">{item.label}</span>
+                <span className="text-[9px] font-medium whitespace-nowrap">{item.label}</span>
                 {isActive && (
                   <motion.div
                     layoutId="clientActiveTab"
