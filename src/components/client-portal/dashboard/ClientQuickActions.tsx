@@ -1,18 +1,21 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Scale, MessageCircle, Plus, Dumbbell, Apple } from 'lucide-react';
+import { BookOpen, Scale, Dumbbell, Apple, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientActivityPreferences } from '@/hooks/useClientActivityPreferences';
+import { AddMeasurementDialog } from '@/components/client-portal/progress/AddMeasurementDialog';
 
 interface QuickAction {
   id: string;
   label: string;
   icon: React.ReactNode;
-  path: string;
+  path?: string;
   color: string;
   bgColor: string;
+  onClick?: () => void;
 }
 
 export function ClientQuickActions() {
@@ -20,6 +23,7 @@ export function ClientQuickActions() {
   const { data: prefs } = useClientActivityPreferences(clientId ?? undefined);
   const location = useLocation();
   const basePath = location.pathname.startsWith('/zona') ? '/zona' : '/client';
+  const [showWeightDialog, setShowWeightDialog] = useState(false);
 
   // Base actions (always visible)
   const baseActions: QuickAction[] = [
@@ -32,17 +36,17 @@ export function ClientQuickActions() {
       bgColor: 'bg-primary/10 hover:bg-primary/20',
     },
     {
-      id: 'chat',
-      label: 'S trenérem',
-      icon: <MessageCircle className="w-5 h-5" />,
-      path: '/chat',
+      id: 'add-weight',
+      label: 'Přidat váhu',
+      icon: <Scale className="w-5 h-5" />,
       color: 'text-accent',
       bgColor: 'bg-accent/10 hover:bg-accent/20',
+      onClick: () => setShowWeightDialog(true),
     },
     {
       id: 'progress',
       label: 'Pokrok',
-      icon: <Scale className="w-5 h-5" />,
+      icon: <TrendingUp className="w-5 h-5" />,
       path: '/progress',
       color: 'text-success',
       bgColor: 'bg-success/10 hover:bg-success/20',
@@ -86,38 +90,65 @@ export function ClientQuickActions() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05 }}
-      className={cn("grid gap-2", getGridClass())}
-    >
-      {allActions.map((action, index) => (
-        <motion.div
-          key={action.id}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.05 + index * 0.05 }}
-        >
-          <Link to={`${basePath}${action.path}`}>
-            <Button
-              variant="ghost"
-              className={cn(
-                "flex flex-col items-center justify-center gap-1.5 h-auto py-3 px-2 w-full rounded-xl transition-all",
-                action.bgColor
-              )}
-            >
-              <div className={cn("shrink-0", action.color)}>
-                {action.icon}
-              </div>
-              <span className="text-xs font-medium text-foreground/80">
-                {action.label}
-              </span>
-            </Button>
-          </Link>
-        </motion.div>
-      ))}
-    </motion.div>
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className={cn("grid gap-2", getGridClass())}
+      >
+        {allActions.map((action, index) => (
+          <motion.div
+            key={action.id}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.05 + index * 0.05 }}
+          >
+            {action.path ? (
+              <Link to={`${basePath}${action.path}`}>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-1.5 h-auto py-3 px-2 w-full rounded-xl transition-all",
+                    action.bgColor
+                  )}
+                >
+                  <div className={cn("shrink-0", action.color)}>
+                    {action.icon}
+                  </div>
+                  <span className="text-xs font-medium text-foreground/80">
+                    {action.label}
+                  </span>
+                </Button>
+              </Link>
+            ) : (
+              <Button
+                variant="ghost"
+                onClick={action.onClick}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1.5 h-auto py-3 px-2 w-full rounded-xl transition-all",
+                  action.bgColor
+                )}
+              >
+                <div className={cn("shrink-0", action.color)}>
+                  {action.icon}
+                </div>
+                <span className="text-xs font-medium text-foreground/80">
+                  {action.label}
+                </span>
+              </Button>
+            )}
+          </motion.div>
+        ))}
+      </motion.div>
+
+      <AddMeasurementDialog 
+        defaultType="weight"
+        trigger={<span className="hidden" />}
+        open={showWeightDialog}
+        onOpenChange={setShowWeightDialog}
+      />
+    </>
   );
 }
 

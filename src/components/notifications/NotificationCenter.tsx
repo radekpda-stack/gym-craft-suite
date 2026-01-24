@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Bell, Check, Trash2, CreditCard, Cake, Trophy, Dumbbell, TrendingDown, AlertTriangle, Clock, Gift, MessageSquare, User, ChevronDown, ChevronRight, Settings, Medal, Target, Stethoscope, Utensils } from "lucide-react";
+import { Bell, Check, Trash2, CreditCard, Cake, Trophy, Dumbbell, TrendingDown, AlertTriangle, Clock, Gift, MessageSquare, User, ChevronDown, ChevronRight, Settings, Medal, Target, Stethoscope, Utensils, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -52,6 +52,7 @@ const notificationIcons: Record<string, typeof Bell> = {
   pre_diagnostic_completed: Stethoscope,
   nutrition_entry_added: Utensils,
   nutrition_inactive: AlertTriangle,
+  client_weight_added: Scale,
 };
 
 const notificationColors: Record<string, string> = {
@@ -77,6 +78,7 @@ const notificationColors: Record<string, string> = {
   pre_diagnostic_completed: "text-success",
   nutrition_entry_added: "text-success",
   nutrition_inactive: "text-warning",
+  client_weight_added: "text-success",
 };
 
 // Category definitions for grouping
@@ -109,7 +111,7 @@ const NOTIFICATION_CATEGORIES = {
     label: "Klienti",
     icon: User,
     color: "text-blue-500",
-    types: ["birthday", "client_anniversary", "inactivity_warning", "pre_diagnostic_completed", "diagnostic_completed", "nutrition_entry_added", "nutrition_inactive"],
+    types: ["birthday", "client_anniversary", "inactivity_warning", "pre_diagnostic_completed", "diagnostic_completed", "nutrition_entry_added", "nutrition_inactive", "client_weight_added"],
   },
   packages: {
     label: "Balíčky & finance",

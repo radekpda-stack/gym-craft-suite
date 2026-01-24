@@ -21,13 +21,21 @@ import { toast } from 'sonner';
 interface AddMeasurementDialogProps {
   defaultType?: 'weight' | 'bodyFat';
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function AddMeasurementDialog({ 
   defaultType = 'weight',
-  trigger 
+  trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: AddMeasurementDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (controlledOnOpenChange || (() => {})) : setInternalOpen;
+  
   const [type, setType] = useState<'weight' | 'bodyFat'>(defaultType);
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [value, setValue] = useState('');
