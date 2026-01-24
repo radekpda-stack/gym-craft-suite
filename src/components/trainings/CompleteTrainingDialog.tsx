@@ -176,11 +176,11 @@ export function CompleteTrainingDialog({
         );
       }
       
-      // Get total price based on participant count (1000 for 2, 1200 for 3+)
-      const totalPrice = getTrainingPrice(participantCount, trainingPrices);
+      // Use current total (sum of all shares) as baseline, not default price
+      const currentTotal = prev.reduce((sum, p) => sum + p.price_share, 0);
       
       // Calculate remaining amount for other participants
-      const remainingAmount = Math.max(0, totalPrice - newPrice);
+      const remainingAmount = Math.max(0, currentTotal - newPrice);
       const otherParticipants = prev.filter(p => p.client_id !== clientId);
       const pricePerOther = otherParticipants.length > 0 
         ? Math.round(remainingAmount / otherParticipants.length) 
