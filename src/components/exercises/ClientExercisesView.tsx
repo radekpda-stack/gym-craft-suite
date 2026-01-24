@@ -3,7 +3,7 @@ import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { 
   User, Search, Dumbbell, Heart, Clock, TrendingUp, TrendingDown, 
-  Minus, ChevronRight, Trophy, ArrowLeft, Calendar, Target
+  Minus, ChevronRight, Trophy, ArrowLeft, Calendar, Target, Zap
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -40,7 +40,42 @@ interface ExerciseListItemProps {
 }
 
 function ExerciseListItem({ exercise, onClick }: ExerciseListItemProps) {
-  const isTimeBased = exercise.isTimeBased;
+  const exerciseType = exercise.exerciseType;
+  
+  const getIcon = () => {
+    switch (exerciseType) {
+      case 'cardio':
+        return <Heart className="w-5 h-5 text-success" />;
+      case 'skill':
+        return <Zap className="w-5 h-5 text-warning" />;
+      default:
+        return <Dumbbell className="w-5 h-5 text-primary" />;
+    }
+  };
+
+  const getBgClass = () => {
+    switch (exerciseType) {
+      case 'cardio':
+        return 'bg-success/10';
+      case 'skill':
+        return 'bg-warning/10';
+      default:
+        return 'bg-primary/10';
+    }
+  };
+
+  const getDisplayValue = () => {
+    if (exerciseType === 'skill' && exercise.bestHeight) {
+      return `${exercise.bestHeight} cm`;
+    }
+    if ((exerciseType === 'cardio' || exercise.isTimeBased) && exercise.bestTime) {
+      return formatTime(exercise.bestTime);
+    }
+    if (exercise.maxWeight) {
+      return `${exercise.maxWeight} kg`;
+    }
+    return null;
+  };
   
   return (
     <button
@@ -49,13 +84,9 @@ function ExerciseListItem({ exercise, onClick }: ExerciseListItemProps) {
     >
       <div className={cn(
         "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
-        isTimeBased ? "bg-success/10" : "bg-primary/10"
+        getBgClass()
       )}>
-        {isTimeBased ? (
-          <Heart className="w-5 h-5 text-success" />
-        ) : (
-          <Dumbbell className="w-5 h-5 text-primary" />
-        )}
+        {getIcon()}
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate">{exercise.exerciseName}</p>
@@ -69,11 +100,9 @@ function ExerciseListItem({ exercise, onClick }: ExerciseListItemProps) {
         </div>
       </div>
       <div className="text-right shrink-0">
-        {isTimeBased && exercise.bestTime ? (
-          <p className="font-semibold tabular-nums">{formatTime(exercise.bestTime)}</p>
-        ) : exercise.maxWeight ? (
-          <p className="font-semibold tabular-nums">{exercise.maxWeight} kg</p>
-        ) : null}
+        {getDisplayValue() && (
+          <p className="font-semibold tabular-nums">{getDisplayValue()}</p>
+        )}
         <p className="text-xs text-muted-foreground">
           {format(parseISO(exercise.lastDate), 'd. M. yyyy', { locale: cs })}
         </p>
@@ -347,9 +376,10 @@ export function ClientExercisesView() {
     );
   }, [exercises, searchQuery]);
 
-  // Separate strength vs cardio
-  const strengthExercises = filteredExercises.filter(e => !e.isTimeBased);
-  const cardioExercises = filteredExercises.filter(e => e.isTimeBased);
+  // Separate by exercise type
+  const strengthExercises = filteredExercises.filter(e => e.exerciseType === 'strength');
+  const cardioExercises = filteredExercises.filter(e => e.exerciseType === 'cardio');
+  const skillExercises = filteredExercises.filter(e => e.exerciseType === 'skill');
 
   const handleClientChange = (value: string) => {
     setSelectedClientId(value || null);
@@ -487,6 +517,25 @@ export function ClientExercisesView() {
                 </div>
                 <div className="space-y-2">
                   {cardioExercises.map(exercise => (
+                    <ExerciseListItem
+                      key={exercise.exerciseName}
+                      exercise={exercise}
+                      onClick={() => setSelectedExercise(exercise)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Skill/Plyo Exercises */}
+            {skillExercises.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-1">
+                  <Zap className="w-4 h-4 text-warning" />
+                  <h4 className="text-sm font-medium">Plyo / Skill ({skillExercises.length})</h4>
+                </div>
+                <div className="space-y-2">
+                  {skillExercises.map(exercise => (
                     <ExerciseListItem
                       key={exercise.exerciseName}
                       exercise={exercise}
