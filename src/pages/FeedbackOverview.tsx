@@ -73,6 +73,8 @@ import { FeedbackSettings } from '@/components/settings/FeedbackSettings';
 import { TrainingFeedbackCorrelationCard } from '@/components/feedback/TrainingFeedbackCorrelationCard';
 import { FeedbackTagCorrelation } from '@/components/feedback/FeedbackTagCorrelation';
 import { FeedbackPeriodComparison } from '@/components/feedback/FeedbackPeriodComparison';
+import { ClientVsBaselineCard } from '@/components/feedback/ClientVsBaselineCard';
+import { FeedbackCoachInsights } from '@/components/feedback/FeedbackCoachInsights';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 type PeriodOption = '7' | '30' | '90' | 'all';
@@ -518,6 +520,12 @@ export default function FeedbackOverview() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <TrainingFeedbackCorrelationCard days={90} />
                 <FeedbackTagCorrelation days={90} />
+              </div>
+              
+              {/* Client vs Baseline + Coach Insights */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <ClientVsBaselineCard />
+                <FeedbackCoachInsights />
               </div>
             </TabsContent>
 
