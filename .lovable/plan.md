@@ -1,156 +1,102 @@
 
-# Kompletní údržba databáze cviků
+# Oprava notifikačního systému - Kompletní propojení
 
-## Shrnutí aktuálního stavu
+## Přehled nalezených problémů
 
-| Metrika | Hodnota |
-|---------|---------|
-| Celkem cviků | 196 |
-| Aktivních | 193 |
-| Archivovaných | 3 |
-| Chybí equipment | 83 |
-| Chybí movement_pattern | 70 |
-| Cviků s využitím | 34 |
+### 1. Výročí spolupráce (client_anniversary)
+**Problém**: Hook `useClientAnniversaryNotifier` používá `created_at` (datum přidání klienta do systému), nikoli `training_start_date` (skutečný začátek spolupráce).
 
-## Fáze 1: Oprava duplicit
+**Dopad**: Většina klientů má `training_start_date` odlišné od `created_at`, takže výročí se nikdy nespustí správně.
 
-Nalezeno **5 duplicitních párů**:
+### 2. Klient zapisuje stravu (nutrition_entry_added)
+**Problém**: Logika v `useClientPortalNutrition.ts` existuje, ale notifikace se do DB nedostávají (0 záznamů).
 
-| Cvik | Varianta 1 | Varianta 2 | Akce |
-|------|------------|------------|------|
-| Plank | `e70e202b` (0 použití) | `f07f9128` (0 použití) | Smazat jeden |
-| Lat Pulldown | `25c7282f` - "Přítah horní kladky" | `c647ac2e` - "Lat Pulldown" | Sloučit, ponechat CZ název |
-| Chin-up | `95861643` - "Shyb podhmatem" | `cb080864` - "Shyby nadhmatem" | Opravit - jsou to různé cviky! |
-| Thruster | `dd1c6829` (0 použití) | `ea4fad10` (0 použití) | Smazat jeden |
-| Zapažování na kladce | `5a01395c` - Tricep Kickback | `da322d40` - Rear Delt Fly | Opravit názvy - jsou to různé cviky! |
+**Možná příčina**: Chyba v kontrole duplicit nebo RLS blokuje insert.
 
-**Důležité**: Chin-up (podhmat) a Pull-up (nadhmat) jsou různé cviky - toto není duplicita, ale chyba v názvu.
+### 3. Klient přidal váhu (client_weight_added)
+**Problém**: Migrace definuje funkci `notify_trainer_on_client_weight()`, ale trigger není připojen k tabulce `measurements`.
 
-## Fáze 2: Sjednocení kategorií
+**Dopad**: Váha se nenotifikuje vůbec.
 
-Přesun cviků z nestandardních kategorií do standardních:
+### 4. Klient zapsal vlastní trénink
+**Problém**: Hook `useCreateWorkoutLog` neobsahuje žádnou notifikační logiku pro trenéra.
 
-| Původní kategorie | Počet | Nová kategorie |
-|-------------------|-------|----------------|
-| Nohy | 2 | Dolní tělo |
-| Záda | 2 | Horní tělo |
-| Paže | 2 | Horní tělo |
-| Ramena | 1 | Horní tělo |
-| Hrudník | 1 (archivováno) | - ponechat |
-| Síla | 6 | Full Body nebo Horní/Dolní tělo |
-| plyometrics | 11 | Dolní tělo (+ přidat tag "plyometrie") |
-| conditioning | 1 | Kardio |
+**Dopad**: Trenér neví, že klient cvičil sám.
 
-## Fáze 3: Doplnění equipment tagů
+### 5. Závislost na načtení aplikace
+**Problém**: Narozeniny a výročí se kontrolují pouze při načtení `Layout.tsx` - pokud trenér neotevře aplikaci v daný den, notifikace se nevytvoří.
 
-83 cviků nemá equipment. Přidám podle typu:
+---
 
-| Kategorie equipment | Cviky k aktualizaci |
-|--------------------|---------------------|
-| kettlebell | Kettlebell Swing, Turkish Get Up, Goblet dřep (opravit) |
-| barbell | Bench press, Dřep, Mrtvý tah, Přední dřep, Přítahy v předklonu |
-| dumbbells | Arnold Press, Bicepsové zdvihy, Rozpažování, Bench press na šikmé |
-| bodyweight | Burpee, Kliky, Shyby, Dipy, Výpady, Výstupy |
-| pull-up bar | Muscle-up, Shyby (všechny varianty), Přednožování ve visu |
-| dip bars | Dipy na bradlech, Tricepsové kliky |
-| bench | Bench press varianty, Hip Thrust |
+## Implementační plán
 
-## Fáze 4: Přidání chybějících cviků
+### Fáze 1: Oprava výročí spolupráce
+Upravit `useClientAnniversaryNotifier` aby používal `training_start_date` jako prioritní datum:
 
-Na základě vybavení (hrazda, bradla, bodyweight, běžecký pás, veslo, skierg, činky, kettlebelly):
-
-### Kettlebell (chybí většina)
-- Kettlebell Clean
-- Kettlebell Snatch  
-- Kettlebell Windmill
-- Kettlebell Halo
-- Kettlebell Press
-- Kettlebell Row
-- Kettlebell Lunge
-
-### Hrazda/Bradla (rozšíření)
-- Australian Pull-ups (horizontální přítahy)
-- Dead Hang (vis)
-- Scapular Pull-ups (aktivace lopatek)
-- Toes to Bar
-- Knee Raises
-
-### Jednoručky (doplnění)
-- Dumbbell Pullover
-- Renegade Row
-- Dumbbell Snatch
-- Farmer Walk / Farmer's Carry
-
-### Bodyweight (doplnění)
-- Bear Crawl (medvědí chůze)
-- Mountain Climbers (horolezci)
-- Hollow Body Hold
-- Superman Hold
-- Glute Bridge
-
-### Kardio - rozšíření běžeckého pásu
-- Běh - 400m sprint
-- Běh - 3000m
-- Běh - Tempo run
-
-## Fáze 5: Oprava movement_pattern
-
-70 cviků nemá movement_pattern. Přiřadím:
-
-| Movement Pattern | Příklady cviků |
-|-----------------|----------------|
-| push_horizontal | Bench press, Kliky, Dips |
-| push_vertical | Tlak nad hlavu, Pike Push-up |
-| pull_horizontal | Přítahy v předklonu, Cable Row |
-| pull_vertical | Shyby, Lat Pulldown |
-| squat | Dřepy, Goblet squat |
-| hinge | Mrtvý tah, RDL, Kettlebell Swing |
-| lunge | Výpady, Bulharský dřep |
-| carry | Farmer Walk, Suitcase Carry |
-| core_anti_extension | Plank, Dead Bug |
-| core_anti_rotation | Pallof Press |
-| conditioning | Burpee, Kardio cviky |
-
-## Bezpečnostní pravidla
-
-1. **NIKDY nesmazat** cviky s `usage_count > 0` (34 cviků má záznamy)
-2. Duplicity řešit **archivací**, ne mazáním
-3. Při sloučení přesunout všechny `workout_entries` na primární cvik
-4. Zálohovat ID původních cviků pro audit
-
-## Technické kroky implementace
-
-### Krok 1: Databázové migrace
-```text
-1. UPDATE exercises - sjednocení kategorií
-2. UPDATE exercises - doplnění equipment arrays
-3. UPDATE exercises - doplnění movement_pattern
-4. INSERT exercises - nové cviky pro kettlebell, bodyweight, atd.
-5. UPDATE exercises - archivace duplicit (is_archived = true)
+```typescript
+// Změna v src/hooks/useClientAnniversaries.ts
+const startDate = client.training_start_date 
+  ? parseISO(client.training_start_date)
+  : parseISO(client.created_at);
 ```
 
-### Krok 2: Standardizace equipment hodnot
-Sjednotit na anglické hodnoty:
-- "Činka" → "barbell"
-- "Jednoručky" → "dumbbells"  
-- "Hrazda" → "pull-up bar"
-- "Bradla" → "dip bars"
-- "Vlastní váha" → "bodyweight"
+### Fáze 2: Oprava notifikace o váze
+Vytvořit databázový trigger na tabulce `measurements`:
 
-### Krok 3: Přidání nových cviků
-Celkem cca **25 nových cviků** pro pokrytí vybavení:
-- 7 kettlebell cviků
-- 5 hrazda/bradla cviků
-- 4 jednoručkové cviky
-- 5 bodyweight cviků
-- 3 běžecký pás varianty
+```sql
+CREATE TRIGGER on_measurement_weight_added
+AFTER INSERT OR UPDATE ON public.measurements
+FOR EACH ROW
+EXECUTE FUNCTION public.notify_trainer_on_client_weight();
+```
 
-## Výsledek po údržbě
+### Fáze 3: Přidat notifikaci pro klientský trénink
+Upravit `useCreateWorkoutLog` v `useClientWorkoutLogs.ts`:
+- Po úspěšném vytvoření záznamu odeslat notifikaci trenérovi
+- Typ: `client_workout_logged` (nový typ)
+- Přidat typ do DB constraintu
 
-| Metrika | Před | Po |
-|---------|------|-----|
-| Aktivních cviků | 193 | ~215 |
-| S equipment | 110 | ~215 |
-| S movement_pattern | 126 | ~215 |
-| Duplicit | 5 | 0 |
-| Nestandardních kategorií | 25 | 0 |
+### Fáze 4: Debug nutrition_entry_added
+Prověřit hook `useClientPortalNutrition.ts`:
+- Zkontrolovat RLS na tabulce notifications
+- Ověřit, že session obsahuje správné `user_id`
+- Přidat lepší error logging
+
+### Fáze 5: Přidat scheduled job pro narozeniny/výročí
+Vytvořit edge function pro kontrolu narozenin/výročí jednou denně:
+- Nezávisí na načtení aplikace trenérem
+- Běží každý den v 6:00
+
+---
+
+## Technické detaily
+
+### Nový typ notifikace
+```sql
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+ALTER TABLE notifications ADD CONSTRAINT notifications_type_check 
+CHECK (type IN (
+  -- existující typy...
+  'client_workout_logged'  -- nový typ
+));
+```
+
+### Soubory k úpravě
+1. `src/hooks/useClientAnniversaries.ts` - oprava výročí
+2. `src/hooks/useClientWorkoutLogs.ts` - přidání notifikace
+3. `src/hooks/useClientPortalNutrition.ts` - debug + oprava
+4. `src/components/notifications/NotificationCenter.tsx` - přidat ikonu pro nový typ
+5. `src/hooks/useNotifications.ts` - přidat nový typ
+6. Nová migrace - trigger pro váhu + constraint update
+7. Nová edge function - `check-birthdays-anniversaries`
+
+### Výsledek po opravě
+| Typ notifikace | Stav | Trigger |
+|----------------|------|---------|
+| Narozeniny | ✅ Funkční + backup cron | Daily cron + frontend hook |
+| Výročí | ✅ Opraveno | Daily cron + frontend hook |
+| Klient přidal váhu | ✅ Opraveno | DB trigger na measurements |
+| Klient zapisuje stravu | ✅ Opraveno | Frontend hook |
+| Klient zapsal trénink | ✅ Nové | Frontend hook |
+| PR záznamy | ✅ Beze změny | Frontend hook |
+| Feedback | ✅ Beze změny | Edge function |
