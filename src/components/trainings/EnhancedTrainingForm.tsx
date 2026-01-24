@@ -1,10 +1,9 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Loader2, Tag, Search, Check, AlertTriangle, Dumbbell } from "lucide-react";
+import { Loader2, Search, Check, AlertTriangle, Dumbbell, Plus, X, Users } from "lucide-react";
 import { TrainingTypeSelector } from "./TrainingTypeSelector";
 import {
   Form,
@@ -13,15 +12,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Command,
   CommandEmpty,
@@ -36,20 +27,19 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { TrainingTagsSelector } from "./TrainingTagsSelector";
 import { Client } from "@/hooks/useClients";
 import { cn } from "@/lib/utils";
 import { useSharedBudgetBalance } from "@/hooks/useSharedBudgetBalance";
 import { useFormTracking } from "@/hooks/useFormTracking";
+import { Badge } from "@/components/ui/badge";
 
 const trainingFormSchema = z.object({
   client_id: z.string().min(1, "Vyberte klienta"),
+  additional_client_ids: z.array(z.string()).optional(),
   date: z.string().min(1, "Zadejte datum"),
   duration: z.number().min(15, "Minimálně 15 minut").max(300, "Maximálně 300 minut"),
-  participant_count: z.number().min(1, "Minimálně 1 účastník").max(5, "Maximálně 5 účastníků"),
   notes: z.string().optional(),
   training_type: z.string().optional(),
-  price_override: z.number().optional(),
 });
 
 export type EnhancedTrainingFormValues = z.infer<typeof trainingFormSchema>;
@@ -80,13 +70,16 @@ export function EnhancedTrainingForm({
   submitLabel = "Vytvořit trénink",
   stickySubmit = false,
 }: EnhancedTrainingFormProps) {
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(defaultTagIds);
   const [clientSearch, setClientSearch] = useState("");
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
-  const [priceOverrideEnabled, setPriceOverrideEnabled] = useState(false);
+  const [additionalClientIds, setAdditionalClientIds] = useState<string[]>(
+    defaultValues?.additional_client_ids || []
+  );
+  const [addClientPopoverOpen, setAddClientPopoverOpen] = useState(false);
+  const [addClientSearch, setAddClientSearch] = useState("");
   
   // Form analytics tracking
-  const { getFieldProps, completeForm, trackValidationErrors } = useFormTracking({
+  const { completeForm } = useFormTracking({
     formType: 'training_form',
   });
   
@@ -106,31 +99,22 @@ export function EnhancedTrainingForm({
     resolver: zodResolver(trainingFormSchema),
     defaultValues: {
       client_id: defaultValues?.client_id || "",
+      additional_client_ids: defaultValues?.additional_client_ids || [],
       date: defaultValues?.date || getLocalDateTimeString(),
       duration: defaultValues?.duration || 60,
-      participant_count: defaultValues?.participant_count || 1,
       notes: defaultValues?.notes || "",
       training_type: defaultValues?.training_type || "",
-      price_override: undefined,
     },
   });
 
   const selectedClientId = form.watch("client_id");
-  const participantCount = form.watch("participant_count");
-  const priceOverride = form.watch("price_override");
-
   const selectedClient = clients.find(c => c.id === selectedClientId);
   
-  // Get shared budget info
+  // Calculate participant count from selected clients
+  const participantCount = 1 + additionalClientIds.length;
+  
+  // Get shared budget info for primary client
   const { data: sharedBudget } = useSharedBudgetBalance(selectedClientId);
-  
-  // Calculate auto price based on participant count
-  const autoPrice = useMemo(() => {
-    const key = participantCount >= 3 ? '3' : participantCount.toString();
-    return trainingPrices[key] || 800;
-  }, [participantCount, trainingPrices]);
-  
-  const finalPrice = priceOverrideEnabled && priceOverride !== undefined ? priceOverride : autoPrice;
   
   // Calculate available credit
   const availableCredit = useMemo(() => {
@@ -140,7 +124,7 @@ export function EnhancedTrainingForm({
     return selectedClient?.credit_balance || 0;
   }, [selectedClient, sharedBudget]);
 
-  // Filtered clients with diacritics-insensitive search
+  // Filtered clients with diacritics-insensitive search (excluding already selected)
   const filteredClients = useMemo(() => {
     if (!clientSearch) return clients.filter(c => !c.is_archived);
     const searchNorm = removeDiacritics(clientSearch);
@@ -149,31 +133,54 @@ export function EnhancedTrainingForm({
       .filter(c => removeDiacritics(c.name).includes(searchNorm));
   }, [clients, clientSearch]);
 
+  // Clients available for adding (excluding primary and already added)
+  const availableClientsForAdd = useMemo(() => {
+    const excludeIds = new Set([selectedClientId, ...additionalClientIds]);
+    let filtered = clients.filter(c => !c.is_archived && !excludeIds.has(c.id));
+    
+    if (addClientSearch) {
+      const searchNorm = removeDiacritics(addClientSearch);
+      filtered = filtered.filter(c => removeDiacritics(c.name).includes(searchNorm));
+    }
+    
+    return filtered;
+  }, [clients, selectedClientId, additionalClientIds, addClientSearch]);
+
   const handleSubmit = async (data: EnhancedTrainingFormValues) => {
-    // Set final price in data
+    // Include participant count calculated from clients
     const submitData = {
       ...data,
-      price_override: finalPrice,
+      additional_client_ids: additionalClientIds,
     };
-    await onSubmit(submitData, selectedTagIds);
-    completeForm(); // Track form completion
+    await onSubmit(submitData, []);
+    completeForm();
+  };
+
+  const handleAddClient = (clientId: string) => {
+    if (!additionalClientIds.includes(clientId)) {
+      setAdditionalClientIds([...additionalClientIds, clientId]);
+    }
+    setAddClientSearch("");
+    setAddClientPopoverOpen(false);
+  };
+
+  const handleRemoveAdditionalClient = (clientId: string) => {
+    setAdditionalClientIds(additionalClientIds.filter(id => id !== clientId));
   };
 
   // Credit status indicator
   const getCreditStatus = () => {
     if (!selectedClient) return null;
     
-    if (availableCredit >= finalPrice) {
-      return { color: "text-success", bg: "bg-success/10", label: "Dostatečný kredit", icon: Check };
-    } else if (availableCredit > 0) {
-      return { color: "text-warning", bg: "bg-warning/10", label: `Částečný kredit (chybí ${(finalPrice - availableCredit).toLocaleString('cs-CZ')} Kč)`, icon: AlertTriangle };
+    // Just show credit info, no price comparison needed during creation
+    if (availableCredit > 0) {
+      return { color: "text-success", bg: "bg-success/10", label: "Kredit k dispozici", icon: Check };
     } else {
-      return { color: "text-destructive", bg: "bg-destructive/10", label: "Bez kreditu", icon: AlertTriangle };
+      return { color: "text-warning", bg: "bg-warning/10", label: "Bez kreditu", icon: AlertTriangle };
     }
   };
 
   const creditStatus = getCreditStatus();
-
 
   return (
     <Form {...form}>
@@ -185,72 +192,150 @@ export function EnhancedTrainingForm({
             name="client_id"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>Klient *</FormLabel>
-                <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <FormControl>
+                <FormLabel className="flex items-center gap-2">
+                  Klient *
+                  {participantCount > 1 && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Users className="w-3 h-3 mr-1" />
+                      {participantCount}
+                    </Badge>
+                  )}
+                </FormLabel>
+                <div className="flex gap-2">
+                  <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            "flex-1 justify-between bg-secondary border-border h-12 text-base",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {selectedClient?.name || "Vyberte klienta..."}
+                          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0 pointer-events-auto" align="start">
+                      <Command shouldFilter={false}>
+                        <CommandInput 
+                          placeholder="Hledat klienta..." 
+                          value={clientSearch}
+                          onValueChange={setClientSearch}
+                          className="h-11"
+                        />
+                        <CommandList>
+                          <CommandEmpty>Žádný klient nenalezen.</CommandEmpty>
+                          <CommandGroup className="max-h-60 overflow-auto">
+                            {filteredClients.map((client) => (
+                              <CommandItem
+                                key={client.id}
+                                value={client.id}
+                                onSelect={() => {
+                                  field.onChange(client.id);
+                                  // Remove from additional if selected as primary
+                                  setAdditionalClientIds(prev => prev.filter(id => id !== client.id));
+                                  setClientSearch("");
+                                  setClientPopoverOpen(false);
+                                }}
+                                className="py-3"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === client.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex-1">
+                                  <span>{client.name}</span>
+                                </div>
+                                <span className={cn(
+                                  "text-sm font-medium",
+                                  (client.credit_balance || 0) > 0 ? "text-success" : "text-muted-foreground"
+                                )}>
+                                  {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  
+                  {/* Add client button */}
+                  <Popover open={addClientPopoverOpen} onOpenChange={setAddClientPopoverOpen}>
+                    <PopoverTrigger asChild>
                       <Button
+                        type="button"
                         variant="outline"
-                        role="combobox"
-                        className={cn(
-                          "w-full justify-between bg-secondary border-border h-12 text-base",
-                          !field.value && "text-muted-foreground"
-                        )}
+                        size="icon"
+                        className="h-12 w-12 shrink-0 bg-secondary border-border"
+                        disabled={!selectedClientId}
                       >
-                        {selectedClient?.name || "Vyberte klienta..."}
-                        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        <Plus className="h-5 w-5" />
                       </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0 pointer-events-auto" align="start">
-                    <Command shouldFilter={false}>
-                      <CommandInput 
-                        placeholder="Hledat klienta..." 
-                        value={clientSearch}
-                        onValueChange={setClientSearch}
-                        className="h-11"
-                      />
-                      <CommandList>
-                        <CommandEmpty>Žádný klient nenalezen.</CommandEmpty>
-                        <CommandGroup className="max-h-60 overflow-auto">
-                          {filteredClients.map((client) => (
-                            <CommandItem
-                              key={client.id}
-                              value={client.id}
-                              onSelect={() => {
-                                field.onChange(client.id);
-                                setClientSearch("");
-                                setClientPopoverOpen(false);
-                              }}
-                              className="py-3"
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  field.value === client.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              <div className="flex-1">
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-0 pointer-events-auto" align="end">
+                      <Command shouldFilter={false}>
+                        <CommandInput 
+                          placeholder="Přidat dalšího klienta..." 
+                          value={addClientSearch}
+                          onValueChange={setAddClientSearch}
+                          className="h-11"
+                        />
+                        <CommandList>
+                          <CommandEmpty>Žádný klient k přidání.</CommandEmpty>
+                          <CommandGroup className="max-h-48 overflow-auto">
+                            {availableClientsForAdd.map((client) => (
+                              <CommandItem
+                                key={client.id}
+                                value={client.id}
+                                onSelect={() => handleAddClient(client.id)}
+                                className="py-2"
+                              >
+                                <Plus className="mr-2 h-4 w-4 text-muted-foreground" />
                                 <span>{client.name}</span>
-                              </div>
-                              <span className={cn(
-                                "text-sm font-medium",
-                                (client.credit_balance || 0) >= autoPrice ? "text-success" :
-                                (client.credit_balance || 0) > 0 ? "text-warning" : "text-destructive"
-                              )}>
-                                {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
-                              </span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 <FormMessage />
               </FormItem>
             )}
           />
+
+          {/* Additional clients chips */}
+          {additionalClientIds.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {additionalClientIds.map(clientId => {
+                const client = clients.find(c => c.id === clientId);
+                if (!client) return null;
+                return (
+                  <Badge 
+                    key={clientId} 
+                    variant="secondary"
+                    className="pl-3 pr-1 py-1.5 gap-2"
+                  >
+                    {client.name}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAdditionalClient(clientId)}
+                      className="hover:bg-destructive/20 rounded-full p-0.5"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
 
           {/* Credit Status Banner */}
           {selectedClient && creditStatus && (
@@ -285,80 +370,6 @@ export function EnhancedTrainingForm({
             )}
           />
 
-          {/* Participant count */}
-          <FormField
-            control={form.control}
-            name="participant_count"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Počet osob</FormLabel>
-                <Select 
-                  onValueChange={(v) => field.onChange(parseInt(v))} 
-                  value={field.value?.toString()}
-                >
-                  <FormControl>
-                    <SelectTrigger className="bg-secondary border-border h-11">
-                      <SelectValue placeholder="1" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent className="bg-popover border-border">
-                    {[1, 2, 3, 4, 5].map((num) => (
-                      <SelectItem key={num} value={num.toString()}>
-                        {num} {num === 1 ? 'osoba' : num < 5 ? 'osoby' : 'osob'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* 5. Price - Auto with override option */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <FormLabel>Cena tréninku</FormLabel>
-              <button
-                type="button"
-                onClick={() => setPriceOverrideEnabled(!priceOverrideEnabled)}
-                className="text-xs text-primary hover:underline"
-              >
-                {priceOverrideEnabled ? "Použít automatickou cenu" : "Upravit ručně"}
-              </button>
-            </div>
-            
-            {priceOverrideEnabled ? (
-              <FormField
-                control={form.control}
-                name="price_override"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder={autoPrice.toString()}
-                        value={field.value || ""}
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                        className="bg-secondary border-border h-11"
-                      />
-                    </FormControl>
-                    <FormDescription className="text-xs">
-                      Automatická cena: {autoPrice.toLocaleString('cs-CZ')} Kč
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-            ) : (
-              <div className="h-11 px-4 rounded-lg bg-secondary border border-border flex items-center justify-between">
-                <span className="text-lg font-semibold">{finalPrice.toLocaleString('cs-CZ')} Kč</span>
-                <span className="text-xs text-muted-foreground">
-                  {participantCount} {participantCount === 1 ? 'osoba' : participantCount < 5 ? 'osoby' : 'osob'}
-                </span>
-              </div>
-            )}
-          </div>
-
-
           {/* Training Type */}
           <FormField
             control={form.control}
@@ -378,18 +389,6 @@ export function EnhancedTrainingForm({
               </FormItem>
             )}
           />
-
-          {/* Training Tags */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Tag className="w-4 h-4" />
-              Štítky tréninku
-            </label>
-            <TrainingTagsSelector
-              selectedTagIds={selectedTagIds}
-              onChange={setSelectedTagIds}
-            />
-          </div>
         </div>
 
         {/* Submit button - sticky on mobile when stickySubmit is true */}

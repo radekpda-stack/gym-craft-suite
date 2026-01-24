@@ -148,14 +148,17 @@ export function QuickActionButton() {
 
   const handleCreateTraining = async (data: EnhancedTrainingFormValues, tagIds: string[]) => {
     try {
+      // Calculate participant count from additional clients
+      const additionalClients = data.additional_client_ids || [];
+      const participantCount = 1 + additionalClients.length;
+      
       const result = await createTraining.mutateAsync({
         client_id: data.client_id,
         date: new Date(data.date).toISOString(),
         duration: data.duration,
         notes: data.notes,
         status: 'scheduled',
-        participant_count: data.participant_count,
-        trainingPrices,
+        participant_count: participantCount,
       });
       
       if (tagIds.length > 0 && result?.session?.id) {
