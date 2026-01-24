@@ -235,7 +235,7 @@ export default function NutritionPage() {
           Strava
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Přehled nutričních deníků klientů
+          Přehled deníků návyků klientů
         </p>
       </div>
 
