@@ -19,6 +19,7 @@ import {
   Settings,
   Activity,
   User,
+  Image,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -44,8 +45,10 @@ import { ClientFollowupHistory } from './ClientFollowupHistory';
 import { ClientAdminBlock } from './ClientAdminBlock';
 import { ClientPortalAccessSection } from '@/components/client-portal/ClientPortalAccessSection';
 import { ClientProfileTab } from './ClientProfileTab';
+import { ClientMediaTab } from '@/components/media/ClientMediaTab';
 import { useCommunicationMetrics, useHealthMetrics } from '@/hooks/useClientDashboardMetrics';
 import { useFeedbackEvaluation } from '@/hooks/useFeedbackEvaluation';
+import { useClientMedia } from '@/hooks/useClientMedia';
 import { Client } from '@/hooks/useClients';
 import { ClientFormValues } from '@/lib/validations/client';
 
@@ -93,12 +96,25 @@ export function ClientDetailTabs({
   const { activePains, hasHighSeverity } = useHealthMetrics(client.id);
   const { evaluation } = useFeedbackEvaluation(client.id);
   const redFlagCount = evaluation?.redFlagCount ?? 0;
+  
+  // Media counts for badge
+  const { data: photos } = useClientMedia(client.id, 'photo');
+  const { data: videos } = useClientMedia(client.id, 'video');
+  const { data: documents } = useClientMedia(client.id, 'document');
+  const { data: audioNotes } = useClientMedia(client.id, 'audio');
+  const totalMediaCount = (photos?.length || 0) + (videos?.length || 0) + (documents?.length || 0) + (audioNotes?.length || 0);
 
   const tabs = [
     {
       id: 'profile',
       label: 'Profil',
       icon: User,
+    },
+    {
+      id: 'media',
+      label: 'Média',
+      icon: Image,
+      badge: totalMediaCount > 0 ? totalMediaCount : undefined,
     },
     { 
       id: 'trainings', 
@@ -171,6 +187,11 @@ export function ClientDetailTabs({
       {/* Tab: Profile */}
       <TabsContent value="profile" className="mt-0 space-y-4">
         <ClientProfileTab client={client} onUpdateClient={onUpdateClient} />
+      </TabsContent>
+
+      {/* Tab: Media */}
+      <TabsContent value="media" className="mt-0 space-y-4">
+        <ClientMediaTab clientId={client.id} />
       </TabsContent>
 
       {/* Tab: Trainings */}

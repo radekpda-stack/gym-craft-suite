@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { featureTracker } from "@/hooks/useFeatureTracking";
 
-export type MediaType = 'photo' | 'audio';
+export type MediaType = 'photo' | 'audio' | 'video' | 'document';
 
 export interface ClientMedia {
   id: string;
@@ -66,6 +66,21 @@ export const CATEGORY_OPTIONS = [
   { value: 'general', label: 'Obecné' },
 ];
 
+export const DOCUMENT_CATEGORY_OPTIONS = [
+  { value: 'contract', label: 'Smlouva' },
+  { value: 'medical', label: 'Lékařská zpráva' },
+  { value: 'training_plan', label: 'Tréninkový plán' },
+  { value: 'diet', label: 'Stravovací plán' },
+  { value: 'other', label: 'Ostatní' },
+];
+
+const BUCKET_MAP: Record<MediaType, string> = {
+  photo: 'client-photos',
+  audio: 'client-audio',
+  video: 'client-videos',
+  document: 'client-documents',
+};
+
 export function useClientMedia(clientId?: string, type?: MediaType, diagnosticId?: string) {
   return useQuery({
     queryKey: ["client-media", clientId, type, diagnosticId],
@@ -90,7 +105,7 @@ export function useClientMedia(clientId?: string, type?: MediaType, diagnosticId
       
       // Convert file paths to public URLs
       return (data || []).map(item => {
-        const bucket = item.type === 'photo' ? 'client-photos' : 'client-audio';
+        const bucket = BUCKET_MAP[item.type as MediaType] || 'client-photos';
         // Check if file_url is already a full URL or just a path
         const isFullUrl = item.file_url?.startsWith('http');
         const publicUrl = isFullUrl 
@@ -111,7 +126,7 @@ export function useCreateMedia() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      const bucket = input.type === 'photo' ? 'client-photos' : 'client-audio';
+      const bucket = BUCKET_MAP[input.type];
       const fileExt = input.file.name.split('.').pop();
       // Use user.id as the folder prefix for storage policies
       const fileName = `${user.id}/${input.client_id}/${Date.now()}.${fileExt}`;
@@ -211,7 +226,7 @@ export function useDeleteMedia() {
 
   return useMutation({
     mutationFn: async ({ id, fileUrl, type }: { id: string; fileUrl: string; type: MediaType }) => {
-      const bucket = type === 'photo' ? 'client-photos' : 'client-audio';
+      const bucket = BUCKET_MAP[type];
       
       // fileUrl now contains the file path directly
       await supabase.storage.from(bucket).remove([fileUrl]);
