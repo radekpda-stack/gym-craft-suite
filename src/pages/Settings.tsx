@@ -12,7 +12,6 @@ import {
   Tag,
   Wrench,
   RefreshCw,
-  Download,
   BarChart2,
   Shield,
   UserCog,
@@ -37,7 +36,7 @@ import { PriceTransitionSettings } from '@/components/settings/PriceTransitionSe
 
 import { FeatureUsageStats } from '@/components/settings/FeatureUsageStats';
 import { CapacitySettingsPanel } from '@/components/settings/CapacitySettings';
-import { DataExport } from '@/components/settings/DataExport';
+// DataExport removed - functionality moved to AdminAnalyticsExport
 import { AdminAnalyticsExport } from '@/components/settings/AdminAnalyticsExport';
 import { FinancialReportSettings } from '@/components/settings/FinancialReportSettings';
 import { AppRefreshSettings } from '@/components/settings/AppRefreshSettings';
@@ -350,16 +349,6 @@ export default function Settings() {
               icon={RefreshCw}
             >
               <AppRefreshSettings />
-            </SettingsSection>
-
-            <SettingsSection
-              title={language === 'cs' ? 'Export dat' : 'Data Export'}
-              description={language === 'cs' 
-                ? 'Stáhněte všechna data pro zálohu' 
-                : 'Download all data for backup'}
-              icon={Download}
-            >
-              <DataExport />
             </SettingsSection>
 
             <SettingsSection
