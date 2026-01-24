@@ -4,60 +4,24 @@ import { PortalUsageStats } from '@/components/client-portal/PortalUsageStats';
 import { PortalRecentActivity } from '@/components/client-portal/PortalRecentActivity';
 import { ClientAccessList } from '@/components/client-portal/ClientAccessList';
 import { ClientPortalQuickSearch } from '@/components/client-portal/ClientPortalQuickSearch';
-import { PortalVisibilitySettings } from '@/components/client-portal/PortalVisibilitySettings';
 import { PortalPreviewButton } from '@/components/client-portal/PortalPreviewButton';
-import { ClientPortalSettingsPage } from '@/components/client-portal/ClientPortalSettingsPage';
 import { ClientWorkoutLogsOverview } from '@/components/client-portal/ClientWorkoutLogsOverview';
-import { QRCodeDisplay } from '@/components/client-portal/QRCodeDisplay';
-import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Users, Settings, Info, BookOpen, Copy, Check } from 'lucide-react';
+import { PortalLinkDropdown } from '@/components/client-portal/PortalLinkDropdown';
+import { PortalActionRequired } from '@/components/client-portal/PortalActionRequired';
+import { PortalSettingsTabs } from '@/components/client-portal/PortalSettingsTabs';
+import { LayoutDashboard, Users, Settings, Info, BookOpen } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { toast } from 'sonner';
 
 export default function ClientPortalAdmin() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [copied, setCopied] = useState(false);
-
-  const loginUrl = `${window.location.origin}/login?mode=client`;
-
-  const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(loginUrl);
-    setCopied(true);
-    toast.success('Odkaz zkopírován');
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   return (
     <div className="container max-w-6xl py-4 sm:py-6 space-y-4 sm:space-y-6 px-4">
-      {/* Quick copy link */}
-      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
-        <code className="text-sm flex-1 truncate text-muted-foreground">{loginUrl}</code>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCopyLink}
-          className="shrink-0 gap-1.5"
-        >
-          {copied ? (
-            <>
-              <Check className="w-4 h-4 text-green-500" />
-              <span className="hidden sm:inline">Zkopírováno</span>
-            </>
-          ) : (
-            <>
-              <Copy className="w-4 h-4" />
-              <span className="hidden sm:inline">Kopírovat odkaz</span>
-            </>
-          )}
-        </Button>
-        <QRCodeDisplay url={loginUrl} />
-      </div>
-
-      {/* Header */}
+      {/* Header - Compact with dropdown for link */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -79,7 +43,10 @@ export default function ClientPortalAdmin() {
           </p>
         </div>
         
-        <PortalPreviewButton />
+        <div className="flex items-center gap-2">
+          <PortalLinkDropdown />
+          <PortalPreviewButton />
+        </div>
       </div>
 
       {/* Tabs */}
@@ -103,10 +70,15 @@ export default function ClientPortalAdmin() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6 mt-6">
+        <TabsContent value="overview" className="space-y-5 mt-6">
+          {/* KPI Stats - 5 cards */}
           <PortalUsageStats />
-          {/* Stack vertically for better readability on all devices */}
-          <div className="space-y-6">
+          
+          {/* Action Required */}
+          <PortalActionRequired />
+          
+          {/* Two-column layout: Search + Activity */}
+          <div className="grid lg:grid-cols-2 gap-5">
             <ClientPortalQuickSearch />
             <PortalRecentActivity />
           </div>
@@ -120,14 +92,8 @@ export default function ClientPortalAdmin() {
           <ClientWorkoutLogsOverview />
         </TabsContent>
 
-        <TabsContent value="settings" className="mt-6 space-y-6">
-          {/* Global visibility settings */}
-          <div className="max-w-2xl">
-            <PortalVisibilitySettings />
-          </div>
-          
-          {/* Per-client settings */}
-          <ClientPortalSettingsPage />
+        <TabsContent value="settings" className="mt-6">
+          <PortalSettingsTabs />
         </TabsContent>
       </Tabs>
     </div>

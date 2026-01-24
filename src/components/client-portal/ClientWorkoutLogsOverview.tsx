@@ -1,19 +1,42 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useAllClientWorkoutLogs, useAddTrainerComment } from '@/hooks/useClientWorkoutLogs';
 import { useReviewWorkout } from '@/hooks/useAssignWorkout';
-import { format, parseISO, formatDistanceToNow } from 'date-fns';
+import { format, parseISO, formatDistanceToNow, isThisWeek } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { BookOpen, Search, ChevronDown, ChevronUp, User, MessageSquare, Send, Trophy, Clock, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Search, ChevronDown, ChevronUp, MessageSquare, Send, Trophy, CheckCircle2, Filter, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkoutTypeColor } from './workout-diary/WorkoutTypeSelector';
 import { getEnergyEmoji } from './workout-diary/EnergyRating';
+
+type FilterValue = 'all' | 'to_review' | 'with_pr' | 'this_week';
+type SortValue = 'newest' | 'oldest' | 'client_name';
+
+const FILTER_OPTIONS: { value: FilterValue; label: string }[] = [
+  { value: 'all', label: 'Vše' },
+  { value: 'to_review', label: 'Ke kontrole' },
+  { value: 'with_pr', label: 'S PR' },
+  { value: 'this_week', label: 'Tento týden' },
+];
+
+const SORT_OPTIONS: { value: SortValue; label: string }[] = [
+  { value: 'newest', label: 'Nejnovější' },
+  { value: 'oldest', label: 'Nejstarší' },
+  { value: 'client_name', label: 'Jméno klienta' },
+];
 
 export function ClientWorkoutLogsOverview() {
   const { data: logs, isLoading } = useAllClientWorkoutLogs();
@@ -23,6 +46,8 @@ export function ClientWorkoutLogsOverview() {
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [commentingLogId, setCommentingLogId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
+  const [filter, setFilter] = useState<FilterValue>('all');
+  const [sort, setSort] = useState<SortValue>('newest');
 
   const toggleLogExpanded = (logId: string) => {
     setExpandedLogs(prev => {
@@ -62,12 +87,53 @@ export function ClientWorkoutLogsOverview() {
     }
   };
 
-  const filteredLogs = logs?.filter(log => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return log.client?.name?.toLowerCase().includes(query) ||
-      log.exercises?.some(ex => ex.exercise_name.toLowerCase().includes(query));
-  });
+  // Count logs needing review
+  const toReviewCount = useMemo(() => {
+    return logs?.filter(log => (log as any).status !== 'reviewed' && (log as any).status !== 'planned').length || 0;
+  }, [logs]);
+
+  // Filter and sort logs
+  const processedLogs = useMemo(() => {
+    if (!logs) return [];
+
+    let filtered = logs.filter(log => {
+      // Text search
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch = 
+          log.client?.name?.toLowerCase().includes(query) ||
+          log.exercises?.some(ex => ex.exercise_name.toLowerCase().includes(query));
+        if (!matchesSearch) return false;
+      }
+
+      // Filter logic
+      switch (filter) {
+        case 'to_review':
+          return (log as any).status !== 'reviewed' && (log as any).status !== 'planned';
+        case 'with_pr':
+          return log.exercises?.some(ex => ex.is_personal_record);
+        case 'this_week':
+          return isThisWeek(parseISO(log.date), { weekStartsOn: 1 });
+        default:
+          return true;
+      }
+    });
+
+    // Sort
+    switch (sort) {
+      case 'newest':
+        filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case 'oldest':
+        filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+      case 'client_name':
+        filtered.sort((a, b) => (a.client?.name || '').localeCompare(b.client?.name || '', 'cs'));
+        break;
+    }
+
+    return filtered;
+  }, [logs, searchQuery, filter, sort]);
 
   if (isLoading) {
     return (
@@ -88,33 +154,72 @@ export function ClientWorkoutLogsOverview() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BookOpen className="w-5 h-5" />
-          Tréninkové deníky klientů
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Záznamy tréninků od klientů s možností komentáře
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              Tréninkové deníky klientů
+              {toReviewCount > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {toReviewCount} ke kontrole
+                </Badge>
+              )}
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Záznamy tréninků od klientů s možností komentáře
+            </p>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Hledat podle jména klienta nebo cviku..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+        {/* Filters and Search */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Hledat podle jména klienta nebo cviku..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={filter} onValueChange={(v) => setFilter(v as FilterValue)}>
+              <SelectTrigger className="w-[140px]">
+                <Filter className="w-4 h-4 mr-2 opacity-50" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FILTER_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                    {opt.value === 'to_review' && toReviewCount > 0 && ` (${toReviewCount})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sort} onValueChange={(v) => setSort(v as SortValue)}>
+              <SelectTrigger className="w-[130px]">
+                <ArrowUpDown className="w-4 h-4 mr-2 opacity-50" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {filteredLogs?.length === 0 ? (
+        {processedLogs.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>Zatím žádné záznamy od klientů</p>
+            <p>{filter !== 'all' || searchQuery ? 'Žádné záznamy neodpovídají filtru' : 'Zatím žádné záznamy od klientů'}</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredLogs?.map(log => {
+            {processedLogs.map(log => {
               const isExpanded = expandedLogs.has(log.id);
               const exerciseCount = log.exercises?.length || 0;
               const WorkoutIcon = getWorkoutTypeIcon(log.workout_type);
