@@ -67,7 +67,7 @@ export function QuickAddTimeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[340px]">
+      <DialogContent className="sm:max-w-[340px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {getIcon()}
@@ -76,19 +76,21 @@ export function QuickAddTimeDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Time Input */}
+          {/* Time Input - wrapped in container to prevent overflow */}
           <div className="space-y-2">
             <Label htmlFor="entry-time" className="flex items-center gap-2 text-sm">
               <Clock className="w-4 h-4" />
               Čas konzumace
             </Label>
-            <Input
-              id="entry-time"
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="text-lg h-12 text-center font-mono"
-            />
+            <div className="relative w-full">
+              <Input
+                id="entry-time"
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="text-lg h-12 text-center font-mono w-full"
+              />
+            </div>
           </div>
 
           {/* Time Presets */}
@@ -112,7 +114,7 @@ export function QuickAddTimeDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 flex-row justify-end">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}

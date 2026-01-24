@@ -240,18 +240,18 @@ export function FoodLogForm({
 
   const renderDateTimePicker = () => (
     <div className="space-y-3 pb-3 border-b mb-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Date */}
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">Datum</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full justify-start text-left font-normal h-9">
-                <Calendar className="mr-2 h-4 w-4" />
+                <Calendar className="mr-2 h-4 w-4 shrink-0" />
                 {format(entryDate, 'd.M.yyyy', { locale: cs })}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent className="w-auto p-0 z-[100]" align="center" side="bottom" sideOffset={4}>
               <CalendarComponent
                 mode="single"
                 selected={entryDate}
@@ -268,13 +268,13 @@ export function FoodLogForm({
         {/* Time */}
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">Čas konzumace</Label>
-          <div className="relative">
-            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative w-full">
+            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
               type="time"
               value={entryTime}
               onChange={(e) => setEntryTime(e.target.value)}
-              className="pl-9 h-9"
+              className="pl-9 h-9 w-full"
             />
           </div>
         </div>
