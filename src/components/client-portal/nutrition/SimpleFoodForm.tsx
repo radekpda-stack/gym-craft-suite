@@ -111,20 +111,20 @@ export function SimpleFoodForm({
 
         <div className="flex-1 overflow-y-auto py-4 space-y-5">
           {/* Date & Time Row */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 min-w-0 overflow-hidden">
             {/* Date - Read Only Display */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5" />
                 Datum
               </Label>
-              <div className="h-11 px-3 flex items-center rounded-lg bg-muted/50 text-sm font-medium">
+              <div className="h-11 px-3 flex items-center rounded-lg bg-muted/50 text-sm font-medium truncate">
                 {format(selectedDate, 'd. MMMM', { locale: cs })}
               </div>
             </div>
 
             {/* Time Input */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0 overflow-hidden">
               <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" />
                 Čas
@@ -133,7 +133,7 @@ export function SimpleFoodForm({
                 type="time"
                 value={entryTime}
                 onChange={(e) => setEntryTime(e.target.value)}
-                className="h-11 text-center text-base font-semibold"
+                className="h-11 text-center text-base font-semibold w-full max-w-full"
               />
             </div>
           </div>

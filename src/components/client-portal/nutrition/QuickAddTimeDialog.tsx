@@ -82,13 +82,13 @@ export function QuickAddTimeDialog({
               <Clock className="w-4 h-4" />
               Čas konzumace
             </Label>
-            <div className="relative w-full">
+            <div className="relative w-full overflow-hidden">
               <Input
                 id="entry-time"
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="text-lg h-12 text-center font-mono w-full"
+                className="text-lg h-12 text-center font-mono w-full max-w-full"
               />
             </div>
           </div>
