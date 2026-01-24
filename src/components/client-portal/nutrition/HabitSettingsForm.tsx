@@ -29,6 +29,10 @@ interface HabitSettingsFormProps {
   className?: string;
   /** Trigger button label */
   triggerLabel?: string;
+  /** Controlled dialog open state (for mode='dialog') */
+  open?: boolean;
+  /** Controlled dialog onChange (for mode='dialog') */
+  onOpenChange?: (open: boolean) => void;
 }
 
 const WATER_PRESETS = [1500, 2000, 2500, 3000];
@@ -44,11 +48,17 @@ export function HabitSettingsForm({
   mode = 'dialog',
   className,
   triggerLabel = 'Nastavení',
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: HabitSettingsFormProps) {
   const { settings, isLoading } = useEffectiveHabitSettings(clientId);
   const upsertSettings = useUpsertHabitSettings();
 
-  const [isOpen, setIsOpen] = useState(false);
+  // Support both controlled and uncontrolled dialog modes
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const isOpen = isControlled ? controlledOpen : internalOpen;
+  const setIsOpen = isControlled ? (controlledOnOpenChange ?? (() => {})) : setInternalOpen;
   const [waterGoal, setWaterGoal] = useState(settings.water_goal_ml);
   const [sleepTime, setSleepTime] = useState(settings.sleep_time || '');
   const [wakeTime, setWakeTime] = useState(settings.wake_time || '');
@@ -197,6 +207,49 @@ export function HabitSettingsForm({
           )}
         </CardContent>
       </Card>
+    );
+  }
+
+  // Controlled mode - no trigger button
+  if (isControlled) {
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Nastavení návyků
+            </DialogTitle>
+          </DialogHeader>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            formContent
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+              disabled={upsertSettings.isPending}
+            >
+              Zrušit
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={upsertSettings.isPending}
+            >
+              {upsertSettings.isPending && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Uložit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     );
   }
 

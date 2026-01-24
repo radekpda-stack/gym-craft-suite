@@ -29,6 +29,8 @@ interface CaffeineWindowWidgetProps {
   showTimeline?: boolean;
   /** Compact mode for smaller displays */
   compact?: boolean;
+  /** Callback when user wants to set sleep time */
+  onSetSleepTime?: () => void;
 }
 
 export function CaffeineWindowWidget({
@@ -38,6 +40,7 @@ export function CaffeineWindowWidget({
   className,
   showTimeline = true,
   compact = false,
+  onSetSleepTime,
 }: CaffeineWindowWidgetProps) {
   const analysis = useMemo(() => {
     if (!sleepTime) {
@@ -78,22 +81,34 @@ export function CaffeineWindowWidget({
   if (!sleepTime) {
     if (compact) {
       return (
-        <div className={cn('flex items-center gap-2 text-muted-foreground', className)}>
+        <button
+          type="button"
+          onClick={onSetSleepTime}
+          className={cn(
+            'flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-full text-left',
+            className
+          )}
+        >
           <Moon className="h-4 w-4" />
-          <span className="text-xs">Nastav čas spánku</span>
-        </div>
+          <span className="text-xs underline underline-offset-2">
+            Nastavit čas spánku ohledně vlivu kávy na spánek
+          </span>
+        </button>
       );
     }
     return (
-      <Card className={cn('p-4', className)}>
+      <Card 
+        className={cn('p-4 cursor-pointer hover:bg-accent/50 transition-colors', className)}
+        onClick={onSetSleepTime}
+      >
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-muted text-muted-foreground">
             <Moon className="h-5 w-5" />
           </div>
           <div className="flex-1">
             <h4 className="font-medium text-sm">Kofeinové okno</h4>
-            <p className="text-xs text-muted-foreground">
-              Nastav čas spánku v nastavení
+            <p className="text-xs text-muted-foreground underline underline-offset-2">
+              Nastavit čas spánku ohledně vlivu kávy na spánek
             </p>
           </div>
         </div>
