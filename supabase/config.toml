@@ -125,3 +125,6 @@ verify_jwt = false
 
 [functions.check-nutrition-inactivity]
 verify_jwt = false
+
+[functions.check-birthdays-anniversaries]
+verify_jwt = false

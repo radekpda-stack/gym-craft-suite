@@ -27,7 +27,8 @@ export type NotificationType =
   | 'pre_diagnostic_completed'
   | 'nutrition_entry_added'
   | 'nutrition_inactive'
-  | 'client_weight_added';
+  | 'client_weight_added'
+  | 'client_workout_logged';
 
 export interface Notification {
   id: string;
