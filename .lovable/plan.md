@@ -1,178 +1,227 @@
 
-# Revize sekce Klientský portál - Audit UI a návrh vylepšení
 
-## Aktuální stav
+# Revize sekce Feedbacky - Audit UI a návrh vylepšení
 
-Sekce obsahuje 4 záložky: **Přehled**, **Klienti**, **Deníky**, **Nastavení**
+## Aktuální stav modulu
 
-### Přehled záložek
+Feedback modul (`/feedback-overview`) obsahuje 4 hlavní záložky:
+- **K odeslání** - Tréninky čekající na odeslání feedbacku
+- **Statistiky** - Trendy a metriky (míra odpovědí, bolesti, energie atd.)
+- **Historie** - Seznam všech feedbacků s filtry
+- **Nastavení** - Konfigurace dotazníku a thresholdů
 
-| Záložka | Komponenty | Obsah |
-|---------|------------|-------|
-| **Přehled** | `PortalUsageStats` + `ClientPortalQuickSearch` + `PortalRecentActivity` | 4 KPI karty, vyhledávání, posledních 20 aktivit |
-| **Klienti** | `ClientAccessList` | Tabulka/karty klientů s přístupem, hromadné akce |
-| **Deníky** | `ClientWorkoutLogsOverview` | Tréninkové záznamy od klientů s komentáři |
-| **Nastavení** | `PortalVisibilitySettings` + `ClientPortalSettingsPage` | Globální a per-klient nastavení |
+### Aktuální analytické komponenty
+
+| Komponenta | Funkce | Typ dat |
+|------------|--------|---------|
+| `FeedbackStatusCards` | 5 KPI karet (K odeslání, Čekající, Vyplněno, Expirováno, Red Flags) | Absolutní počty |
+| `FeedbackTrendsOverview` | Míra odpovědí, průměry metrik, grafy v čase | Agregovaná data bez kontextu tréninku |
+| `FeedbackAttentionInbox` | Prioritní inbox red flagů a čekajících | Akční seznam |
+| `FeedbackActivityTimeline` | Poslední aktivita | Chronologický přehled |
 
 ---
 
 ## Nalezené problémy
 
-### 1. Duplikace funkcí mezi Přehledem a Klienty
+### 1. Chybí korelace tréninku s feedbackem
 
-| Funkce | Přehled | Klienti |
-|--------|---------|---------|
-| Vyhledávání klientů | ✅ `ClientPortalQuickSearch` | ✅ `ClientAccessList` s filtrem |
-| Tlačítko "Přidat klienta" | ✅ | ✅ |
-| Zobrazení statusu | ✅ Badge | ✅ Badge + tabulka |
-| Detail klienta | ✅ Sheet | ✅ Sheet |
+Aktuálně existuje pouze `RecoveryInsightsCard` v detailu klienta, který ukazuje spánek vs. energie. **Chybí**:
+- Zobrazení obsahu tréninku (cviky, objem, trvání) vedle feedbackových metrik
+- Graf "Objem vs. Svalovka" nebo "RPE z tréninku vs. Pocit těla D+1"
+- Identifikace, které typy tréninků vedou k lepšímu/horšímu feedbacku
 
-**Problém**: Uživatel má dvě místa pro stejnou akci (vyhledání a správu klienta).
+### 2. Chybí historické porovnání období
 
-### 2. Neefektivní využití prostoru v záložce Přehled
+`FeedbackTrendsOverview` ukazuje pouze trend za jedno období. **Chybí**:
+- Možnost porovnat 2 období (např. Leden vs. Prosinec)
+- Porovnání klienta s průměrem všech klientů (trenérský baseline)
+- Vizualizace "Tento měsíc vs. Minulý měsíc"
 
-Aktuální layout:
-```text
-[--- 4 KPI karty (2x2 na mobilu, 4x1 na desktopu) ---]
-[--- Vyhledávání klientů (celá šířka) ---]
-[--- Poslední aktivita (celá šířka, 350px výška) ---]
-```
+### 3. Nevyužitá data z feedbacku
 
-**Problém**: Vyhledávání zabírá celou šířku, ale často je prázdné. Aktivita také zabírá celou šířku, přestože by mohla být vedle vyhledávání.
+Data se sbírají, ale nevyužívají pro:
+- Doporučení úprav programu (např. "Vysoká svalovka po silových = snížit objem")
+- Identifikaci vzorců (např. "Po tréninku nohou vždy nízká energie")
+- Korelaci s tagy tréninků (fokus, část těla, intenzita)
 
-### 3. KPI karty bez kontextu porovnání
+### 4. Záložka Statistiky - chybí kontext
 
-Aktuální metriky:
-- Celkem klientů (absolutní číslo)
-- Aktivní dnes (absolutní číslo)
-- Aktivní tento týden (absolutní číslo)
-- Ø návštěv / klient (průměr)
+`FeedbackTrendsOverview` zobrazuje:
+- Míra odpovědí, průměrné metriky, grafy
+- **Ale bez porovnání** - není jasné, jestli 6.5/10 je dobré nebo špatné
 
-**Chybí**:
-- Trend vs minulý týden/měsíc
-- % aktivních vs celkem (poměr)
-- Klienti bez přihlášení 7+ dní (varování)
+### 5. UI neoptimální pro rychlé rozhodování
 
-### 4. Záložka Deníky - chybí filtry a řazení
-
-`ClientWorkoutLogsOverview` zobrazuje všechny záznamy bez možnosti:
-- Filtrovat pouze nezkontrolované
-- Seřadit podle data/klienta
-- Zobrazit pouze tréninky s PR
-
-### 5. Nastavení rozděleno na dvě karty
-
-- `PortalVisibilitySettings` - globální nastavení (max-w-2xl)
-- `ClientPortalSettingsPage` - per-klient nastavení
-
-**Problém**: Není jasné, co ovlivňuje co. Uživatel neví, zda globální nastavení přepisuje per-klient nastavení.
-
-### 6. Quick copy link bar nahoře
-
-```text
-[--- URL odkaz + Kopírovat + QR kód ---]
-```
-
-**Problém**: Zabírá místo a je viditelný i když uživatel nehledá odkaz. Mohl by být součástí headeru nebo v dropdown menu.
+- Status karty nahoře jsou velké (zabírají výšku)
+- Attention inbox je v bočním panelu, ale trenér ho potřebuje vidět jako první
+- Chybí "Dashboard summary" - rychlý přehled bez scrollování
 
 ---
 
 ## Navrhované změny
 
-### Fáze 1: Zjednodušení záložky Přehled
+### Fáze 1: Korelace tréninku s feedbackem
 
-**Nový layout**:
+**Nová komponenta `TrainingFeedbackCorrelationCard`:**
+
 ```text
-[--- 4 KPI karty s trendy (2x2 na mobilu) ---]
-[--- 2 sloupce na desktopu ---]
-[Vyhledávání + rychlé akce] | [Poslední aktivita]
+┌─────────────────────────────────────────────────────────────┐
+│ 📊 Trénink → Reakce                                          │
+├─────────────────────────────────────────────────────────────┤
+│ [Scatter plot: X = Objem tréninku, Y = Svalovka D+1]         │
+│                                                              │
+│ Poznámky:                                                    │
+│ • Po silovém tréninku nohou: Ø svalovka 7.2/10              │
+│ • Po kardio: Ø svalovka 3.1/10                              │
+│ • Korelace objemu a svalovky: 0.72 (silná)                  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Změny v KPI**:
-- Přidat trend šipky (+/- vs minulý týden)
-- "Aktivní tento týden" → zobrazit jako % z celkem
-- Přidat 5. KPI: "Vyžaduje pozornost" (nepřihlášeni 7+ dní)
+**Nový hook `useTrainingFeedbackCorrelation`:**
+- Propojí `exercise_entries` s `training_feedback` přes `training_session_id`
+- Vypočítá korelaci mezi objemem/RPE a feedbackovými metrikami
+- Agreguje podle tagů tréninku (fokus, část těla)
 
-### Fáze 2: Sloučení quick copy linku do headeru
+### Fáze 2: Historické porovnání období
 
-Místo:
+**Rozšíření `FeedbackTrendsOverview` o comparison mode:**
+
 ```text
-[--- Odkaz + Kopírovat + QR ---]
-[Nadpis + PortalPreviewButton]
+┌─────────────────────────────────────────────────────────────┐
+│ 📈 Porovnání období                                          │
+│ [Toto období: Leden 2026 ▾] vs [Minulé období: Prosinec ▾]   │
+├─────────────────────────────────────────────────────────────┤
+│ Metrika          │ Leden  │ Prosinec │ Změna                │
+│ ─────────────────┼────────┼──────────┼─────────────────     │
+│ Pocit těla       │ 7.2    │ 6.8      │ +0.4 ↑               │
+│ Svalovka         │ 5.1    │ 6.3      │ -1.2 ↓ (lepší)       │
+│ Bolest           │ 2.8    │ 3.5      │ -0.7 ↓               │
+│ Energie          │ 6.9    │ 6.4      │ +0.5 ↑               │
+│ Red Flags        │ 2      │ 5        │ -3 ↓                 │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Nový design:
+### Fáze 3: Porovnání klient vs. trenérský průměr
+
+**Nová komponenta `ClientVsBaselineCard`:**
+
 ```text
-[Nadpis] [Kopírovat odkaz ▾] [Náhled portálu]
-         └─ Dropdown s URL, tlačítkem a QR kódem
+┌─────────────────────────────────────────────────────────────┐
+│ 👤 Jan Novák vs. Průměr všech klientů                        │
+├─────────────────────────────────────────────────────────────┤
+│ [Bar chart - dvojité pruhy: klient | průměr]                │
+│                                                              │
+│ Pocit těla:  ████████░░ 7.8  vs  ████████░░ 7.2 (+0.6)       │
+│ Svalovka:    █████░░░░░ 4.9  vs  ██████░░░░ 5.8 (-0.9)       │
+│ Energie:     ███████░░░ 6.5  vs  ███████░░░ 6.7 (-0.2)       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Fáze 3: Přidání filtrů do Deníků
+### Fáze 4: Vzory a korelace podle tagů
 
-Přidat nad seznam deníků:
+**Nová komponenta `FeedbackTagCorrelation`:**
+
 ```text
-[Vše] [Ke kontrole (3)] [S PR] [Tento týden]
+┌─────────────────────────────────────────────────────────────┐
+│ 🏷️ Feedback podle typu tréninku                             │
+├─────────────────────────────────────────────────────────────┤
+│ Tag             │ Počet │ Ø Svalovka │ Ø Energie │ Ø Bolest │
+│ ────────────────┼───────┼────────────┼───────────┼──────────│
+│ Silový          │ 23    │ 6.8        │ 5.9       │ 2.1      │
+│ Kardio          │ 15    │ 3.2        │ 7.2       │ 1.5      │
+│ Nohy            │ 12    │ 7.5        │ 5.4       │ 2.8      │
+│ Horní tělo      │ 11    │ 5.2        │ 6.8       │ 1.9      │
+│ Vysoká intenzita│ 8     │ 7.1        │ 5.1       │ 3.2      │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-A řazení:
+### Fáze 5: Redesign záložky Statistiky
+
+**Nový layout:**
+
 ```text
-[Řadit: Nejnovější ▾]
+┌─────────────────────────────────────────────────────────────┐
+│ [Období: 30 dní ▾] [Klient: Všichni ▾] [Porovnat s ▾]       │
+├─────────────────────────────────────────────────────────────┤
+│ ┌────────────────┐ ┌────────────────┐ ┌────────────────┐    │
+│ │ Míra odpovědí  │ │ Ø Pocit těla   │ │ Red Flags      │    │
+│ │     76%        │ │     7.2/10     │ │     3          │    │
+│ │ ↑ vs min. měsíc│ │ +0.4 vs min.   │ │ -2 vs min.     │    │
+│ └────────────────┘ └────────────────┘ └────────────────┘    │
+├─────────────────────────────────────────────────────────────┤
+│ [Trendy] [Korelace] [Podle tagů]                             │
+│                                                              │
+│ ┌─ Trendy ──────────────────────────────────────────────┐   │
+│ │ [Chart: Vývoj metrik v čase s comparison overlay]     │   │
+│ └───────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Fáze 4: Sjednocení Nastavení
+### Fáze 6: Praktické využití dat (Coach Insights)
 
-Nahradit dvě oddělené sekce jednou kartou s tabbed interface:
+**Rozšíření `FeedbackAttentionInbox` o akční doporučení:**
+
+Aktuálně `src/lib/coachSuggestions.ts` obsahuje logiku pro generování doporučení. Integrace do přehledu:
+
 ```text
-[Globální nastavení] | [Nastavení pro klienta]
+┌─────────────────────────────────────────────────────────────┐
+│ 💡 Postřehy z feedbacku                                      │
+├─────────────────────────────────────────────────────────────┤
+│ • Jan Novák: Opakovaná bolest ramene (3× za 14 dní)         │
+│   → Zvážit úpravu tlakových cviků                           │
+│                                                              │
+│ • Petra K.: Klesající energie posledních 5 tréninků         │
+│   → Možná přetrénování, zkontrolovat spánek                 │
+│                                                              │
+│ • Celkově: Po silových trénincích nohou vysoká svalovka     │
+│   → 45% klientů hlásí 7+/10                                 │
+└─────────────────────────────────────────────────────────────┘
 ```
-
-S vysvětlením: "Globální nastavení platí pro všechny klienty. Individuální nastavení přepisuje globální."
-
-### Fáze 5: Přidání "Action Required" sekce
-
-Na záložku Přehled přidat kartu s okamžitými úkoly:
-- Nezkontrolované tréninky (badge s počtem)
-- Klienti bez přihlášení 7+ dní
-- Nově zaregistrovaní klienti (čekají na aktivaci)
 
 ---
 
 ## Technické kroky implementace
 
-### Krok 1: Úprava ClientPortalAdmin.tsx - header redesign
+### Krok 1: Nový hook `useTrainingFeedbackCorrelation`
 ```text
-- Přesunout quick copy link do dropdown v headeru
-- Vytvořit PortalLinkDropdown komponentu
-- Odstranit horní pruh s URL
+- Propojit training_feedback s exercise_entries přes training_session_id
+- Vypočítat objem tréninku (sets × reps × weight)
+- Korelovat s feedback metrikami (soreness, body_feel, energy)
+- Agregovat podle training_type z training_sessions
 ```
 
-### Krok 2: Rozšíření PortalUsageStats.tsx
+### Krok 2: Komponenta `TrainingFeedbackCorrelationCard`
 ```text
-- Přidat trend vs minulý týden do každé metriky
-- Přidat 5. KPI "Vyžaduje pozornost" 
-- Změnit layout na 5 karet (3+2 na mobilu)
+- Scatter chart: X = objem, Y = svalovka (recharts)
+- Tabulka: agregace podle typu tréninku
+- Neutrální prezentace (bez hodnocení)
 ```
 
-### Krok 3: Úprava layoutu záložky Přehled
+### Krok 3: Rozšíření `FeedbackTrendsOverview`
 ```text
-- Změnit vertikální stack na 2-column grid
-- ClientPortalQuickSearch vlevo
-- PortalRecentActivity vpravo
-- Přidat ActionRequired kartu nad grid
+- Přidat comparison mode toggle
+- Přidat period selector pro 2 období
+- Vypočítat rozdíly a zobrazit neutrálně (bez barev zelená/červená)
 ```
 
-### Krok 4: Přidání filtrů do ClientWorkoutLogsOverview
+### Krok 4: Komponenta `FeedbackTagCorrelation`
 ```text
-- Přidat filter chips (Vše/Ke kontrole/S PR)
-- Přidat sort dropdown
-- Počítat badge pro "Ke kontrole"
+- Načíst tagy z training_sessions
+- Agregovat feedback metriky podle tagů
+- Zobrazit jako tabulku s fakty
 ```
 
-### Krok 5: Refaktor záložky Nastavení
+### Krok 5: Hook pro trenérský baseline
 ```text
-- Vytvořit PortalSettingsTabs komponentu
-- Sloučit PortalVisibilitySettings a ClientPortalSettingsPage
-- Přidat vysvětlující text o prioritě nastavení
+- useTrainerFeedbackBaseline: Ø metriky ze všech klientů
+- Slouží jako referenční vrstva pro porovnání
+```
+
+### Krok 6: Integrace coach suggestions
+```text
+- Rozšířit FeedbackAttentionInbox o sekci "Postřehy"
+- Využít existující coachSuggestions.ts logiku
+- Zobrazit top 3-5 postřehů
 ```
 
 ---
@@ -181,54 +230,41 @@ Na záložku Přehled přidat kartu s okamžitými úkoly:
 
 | Oblast | Před | Po |
 |--------|------|-----|
-| Header | URL bar + nadpis | Kompaktní header s dropdown |
-| Přehled layout | Vertikální stack | 2-column + action required |
-| KPI metriky | 4 bez kontextu | 5 s trendy |
-| Deníky | Bez filtrů | Filtry + řazení |
-| Nastavení | 2 oddělené sekce | Tabbed interface |
-
----
-
-## Vizuální návrh nového layoutu
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ Klientský portál ⓘ          [Odkaz ▾] [Náhled portálu]      │
-│ Spravujte přístup klientů...                                 │
-├─────────────────────────────────────────────────────────────┤
-│ [Přehled] [Klienti] [Deníky] [Nastavení]                     │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐               │
-│  │ 12   │ │ 3    │ │ 25%  │ │ 2.4  │ │ ⚠ 2  │               │
-│  │Klient│ │Dnes  │ │Aktivn│ │Ø/kli│ │Pozor │               │
-│  └──────┘ └──────┘ └──────┘ └──────┘ └──────┘               │
-│                                                              │
-│  ┌─ Vyžaduje pozornost ─────────────────────────────────┐   │
-│  │ 3 tréninky ke kontrole • 2 klienti nepřihlášeni 7d   │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                              │
-│  ┌─ Vyhledat klienta ───────┐  ┌─ Poslední aktivita ────┐   │
-│  │ [🔍 Zadejte jméno...]    │  │ Jan Novák - Přihlášení │   │
-│  │ [+ Přidat]               │  │ Petra K. - Váha 82kg   │   │
-│  │                          │  │ ...                    │   │
-│  └──────────────────────────┘  └─────────────────────────┘   │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
+| Korelace trénink-feedback | Žádná | Scatter chart + tabulka |
+| Porovnání období | Chybí | Period vs Period view |
+| Porovnání klient vs baseline | Chybí | Client vs Trainer Average |
+| Agregace podle tagů | Chybí | Tag correlation table |
+| Využití dat | Pouze red flags | Coach insights + patterns |
+| KPI trendy | Absolutní hodnoty | Relativní změny vs minulé období |
 
 ---
 
 ## Prioritizace
 
-**Vysoká priorita:**
-1. Přesun quick copy link do dropdown (zbytečně zabírá místo)
-2. Rozšíření KPI o trendy (kontext porovnání)
-3. Přidání filtrů do Deníků (rychlejší workflow)
+**Vysoká priorita (největší hodnota):**
+1. Korelace tréninku s feedbackem (nový hook + komponenta)
+2. Porovnání období (rozšíření FeedbackTrendsOverview)
 
 **Střední priorita:**
-4. 2-column layout v Přehledu
-5. Action Required sekce
+3. Agregace podle tagů tréninku
+4. Client vs Baseline porovnání
 
 **Nižší priorita:**
-6. Refaktor Nastavení do tabs
+5. Coach insights integrace
+6. UI redesign statistik (kompaktnější layout)
+
+---
+
+## Datové zdroje pro implementaci
+
+**Již dostupné:**
+- `training_feedback` - všechny feedback metriky
+- `exercise_entries` - cviky, objem, váhy, RPE
+- `training_sessions` - datum, trvání, tagy (focus, body_part, intensity)
+- `feedback_requests` - propojení feedback → trénink
+
+**Nové kalkulace:**
+- Session volume = Σ(sets × reps × weight) pro všechny cviky v tréninku
+- Tag correlation = Ø feedback metrika grouped by training tag
+- Period comparison = Current period metrics - Previous period metrics
+
