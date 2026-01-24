@@ -10,21 +10,29 @@ import { FoodLogForm } from '@/components/client-portal/nutrition/FoodLogForm';
 import { TodayEntries } from '@/components/client-portal/nutrition/TodayEntries';
 import { EditEntryDialog } from '@/components/client-portal/nutrition/EditEntryDialog';
 import { WeekStrip } from '@/components/client-portal/nutrition/WeekStrip';
+import { WaterGoalWidget, calculateDailyWaterIntake } from '@/components/client-portal/nutrition/WaterGoalWidget';
+import { CaffeineWindowWidget } from '@/components/client-portal/nutrition/CaffeineWindowWidget';
+import { QuickAddTimeDialog } from '@/components/client-portal/nutrition/QuickAddTimeDialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { type MealTypeId } from '@/components/client-portal/nutrition/constants';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  useQuickAddWater, 
   useDeleteNutritionEntryPortal,
-  useAddCoffeeEntry,
 } from '@/hooks/useClientPortalNutrition';
 import { useNutritionXP } from '@/hooks/useNutritionXP';
+import { useEffectiveHabitSettings } from '@/hooks/useClientHabitSettings';
 
 type EditingEntry = {
   type: 'food' | 'drink' | 'coffee';
   entry: any;
+} | null;
+
+type QuickAddDialogState = {
+  open: boolean;
+  type: 'water' | 'coffee';
+  value: number | string;
 } | null;
 
 // Hook to get or create ongoing nutrition session
@@ -150,6 +158,7 @@ export default function ClientPortalNutritionTab() {
   const { clientId, clientAccount } = useClientPortal();
   const trainerId = clientAccount?.trainer_id;
   const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   
   const { session, isLoading, createSession } = useOngoingNutritionSession(clientId ?? undefined, trainerId);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -161,15 +170,32 @@ export default function ClientPortalNutritionTab() {
     selectedDateStr
   );
   const { data: completedDays = [] } = useCompletedDays(session?.id);
-  const quickWater = useQuickAddWater();
-  const addCoffee = useAddCoffeeEntry();
   const deleteEntry = useDeleteNutritionEntryPortal();
   const nutritionXP = useNutritionXP();
   const { trackPortalEvent } = useClientPortalPageTracking('client_portal_nutrition');
+  
+  // Habit settings for widgets
+  const { settings: habitSettings } = useEffectiveHabitSettings(clientId ?? undefined);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<EditingEntry>(null);
   const [prefilledMealType, setPrefilledMealType] = useState<MealTypeId | undefined>();
+  const [quickAddDialog, setQuickAddDialog] = useState<QuickAddDialogState>(null);
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
+
+  // Calculate water intake for widget
+  const waterIntake = dayData?.drinks ? calculateDailyWaterIntake(dayData.drinks) : 0;
+
+  // Prepare caffeine entries for widget
+  const caffeineEntriesForWidget = (dayData?.coffee || []).map(c => ({
+    id: c.id,
+    entry_time: c.occurred_at 
+      ? format(new Date(c.occurred_at), 'HH:mm')
+      : c.entry_time || '12:00',
+    coffee_type: c.coffee_type || 'espresso',
+    is_caffeinated: c.is_caffeinated !== false,
+    count: c.count || 1,
+  }));
 
   // Handle URL action parameter - auto-open add form
   useEffect(() => {
@@ -183,42 +209,74 @@ export default function ClientPortalNutritionTab() {
     }
   }, [searchParams, session]);
 
-  const handleQuickWater = async () => {
-    if (!session || !clientId) return;
-    
-    try {
-      await quickWater.mutateAsync({
-        sessionId: session.id,
-        clientId,
-        amount: 300,
-      });
-      toast.success('+300 ml vody');
-      trackPortalEvent('client_portal_quick_water');
-      
-      nutritionXP.mutate({ clientId, date: selectedDateStr, entryType: 'drink' });
-    } catch (error) {
-      toast.error('Nepodařilo se přidat');
-    }
+  // Open dialog for quick water add
+  const handleQuickWaterClick = (amount: number = 300) => {
+    setQuickAddDialog({ open: true, type: 'water', value: amount });
   };
 
-  const handleQuickCoffee = async () => {
-    if (!session || !clientId) return;
+  // Open dialog for quick coffee add
+  const handleQuickCoffeeClick = (coffeeType: 'espresso' | 'tea' = 'espresso') => {
+    setQuickAddDialog({ open: true, type: 'coffee', value: coffeeType });
+  };
+
+  // Confirm quick add with selected time
+  const handleQuickAddConfirm = async (time: string) => {
+    if (!session || !clientId || !quickAddDialog) return;
     
+    setIsQuickAdding(true);
     try {
-      await addCoffee.mutateAsync({
-        sessionId: session.id,
-        clientId,
-        entry: {
-          coffee_type: 'espresso',
-          count: 1,
-        },
-      });
-      toast.success('Káva přidána');
-      trackPortalEvent('client_portal_quick_coffee');
+      const entryDate = selectedDateStr;
+      const occurredAt = new Date(`${entryDate}T${time}:00`).toISOString();
+
+      if (quickAddDialog.type === 'water') {
+        const { error } = await supabase
+          .from('nutrition_drink_entries')
+          .insert({
+            session_id: session.id,
+            client_id: clientId,
+            entry_date: entryDate,
+            entry_time: time,
+            occurred_at: occurredAt,
+            drink_type: 'water',
+            amount_ml: quickAddDialog.value as number,
+            created_from: 'web',
+          });
+        
+        if (error) throw error;
+        toast.success(`+${quickAddDialog.value} ml vody`);
+        trackPortalEvent('client_portal_quick_water', { amount: quickAddDialog.value });
+        nutritionXP.mutate({ clientId, date: selectedDateStr, entryType: 'drink' });
+      } else {
+        const coffeeType = quickAddDialog.value as string;
+        const { error } = await supabase
+          .from('nutrition_coffee_entries')
+          .insert({
+            session_id: session.id,
+            client_id: clientId,
+            entry_date: entryDate,
+            entry_time: time,
+            occurred_at: occurredAt,
+            coffee_type: coffeeType,
+            count: 1,
+            is_caffeinated: coffeeType !== 'tea',
+            created_from: 'web',
+          });
+        
+        if (error) throw error;
+        toast.success(coffeeType === 'tea' ? 'Čaj přidán' : 'Káva přidána');
+        trackPortalEvent('client_portal_quick_coffee', { coffeeType });
+        nutritionXP.mutate({ clientId, date: selectedDateStr, entryType: 'coffee' });
+      }
+
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId, session.id] });
+      queryClient.invalidateQueries({ queryKey: ['client-nutrition-completed-days', session.id] });
       
-      nutritionXP.mutate({ clientId, date: selectedDateStr, entryType: 'coffee' });
+      setQuickAddDialog(null);
     } catch (error) {
       toast.error('Nepodařilo se přidat');
+    } finally {
+      setIsQuickAdding(false);
     }
   };
 
@@ -307,6 +365,21 @@ export default function ClientPortalNutritionTab() {
         onDaySelect={setSelectedDate}
       />
 
+      {/* Habit Widgets Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <WaterGoalWidget
+          currentMl={waterIntake}
+          goalMl={habitSettings?.water_goal_ml || 2000}
+          compact
+        />
+        <CaffeineWindowWidget
+          entries={caffeineEntriesForWidget}
+          sleepTime={habitSettings?.sleep_time || null}
+          cutoffMinutes={habitSettings?.caffeine_cutoff_minutes || 480}
+          compact
+        />
+      </div>
+
       {/* Single Add Button - ONE clear CTA */}
       <Button 
         onClick={() => {
@@ -320,13 +393,12 @@ export default function ClientPortalNutritionTab() {
         Přidat jídlo nebo nápoj
       </Button>
 
-      {/* Quick Add - Inline water/coffee buttons */}
+      {/* Quick Add - Inline water/coffee buttons - NOW WITH TIME PROMPT */}
       <div className="flex gap-2">
         <Button 
           variant="outline"
           size="sm"
-          onClick={handleQuickWater}
-          disabled={quickWater.isPending}
+          onClick={() => handleQuickWaterClick(300)}
           className="flex-1 h-9 gap-1.5"
         >
           <Droplets className="w-4 h-4 text-blue-500" />
@@ -335,14 +407,25 @@ export default function ClientPortalNutritionTab() {
         <Button 
           variant="outline"
           size="sm"
-          onClick={handleQuickCoffee}
-          disabled={addCoffee.isPending}
+          onClick={() => handleQuickCoffeeClick('espresso')}
           className="flex-1 h-9 gap-1.5"
         >
           <Coffee className="w-4 h-4 text-amber-600" />
           <span className="text-xs">+1 Káva</span>
         </Button>
       </div>
+
+      {/* Quick Add Time Dialog */}
+      {quickAddDialog && (
+        <QuickAddTimeDialog
+          open={quickAddDialog.open}
+          onOpenChange={(open) => !open && setQuickAddDialog(null)}
+          type={quickAddDialog.type}
+          value={quickAddDialog.value}
+          onConfirm={handleQuickAddConfirm}
+          isPending={isQuickAdding}
+        />
+      )}
 
       {/* Trainer Comment Notice */}
       {hasTrainerComments && (

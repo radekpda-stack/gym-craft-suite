@@ -27,6 +27,8 @@ interface CaffeineWindowWidgetProps {
   className?: string;
   /** Show detailed timeline */
   showTimeline?: boolean;
+  /** Compact mode for smaller displays */
+  compact?: boolean;
 }
 
 export function CaffeineWindowWidget({
@@ -35,6 +37,7 @@ export function CaffeineWindowWidget({
   cutoffMinutes,
   className,
   showTimeline = true,
+  compact = false,
 }: CaffeineWindowWidgetProps) {
   const analysis = useMemo(() => {
     if (!sleepTime) {
@@ -73,6 +76,14 @@ export function CaffeineWindowWidget({
 
   // If no sleep time configured, show setup prompt
   if (!sleepTime) {
+    if (compact) {
+      return (
+        <div className={cn('flex items-center gap-2 text-muted-foreground', className)}>
+          <Moon className="h-4 w-4" />
+          <span className="text-xs">Nastav čas spánku</span>
+        </div>
+      );
+    }
     return (
       <Card className={cn('p-4', className)}>
         <div className="flex items-center gap-3">
@@ -93,6 +104,27 @@ export function CaffeineWindowWidget({
   const StatusIcon = analysis.hasLateCaffeine ? AlertTriangle : CheckCircle;
   const statusColor = analysis.hasLateCaffeine ? 'text-amber-500' : 'text-green-500';
   const statusBg = analysis.hasLateCaffeine ? 'bg-amber-500/20' : 'bg-green-500/20';
+
+  // Compact mode - single line display
+  if (compact) {
+    return (
+      <div className={cn('flex items-center gap-2', className)}>
+        <Coffee className={cn('h-4 w-4', statusColor)} />
+        <span className="text-xs text-muted-foreground flex-1 min-w-0 truncate">
+          {analysis.hasLateCaffeine ? (
+            <>⚠️ Kofein po {analysis.cutoffTime}</>
+          ) : analysis.caffeineCount > 0 ? (
+            <>✓ {analysis.caffeineCount}× OK</>
+          ) : (
+            <>☕ Bez kofeinu</>
+          )}
+        </span>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          🛏️ {sleepTime}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <Card className={cn('p-4', className)}>
