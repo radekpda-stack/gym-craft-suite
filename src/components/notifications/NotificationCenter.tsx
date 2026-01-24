@@ -53,6 +53,7 @@ const notificationIcons: Record<string, typeof Bell> = {
   nutrition_entry_added: Utensils,
   nutrition_inactive: AlertTriangle,
   client_weight_added: Scale,
+  client_workout_logged: Dumbbell,
 };
 
 const notificationColors: Record<string, string> = {
@@ -79,6 +80,7 @@ const notificationColors: Record<string, string> = {
   nutrition_entry_added: "text-success",
   nutrition_inactive: "text-warning",
   client_weight_added: "text-success",
+  client_workout_logged: "text-primary",
 };
 
 // Category definitions for grouping
@@ -111,7 +113,7 @@ const NOTIFICATION_CATEGORIES = {
     label: "Klienti",
     icon: User,
     color: "text-blue-500",
-    types: ["birthday", "client_anniversary", "inactivity_warning", "pre_diagnostic_completed", "diagnostic_completed", "nutrition_entry_added", "nutrition_inactive", "client_weight_added"],
+    types: ["birthday", "client_anniversary", "inactivity_warning", "pre_diagnostic_completed", "diagnostic_completed", "nutrition_entry_added", "nutrition_inactive", "client_weight_added", "client_workout_logged"],
   },
   packages: {
     label: "Balíčky & finance",

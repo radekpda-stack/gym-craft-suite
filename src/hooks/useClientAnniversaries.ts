@@ -15,18 +15,20 @@ export function useClientAnniversaryNotifier() {
     const activeClients = clients.filter(c => !c.is_archived);
 
     activeClients.forEach(client => {
-      if (!client.created_at) return;
+      // Use training_start_date if available, otherwise fallback to created_at
+      const startDateStr = client.training_start_date || client.created_at;
+      if (!startDateStr) return;
 
-      const createdDate = parseISO(client.created_at);
-      const years = differenceInYears(today, createdDate);
+      const startDate = parseISO(startDateStr);
+      const years = differenceInYears(today, startDate);
       
       // Only check for anniversaries 1+ years
       if (years < 1) return;
 
       // Check if today is the anniversary (same month and day)
       const isAnniversaryToday = 
-        createdDate.getMonth() === today.getMonth() && 
-        createdDate.getDate() === today.getDate();
+        startDate.getMonth() === today.getMonth() && 
+        startDate.getDate() === today.getDate();
 
       if (!isAnniversaryToday) return;
 
@@ -58,16 +60,18 @@ export function useUpcomingAnniversaries(daysAhead: number = 7) {
 
   const upcoming = activeClients
     .map(client => {
-      if (!client.created_at) return null;
+      // Use training_start_date if available, otherwise fallback to created_at
+      const startDateStr = client.training_start_date || client.created_at;
+      if (!startDateStr) return null;
 
-      const createdDate = parseISO(client.created_at);
-      const years = differenceInYears(today, createdDate);
+      const startDate = parseISO(startDateStr);
+      const years = differenceInYears(today, startDate);
       
       // Create this year's anniversary date
       const anniversaryThisYear = new Date(
         today.getFullYear(),
-        createdDate.getMonth(),
-        createdDate.getDate()
+        startDate.getMonth(),
+        startDate.getDate()
       );
 
       // If anniversary already passed this year, use next year
@@ -76,7 +80,7 @@ export function useUpcomingAnniversaries(daysAhead: number = 7) {
       }
 
       const daysUntil = Math.ceil((anniversaryThisYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      const upcomingYears = anniversaryThisYear.getFullYear() - createdDate.getFullYear();
+      const upcomingYears = anniversaryThisYear.getFullYear() - startDate.getFullYear();
 
       if (daysUntil > daysAhead || upcomingYears < 1) return null;
 

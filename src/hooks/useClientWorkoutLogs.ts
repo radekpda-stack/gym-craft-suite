@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 export interface WorkoutExercise {
   id?: string;
@@ -146,10 +147,50 @@ export function useCreateWorkoutLog() {
 
       return log;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: async (log, variables) => {
       queryClient.invalidateQueries({ queryKey: ['client-workout-logs', variables.client_id] });
       queryClient.invalidateQueries({ queryKey: ['all-client-workout-logs'] });
       toast.success('Trénink byl zaznamenán');
+      
+      // Notify trainer about client workout (max 1x per day per client)
+      try {
+        const today = format(new Date(), 'yyyy-MM-dd');
+        
+        // Check if notification already sent today for this client
+        const { data: existingToday } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('client_id', variables.client_id)
+          .eq('type', 'client_workout_logged')
+          .gte('created_at', `${today}T00:00:00`)
+          .maybeSingle();
+          
+        if (!existingToday) {
+          // Get client name and trainer_id
+          const { data: client } = await supabase
+            .from('clients')
+            .select('name, user_id')
+            .eq('id', variables.client_id)
+            .single();
+          
+          if (client?.user_id) {
+            const clientName = client.name || 'Klient';
+            const workoutType = variables.workout_type || 'trénink';
+            
+            await supabase.from('notifications').insert({
+              user_id: client.user_id,
+              client_id: variables.client_id,
+              type: 'client_workout_logged',
+              title: '🏋️ Klient cvičil',
+              message: `${clientName} si zapsal/a vlastní ${workoutType}.`,
+              entity_type: 'workout_log',
+              entity_id: log.id,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[useCreateWorkoutLog] Failed to create notification:', error);
+      }
     },
     onError: (error) => {
       console.error('Error creating workout log:', error);
