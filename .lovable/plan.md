@@ -1,124 +1,157 @@
 
-# Oprava chybějícího srovnávání na dashboardu klientského portálu
+# Oprava notifikačního centra - Persistentní dismissal a respektování preferencí
 
-## Identifikovaný problém
+## Shrnutí problému
 
-Během refaktoru Fáze 1 byla z dashboardu **odstraněna komponenta `OverallPerformanceCard`**, která zobrazovala:
-- Celkové percentilové umístění klienta
-- Nejsilnější cvik (např. "Bench Press - Top 15%")
-- PR rank
-- Nejslabší cvik
+Trenér hlásí tři klíčové problémy:
+1. Notifikace "Chybí trénink" a "Nízký kredit" se objevují opakovaně i po odmítnutí
+2. Důležité notifikace (feedback, strava) nejsou viditelné kvůli přeplnění méně důležitými
+3. Chybí možnost tyto "Smart Alerts" trvale vypnout
 
-Klient tak nyní nemá na hlavní obrazovce způsob, jak se dostat ke srovnání s ostatními.
+## Analýza příčin
+
+### 1. Dočasný dismissal (pouze 24h)
+Smart Alerts používají `localStorage` s 24-hodinovou expirací:
+```javascript
+// src/hooks/useSmartAlerts.ts, řádek 14-16
+const valid = Object.entries(data).filter(
+  ([_, ts]) => now - (ts as number) < 24 * 60 * 60 * 1000 // 24h expiruje
+);
+```
+Po uplynutí 24 hodin se alert znovu vypočítá a zobrazí.
+
+### 2. Smart Alerts ignorují uživatelské preference
+Hook `useSmartAlerts` nekontroluje nastavení z `app_settings.notification_preferences`. I když má trenér vypnuté "lowCreditAlerts", Smart Alerts pro nízký kredit se stále generují.
+
+### 3. Chybějící nastavení pro "No Training" alerty
+V `InlineNotificationSettings` a `NotificationSettings` chybí toggle pro typ `noTrainingAlerts`, takže trenér nemá jak tyto notifikace vypnout.
+
+---
 
 ## Navrhované řešení
 
-### 1. Vrátit `OverallPerformanceCard` na dashboard
+### Krok 1: Prodloužit expiraci dismissed alertů na 7 dní
 
-Přidáme zpět komponentu `OverallPerformanceCard` do `ClientPortalOverview.tsx`. Tato karta:
-- Zobrazuje percentilové srovnání (např. "Lepší než 65% ostatních klientů")
-- Ukazuje konkrétní cviky (bench press 50kg - Top 20%)
-- Po kliknutí naviguje na `/zona/competitions?tab=leaderboard`
+**Soubor:** `src/hooks/useSmartAlerts.ts`
 
-### 2. Udělat `ClientQuickStats` klikatelnou
-
-Karty v `ClientQuickStats` (Tréninků | Moje PRs | Série) budou nově klikatelné:
-- **Moje PRs** → naviguje na `/zona/progress` (sekce s PRs)
-- **Tréninků** → naviguje na `/zona/diary`
-- **Série** → naviguje na `/zona/competitions?tab=leaderboard`
-
----
-
-## Technická implementace
-
-### Krok 1: Upravit `ClientPortalOverview.tsx`
-
-```tsx
-// Přidat import
-import { OverallPerformanceCard } from '@/components/client-portal/dashboard/OverallPerformanceCard';
-
-// V renderovací části přidat mezi ClientQuickStats a ClientQuickActions:
-{clientId && <OverallPerformanceCard clientId={clientId} />}
-```
-
-### Krok 2: Upravit `ClientQuickStats.tsx`
-
-```tsx
-// Přidat navigaci
-import { useNavigate } from 'react-router-dom';
-
-// V komponentě
-const navigate = useNavigate();
-
-// Upravit QuickStat aby byla klikatelná
-<Card 
-  className="bg-card/50 border-border/50 cursor-pointer hover:border-primary/30 transition-colors"
-  onClick={onClick}
->
-```
-
-Každá statistika bude mít svůj `onClick`:
-- Tréninků → `navigate('/zona/diary')`
-- Moje PRs → `navigate('/zona/progress')`
-- Série → `navigate('/zona/competitions?tab=leaderboard')`
-
-### Krok 3: Opravit navigační cíl v `OverallPerformanceCard`
-
-Aktuálně naviguje na `/zona/leaderboard`, ale správný cíl je `/zona/competitions?tab=leaderboard` (kam jsme sloučili žebříčky).
-
----
-
-## Výsledná struktura dashboardu
+Změna expirace z 24 hodin na 7 dní (nebo neomezeně pro specifické typy):
 
 ```text
-┌─────────────────────────────────────┐
-│  Ahoj, Tomáši!                      │
-│  Tvůj tréninkový přehled            │
-└─────────────────────────────────────┘
+Před:  24 * 60 * 60 * 1000 (24 hodin)
+Po:    7 * 24 * 60 * 60 * 1000 (7 dní)
+```
 
-┌─────────────────────────────────────┐
-│ ⚠️ Action Required (pokud existuje) │
-└─────────────────────────────────────┘
+### Krok 2: Přidat kontrolu preferencí do useSmartAlerts
 
-┌─────────────────┐ ┌─────────────────┐
-│ 💳 Kredit       │ │ 📅 Další trénink│
-│ 2 500 Kč        │ │ Zítra 10:00     │
-└─────────────────┘ └─────────────────┘
+**Soubor:** `src/hooks/useSmartAlerts.ts`
 
-┌───────┬───────┬───────┐
-│ 12    │  8    │  4w   │ ← klikatelné
-│Trénin │ PRs   │Série  │
-└───────┴───────┴───────┘
+Přidat načítání `notification_preferences` a filtrování alertů podle nich:
 
-┌─────────────────────────────────────┐  ← VRÁCENO
-│ 📊 Můj celkový výkon                │
-│ ━━━━━━━━━━━━━━━━━━━━━━ 65%         │
-│ Lepší než 65% ostatních            │
-│                                     │
-│ 💪 Nejsilnější: Bench Press        │
-│ 📈 Prostor: Deadlift               │
-└─────────────────────────────────────┘
+```text
+1. Načíst app_settings.notification_preferences
+2. Přidat mapování: 
+   - low_credit → lowCreditAlerts
+   - no_training_scheduled → noTrainingAlerts (nová preference)
+   - birthdays_this_month → birthdayAlerts
+3. Filtrovat generované alerty podle preferencí
+```
 
-┌─────────────────────────────────────┐
-│ + Přidat trénink    + Přidat váhu   │
-└─────────────────────────────────────┘
+### Krok 3: Přidat chybějící nastavení
+
+**Soubory:**
+- `src/components/notifications/InlineNotificationSettings.tsx`
+- `src/components/settings/NotificationSettings.tsx`
+
+Přidat toggle pro:
+- `noTrainingAlerts` - "Chybějící tréninky" (aby trenér mohl tyto alerty vypnout)
+
+### Krok 4: Změnit prioritu Smart Alerts
+
+**Soubor:** `src/hooks/useAggregatedNotifications.ts`
+
+Přidat mapování typu `no_training_scheduled` na prioritu `info` místo výchozí hodnoty, aby se tyto alerty zobrazovaly až pod důležitějšími.
+
+---
+
+## Technické detaily implementace
+
+### useSmartAlerts.ts - Hlavní změny
+
+```javascript
+// 1. Prodloužit expiraci na 7 dní
+const DISMISSAL_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 dní
+
+// 2. Načíst preference
+const { data: settingsData } = await supabase
+  .from('app_settings')
+  .select('value')
+  .eq('key', 'notification_preferences')
+  .maybeSingle();
+
+const prefs = settingsData?.value as Record<string, boolean> | null;
+
+// 3. Podmíněně generovat alerty
+const alerts = [];
+
+if (prefs?.noTrainingAlerts !== false) {
+  alerts.push(...await getClientsWithoutTraining(userId));
+}
+
+if (prefs?.lowCreditAlerts !== false) {
+  alerts.push(...await getClientsWithLowCredit(userId));
+}
+// ... atd.
+```
+
+### InlineNotificationSettings.tsx - Přidat toggle
+
+```javascript
+const QUICK_SETTINGS = [
+  { key: 'chatNotifications', label: 'Zprávy', icon: '💬' },
+  { key: 'lowCreditAlerts', label: 'Finance & balíčky', icon: '💰' },
+  { key: 'noTrainingAlerts', label: 'Chybějící tréninky', icon: '📅' }, // NOVÉ
+  { key: 'prAlerts', label: 'Osobní rekordy', icon: '🏆' },
+  { key: 'birthdayAlerts', label: 'Narozeniny & výročí', icon: '🎂' },
+  { key: 'feedbackAlerts', label: 'Zpětná vazba', icon: '📝' },
+];
+```
+
+### NotificationSettings.tsx - Přidat do kategorií
+
+```javascript
+// V kategorii "Tréninky"
+{
+  key: "noTrainingAlerts",
+  label: "Chybějící tréninky tento týden",
+  description: "Upozornění na klienty bez naplánovaného tréninku",
+}
+```
+
+### useAggregatedNotifications.ts - Upravit priority
+
+```javascript
+const TYPE_PRIORITY = {
+  // ... existující
+  no_training_scheduled: 'info', // Snížit prioritu na Info (modrá)
+};
 ```
 
 ---
 
-## Změny v souborech
+## Výsledek po implementaci
+
+| Problém | Řešení |
+|---------|--------|
+| Alerty se znovu objevují po 24h | Expirace prodloužena na 7 dní |
+| Ignorují se uživatelské preference | Smart Alerts kontrolují `notification_preferences` |
+| Chybí toggle pro "chybějící tréninky" | Přidán `noTrainingAlerts` toggle |
+| Méně důležité alerty přeplňují inbox | Priorita `no_training_scheduled` snížena na "Info" |
+
+## Ovlivněné soubory
 
 | Soubor | Změna |
 |--------|-------|
-| `src/pages/client-portal/ClientPortalOverview.tsx` | Import a render `OverallPerformanceCard` |
-| `src/components/client-portal/dashboard/ClientQuickStats.tsx` | Přidat `onClick` navigaci pro každou statistiku |
-| `src/components/client-portal/dashboard/OverallPerformanceCard.tsx` | Opravit navigaci z `/zona/leaderboard` na `/zona/competitions?tab=leaderboard` |
-
----
-
-## Zachováno z původního designu
-
-- Karta se skryje, pokud klient nemá žádná data (`benchmarks.overallPercentile === null`)
-- Zobrazí konkrétní cviky s hodnotami (bench press, deadlift)
-- Po kliknutí přechod na detailní žebříček
-- Glassmorphism styl a Framer Motion animace
+| `src/hooks/useSmartAlerts.ts` | Prodloužit expiraci, přidat kontrolu preferencí |
+| `src/hooks/useAggregatedNotifications.ts` | Přidat mapování priority pro `no_training_scheduled` |
+| `src/components/notifications/InlineNotificationSettings.tsx` | Přidat `noTrainingAlerts` toggle |
+| `src/components/settings/NotificationSettings.tsx` | Přidat `noTrainingAlerts` do interface a kategorie |
