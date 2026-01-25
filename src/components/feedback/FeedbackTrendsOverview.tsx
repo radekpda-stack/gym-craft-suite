@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -12,6 +13,7 @@ import {
   AlertTriangle,
   Clock,
   BarChart3,
+  HelpCircle,
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -19,7 +21,7 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
+  Tooltip as RechartsTooltip, 
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -29,6 +31,7 @@ import {
 } from 'recharts';
 import { useFeedbackAnalytics } from '@/hooks/useFeedbackAnalytics';
 import { cn } from '@/lib/utils';
+import { METRIC_EXPLANATIONS } from '@/lib/feedbackCalculations';
 
 interface FeedbackTrendsOverviewProps {
   days?: number;
@@ -44,6 +47,7 @@ const TrendIcon = ({ trend }: { trend: 'up' | 'down' | 'same' | null }) => {
 const MetricCard = ({ 
   icon: Icon, 
   label, 
+  metricKey,
   value, 
   trend,
   suffix = '/10',
@@ -51,6 +55,7 @@ const MetricCard = ({
 }: { 
   icon: typeof Activity;
   label: string;
+  metricKey?: keyof typeof METRIC_EXPLANATIONS;
   value: number | null;
   trend: 'up' | 'down' | 'same' | null;
   suffix?: string;
@@ -65,16 +70,19 @@ const MetricCard = ({
     return trend === 'up' ? 'text-success' : trend === 'down' ? 'text-destructive' : '';
   };
 
-  return (
+  const metric = metricKey ? METRIC_EXPLANATIONS[metricKey] : null;
+
+  const content = (
     <div className="p-3 rounded-xl bg-secondary/30 space-y-1">
       <div className="flex items-center gap-2 text-muted-foreground">
         <Icon className="w-4 h-4" />
         <span className="text-xs">{label}</span>
+        {metric && <HelpCircle className="w-3 h-3 text-muted-foreground/50" />}
       </div>
       <div className="flex items-center gap-2">
         <span className="text-xl font-bold">
-          {value !== null ? value : '—'}
-          {value !== null && <span className="text-sm font-normal text-muted-foreground">{suffix}</span>}
+          {value !== null && !isNaN(value) ? value : '—'}
+          {value !== null && !isNaN(value) && <span className="text-sm font-normal text-muted-foreground">{suffix}</span>}
         </span>
         {trend && (
           <span className={cn('flex items-center gap-0.5', getTrendColor())}>
@@ -84,6 +92,27 @@ const MetricCard = ({
       </div>
     </div>
   );
+
+  if (metric) {
+    return (
+      <TooltipProvider>
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            {content}
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs">
+            <div className="space-y-1">
+              <p className="font-medium">{metric.label}</p>
+              <p className="text-xs text-muted-foreground">{metric.description}</p>
+              <p className="text-xs text-primary/80 font-mono">{metric.scale}</p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return content;
 };
 
 export function FeedbackTrendsOverview({ days = 30 }: FeedbackTrendsOverviewProps) {
@@ -236,7 +265,7 @@ export function FeedbackTrendsOverview({ days = 30 }: FeedbackTrendsOverviewProp
                     interval="preserveStartEnd"
                   />
                   <YAxis tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                  <Tooltip 
+                  <RechartsTooltip 
                     contentStyle={{ 
                       backgroundColor: 'hsl(var(--card))', 
                       border: '1px solid hsl(var(--border))',
@@ -279,7 +308,7 @@ export function FeedbackTrendsOverview({ days = 30 }: FeedbackTrendsOverviewProp
                     tick={{ fontSize: 10 }} 
                     className="text-muted-foreground" 
                   />
-                  <Tooltip 
+                  <RechartsTooltip 
                     contentStyle={{ 
                       backgroundColor: 'hsl(var(--card))', 
                       border: '1px solid hsl(var(--border))',
@@ -322,7 +351,7 @@ export function FeedbackTrendsOverview({ days = 30 }: FeedbackTrendsOverviewProp
                     interval="preserveStartEnd"
                   />
                   <YAxis tick={{ fontSize: 10 }} className="text-muted-foreground" allowDecimals={false} />
-                  <Tooltip 
+                  <RechartsTooltip 
                     contentStyle={{ 
                       backgroundColor: 'hsl(var(--card))', 
                       border: '1px solid hsl(var(--border))',

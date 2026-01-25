@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { subDays, startOfDay, format, eachDayOfInterval, eachWeekOfInterval, startOfWeek, endOfWeek } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { safeResponseRate } from '@/lib/feedbackCalculations';
 
 export interface FeedbackAnalyticsData {
   // Response rate
@@ -69,10 +70,10 @@ export function useFeedbackAnalytics(days: number = 30) {
         feedbacks = data || [];
       }
 
-      // Calculate response rate
+      // Calculate response rate with safe limits (≤100%, completed ≤ sent)
       const totalSent = (requests || []).filter(r => r.sent_at).length;
       const totalCompleted = completedRequestIds.length;
-      const responseRate = totalSent > 0 ? Math.round((totalCompleted / totalSent) * 100) : 0;
+      const responseRate = safeResponseRate(totalCompleted, totalSent);
 
       // Build daily/weekly data based on period length
       const useWeekly = days > 30;
@@ -144,9 +145,10 @@ export function useFeedbackAnalytics(days: number = 30) {
           trend: calcTrend(calcAvg(olderFeedbacks, 'soreness'), calcAvg(recentFeedbacks, 'soreness')), // Inverted
         },
         energy: {
-          current: calcAvg(recentFeedbacks, 'energy'),
-          previous: calcAvg(olderFeedbacks, 'energy'),
-          trend: calcTrend(calcAvg(recentFeedbacks, 'energy'), calcAvg(olderFeedbacks, 'energy')),
+          // Use energy_rating - correct field name from DB (fallback to energy for compatibility)
+          current: calcAvg(recentFeedbacks, 'energy_rating') ?? calcAvg(recentFeedbacks, 'energy'),
+          previous: calcAvg(olderFeedbacks, 'energy_rating') ?? calcAvg(olderFeedbacks, 'energy'),
+          trend: calcTrend(calcAvg(recentFeedbacks, 'energy_rating') ?? calcAvg(recentFeedbacks, 'energy'), calcAvg(olderFeedbacks, 'energy_rating') ?? calcAvg(olderFeedbacks, 'energy')),
         },
         pain: {
           current: calcAvg(recentFeedbacks, 'pain'),

@@ -1,5 +1,6 @@
 /**
  * FeedbackPeriodComparison - Compare feedback metrics between two time periods
+ * Fixed: safe response rate, NaN handling, metric tooltips
  */
 
 import { useState } from 'react';
@@ -21,9 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { CalendarDays, TrendingUp, TrendingDown, Minus, ArrowRight } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { CalendarDays, TrendingUp, TrendingDown, Minus, ArrowRight, HelpCircle } from 'lucide-react';
 import { useFeedbackPeriodComparison, PeriodType } from '@/hooks/useFeedbackPeriodComparison';
 import { cn } from '@/lib/utils';
+import { METRIC_EXPLANATIONS } from '@/lib/feedbackCalculations';
 
 interface FeedbackPeriodComparisonProps {
   clientId?: string;
@@ -37,6 +40,9 @@ const PERIOD_OPTIONS: { value: PeriodType; label: string }[] = [
   { value: 'month', label: 'Tento měsíc' },
 ];
 
+// Max change to display (prevents absurd percentages like +3000%)
+const MAX_CHANGE_DISPLAY = 100;
+
 const ChangeIndicator = ({ 
   value, 
   inverted = false,
@@ -46,7 +52,13 @@ const ChangeIndicator = ({
   inverted?: boolean;
   suffix?: string;
 }) => {
-  if (value === null) return <span className="text-muted-foreground">—</span>;
+  if (value === null || isNaN(value)) return <span className="text-muted-foreground">—</span>;
+  
+  // Cap display value to reasonable range
+  const cappedValue = Math.abs(value) > MAX_CHANGE_DISPLAY;
+  const displayValue = cappedValue 
+    ? (value > 0 ? `>${MAX_CHANGE_DISPLAY}` : `<-${MAX_CHANGE_DISPLAY}`)
+    : value.toFixed(1);
   
   const isPositive = inverted ? value < 0 : value > 0;
   const isNegative = inverted ? value > 0 : value < 0;
@@ -64,13 +76,20 @@ const ChangeIndicator = ({
       ) : (
         <Minus className="w-3.5 h-3.5" />
       )}
-      {value > 0 ? '+' : ''}{value}{suffix}
+      {value > 0 && !cappedValue ? '+' : ''}{displayValue}{suffix}
     </span>
   );
 };
 
+// Safe format for metric values
+const formatMetric = (value: number | null, suffix: string = '/10'): string => {
+  if (value === null || isNaN(value) || !isFinite(value)) return '—';
+  return `${value.toFixed(1)}${suffix}`;
+};
+
 const MetricRow = ({ 
   label, 
+  metricKey,
   current, 
   previous, 
   change,
@@ -78,25 +97,47 @@ const MetricRow = ({
   suffix = '/10'
 }: {
   label: string;
+  metricKey?: keyof typeof METRIC_EXPLANATIONS;
   current: number | null;
   previous: number | null;
   change: number | null;
   inverted?: boolean;
   suffix?: string;
-}) => (
-  <TableRow>
-    <TableCell className="font-medium">{label}</TableCell>
-    <TableCell className="text-center">
-      {current !== null ? `${current.toFixed(1)}${suffix}` : '—'}
-    </TableCell>
-    <TableCell className="text-center">
-      {previous !== null ? `${previous.toFixed(1)}${suffix}` : '—'}
-    </TableCell>
-    <TableCell className="text-center">
-      <ChangeIndicator value={change} inverted={inverted} />
-    </TableCell>
-  </TableRow>
-);
+}) => {
+  const metric = metricKey ? METRIC_EXPLANATIONS[metricKey] : null;
+  
+  return (
+    <TableRow>
+      <TableCell className="font-medium">
+        {metric ? (
+          <TooltipProvider>
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger className="flex items-center gap-1 cursor-help">
+                {label}
+                <HelpCircle className="w-3 h-3 text-muted-foreground/50" />
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-xs">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">{metric.description}</p>
+                  <p className="text-xs text-primary/80 font-mono">{metric.scale}</p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : label}
+      </TableCell>
+      <TableCell className="text-center">
+        {formatMetric(current, suffix)}
+      </TableCell>
+      <TableCell className="text-center">
+        {formatMetric(previous, suffix)}
+      </TableCell>
+      <TableCell className="text-center">
+        <ChangeIndicator value={change} inverted={inverted} />
+      </TableCell>
+    </TableRow>
+  );
+};
 
 export function FeedbackPeriodComparison({ 
   clientId,
@@ -155,14 +196,16 @@ export function FeedbackPeriodComparison({
           <Badge variant="outline">{data.previousPeriod.periodLabel}</Badge>
         </div>
         
-        {/* Summary stats */}
+        {/* Summary stats - with safe response rate (max 100%) */}
         <div className="grid grid-cols-3 gap-3">
           <div className="p-3 rounded-lg bg-secondary/30 text-center">
             <div className="text-2xl font-bold">
-              {data.currentPeriod.responseRate}%
+              {Math.min(data.currentPeriod.responseRate, 100)}%
             </div>
             <div className="text-xs text-muted-foreground">Míra odpovědí</div>
-            <ChangeIndicator value={data.changes.responseRate} suffix="%" />
+            <div className="text-xs text-muted-foreground">
+              {Math.min(data.currentPeriod.totalCompleted, data.currentPeriod.totalSent)} z {data.currentPeriod.totalSent}
+            </div>
           </div>
           <div className="p-3 rounded-lg bg-secondary/30 text-center">
             <div className="text-2xl font-bold">
@@ -170,7 +213,7 @@ export function FeedbackPeriodComparison({
             </div>
             <div className="text-xs text-muted-foreground">Vyplněno</div>
             <span className="text-xs text-muted-foreground">
-              z {data.currentPeriod.totalSent} odeslaných
+              za období
             </span>
           </div>
           <div className="p-3 rounded-lg bg-secondary/30 text-center">
@@ -196,24 +239,28 @@ export function FeedbackPeriodComparison({
             <TableBody>
               <MetricRow
                 label="Pocit těla"
+                metricKey="bodyFeel"
                 current={data.currentPeriod.avgBodyFeel}
                 previous={data.previousPeriod.avgBodyFeel}
                 change={data.changes.avgBodyFeel}
               />
               <MetricRow
                 label="Energie"
+                metricKey="energy"
                 current={data.currentPeriod.avgEnergy}
                 previous={data.previousPeriod.avgEnergy}
                 change={data.changes.avgEnergy}
               />
               <MetricRow
                 label="Zábava"
+                metricKey="fun"
                 current={data.currentPeriod.avgFun}
                 previous={data.previousPeriod.avgFun}
                 change={data.changes.avgFun}
               />
               <MetricRow
                 label="Svalovka"
+                metricKey="soreness"
                 current={data.currentPeriod.avgSoreness}
                 previous={data.previousPeriod.avgSoreness}
                 change={data.changes.avgSoreness}
@@ -221,6 +268,7 @@ export function FeedbackPeriodComparison({
               />
               <MetricRow
                 label="Bolest"
+                metricKey="pain"
                 current={data.currentPeriod.avgPain}
                 previous={data.previousPeriod.avgPain}
                 change={data.changes.avgPain}

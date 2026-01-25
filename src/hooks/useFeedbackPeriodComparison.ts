@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { subDays, subMonths, startOfDay, endOfDay, startOfMonth, endOfMonth, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { safeAverage } from '@/lib/feedbackCalculations';
+import { safeAverage, safeResponseRate } from '@/lib/feedbackCalculations';
 
 export type PeriodType = '7d' | '30d' | '90d' | 'month';
 
@@ -104,7 +104,8 @@ async function fetchPeriodMetrics(
   // Calculate metrics
   const totalSent = (requests || []).filter(r => r.sent_at).length;
   const totalCompleted = completedIds.length;
-  const responseRate = totalSent > 0 ? Math.round((totalCompleted / totalSent) * 100) : 0;
+  // Use safe response rate to ensure ≤100% and completed ≤ sent
+  const responseRate = safeResponseRate(totalCompleted, totalSent);
   const redFlagsCount = feedbacks.filter(f => f.is_red_flag).length;
   
   const responseTimes = (requests || [])
@@ -125,7 +126,8 @@ async function fetchPeriodMetrics(
     redFlagsCount,
     avgBodyFeel: safeAverage(feedbacks.map(f => f.body_feel)),
     avgSoreness: safeAverage(feedbacks.map(f => f.soreness)),
-    avgEnergy: safeAverage(feedbacks.map(f => f.energy)),
+    // Use energy_rating - correct field name from DB
+    avgEnergy: safeAverage(feedbacks.map(f => f.energy_rating ?? f.energy)),
     avgPain: safeAverage(feedbacks.map(f => f.pain)),
     avgFun: safeAverage(feedbacks.map(f => f.fun)),
     avgRpe: safeAverage(feedbacks.map(f => f.rpe_rating)),
