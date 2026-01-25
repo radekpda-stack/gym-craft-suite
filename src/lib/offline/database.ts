@@ -65,6 +65,18 @@ interface CachedExercise {
   updatedAt: string;
 }
 
+interface CachedPR {
+  id: string;
+  clientId: string;
+  exerciseId: string;
+  exerciseName: string;
+  metric: 'weight' | 'reps' | 'duration' | 'distance';
+  value: number;
+  unit: string;
+  achievedAt: string;
+  updatedAt: string;
+}
+
 interface OfflineDBSchema extends DBSchema {
   trainings: {
     key: string;
@@ -98,6 +110,14 @@ interface OfflineDBSchema extends DBSchema {
       'by-category': string;
     };
   };
+  personalRecords: {
+    key: string;
+    value: CachedPR;
+    indexes: {
+      'by-client': string;
+      'by-exercise': string;
+    };
+  };
   metadata: {
     key: string;
     value: {
@@ -109,7 +129,7 @@ interface OfflineDBSchema extends DBSchema {
 }
 
 const DB_NAME = 'justmove-offline';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented for PR cache
 
 let dbInstance: IDBPDatabase<OfflineDBSchema> | null = null;
 
@@ -147,6 +167,13 @@ async function getDB(): Promise<IDBPDatabase<OfflineDBSchema>> {
         const exercisesStore = db.createObjectStore('exercises', { keyPath: 'id' });
         exercisesStore.createIndex('by-name', 'name');
         exercisesStore.createIndex('by-category', 'category');
+      }
+
+      // Personal Records cache store
+      if (!db.objectStoreNames.contains('personalRecords')) {
+        const prStore = db.createObjectStore('personalRecords', { keyPath: 'id' });
+        prStore.createIndex('by-client', 'clientId');
+        prStore.createIndex('by-exercise', 'exerciseId');
       }
 
       // Metadata store for general settings
@@ -297,6 +324,35 @@ export async function searchCachedExercises(query: string): Promise<CachedExerci
   return all.filter(e => e.name.toLowerCase().includes(lowerQuery));
 }
 
+// ============ PERSONAL RECORDS CACHE ============
+
+export async function cachePRs(prs: CachedPR[]): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction('personalRecords', 'readwrite');
+  await Promise.all([
+    ...prs.map(pr => tx.store.put({
+      ...pr,
+      updatedAt: new Date().toISOString(),
+    })),
+    tx.done,
+  ]);
+}
+
+export async function getCachedPRs(): Promise<CachedPR[]> {
+  const db = await getDB();
+  return db.getAll('personalRecords');
+}
+
+export async function getCachedPRsByClient(clientId: string): Promise<CachedPR[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('personalRecords', 'by-client', clientId);
+}
+
+export async function getCachedPRsByExercise(exerciseId: string): Promise<CachedPR[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('personalRecords', 'by-exercise', exerciseId);
+}
+
 // ============ METADATA ============
 
 export async function setMetadata(key: string, value: unknown): Promise<void> {
@@ -323,6 +379,7 @@ export async function clearAllOfflineData(): Promise<void> {
     db.clear('syncQueue'),
     db.clear('clients'),
     db.clear('exercises'),
+    db.clear('personalRecords'),
     db.clear('metadata'),
   ]);
 }
@@ -332,15 +389,17 @@ export async function getOfflineStats(): Promise<{
   syncQueueItems: number;
   cachedClients: number;
   cachedExercises: number;
+  cachedPRs: number;
 }> {
   const db = await getDB();
-  const [pendingTrainings, syncQueueItems, cachedClients, cachedExercises] = await Promise.all([
+  const [pendingTrainings, syncQueueItems, cachedClients, cachedExercises, cachedPRs] = await Promise.all([
     db.countFromIndex('trainings', 'by-status', 'pending_sync'),
     db.count('syncQueue'),
     db.count('clients'),
     db.count('exercises'),
+    db.count('personalRecords'),
   ]);
-  return { pendingTrainings, syncQueueItems, cachedClients, cachedExercises };
+  return { pendingTrainings, syncQueueItems, cachedClients, cachedExercises, cachedPRs };
 }
 
 // Export types
@@ -350,5 +409,6 @@ export type {
   OfflineSet, 
   SyncQueueItem, 
   CachedClient, 
-  CachedExercise 
+  CachedExercise,
+  CachedPR,
 };

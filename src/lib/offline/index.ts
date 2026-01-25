@@ -4,3 +4,9 @@
 
 export * from './database';
 export * from './syncService';
+export { 
+  cachePRs, 
+  getCachedPRs, 
+  getCachedPRsByClient, 
+  getCachedPRsByExercise 
+} from './database';
