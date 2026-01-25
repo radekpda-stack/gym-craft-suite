@@ -6,7 +6,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { subDays, startOfDay } from 'date-fns';
-import { safeAverage } from '@/lib/feedbackCalculations';
+import { safeAverage, safeResponseRate } from '@/lib/feedbackCalculations';
 
 export interface BaselineMetrics {
   avgBodyFeel: number | null;
@@ -66,18 +66,18 @@ export function useTrainerFeedbackBaseline(days: number = 90) {
         feedbacks = properData || [];
       }
       
-      // Calculate averages
+      // Calculate averages (use energy_rating - correct field name)
       const bodyFeelValues = feedbacks.map(f => f.body_feel).filter(v => v !== null);
       const sorenessValues = feedbacks.map(f => f.soreness).filter(v => v !== null);
-      const energyValues = feedbacks.map(f => f.energy).filter(v => v !== null);
+      const energyValues = feedbacks.map(f => f.energy_rating ?? f.energy).filter(v => v !== null);
       const painValues = feedbacks.map(f => f.pain).filter(v => v !== null);
       const funValues = feedbacks.map(f => f.fun).filter(v => v !== null);
       const rpeValues = feedbacks.map(f => f.rpe_rating).filter(v => v !== null);
       
-      // Response rate
+      // Response rate with safe limits (≤100%, completed ≤ sent)
       const totalSent = (requests || []).filter(r => r.sent_at).length;
       const totalCompleted = completedIds.length;
-      const responseRate = totalSent > 0 ? Math.round((totalCompleted / totalSent) * 100) : 0;
+      const responseRate = safeResponseRate(totalCompleted, totalSent);
       
       // Response time
       const responseTimes = (requests || [])
@@ -170,12 +170,14 @@ export function useClientVsBaseline(clientId: string, days: number = 90) {
         return {
           avgBodyFeel: safeAverage(feedbacks.map(f => f.body_feel)),
           avgSoreness: safeAverage(feedbacks.map(f => f.soreness)),
-          avgEnergy: safeAverage(feedbacks.map(f => f.energy)),
+          // Use energy_rating - correct field name
+          avgEnergy: safeAverage(feedbacks.map(f => f.energy_rating ?? f.energy)),
           avgPain: safeAverage(feedbacks.map(f => f.pain)),
           avgFun: safeAverage(feedbacks.map(f => f.fun)),
           avgRpe: safeAverage(feedbacks.map(f => f.rpe_rating)),
           totalFeedbacks: feedbacks.length,
-          responseRate: totalSent > 0 ? Math.round((totalCompleted / totalSent) * 100) : 0,
+          // Use safe response rate
+          responseRate: safeResponseRate(totalCompleted, totalSent),
           avgResponseTimeHours: safeAverage(responseTimes),
         };
       };
