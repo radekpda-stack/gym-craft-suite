@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useCreateWorkoutLog, useDeleteWorkoutLog } from '@/hooks/useClientWorkoutLogs';
 import { useCompleteAssignedWorkout } from '@/hooks/useAssignWorkout';
@@ -29,16 +30,13 @@ import {
   Calendar,
   Clock,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Apple,
 } from 'lucide-react';
 import { SimpleAddWorkoutDialog } from '@/components/client-portal/workout-diary/SimpleAddWorkoutDialog';
 import { SimpleWorkoutCard } from '@/components/client-portal/workout-diary/SimpleWorkoutCard';
-
+import { TrainingCalendar } from '@/components/client-portal/calendar/TrainingCalendar';
 import { getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkoutTypeColor } from '@/components/client-portal/workout-diary/WorkoutTypeSelector';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 // Lazy load the nutrition content to avoid circular dependencies
@@ -58,7 +56,6 @@ export default function ClientPortalWorkoutDiary() {
   const initialTab = searchParams.get('tab') === 'nutrition' ? 'nutrition' : 'workouts';
   const [activeTab, setActiveTab] = useState<'workouts' | 'nutrition'>(initialTab);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [trainerSectionExpanded, setTrainerSectionExpanded] = useState(true);
 
   // Handle URL parameters for tab and action
   useEffect(() => {
@@ -217,211 +214,142 @@ export default function ClientPortalWorkoutDiary() {
 
         {/* Workouts Tab */}
         <TabsContent value="workouts" className="mt-4 space-y-4">
+          {/* Training Calendar - Compact widget */}
+          <TrainingCalendar compact className="rounded-2xl" />
+
           {/* Add Workout Button - Always visible */}
           <Button 
             onClick={() => setDialogOpen(true)}
-            className="w-full gap-2 h-12"
+            className="w-full gap-2 h-12 rounded-2xl"
             size="lg"
           >
             <Plus className="w-5 h-5" />
             Přidat svůj trénink
           </Button>
 
-          {/* Trainer-assigned workouts section */}
+          {/* Trainer-assigned workouts - Inline list (no collapsible) */}
           {hasPlannedWorkouts && (
-            <Card className="border-primary/30 bg-primary/5">
-              <button
-                className="w-full p-4 flex items-center justify-between text-left"
-                onClick={() => setTrainerSectionExpanded(!trainerSectionExpanded)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <ClipboardList className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-primary">Tréninky od trenéra</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {plannedWorkouts.length} {plannedWorkouts.length === 1 ? 'naplánovaný trénink' : 'naplánované tréninky'}
-                    </p>
-                  </div>
-                </div>
-                {trainerSectionExpanded ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                )}
-              </button>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <ClipboardList className="w-4 h-4 text-primary" />
+                <span className="font-medium text-primary">
+                  {plannedWorkouts.length} {plannedWorkouts.length === 1 ? 'trénink od trenéra' : 'tréninky od trenéra'}
+                </span>
+              </div>
+              
+              {plannedWorkouts.map((workout) => {
+                const Icon = getWorkoutTypeIcon(workout.workout_type);
+                const isOverdue = workout.scheduled_for && isBefore(parseISO(workout.scheduled_for), startOfDay(new Date()));
+                const isToday = workout.scheduled_for && 
+                  format(parseISO(workout.scheduled_for), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
 
-              <AnimatePresence>
-                {trainerSectionExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                return (
+                  <Card 
+                    key={workout.id}
+                    className={cn(
+                      "overflow-hidden rounded-2xl",
+                      isToday && "ring-2 ring-primary",
+                      isOverdue && "border-destructive/50"
+                    )}
                   >
-                    <div className="px-4 pb-4 space-y-3">
-                      {/* Tip for clients */}
-                      <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg text-sm">
-                        <span className="text-lg">💡</span>
-                        <p className="text-muted-foreground">
-                          Tyto tréninky ti naplánoval trenér. Až je dokončíš, klikni na <strong>"Splnit"</strong>.
-                        </p>
-                      </div>
-                      {plannedWorkouts.map((workout) => {
-                        const Icon = getWorkoutTypeIcon(workout.workout_type);
-                        const isOverdue = workout.scheduled_for && isBefore(parseISO(workout.scheduled_for), startOfDay(new Date()));
-                        const isToday = workout.scheduled_for && 
-                          format(parseISO(workout.scheduled_for), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-
-                        return (
-                          <Card 
-                            key={workout.id}
-                            className={cn(
-                              "overflow-hidden",
-                              isToday && "ring-2 ring-primary",
-                              isOverdue && "border-destructive/50"
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                            getWorkoutTypeColor(workout.workout_type)
+                          )}>
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium">
+                                {getWorkoutTypeLabel(workout.workout_type)}
+                              </span>
+                              {isToday && (
+                                <Badge variant="default" className="text-xs">Dnes</Badge>
+                              )}
+                              {isOverdue && (
+                                <Badge variant="destructive" className="text-xs">Zpožděno</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                              {workout.scheduled_for && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  {format(parseISO(workout.scheduled_for), 'EEEE d. M.', { locale: cs })}
+                                </span>
+                              )}
+                              {workout.duration_minutes && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  {workout.duration_minutes} min
+                                </span>
+                              )}
+                            </div>
+                            {workout.notes && (
+                              <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                                {workout.notes}
+                              </p>
                             )}
-                          >
-                            <CardContent className="p-4">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex items-start gap-3 flex-1 min-w-0">
-                                  <div className={cn(
-                                    "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
-                                    getWorkoutTypeColor(workout.workout_type)
-                                  )}>
-                                    <Icon className="w-5 h-5" />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-medium">
-                                        {getWorkoutTypeLabel(workout.workout_type)}
-                                      </span>
-                                      {isToday && (
-                                        <Badge variant="default" className="text-xs">Dnes</Badge>
-                                      )}
-                                      {isOverdue && (
-                                        <Badge variant="destructive" className="text-xs">Zpožděno</Badge>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                                      {workout.scheduled_for && (
-                                        <span className="flex items-center gap-1">
-                                          <Calendar className="w-3.5 h-3.5" />
-                                          {format(parseISO(workout.scheduled_for), 'EEEE d. M.', { locale: cs })}
-                                        </span>
-                                      )}
-                                      {workout.duration_minutes && (
-                                        <span className="flex items-center gap-1">
-                                          <Clock className="w-3.5 h-3.5" />
-                                          {workout.duration_minutes} min
-                                        </span>
-                                      )}
-                                    </div>
-                                    {workout.notes && (
-                                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                                        {workout.notes}
-                                      </p>
-                                    )}
-                                    {workout.exercises && workout.exercises.length > 0 && (
-                                      <div className="flex flex-wrap gap-1 mt-2">
-                                        {workout.exercises.slice(0, 3).map((ex, idx) => (
-                                          <Badge key={idx} variant="secondary" className="text-xs">
-                                            {ex.exercise_name}
-                                          </Badge>
-                                        ))}
-                                        {workout.exercises.length > 3 && (
-                                          <Badge variant="outline" className="text-xs">
-                                            +{workout.exercises.length - 3}
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => handleCompleteAssignedWorkout(workout)}
-                                  disabled={completeAssignedWorkout.isPending}
-                                  className="shrink-0"
-                                >
-                                  <CheckCircle2 className="w-4 h-4 mr-1" />
-                                  Splnit
-                                </Button>
+                            {workout.exercises && workout.exercises.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {workout.exercises.slice(0, 3).map((ex, idx) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs">
+                                    {ex.exercise_name}
+                                  </Badge>
+                                ))}
+                                {workout.exercises.length > 3 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{workout.exercises.length - 3}
+                                  </Badge>
+                                )}
                               </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </Card>
+                            )}
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleCompleteAssignedWorkout(workout)}
+                          disabled={completeAssignedWorkout.isPending}
+                          className="shrink-0"
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-1" />
+                          Splnit
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           )}
 
-          {/* Workout List */}
+          {/* Empty State - Simplified */}
           {completedEntries.length === 0 && !hasPlannedWorkouts ? (
-            <Card className="overflow-hidden">
-              <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
-                <CardContent className="py-10 text-center">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-24 h-24 rounded-full bg-primary/10 animate-pulse" />
-                    </div>
-                    <Dumbbell className="w-14 h-14 mx-auto mb-4 text-primary relative z-10" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">✨ Tvůj deník je zatím prázdný</h3>
-                  <p className="text-muted-foreground mb-4 max-w-xs mx-auto">
-                    Zaznamenávej sem aktivity, které děláš mimo tréninky se mnou
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2 mb-6 text-sm">
-                    <Badge variant="secondary" className="gap-1">🏃 Běh</Badge>
-                    <Badge variant="secondary" className="gap-1">🚴 Kolo</Badge>
-                    <Badge variant="secondary" className="gap-1">🏊 Plavání</Badge>
-                    <Badge variant="secondary" className="gap-1">💪 Posilka</Badge>
-                    <Badge variant="secondary" className="gap-1">🧘 Protažení</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-5">
-                    Trenér uvidí tvou snahu a může ti lépe přizpůsobit tréninkový plán! 💪
-                  </p>
-                  <Button size="lg" onClick={() => setDialogOpen(true)} className="animate-pulse">
-                    <Plus className="w-5 h-5 mr-2" />
-                    Přidat první aktivitu
-                  </Button>
-                </CardContent>
-              </div>
-            </Card>
+            <EmptyState
+              icon={Dumbbell}
+              title="Tvůj deník je prázdný"
+              description="Zaznamenávej aktivity, které děláš mimo tréninky s trenérem"
+              actionLabel="Přidat aktivitu"
+              onAction={() => setDialogOpen(true)}
+              size="lg"
+              variant="card"
+            />
           ) : completedEntries.length > 0 && (
-            <>
-              <div className="pt-2">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  🏃 Moje záznamy
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Aktivity, které jsi zaznamenal/a sám/a
-                </p>
-              </div>
-              <div className="space-y-3">
-                {completedEntries.map((entry) => (
-                  <SimpleWorkoutCard
-                    key={entry.id}
-                    entry={entry}
-                    onDelete={entry.is_coached ? undefined : () => handleDeleteWorkout(entry)}
-                  />
-                ))}
-              </div>
-            </>
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                Moje záznamy ({completedEntries.length})
+              </h3>
+              {completedEntries.map((entry) => (
+                <SimpleWorkoutCard
+                  key={entry.id}
+                  entry={entry}
+                  onDelete={entry.is_coached ? undefined : () => handleDeleteWorkout(entry)}
+                />
+              ))}
+            </div>
           )}
-
-          {/* FAB Button for workouts */}
-          <Button
-            size="lg"
-            className="fixed bottom-20 right-4 md:bottom-6 md:right-6 h-14 w-14 rounded-full shadow-lg z-40"
-            onClick={() => setDialogOpen(true)}
-          >
-            <Plus className="w-6 h-6" />
-          </Button>
         </TabsContent>
 
         {/* Nutrition Tab */}

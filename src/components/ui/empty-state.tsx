@@ -1,14 +1,18 @@
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { LucideIcon, Inbox } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface EmptyStateProps {
   icon?: LucideIcon;
   title: string;
   description?: string;
   action?: ReactNode;
+  actionLabel?: string;
+  onAction?: () => void;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  variant?: 'default' | 'muted' | 'card';
 }
 
 export function EmptyState({
@@ -16,8 +20,11 @@ export function EmptyState({
   title,
   description,
   action,
+  actionLabel,
+  onAction,
   className,
   size = 'md',
+  variant = 'default',
 }: EmptyStateProps) {
   const sizeClasses = {
     sm: {
@@ -43,13 +50,20 @@ export function EmptyState({
     },
   };
 
+  const variantClasses = {
+    default: 'bg-transparent',
+    muted: 'bg-muted/30 rounded-2xl',
+    card: 'bg-card border border-border rounded-2xl shadow-sm',
+  };
+
   const classes = sizeClasses[size];
 
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center text-center',
+        'flex flex-col items-center justify-center text-center px-4',
         classes.container,
+        variantClasses[variant],
         className
       )}
     >
@@ -65,11 +79,16 @@ export function EmptyState({
         {title}
       </h3>
       {description && (
-        <p className={cn('text-muted-foreground max-w-[250px]', classes.description)}>
+        <p className={cn('text-muted-foreground max-w-[280px]', classes.description)}>
           {description}
         </p>
       )}
       {action && <div className="mt-4">{action}</div>}
+      {!action && actionLabel && onAction && (
+        <Button onClick={onAction} className="mt-4" size={size === 'sm' ? 'sm' : 'default'}>
+          {actionLabel}
+        </Button>
+      )}
     </div>
   );
 }
