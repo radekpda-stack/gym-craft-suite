@@ -2,7 +2,7 @@
  * ClientFeedbackRecovery
  * 
  * Feedback & Recovery section for client detail page.
- * Shows mini trends, risk signals, and coaching profile.
+ * Shows simplified coaching profile with optional detailed charts.
  */
 
 import { useMemo, useState } from 'react';
@@ -16,6 +16,8 @@ import {
   TrendingDown,
   Minus,
   BarChart3,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -29,7 +31,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
+import { SimplifiedCoachingProfile } from '@/components/feedback/SimplifiedCoachingProfile';
 import { useClientFeedback, TrainingFeedback } from '@/hooks/useTrainingFeedback';
 import { 
   safeAverage, 
@@ -58,27 +62,27 @@ type PeriodFilter = 7 | 30 | 90 | 365;
 
 type MetricType = 'sessionLoad' | 'readiness' | 'pain' | 'sessionFit';
 
-// Help content for metric cards
+// Help content for metric cards - simplified Czech labels
 const METRIC_HELP = {
   sessionLoad: {
-    title: 'sRPE (session Rating of Perceived Exertion)',
-    description: 'Subjektivní vnímání náročnosti tréninku. Vyšší hodnota = těžší trénink. Sleduje trend zátěže v čase.',
-    calculation: 'sRPE = RPE hodnocení × doba tréninku (min). Zobrazeno v AU (Arbitrary Units). Graf ukazuje průměr za zvolené období.',
+    title: 'Náročnost tréninku',
+    description: 'Jak těžký byl trénink podle klienta. Vyšší hodnota = náročnější trénink.',
+    calculation: 'Kombinace RPE hodnocení a délky tréninku. Zobrazeno v AU (jednotky zátěže).',
   },
   readiness: {
     title: 'Připravenost',
-    description: 'Jak se klient cítil připravený na trénink. Sleduje fyzickou a mentální připravenost před tréninkem.',
-    calculation: 'Škála 1-10 z feedbacku. Nižší hodnota = horší připravenost. Šipka ukazuje trend vs. předchozí období.',
+    description: 'Jak se klient cítil připravený na trénink před jeho začátkem.',
+    calculation: 'Škála 1-10. Vyšší hodnota = lepší připravenost.',
   },
   pain: {
     title: 'Bolest',
-    description: 'Průměrná úroveň bolesti reportovaná klientem. Nižší hodnota je lepší.',
-    calculation: 'Škála 1-10 z feedbacku. Pozor: u bolesti je pokles (↓) pozitivní signál. Červená barva = vyšší bolest.',
+    description: 'Průměrná úroveň bolesti po tréninku. Nižší hodnota je lepší.',
+    calculation: 'Škála 1-10. Pozor: u bolesti je pokles (↓) pozitivní signál.',
   },
   sessionFit: {
-    title: 'Session Fit',
+    title: 'Jak mu to sedí',
     description: 'Jak dobře trénink odpovídal tomu, co klient očekával nebo potřeboval.',
-    calculation: 'Škála 1-10 z feedbacku. Vyšší hodnota = lepší shoda tréninku s očekáváním klienta.',
+    calculation: 'Škála 1-10. Vyšší hodnota = lepší shoda s očekáváním.',
   },
 };
 
@@ -87,7 +91,7 @@ const getMetricConfig = (type: MetricType) => {
   const configs = {
     sessionLoad: {
       key: 'sessionLoad',
-      label: 'sRPE',
+      label: 'Náročnost',
       color: 'hsl(var(--primary))',
       icon: <Zap className="w-4 h-4" />,
       getValue: (f: TrainingFeedback) => calculateSessionLoad(f.rpe_rating, 60),
@@ -110,7 +114,7 @@ const getMetricConfig = (type: MetricType) => {
     },
     sessionFit: {
       key: 'sessionFit',
-      label: 'Session Fit',
+      label: 'Jak mu to sedí',
       color: 'hsl(var(--primary))',
       icon: <Target className="w-4 h-4" />,
       getValue: (f: TrainingFeedback) => (f as any).session_fit ?? f.fun,
@@ -197,6 +201,7 @@ export function ClientFeedbackRecovery({
 }: ClientFeedbackRecoveryProps) {
   const [period, setPeriod] = useState<PeriodFilter>(initialDays as PeriodFilter);
   const [selectedMetric, setSelectedMetric] = useState<MetricType | null>(null);
+  const [showCharts, setShowCharts] = useState(false);
   const { data: allFeedback, isLoading } = useClientFeedback(clientId);
 
   const analytics = useMemo(() => {
@@ -360,241 +365,232 @@ export function ClientFeedbackRecovery({
         ))}
       </div>
 
-      {/* Mini Charts Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* sRPE Trend */}
-        <Card 
-          className="glass cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
-          onClick={() => setSelectedMetric('sessionLoad')}
-        >
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Zap className="w-3 h-3" />
-                sRPE
-                <StatInfoTooltip
-                  title={METRIC_HELP.sessionLoad.title}
-                  description={METRIC_HELP.sessionLoad.description}
-                  calculation={METRIC_HELP.sessionLoad.calculation}
-                />
-              </span>
-              <TrendIndicator 
-                current={analytics.metrics.sessionLoad.current}
-                previous={analytics.metrics.sessionLoad.previous}
-              />
-            </div>
-            <div className="text-lg font-bold">
-              {formatMetric(analytics.metrics.sessionLoad.current, { decimals: 0, suffix: ' AU' })}
-            </div>
-            <MiniSparkline 
-              data={analytics.timeSeriesData.map(d => ({ date: d.date, value: d.sessionLoad }))}
-              dataKey="sessionLoad"
-              color="primary"
-            />
-          </CardContent>
-        </Card>
+      {/* Simplified Coaching Profile - Main View */}
+      <SimplifiedCoachingProfile
+        metrics={{
+          sessionFit: analytics.metrics.sessionFit.current,
+          pain: analytics.metrics.pain.current,
+          readiness: analytics.metrics.readiness.current,
+          rpe: analytics.metrics.sessionLoad.current ? analytics.metrics.sessionLoad.current / 60 : null, // Convert back to RPE scale
+        }}
+        limitingFactor={analytics.profile.topLimitingFactor}
+        enjoymentAvg={analytics.profile.enjoymentAvg}
+        totalFeedback={analytics.profile.totalFeedback}
+        feedbackData={{
+          rpe_rating: analytics.metrics.sessionLoad.current ? analytics.metrics.sessionLoad.current / 60 : null,
+          session_fit: analytics.metrics.sessionFit.current,
+          pain: analytics.metrics.pain.current,
+          readiness_level: analytics.metrics.readiness.current,
+        }}
+        onShowDetails={() => setShowCharts(!showCharts)}
+      />
 
-        {/* Readiness Trend */}
-        <Card 
-          className="glass cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
-          onClick={() => setSelectedMetric('readiness')}
-        >
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Activity className="w-3 h-3" />
-                Připravenost
-                <StatInfoTooltip
-                  title={METRIC_HELP.readiness.title}
-                  description={METRIC_HELP.readiness.description}
-                  calculation={METRIC_HELP.readiness.calculation}
-                />
-              </span>
-              <TrendIndicator 
-                current={analytics.metrics.readiness.current}
-                previous={analytics.metrics.readiness.previous}
-              />
-            </div>
-            <div className="text-lg font-bold">
-              {formatMetric(analytics.metrics.readiness.current, { suffix: '/10' })}
-            </div>
-            <MiniSparkline 
-              data={analytics.timeSeriesData.map(d => ({ date: d.date, value: d.readiness }))}
-              dataKey="readiness"
-              color="success"
-            />
-          </CardContent>
-        </Card>
-
-        {/* Pain Incidence */}
-        <Card 
-          className="glass cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
-          onClick={() => setSelectedMetric('pain')}
-        >
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Heart className="w-3 h-3" />
-                Bolest
-                <StatInfoTooltip
-                  title={METRIC_HELP.pain.title}
-                  description={METRIC_HELP.pain.description}
-                  calculation={METRIC_HELP.pain.calculation}
-                />
-              </span>
-              <TrendIndicator 
-                current={analytics.metrics.pain.current}
-                previous={analytics.metrics.pain.previous}
-                inverted
-              />
-            </div>
-            <div className="text-lg font-bold">
-              {formatMetric(analytics.metrics.pain.current, { suffix: '/10' })}
-            </div>
-            <MiniSparkline 
-              data={analytics.timeSeriesData.map(d => ({ date: d.date, value: d.pain }))}
-              dataKey="pain"
-              color="destructive"
-              inverted
-            />
-          </CardContent>
-        </Card>
-
-        {/* Session Fit Trend */}
-        <Card 
-          className="glass cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
-          onClick={() => setSelectedMetric('sessionFit')}
-        >
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Target className="w-3 h-3" />
-                Session Fit
-                <StatInfoTooltip
-                  title={METRIC_HELP.sessionFit.title}
-                  description={METRIC_HELP.sessionFit.description}
-                  calculation={METRIC_HELP.sessionFit.calculation}
-                />
-              </span>
-              <TrendIndicator 
-                current={analytics.metrics.sessionFit.current}
-                previous={analytics.metrics.sessionFit.previous}
-              />
-            </div>
-            <div className="text-lg font-bold">
-              {formatMetric(analytics.metrics.sessionFit.current, { suffix: '/10' })}
-            </div>
-            <MiniSparkline 
-              data={analytics.timeSeriesData.map(d => ({ date: d.date, value: d.sessionFit }))}
-              dataKey="sessionFit"
-              color="primary"
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Risk Signals */}
-      <Card className="glass">
-        <CardContent className="p-4">
-          <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-500" />
-            Rizikové signály
-            <StatInfoTooltip
-              title="Rizikové signály"
-              description="Automatická detekce varovných signálů z feedbacků klienta. Pomáhá identifikovat problémy dříve, než eskalují."
-              calculation="Red Flag = závažný jednorázový problém (vysoká bolest, nízká energie). Pattern = opakující se trend (např. klesající připravenost 3× za sebou). Top bolest = nejčastěji reportované bolestivé oblasti."
-            />
-          </h4>
-          
-          <div className="space-y-2">
-            {analytics.riskSignals.lastRedFlag && (
-              <div className="flex items-start gap-2 text-sm">
-                <Badge variant="destructive" className="shrink-0">Red Flag</Badge>
-                <span>{analytics.riskSignals.lastRedFlag.message}</span>
-                {analytics.riskSignals.lastRedFlag.date && (
-                  <span className="text-muted-foreground">
-                    ({format(new Date(analytics.riskSignals.lastRedFlag.date), 'd.M.yyyy', { locale: cs })})
+      {/* Detailed Charts - Collapsible */}
+      <Collapsible open={showCharts} onOpenChange={setShowCharts}>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" size="sm" className="w-full gap-2">
+            <BarChart3 className="w-4 h-4" />
+            {showCharts ? 'Skrýt podrobné grafy' : 'Zobrazit podrobné grafy'}
+            {showCharts ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </Button>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent className="mt-4 space-y-4">
+          {/* Mini Charts Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Náročnost Trend */}
+            <Card 
+              className="glass cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+              onClick={() => setSelectedMetric('sessionLoad')}
+            >
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Zap className="w-3 h-3" />
+                    Náročnost
+                    <StatInfoTooltip
+                      title={METRIC_HELP.sessionLoad.title}
+                      description={METRIC_HELP.sessionLoad.description}
+                      calculation={METRIC_HELP.sessionLoad.calculation}
+                    />
                   </span>
+                  <TrendIndicator 
+                    current={analytics.metrics.sessionLoad.current}
+                    previous={analytics.metrics.sessionLoad.previous}
+                  />
+                </div>
+                <div className="text-lg font-bold">
+                  {formatMetric(analytics.metrics.sessionLoad.current, { decimals: 0, suffix: ' AU' })}
+                </div>
+                <MiniSparkline 
+                  data={analytics.timeSeriesData.map(d => ({ date: d.date, value: d.sessionLoad }))}
+                  dataKey="sessionLoad"
+                  color="primary"
+                />
+              </CardContent>
+            </Card>
+
+            {/* Readiness Trend */}
+            <Card 
+              className="glass cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+              onClick={() => setSelectedMetric('readiness')}
+            >
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Activity className="w-3 h-3" />
+                    Připravenost
+                    <StatInfoTooltip
+                      title={METRIC_HELP.readiness.title}
+                      description={METRIC_HELP.readiness.description}
+                      calculation={METRIC_HELP.readiness.calculation}
+                    />
+                  </span>
+                  <TrendIndicator 
+                    current={analytics.metrics.readiness.current}
+                    previous={analytics.metrics.readiness.previous}
+                  />
+                </div>
+                <div className="text-lg font-bold">
+                  {formatMetric(analytics.metrics.readiness.current, { suffix: '/10' })}
+                </div>
+                <MiniSparkline 
+                  data={analytics.timeSeriesData.map(d => ({ date: d.date, value: d.readiness }))}
+                  dataKey="readiness"
+                  color="success"
+                />
+              </CardContent>
+            </Card>
+
+            {/* Pain Incidence */}
+            <Card 
+              className="glass cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+              onClick={() => setSelectedMetric('pain')}
+            >
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Heart className="w-3 h-3" />
+                    Bolest
+                    <StatInfoTooltip
+                      title={METRIC_HELP.pain.title}
+                      description={METRIC_HELP.pain.description}
+                      calculation={METRIC_HELP.pain.calculation}
+                    />
+                  </span>
+                  <TrendIndicator 
+                    current={analytics.metrics.pain.current}
+                    previous={analytics.metrics.pain.previous}
+                    inverted
+                  />
+                </div>
+                <div className="text-lg font-bold">
+                  {formatMetric(analytics.metrics.pain.current, { suffix: '/10' })}
+                </div>
+                <MiniSparkline 
+                  data={analytics.timeSeriesData.map(d => ({ date: d.date, value: d.pain }))}
+                  dataKey="pain"
+                  color="destructive"
+                  inverted
+                />
+              </CardContent>
+            </Card>
+
+            {/* Session Fit Trend */}
+            <Card 
+              className="glass cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+              onClick={() => setSelectedMetric('sessionFit')}
+            >
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Target className="w-3 h-3" />
+                    Jak mu to sedí
+                    <StatInfoTooltip
+                      title={METRIC_HELP.sessionFit.title}
+                      description={METRIC_HELP.sessionFit.description}
+                      calculation={METRIC_HELP.sessionFit.calculation}
+                    />
+                  </span>
+                  <TrendIndicator 
+                    current={analytics.metrics.sessionFit.current}
+                    previous={analytics.metrics.sessionFit.previous}
+                  />
+                </div>
+                <div className="text-lg font-bold">
+                  {formatMetric(analytics.metrics.sessionFit.current, { suffix: '/10' })}
+                </div>
+                <MiniSparkline 
+                  data={analytics.timeSeriesData.map(d => ({ date: d.date, value: d.sessionFit }))}
+                  dataKey="sessionFit"
+                  color="primary"
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Risk Signals */}
+          <Card className="glass">
+            <CardContent className="p-4">
+              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                Rizikové signály
+                <StatInfoTooltip
+                  title="Rizikové signály"
+                  description="Automatická detekce varovných signálů z feedbacků klienta."
+                  calculation="Red Flag = závažný jednorázový problém. Pattern = opakující se trend. Top bolest = nejčastěji reportované bolestivé oblasti."
+                />
+              </h4>
+              
+              <div className="space-y-2">
+                {analytics.riskSignals.lastRedFlag && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <Badge variant="destructive" className="shrink-0">Pozor</Badge>
+                    <span>{analytics.riskSignals.lastRedFlag.message}</span>
+                    {analytics.riskSignals.lastRedFlag.date && (
+                      <span className="text-muted-foreground">
+                        ({format(new Date(analytics.riskSignals.lastRedFlag.date), 'd.M.yyyy', { locale: cs })})
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {analytics.riskSignals.topPain.length > 0 && (
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
+                    <span className="text-muted-foreground">Nejčastější bolest:</span>
+                    {analytics.riskSignals.topPain.map(p => (
+                      <Badge key={p.area} variant="secondary">
+                        {p.area} ({p.count}×)
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {analytics.riskSignals.patterns.length > 0 && (
+                  <div className="space-y-1">
+                    {analytics.riskSignals.patterns.map((pattern, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <Badge variant="outline" className="text-amber-500 border-amber-500/50">
+                          Trend
+                        </Badge>
+                        <span>{pattern.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!analytics.riskSignals.lastRedFlag && 
+                 analytics.riskSignals.topPain.length === 0 && 
+                 analytics.riskSignals.patterns.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    ✅ Žádné rizikové signály v tomto období
+                  </p>
                 )}
               </div>
-            )}
-
-            {analytics.riskSignals.topPain.length > 0 && (
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">Top bolest:</span>
-                {analytics.riskSignals.topPain.map(p => (
-                  <Badge key={p.area} variant="secondary">
-                    {p.area} ({p.count}×)
-                  </Badge>
-                ))}
-              </div>
-            )}
-
-            {analytics.riskSignals.patterns.length > 0 && (
-              <div className="space-y-1">
-                {analytics.riskSignals.patterns.map((pattern, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <Badge variant="outline" className="text-amber-500 border-amber-500/50">
-                      Pattern
-                    </Badge>
-                    <span>{pattern.message}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {!analytics.riskSignals.lastRedFlag && 
-             analytics.riskSignals.topPain.length === 0 && 
-             analytics.riskSignals.patterns.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                Žádné rizikové signály v tomto období
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Coaching Profile */}
-      <Card className="glass">
-        <CardContent className="p-4">
-          <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-            <Target className="w-4 h-4 text-primary" />
-            Koučovací profil
-            <StatInfoTooltip
-              title="Koučovací profil"
-              description="Souhrnný přehled o tom, jak klient vnímá tréninky. Pomáhá přizpůsobit styl koučování."
-              calculation="Nejčastější limit = co klienta nejčastěji brzdí (čas, energie, motivace...). Enjoyment = průměrné hodnocení, jak moc se klientovi tréninky líbí."
-            />
-          </h4>
-          
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground mb-1">Nejčastější limit</p>
-              {analytics.profile.topLimitingFactor ? (
-                <Badge variant="secondary">
-                  {LIMITING_FACTOR_LABELS[analytics.profile.topLimitingFactor.factor] || 
-                   analytics.profile.topLimitingFactor.factor}
-                  {' '}({analytics.profile.topLimitingFactor.count}×)
-                </Badge>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-            </div>
-            
-            <div>
-              <p className="text-muted-foreground mb-1">Průměr enjoyment</p>
-              <span className="font-medium">
-                {formatMetric(analytics.profile.enjoymentAvg, { suffix: '/10' })}
-              </span>
-            </div>
-            
-            <div>
-              <p className="text-muted-foreground mb-1">Feedbacků celkem</p>
-              <span className="font-medium">{analytics.profile.totalFeedback}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Detail Dialog */}
       {selectedMetric && allFeedback && (
