@@ -28,8 +28,10 @@ const TYPE_PRIORITY: Record<string, NotificationPriority> = {
   feedback_trend_alert: 'important',
   nutrition_inactive: 'important',
   
-  // Info (blue) - default
+  // Info (blue) - lower priority alerts
+  no_training_scheduled: 'info', // Demoted from default to explicitly info
   birthday: 'info',
+  birthdays_this_month: 'info',
   client_anniversary: 'info',
   pr_achieved: 'info',
   pr_created: 'info',

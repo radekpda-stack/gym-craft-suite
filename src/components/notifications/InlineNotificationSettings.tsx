@@ -16,6 +16,7 @@ interface SettingItem {
 const QUICK_SETTINGS: SettingItem[] = [
   { key: 'chatNotifications', label: 'Zprávy', icon: '💬' },
   { key: 'lowCreditAlerts', label: 'Finance & balíčky', icon: '💰' },
+  { key: 'noTrainingAlerts', label: 'Chybějící tréninky', icon: '📅' },
   { key: 'prAlerts', label: 'Osobní rekordy', icon: '🏆' },
   { key: 'birthdayAlerts', label: 'Narozeniny & výročí', icon: '🎂' },
   { key: 'feedbackAlerts', label: 'Zpětná vazba', icon: '📝' },

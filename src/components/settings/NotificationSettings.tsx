@@ -27,6 +27,7 @@ export interface NotificationPreferences {
   // Trainings
   trainingReminders: boolean;
   incompleteTrainingAlerts: boolean;
+  noTrainingAlerts: boolean; // Smart Alert: clients without scheduled training
   
   // Personal Records (PR)
   prAlerts: boolean;
@@ -41,6 +42,9 @@ export interface NotificationPreferences {
   anniversaryAlerts: boolean;
   inactivityAlerts: boolean;
   
+  // Nutrition
+  nutritionAlerts: boolean;
+  
   // Chat
   chatNotifications: boolean;
 }
@@ -51,6 +55,7 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   packageAlerts: true,
   trainingReminders: true,
   incompleteTrainingAlerts: true,
+  noTrainingAlerts: true,
   prAlerts: true,
   feedbackAlerts: true,
   feedbackRedFlags: true,
@@ -58,6 +63,7 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   milestoneAlerts: true,
   anniversaryAlerts: false,
   inactivityAlerts: true,
+  nutritionAlerts: true,
   chatNotifications: true,
 };
 
@@ -148,6 +154,11 @@ export function NotificationSettings() {
           key: "incompleteTrainingAlerts",
           label: language === 'cs' ? "Nedokončené tréninky" : "Incomplete trainings",
           description: language === 'cs' ? "Upozornění na tréninky, které nebyly dokončeny" : "Alerts for trainings not completed",
+        },
+        {
+          key: "noTrainingAlerts",
+          label: language === 'cs' ? "Chybějící tréninky tento týden" : "Missing trainings this week",
+          description: language === 'cs' ? "Upozornění na klienty bez naplánovaného tréninku" : "Alerts for clients without scheduled training",
         },
       ],
     },

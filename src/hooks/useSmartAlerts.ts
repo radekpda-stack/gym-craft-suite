@@ -2,23 +2,35 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { differenceInDays, startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { useAuth } from './useAuth';
+import { useAppSettings } from './useAppSettings';
 
 // LocalStorage key for dismissed smart alerts (must match NotificationCenter)
 const DISMISSED_SMART_ALERTS_KEY = 'dismissed-smart-alerts';
+
+// Dismissal expiry: 7 days instead of 24 hours
+const DISMISSAL_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 function getDismissedSmartAlerts(): Set<string> {
   try {
     const stored = localStorage.getItem(DISMISSED_SMART_ALERTS_KEY);
     if (!stored) return new Set();
     const data = JSON.parse(stored);
-    // Filter out old dismissals (older than 24 hours)
+    // Filter out old dismissals (older than 7 days)
     const now = Date.now();
-    const valid = Object.entries(data).filter(([_, ts]) => now - (ts as number) < 24 * 60 * 60 * 1000);
+    const valid = Object.entries(data).filter(([_, ts]) => now - (ts as number) < DISMISSAL_EXPIRY_MS);
     return new Set(valid.map(([id]) => id));
   } catch {
     return new Set();
   }
 }
+
+// Map Smart Alert types to notification preference keys
+const ALERT_TYPE_TO_PREFERENCE: Record<string, string> = {
+  'no_training_scheduled': 'noTrainingAlerts',
+  'low_credit': 'lowCreditAlerts',
+  'birthdays_this_month': 'birthdayAlerts',
+  'inactive_nutrition': 'nutritionAlerts',
+};
 
 export interface SmartAlert {
   id: string;
@@ -279,11 +291,21 @@ async function getRecentBadges(userId: string): Promise<SmartAlert[]> {
 
 export function useSmartAlerts() {
   const { user } = useAuth();
+  const { data: appSettings } = useAppSettings();
+
+  // Get notification preferences from app settings
+  const notificationPrefs = appSettings?.notification_preferences as Record<string, boolean> | undefined;
 
   return useQuery({
-    queryKey: ['smart-alerts', user?.id],
+    queryKey: ['smart-alerts', user?.id, notificationPrefs],
     queryFn: async () => {
       if (!user?.id) return [];
+
+      // Conditionally fetch alerts based on user preferences
+      const shouldFetchNoTraining = notificationPrefs?.noTrainingAlerts !== false;
+      const shouldFetchLowCredit = notificationPrefs?.lowCreditAlerts !== false;
+      const shouldFetchBirthdays = notificationPrefs?.birthdayAlerts !== false;
+      const shouldFetchNutrition = notificationPrefs?.nutritionAlerts !== false;
 
       const [
         noTraining,
@@ -293,11 +315,11 @@ export function useSmartAlerts() {
         inactiveNutrition,
         recentBadges,
       ] = await Promise.all([
-        getClientsWithoutTraining(user.id),
-        getClientsWithLowCredit(user.id),
-        getBirthdaysThisMonth(user.id),
+        shouldFetchNoTraining ? getClientsWithoutTraining(user.id) : Promise.resolve([]),
+        shouldFetchLowCredit ? getClientsWithLowCredit(user.id) : Promise.resolve([]),
+        shouldFetchBirthdays ? getBirthdaysThisMonth(user.id) : Promise.resolve(null),
         getProfitTrend(user.id),
-        getInactiveNutritionClients(user.id),
+        shouldFetchNutrition ? getInactiveNutritionClients(user.id) : Promise.resolve(null),
         getRecentBadges(user.id),
       ]);
 
