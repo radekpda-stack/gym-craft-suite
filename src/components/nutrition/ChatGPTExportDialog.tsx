@@ -123,12 +123,15 @@ export function ChatGPTExportDialog({
         lines.push('NÁPOJE:');
         dayEntries.drinks.forEach(d => {
           const time = getEntryTime(d);
-          const drinkType = drinkTypeLabels[d.drink_type] || d.drink_type;
+          const drinkLabel = d.drink_name 
+            ? d.drink_name 
+            : d.drink_type === 'other' 
+              ? 'Jiný nápoj (nespecifikováno)' 
+              : drinkTypeLabels[d.drink_type] || d.drink_type;
           const amount = d.amount_ml ? `${d.amount_ml}ml` : '';
           
-          let line = `• ${time} - ${drinkType}`;
+          let line = `• ${time} - ${drinkLabel}`;
           if (amount) line += ` ${amount}`;
-          if (d.drink_name) line += ` (${d.drink_name})`;
           lines.push(line);
         });
         lines.push('');
@@ -139,11 +142,15 @@ export function ChatGPTExportDialog({
         lines.push('KOFEIN:');
         dayEntries.coffee.forEach(c => {
           const time = getEntryTime(c);
-          const coffeeType = coffeeTypeLabels[c.coffee_type] || c.coffee_type;
+          const coffeeLabel = c.coffee_name 
+            ? c.coffee_name 
+            : c.coffee_type === 'other' 
+              ? 'Jiný nápoj (nespecifikováno)' 
+              : coffeeTypeLabels[c.coffee_type] || c.coffee_type;
           const count = c.count > 1 ? `(${c.count}×)` : '(1×)';
           const decaf = c.is_caffeinated === false ? ' [bez kofeinu]' : '';
           
-          lines.push(`• ${time} - ${coffeeType} ${count}${decaf}`);
+          lines.push(`• ${time} - ${coffeeLabel} ${count}${decaf}`);
         });
         lines.push('');
       }

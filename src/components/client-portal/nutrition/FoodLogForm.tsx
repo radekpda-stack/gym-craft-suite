@@ -89,6 +89,7 @@ export function FoodLogForm({
   const [isCaffeinated, setIsCaffeinated] = useState(true);
   const [coffeeAmountMl, setCoffeeAmountMl] = useState<number | null>(null);
   const [showCoffeeAmount, setShowCoffeeAmount] = useState(false);
+  const [coffeeName, setCoffeeName] = useState<string>('');
 
   const COFFEE_AMOUNTS = [30, 60, 120, 200, 330];
 
@@ -187,6 +188,12 @@ export function FoodLogForm({
   };
 
   const handleSubmitDrink = async () => {
+    // Validate: if "other" is selected, drink name is required
+    if (drinkType === 'other' && !drinkName.trim()) {
+      toast.error('Zadej konkrétní název nápoje');
+      return;
+    }
+    
     const finalAmount = showCustomAmount ? parseInt(customAmount) || 300 : drinkAmount;
     
     try {
@@ -214,6 +221,12 @@ export function FoodLogForm({
   };
 
   const handleSubmitCoffee = async () => {
+    // Validate: if "other" is selected, coffee name is required
+    if (coffeeType === 'other' && !coffeeName.trim()) {
+      toast.error('Zadej konkrétní název nápoje');
+      return;
+    }
+    
     try {
       await addCoffee.mutateAsync({
         sessionId,
@@ -224,6 +237,7 @@ export function FoodLogForm({
           count: coffeeCount,
           is_caffeinated: isCaffeinated,
           coffee_amount_ml: coffeeAmountMl || undefined,
+          coffee_name: coffeeType === 'other' && coffeeName.trim() ? coffeeName.trim() : undefined,
           entry_time: entryTime,
         },
       });
@@ -232,6 +246,7 @@ export function FoodLogForm({
       const dateStr = format(entryDate, 'yyyy-MM-dd');
       nutritionXP.mutate({ clientId, date: dateStr, entryType: 'coffee' });
       
+      setCoffeeName('');
       onClose?.();
     } catch (error) {
       toast.error('Nepodařilo se uložit');
@@ -583,7 +598,10 @@ export function FoodLogForm({
           {COFFEE_TYPES.map((type) => (
             <button
               key={type.id}
-              onClick={() => setCoffeeType(type.id)}
+              onClick={() => {
+                setCoffeeType(type.id);
+                if (type.id !== 'other') setCoffeeName('');
+              }}
               className={cn(
                 "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
                 coffeeType === type.id 
@@ -597,6 +615,20 @@ export function FoodLogForm({
           ))}
         </div>
       </div>
+
+      {/* Coffee Name (for "other" type) - required */}
+      {coffeeType === 'other' && (
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Jaký nápoj? *</Label>
+          <Input
+            value={coffeeName}
+            onChange={(e) => setCoffeeName(e.target.value)}
+            placeholder="např. Matcha, Kakao, Horká čokoláda..."
+            maxLength={50}
+            required
+          />
+        </div>
+      )}
 
       {/* Caffeinated Toggle */}
       <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">

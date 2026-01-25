@@ -5872,6 +5872,7 @@ export type Database = {
           client_reply: string | null
           client_request_id: string | null
           coffee_amount_ml: number | null
+          coffee_name: string | null
           coffee_type: string
           count: number
           created_at: string
@@ -5898,6 +5899,7 @@ export type Database = {
           client_reply?: string | null
           client_request_id?: string | null
           coffee_amount_ml?: number | null
+          coffee_name?: string | null
           coffee_type: string
           count?: number
           created_at?: string
@@ -5924,6 +5926,7 @@ export type Database = {
           client_reply?: string | null
           client_request_id?: string | null
           coffee_amount_ml?: number | null
+          coffee_name?: string | null
           coffee_type?: string
           count?: number
           created_at?: string
