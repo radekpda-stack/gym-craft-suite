@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Bell, Check, Trash2, CreditCard, Cake, Trophy, Dumbbell, TrendingDown, AlertTriangle, Clock, Gift, MessageSquare, User, ChevronDown, ChevronRight, Settings, Medal, Target, Stethoscope, Utensils, Scale } from "lucide-react";
+import { Bell, Check, AlertCircle, AlertTriangle, Info, MessageSquare, ChevronDown, ChevronRight, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -10,15 +10,15 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  useNotifications,
-  useUnreadNotificationsCount,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
   useDeleteNotification,
 } from "@/hooks/useNotifications";
 import { useTrainerConversations, useMarkMessagesAsRead, useMarkAllMessagesAsRead } from "@/hooks/useChatMessages";
+import { useAggregatedNotifications } from "@/hooks/useAggregatedNotifications";
 import { formatDistanceToNow, isToday, isYesterday, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -26,112 +26,38 @@ import { useNavigate } from "react-router-dom";
 import { FeedbackDetailDialog } from "@/components/feedback/FeedbackDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { TrainingFeedback } from "@/hooks/useTrainingFeedback";
-import { NotificationSettingsDialog } from "./NotificationSettingsDialog";
+import { NotificationEmptyState } from "./NotificationEmptyState";
+import { UnifiedNotificationItem, type UnifiedNotification } from "./UnifiedNotificationItem";
+import { InlineNotificationSettings } from "./InlineNotificationSettings";
+import { motion, AnimatePresence } from "framer-motion";
 
-const notificationIcons: Record<string, typeof Bell> = {
-  low_credit: CreditCard,
-  negative_credit: CreditCard,
-  birthday: Cake,
-  milestone_100: Trophy,
-  milestone_500: Trophy,
-  milestone_1000: Trophy,
-  incomplete_training: Dumbbell,
-  feedback_received: MessageSquare,
-  feedback_red_flag: AlertTriangle,
-  feedback_trend_alert: TrendingDown,
-  feedback_pending: MessageSquare,
-  client_anniversary: Gift,
-  pr_achieved: Medal,
-  pr_created: Medal,
-  pr_updated: Target,
-  package_low: CreditCard,
-  package_expiring: Clock,
-  inactivity_warning: AlertTriangle,
-  training_streak: Trophy,
-  diagnostic_completed: Stethoscope,
-  pre_diagnostic_completed: Stethoscope,
-  nutrition_entry_added: Utensils,
-  nutrition_inactive: AlertTriangle,
-  client_weight_added: Scale,
-  client_workout_logged: Dumbbell,
-};
-
-const notificationColors: Record<string, string> = {
-  low_credit: "text-warning",
-  negative_credit: "text-destructive",
-  birthday: "text-primary",
-  milestone_100: "text-success",
-  milestone_500: "text-success",
-  milestone_1000: "text-success",
-  incomplete_training: "text-warning",
-  feedback_received: "text-green-500",
-  feedback_red_flag: "text-destructive",
-  feedback_trend_alert: "text-orange-500",
-  feedback_pending: "text-blue-500",
-  client_anniversary: "text-amber-500",
-  pr_achieved: "text-yellow-500",
-  pr_created: "text-yellow-500",
-  pr_updated: "text-orange-500",
-  package_low: "text-warning",
-  package_expiring: "text-orange-500",
-  inactivity_warning: "text-destructive",
-  training_streak: "text-success",
-  pre_diagnostic_completed: "text-success",
-  nutrition_entry_added: "text-success",
-  nutrition_inactive: "text-warning",
-  client_weight_added: "text-success",
-  client_workout_logged: "text-primary",
-};
-
-// Category definitions for grouping
-const NOTIFICATION_CATEGORIES = {
-  messages: {
-    label: "Zprávy",
-    icon: MessageSquare,
-    color: "text-primary",
-    types: [] as string[], // Handled separately
+// Priority section config
+const PRIORITY_SECTIONS = {
+  urgent: {
+    label: "Vyžaduje akci",
+    icon: AlertCircle,
+    color: "text-destructive",
+    bgColor: "bg-destructive/10",
   },
-  pr: {
-    label: "Osobní rekordy (PR)",
-    icon: Medal,
-    color: "text-yellow-500",
-    types: ["pr_created", "pr_updated", "pr_achieved"],
-  },
-  feedback: {
-    label: "Zpětná vazba",
-    icon: MessageSquare,
-    color: "text-green-500",
-    types: ["feedback_received", "feedback_red_flag", "feedback_trend_alert", "feedback_pending"],
-  },
-  achievements: {
-    label: "Úspěchy & Milníky",
-    icon: Trophy,
-    color: "text-success",
-    types: ["milestone_100", "milestone_500", "milestone_1000", "training_streak"],
-  },
-  clients: {
-    label: "Klienti",
-    icon: User,
-    color: "text-blue-500",
-    types: ["birthday", "client_anniversary", "inactivity_warning", "pre_diagnostic_completed", "diagnostic_completed", "nutrition_entry_added", "nutrition_inactive", "client_weight_added", "client_workout_logged"],
-  },
-  packages: {
-    label: "Balíčky & finance",
-    icon: CreditCard,
+  important: {
+    label: "Důležité",
+    icon: AlertTriangle,
     color: "text-warning",
-    types: ["low_credit", "negative_credit", "package_low", "package_expiring"],
+    bgColor: "bg-warning/10",
   },
-  trainings: {
-    label: "Tréninky",
-    icon: Dumbbell,
-    color: "text-orange-500",
-    types: ["incomplete_training"],
+  info: {
+    label: "Informativní",
+    icon: Info,
+    color: "text-primary",
+    bgColor: "bg-primary/10",
   },
 };
 
-function extractTrainingId(message: string): string | null {
-  const match = message.match(/ID: ([a-f0-9-]+)/);
-  return match ? match[1] : null;
+function getDateLabel(dateStr: string) {
+  const date = parseISO(dateStr);
+  if (isToday(date)) return "Dnes";
+  if (isYesterday(date)) return "Včera";
+  return formatDistanceToNow(date, { addSuffix: true, locale: cs });
 }
 
 interface NotificationCenterProps {
@@ -141,8 +67,6 @@ interface NotificationCenterProps {
 
 export function NotificationCenter({ onOpenChange, children }: NotificationCenterProps = {}) {
   const navigate = useNavigate();
-  const { data: notifications = [], isLoading } = useNotifications();
-  const { data: unreadCount = 0 } = useUnreadNotificationsCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const deleteNotification = useDeleteNotification();
@@ -151,6 +75,8 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const markMessagesRead = useMarkMessagesAsRead();
   const markAllMessagesRead = useMarkAllMessagesAsRead();
   const unreadConversations = conversations.filter(c => c.unreadCount > 0);
+  
+  const { urgent, important, info, all, unreadCount, isLoading } = useAggregatedNotifications();
   const totalUnread = unreadCount + unreadConversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
@@ -158,75 +84,58 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const [feedbackMeta, setFeedbackMeta] = useState<{ clientName?: string; trainingDate?: string }>({});
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["messages"]));
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["messages", "urgent", "important"]));
 
   const handleSheetOpenChange = (open: boolean) => {
     setSheetOpen(open);
     onOpenChange?.(open);
-  };
-
-  // Group notifications by category
-  const groupedNotifications = useMemo(() => {
-    const groups: Record<string, typeof notifications> = {};
-    
-    Object.keys(NOTIFICATION_CATEGORIES).forEach(key => {
-      if (key !== "messages") {
-        groups[key] = [];
-      }
-    });
-    groups.other = [];
-
-    notifications.forEach(notification => {
-      let placed = false;
-      for (const [key, category] of Object.entries(NOTIFICATION_CATEGORIES)) {
-        if (key !== "messages" && category.types.includes(notification.type)) {
-          groups[key].push(notification);
-          placed = true;
-          break;
-        }
-      }
-      if (!placed) {
-        groups.other.push(notification);
-      }
-    });
-
-    // Remove empty groups
-    Object.keys(groups).forEach(key => {
-      if (groups[key].length === 0) {
-        delete groups[key];
-      }
-    });
-
-    return groups;
-  }, [notifications]);
-
-  // Group notifications by date for display
-  const getDateLabel = (dateStr: string) => {
-    const date = parseISO(dateStr);
-    if (isToday(date)) return "Dnes";
-    if (isYesterday(date)) return "Včera";
-    return formatDistanceToNow(date, { addSuffix: true, locale: cs });
-  };
-
-  const toggleCategory = (category: string) => {
-    const newExpanded = new Set(expandedCategories);
-    if (newExpanded.has(category)) {
-      newExpanded.delete(category);
-    } else {
-      newExpanded.add(category);
+    if (!open) {
+      setSearchQuery("");
+      setSettingsExpanded(false);
     }
-    setExpandedCategories(newExpanded);
   };
 
-  // Handle chat notification click - navigate to client with chat open and mark as read
+  const toggleSection = (section: string) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(section)) {
+      newExpanded.delete(section);
+    } else {
+      newExpanded.add(section);
+    }
+    setExpandedSections(newExpanded);
+  };
+
+  // Filter notifications by search query
+  const filteredNotifications = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return { urgent, important, info };
+    }
+    
+    const query = searchQuery.toLowerCase();
+    const filter = (notifications: UnifiedNotification[]) =>
+      notifications.filter(
+        (n) =>
+          n.title.toLowerCase().includes(query) ||
+          n.message.toLowerCase().includes(query)
+      );
+
+    return {
+      urgent: filter(urgent),
+      important: filter(important),
+      info: filter(info),
+    };
+  }, [urgent, important, info, searchQuery]);
+
+  // Handle chat notification click
   const handleChatClick = (clientId: string, conversationId: string) => {
     markMessagesRead.mutate({ conversationId });
     setSheetOpen(false);
     navigate(`/clients/${clientId}?tab=chat`);
   };
 
-  // Mark all notifications AND messages as read
+  // Mark all as read
   const handleMarkAllAsRead = () => {
     if (unreadCount > 0) {
       markAllRead.mutate();
@@ -236,172 +145,135 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     }
   };
 
-  const handleFeedbackNotificationClick = async (notification: typeof notifications[0]) => {
+  // Handle notification click with feedback dialog support
+  const handleNotificationClick = async (notification: UnifiedNotification) => {
+    const isFeedbackNotification = ['feedback_received', 'feedback_red_flag', 'feedback_trend_alert'].includes(notification.type);
     const trainingId = notification.entity_type === 'training' ? notification.entity_id : null;
-    
-    console.log('[NotificationCenter] Feedback notification clicked:', { 
-      notificationId: notification.id, 
-      entityType: notification.entity_type, 
-      entityId: notification.entity_id,
-      trainingId 
-    });
-    
-    if (!trainingId) {
-      console.log('[NotificationCenter] No trainingId, navigating to feedback-overview');
-      setSheetOpen(false);
-      navigate('/feedback-overview');
-      return;
-    }
+    const clientId = notification.client_id || (notification.entity_type === 'client' ? notification.entity_id : null);
 
-    setLoadingFeedback(true);
+    if (isFeedbackNotification && trainingId) {
+      setLoadingFeedback(true);
+      try {
+        const { data: feedbacks } = await supabase
+          .from('training_feedback')
+          .select('*')
+          .eq('training_session_id', trainingId)
+          .order('created_at', { ascending: false })
+          .limit(1);
 
-    try {
-      // Get the latest feedback for this training (there may be multiple)
-      const { data: feedbacks, error: feedbackError } = await supabase
-        .from('training_feedback')
-        .select('*')
-        .eq('training_session_id', trainingId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      console.log('[NotificationCenter] Feedback query result:', { feedbacks, feedbackError });
-
-      if (feedbackError) throw feedbackError;
-
-      const feedback = feedbacks && feedbacks.length > 0 ? feedbacks[0] : null;
-
-      if (feedback) {
-        const { data: training } = await supabase
-          .from('training_sessions')
-          .select('date, client_id')
-          .eq('id', trainingId)
-          .maybeSingle();
-
-        let clientName = 'Neznámý klient';
-        if (training?.client_id) {
-          const { data: client } = await supabase
-            .from('clients')
-            .select('name')
-            .eq('id', training.client_id)
+        const feedback = feedbacks?.[0];
+        if (feedback) {
+          const { data: training } = await supabase
+            .from('training_sessions')
+            .select('date, client_id')
+            .eq('id', trainingId)
             .maybeSingle();
-          clientName = client?.name || clientName;
-        }
 
-        console.log('[NotificationCenter] Opening feedback dialog for:', { 
-          feedbackId: feedback.id, 
-          clientName, 
-          trainingDate: training?.date 
-        });
-        
-        setSelectedFeedback(feedback as TrainingFeedback);
-        setFeedbackMeta({ clientName, trainingDate: training?.date });
-        setFeedbackDialogOpen(true);
-        setSheetOpen(false);
-      } else {
-        console.log('[NotificationCenter] No feedback found, navigating to training page');
+          let clientName = 'Neznámý klient';
+          if (training?.client_id) {
+            const { data: client } = await supabase
+              .from('clients')
+              .select('name')
+              .eq('id', training.client_id)
+              .maybeSingle();
+            clientName = client?.name || clientName;
+          }
+
+          setSelectedFeedback(feedback as TrainingFeedback);
+          setFeedbackMeta({ clientName, trainingDate: training?.date });
+          setFeedbackDialogOpen(true);
+          setSheetOpen(false);
+        } else {
+          setSheetOpen(false);
+          navigate(`/trainings/${trainingId}`);
+        }
+      } catch (error) {
+        console.error('[NotificationCenter] Error loading feedback:', error);
         setSheetOpen(false);
         navigate(`/trainings/${trainingId}`);
+      } finally {
+        setLoadingFeedback(false);
       }
-    } catch (error) {
-      console.error('[NotificationCenter] Error loading feedback:', error);
+    } else if (trainingId) {
       setSheetOpen(false);
       navigate(`/trainings/${trainingId}`);
-    } finally {
-      setLoadingFeedback(false);
+    } else if (clientId) {
+      setSheetOpen(false);
+      navigate(`/clients/${clientId}`);
     }
 
-    if (!notification.is_read) {
+    if (!notification.is_read && !notification.id.startsWith('aggregated-')) {
       markRead.mutate(notification.id);
     }
   };
 
-  const renderNotificationItem = (notification: typeof notifications[0]) => {
-    const Icon = notificationIcons[notification.type] || Bell;
-    const colorClass = notificationColors[notification.type] || "text-foreground";
-    const isFeedbackNotification = ['feedback_received', 'feedback_red_flag', 'feedback_trend_alert'].includes(notification.type);
-    const isPreDiagnosticNotification = notification.type === 'pre_diagnostic_completed';
-    const trainingId = notification.type === 'incomplete_training' 
-      ? extractTrainingId(notification.message) 
-      : notification.entity_type === 'training' ? notification.entity_id : null;
-    const clientId = notification.client_id || 
-      (notification.entity_type === 'client' ? notification.entity_id : null);
+  const hasAnyNotifications = all.length > 0 || unreadConversations.length > 0;
 
-    // Determine link destination
-    let linkTo: string | null = null;
-    if (isFeedbackNotification) {
-      linkTo = null; // Handled specially
-    } else if (isPreDiagnosticNotification) {
-      // For pre-diagnostic notifications, link to client if available, otherwise to clients page
-      linkTo = clientId ? `/clients/${clientId}` : '/clients';
-    } else if (trainingId) {
-      linkTo = `/trainings/${trainingId}`;
-    } else if (clientId) {
-      linkTo = `/clients/${clientId}`;
-    }
+  const renderPrioritySection = (
+    priority: 'urgent' | 'important' | 'info',
+    notifications: UnifiedNotification[]
+  ) => {
+    if (notifications.length === 0) return null;
 
-    const displayMessage = notification.message.replace(/\s*ID:\s*[a-f0-9-]+/i, '');
-
-    const handleClick = () => {
-      if (isFeedbackNotification) {
-        handleFeedbackNotificationClick(notification);
-      } else if (linkTo) {
-        if (!notification.is_read) {
-          markRead.mutate(notification.id);
-        }
-        setSheetOpen(false);
-        navigate(linkTo);
-      }
-    };
+    const config = PRIORITY_SECTIONS[priority];
+    const Icon = config.icon;
+    const unreadInSection = notifications.filter(n => !n.is_read).length;
 
     return (
-      <div
-        key={notification.id}
-        onClick={linkTo || isFeedbackNotification ? handleClick : undefined}
-        className={cn(
-          "flex items-start gap-3 p-3 rounded-xl border transition-colors",
-          (linkTo || isFeedbackNotification) && "cursor-pointer hover:border-primary/40",
-          notification.is_read 
-            ? "bg-background border-border" 
-            : "bg-secondary/50 border-primary/20"
-        )}
+      <Collapsible
+        open={expandedSections.has(priority)}
+        onOpenChange={() => toggleSection(priority)}
       >
-        <div className={cn("mt-0.5 shrink-0", colorClass)}>
-          <Icon className="w-4 h-4" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm leading-tight">{notification.title}</p>
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{displayMessage}</p>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            {getDateLabel(notification.created_at)}
-          </p>
-        </div>
-        <div className="flex gap-0.5 shrink-0">
-          {!notification.is_read && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={(e) => {
-                e.stopPropagation();
-                markRead.mutate(notification.id);
-              }}
-            >
-              <Check className="w-3.5 h-3.5" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteNotification.mutate(notification.id);
-            }}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </Button>
-        </div>
-      </div>
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-muted/50 transition-colors">
+          <div className="flex items-center gap-2">
+            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", config.bgColor)}>
+              <Icon className={cn("w-4 h-4", config.color)} />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-medium">{config.label}</p>
+              <p className="text-xs text-muted-foreground">
+                {notifications.length} {notifications.length === 1 ? "položka" : "položek"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {unreadInSection > 0 && (
+              <Badge 
+                variant={priority === 'urgent' ? 'destructive' : 'secondary'} 
+                className="text-[10px]"
+              >
+                {unreadInSection} nové
+              </Badge>
+            )}
+            {expandedSections.has(priority) ? (
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            )}
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2 space-y-2">
+          <AnimatePresence mode="popLayout">
+            {notifications.map((notification) => (
+              <motion.div
+                key={notification.id}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -100 }}
+                layout
+              >
+                <UnifiedNotificationItem
+                  notification={notification}
+                  onMarkRead={(id) => markRead.mutate(id)}
+                  onDelete={(id) => deleteNotification.mutate(id)}
+                  onClick={() => handleNotificationClick(notification)}
+                  enableSwipe={true}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </CollapsibleContent>
+      </Collapsible>
     );
   };
 
@@ -423,17 +295,10 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
           )}
         </SheetTrigger>
         <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
-          <SheetHeader className="px-4 py-3 border-b flex flex-row items-center justify-between shrink-0">
+          {/* Header - fixed pr-12 to avoid overlap with close button */}
+          <SheetHeader className="px-4 py-3 border-b flex flex-row items-center justify-between shrink-0 pr-12">
             <SheetTitle className="text-lg">Notifikace</SheetTitle>
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setSettingsOpen(true)}
-              >
-                <Settings className="w-4 h-4" />
-              </Button>
               {totalUnread > 0 && (
                 <Button
                   variant="ghost"
@@ -449,126 +314,122 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
             </div>
           </SheetHeader>
 
+          {/* Search Bar */}
+          <div className="px-4 py-2 border-b">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Hledat v notifikacích..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-8 h-9 text-sm"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Content */}
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-3">
-              {/* Unread Messages Section */}
-              {unreadConversations.length > 0 && (
-                <Collapsible open={expandedCategories.has("messages")} onOpenChange={() => toggleCategory("messages")}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <MessageSquare className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-sm font-medium">Zprávy</p>
-                        <p className="text-xs text-muted-foreground">
-                          {unreadConversations.length} nepřečtených konverzací
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="destructive" className="text-[10px]">
-                        {unreadConversations.reduce((sum, c) => sum + c.unreadCount, 0)}
-                      </Badge>
-                      {expandedCategories.has("messages") ? (
-                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      )}
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2 space-y-2">
-                    {unreadConversations.map((conv) => (
-                      <div
-                        key={conv.conversationId}
-                        onClick={() => handleChatClick(conv.clientId, conv.conversationId)}
-                        className="flex items-start gap-3 p-3 rounded-xl border bg-secondary/50 border-primary/20 hover:border-primary/40 cursor-pointer transition-colors"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary shrink-0">
-                          {conv.clientName.charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-sm">{conv.clientName}</p>
-                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                              {conv.unreadCount}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                            {conv.lastMessage}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground mt-1">
-                            {getDateLabel(conv.lastMessageAt)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
-
-              {/* Grouped Notifications */}
-              {Object.entries(groupedNotifications).map(([categoryKey, categoryNotifications]) => {
-                const category = NOTIFICATION_CATEGORIES[categoryKey as keyof typeof NOTIFICATION_CATEGORIES];
-                const CategoryIcon = category?.icon || Bell;
-                const unreadInCategory = categoryNotifications.filter(n => !n.is_read).length;
-                const categoryLabel = category?.label || "Ostatní";
-                const categoryColor = category?.color || "text-muted-foreground";
-
-                return (
-                  <Collapsible 
-                    key={categoryKey} 
-                    open={expandedCategories.has(categoryKey)} 
-                    onOpenChange={() => toggleCategory(categoryKey)}
-                  >
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", 
-                          categoryColor.replace("text-", "bg-") + "/10"
-                        )}>
-                          <CategoryIcon className={cn("w-4 h-4", categoryColor)} />
-                        </div>
-                        <div className="text-left">
-                          <p className="text-sm font-medium">{categoryLabel}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {categoryNotifications.length} {categoryNotifications.length === 1 ? "notifikace" : "notifikací"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {unreadInCategory > 0 && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            {unreadInCategory} nové
-                          </Badge>
-                        )}
-                        {expandedCategories.has(categoryKey) ? (
-                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2 space-y-2">
-                      {categoryNotifications.map(renderNotificationItem)}
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
-
-              {/* Empty State */}
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                 </div>
-              ) : notifications.length === 0 && unreadConversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Bell className="w-12 h-12 mb-4 opacity-30" />
-                  <p className="font-medium">Žádné notifikace</p>
-                  <p className="text-sm">Vše je vyřízeno</p>
-                </div>
-              ) : null}
+              ) : !hasAnyNotifications ? (
+                <NotificationEmptyState onOpenSettings={() => setSettingsExpanded(true)} />
+              ) : (
+                <>
+                  {/* Unread Messages Section */}
+                  {unreadConversations.length > 0 && (
+                    <Collapsible 
+                      open={expandedSections.has("messages")} 
+                      onOpenChange={() => toggleSection("messages")}
+                    >
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <MessageSquare className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="text-left">
+                            <p className="text-sm font-medium">Zprávy</p>
+                            <p className="text-xs text-muted-foreground">
+                              {unreadConversations.length} nepřečtených konverzací
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="destructive" className="text-[10px]">
+                            {unreadConversations.reduce((sum, c) => sum + c.unreadCount, 0)}
+                          </Badge>
+                          {expandedSections.has("messages") ? (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2 space-y-2">
+                        {unreadConversations.map((conv) => (
+                          <div
+                            key={conv.conversationId}
+                            onClick={() => handleChatClick(conv.clientId, conv.conversationId)}
+                            className="flex items-start gap-3 p-3 rounded-xl border bg-primary/5 border-primary/20 hover:border-primary/40 cursor-pointer transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary shrink-0">
+                              {conv.clientName.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-sm truncate">{conv.clientName}</p>
+                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0 shrink-0">
+                                  {conv.unreadCount}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                                {conv.lastMessage}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-1">
+                                {getDateLabel(conv.lastMessageAt)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+
+                  {/* Priority Sections */}
+                  {renderPrioritySection('urgent', filteredNotifications.urgent)}
+                  {renderPrioritySection('important', filteredNotifications.important)}
+                  {renderPrioritySection('info', filteredNotifications.info)}
+
+                  {/* No results for search */}
+                  {searchQuery && 
+                   filteredNotifications.urgent.length === 0 && 
+                   filteredNotifications.important.length === 0 && 
+                   filteredNotifications.info.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Search className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">Žádné výsledky pro "{searchQuery}"</p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </ScrollArea>
+
+          {/* Inline Settings */}
+          <InlineNotificationSettings
+            isExpanded={settingsExpanded}
+            onToggle={() => setSettingsExpanded(!settingsExpanded)}
+          />
         </SheetContent>
       </Sheet>
 
@@ -584,11 +445,6 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
         }}
         clientName={feedbackMeta.clientName}
         trainingDate={feedbackMeta.trainingDate}
-      />
-
-      <NotificationSettingsDialog 
-        open={settingsOpen} 
-        onOpenChange={setSettingsOpen} 
       />
     </>
   );
