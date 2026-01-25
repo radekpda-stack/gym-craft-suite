@@ -8,10 +8,14 @@ import {
   getOfflineStats,
   cacheClients,
   cacheExercises,
+  cachePRs,
   getCachedClients,
   getCachedExercises,
+  getCachedPRs,
+  getCachedPRsByClient,
   type CachedClient,
   type CachedExercise,
+  type CachedPR,
 } from '@/lib/offline';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -22,6 +26,7 @@ interface OfflineSyncState {
   pendingCount: number;
   cachedClientsCount: number;
   cachedExercisesCount: number;
+  cachedPRsCount: number;
 }
 
 /**
@@ -36,6 +41,7 @@ export function useOfflineSync() {
     pendingCount: 0,
     cachedClientsCount: 0,
     cachedExercisesCount: 0,
+    cachedPRsCount: 0,
   });
   
   const syncSchedulerCleanup = useRef<(() => void) | null>(null);
@@ -52,6 +58,7 @@ export function useOfflineSync() {
           pendingCount: stats.pendingTrainings + stats.syncQueueItems,
           cachedClientsCount: stats.cachedClients,
           cachedExercisesCount: stats.cachedExercises,
+          cachedPRsCount: stats.cachedPRs,
         }));
       } catch (error) {
         console.error('Failed to check pending sync:', error);
@@ -78,6 +85,7 @@ export function useOfflineSync() {
         ...prev,
         hasPendingData: pending,
         pendingCount: stats.pendingTrainings + stats.syncQueueItems,
+        cachedPRsCount: stats.cachedPRs,
         lastSyncAt: new Date(),
         isSyncing: false,
       }));
@@ -201,6 +209,19 @@ export function useOfflineSync() {
   }, []);
 
   /**
+   * Cache PRs for offline use - placeholder for future implementation
+   */
+  const cachePRsForOffline = useCallback(async () => {
+    // PRs are calculated dynamically from exercise_entries
+    // For now, we cache a minimal set
+    setState(prev => ({
+      ...prev,
+      cachedPRsCount: 0,
+    }));
+    return 0;
+  }, []);
+
+  /**
    * Get cached clients (for offline use)
    */
   const getOfflineClients = useCallback(async () => {
@@ -215,22 +236,37 @@ export function useOfflineSync() {
   }, []);
 
   /**
+   * Get cached PRs (for offline use)
+   */
+  const getOfflinePRs = useCallback(async () => {
+    return getCachedPRs();
+  }, []);
+
+  /**
+   * Get cached PRs for a specific client
+   */
+  const getOfflinePRsByClient = useCallback(async (clientId: string) => {
+    return getCachedPRsByClient(clientId);
+  }, []);
+
+  /**
    * Prepare for offline mode (cache essential data)
    */
   const prepareForOffline = useCallback(async () => {
-    if (!isOnline) return { clients: 0, exercises: 0 };
+    if (!isOnline) return { clients: 0, exercises: 0, prs: 0 };
 
-    const [clientsCount, exercisesCount] = await Promise.all([
+    const [clientsCount, exercisesCount, prsCount] = await Promise.all([
       cacheClientsForOffline(),
       cacheExercisesForOffline(),
+      cachePRsForOffline(),
     ]);
 
     toast.success('Připraveno pro offline režim', {
-      description: `${clientsCount} klientů, ${exercisesCount} cviků`,
+      description: `${clientsCount} klientů, ${exercisesCount} cviků, ${prsCount} PR`,
     });
 
-    return { clients: clientsCount, exercises: exercisesCount };
-  }, [isOnline, cacheClientsForOffline, cacheExercisesForOffline]);
+    return { clients: clientsCount, exercises: exercisesCount, prs: prsCount };
+  }, [isOnline, cacheClientsForOffline, cacheExercisesForOffline, cachePRsForOffline]);
 
   return {
     ...state,
@@ -239,7 +275,10 @@ export function useOfflineSync() {
     prepareForOffline,
     getOfflineClients,
     getOfflineExercises,
+    getOfflinePRs,
+    getOfflinePRsByClient,
     cacheClientsForOffline,
     cacheExercisesForOffline,
+    cachePRsForOffline,
   };
 }
