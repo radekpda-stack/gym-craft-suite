@@ -38,6 +38,7 @@ import autoTable from 'jspdf-autotable';
 import { useEffectiveHabitSettings } from '@/hooks/useClientHabitSettings';
 import { useDayNotes, useUpsertDayNote } from '@/hooks/useNutritionDayNotes';
 import { analyzeCaffeineForPeriod } from '@/components/client-portal/nutrition/CaffeineWindowWidget';
+import { NutritionFoodCard } from '@/components/nutrition/NutritionFoodCard';
 import { HabitSettingsForm } from '@/components/client-portal/nutrition/HabitSettingsForm';
 import {
   MEAL_TYPES,
@@ -719,48 +720,20 @@ export default function NutritionClientDetail() {
                             <Apple className="w-3 h-3" /> Jídlo
                           </p>
                           {dayEntries.food.map(f => (
-                            <div key={f.id} className="flex items-start gap-2 p-2 rounded-lg bg-muted/30 group">
-                              <span className="text-xs text-muted-foreground shrink-0 w-10">
-                                {getEntryTime(f)}
-                              </span>
-                              <Badge variant="outline" className="text-[10px] shrink-0">
-                                {mealTypeLabels[f.meal_type] || f.meal_type}
-                              </Badge>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm">{f.description}</p>
-                                {f.portion_size && (
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    Porce: {portionLabels[f.portion_size] || f.portion_size}
-                                  </p>
-                                )}
-                                {f.trainer_comment && (
-                                  <div className="flex items-start gap-1 mt-1 p-1.5 rounded bg-primary/10 text-xs text-primary">
-                                    <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
-                                    <span>{f.trainer_comment}</span>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={() => openEditDialog('food', f)}
-                                  title="Upravit"
-                                >
-                                  <Pencil className="w-3 h-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={() => openCommentDialog('food', f.id, f.trainer_comment)}
-                                  title="Komentář"
-                                >
-                                  <MessageSquare className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
+                            <NutritionFoodCard
+                              key={f.id}
+                              time={getEntryTime(f)}
+                              mealType={f.meal_type}
+                              description={f.description}
+                              portionSize={f.portion_size}
+                              quality={f.quality as 'good' | 'normal' | 'poor' | null}
+                              satiation={f.satiation}
+                              clientNote={f.client_note}
+                              trainerNote={f.trainer_comment}
+                              trainerEdited={f.trainer_edited}
+                              onEdit={() => openEditDialog('food', f)}
+                              onComment={() => openCommentDialog('food', f.id, f.trainer_comment)}
+                            />
                           ))}
                         </div>
                       )}
