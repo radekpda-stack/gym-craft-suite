@@ -26,10 +26,12 @@ interface ExerciseComparisonGridProps {
   isLoading: boolean;
 }
 
+// Positive framing labels - never make user feel bad
 function getPercentileStyle(percentile: number | null) {
   if (percentile === null) return { 
-    label: 'Bez dat', 
-    bgColor: 'bg-muted/50', 
+    label: 'Připrav se!', 
+    emoji: '🚀',
+    bgColor: 'bg-muted/30', 
     textColor: 'text-muted-foreground',
     borderColor: 'border-border/50',
     gradient: 'from-muted to-muted',
@@ -37,46 +39,70 @@ function getPercentileStyle(percentile: number | null) {
   };
   
   if (percentile >= 90) return { 
-    label: `Top ${Math.round(100 - percentile)}%`, 
-    bgColor: 'bg-gradient-to-br from-primary/15 via-primary/10 to-success/10', 
-    textColor: 'text-primary',
-    borderColor: 'border-primary/30',
-    gradient: 'from-primary via-primary to-success',
-    iconColor: 'text-primary'
+    label: 'Špička!', 
+    emoji: '🏆',
+    bgColor: 'bg-gradient-to-br from-amber-500/15 via-primary/10 to-amber-500/5', 
+    textColor: 'text-amber-500',
+    borderColor: 'border-amber-500/40',
+    gradient: 'from-amber-500 via-primary to-amber-500',
+    iconColor: 'text-amber-500'
   };
   if (percentile >= 75) return { 
-    label: `Top ${Math.round(100 - percentile)}%`, 
-    bgColor: 'bg-gradient-to-br from-success/15 to-success/10', 
-    textColor: 'text-success',
-    borderColor: 'border-success/30',
-    gradient: 'from-success to-success',
-    iconColor: 'text-success'
+    label: 'Mezi nejlepšími', 
+    emoji: '⭐',
+    bgColor: 'bg-gradient-to-br from-primary/15 to-primary/5', 
+    textColor: 'text-primary',
+    borderColor: 'border-primary/30',
+    gradient: 'from-primary to-primary',
+    iconColor: 'text-primary'
   };
   if (percentile >= 50) return { 
-    label: 'Nad průměr', 
-    bgColor: 'bg-gradient-to-br from-warning/15 to-warning/10', 
-    textColor: 'text-warning',
-    borderColor: 'border-warning/30',
-    gradient: 'from-warning to-warning',
-    iconColor: 'text-warning'
+    label: 'Nad průměrem', 
+    emoji: '📈',
+    bgColor: 'bg-gradient-to-br from-emerald-400/15 to-emerald-400/5', 
+    textColor: 'text-emerald-400',
+    borderColor: 'border-emerald-400/30',
+    gradient: 'from-emerald-400 to-emerald-400',
+    iconColor: 'text-emerald-400'
   };
   if (percentile >= 25) return { 
-    label: 'Průměr', 
-    bgColor: 'bg-muted/50', 
-    textColor: 'text-muted-foreground',
-    borderColor: 'border-border/50',
-    gradient: 'from-muted-foreground to-muted-foreground',
-    iconColor: 'text-muted-foreground'
+    label: 'Stavíš základy', 
+    emoji: '🧱',
+    bgColor: 'bg-gradient-to-br from-amber-400/15 to-amber-400/5', 
+    textColor: 'text-amber-400',
+    borderColor: 'border-amber-400/30',
+    gradient: 'from-amber-400 to-amber-400',
+    iconColor: 'text-amber-400'
   };
   return { 
-    label: 'Začínáš', 
-    bgColor: 'bg-gradient-to-br from-sky-500/15 to-sky-500/10', 
-    textColor: 'text-sky-500',
-    borderColor: 'border-sky-500/30',
-    gradient: 'from-sky-500 to-sky-500',
-    iconColor: 'text-sky-500'
+    label: 'Na startu', 
+    emoji: '🌱',
+    bgColor: 'bg-gradient-to-br from-sky-400/15 to-sky-400/5', 
+    textColor: 'text-sky-400',
+    borderColor: 'border-sky-400/30',
+    gradient: 'from-sky-400 to-sky-400',
+    iconColor: 'text-sky-400'
   };
 }
+
+// Stagger animation variants for grid
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { type: "spring" as const, stiffness: 300, damping: 24 }
+  }
+};
 
 function GenderFilterToggle({ 
   value, 
@@ -278,26 +304,42 @@ function ExerciseCard({
 
   return (
     <motion.div
+      variants={itemVariants}
       className={cn(
-        "rounded-xl border overflow-hidden transition-all cursor-pointer group",
+        "rounded-xl border overflow-hidden cursor-pointer group relative",
         style.borderColor,
         isExpanded ? "col-span-full" : "",
-        isTopPerformer && "ring-1 ring-primary/20"
+        isTopPerformer && "ring-1 ring-primary/30 shadow-lg shadow-primary/5"
       )}
+      whileHover={!isExpanded ? { scale: 1.02, y: -2 } : undefined}
+      whileTap={!isExpanded ? { scale: 0.98 } : undefined}
+      transition={{ type: "spring" as const, stiffness: 400, damping: 25 }}
     >
+      {/* Animated glow for top performers */}
+      {isTopPerformer && (
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-amber-500/5 pointer-events-none"
+          animate={{
+            backgroundPosition: ['0% 0%', '100% 0%', '0% 0%']
+          }}
+          transition={{
+            duration: 5,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+          style={{ backgroundSize: '200% 100%' }}
+        />
+      )}
+      
       {/* Card Header - Always visible */}
       <div 
         className={cn(
           "p-4 relative",
-          style.bgColor
+          style.bgColor,
+          "transition-all duration-200"
         )}
         onClick={onToggle}
       >
-        {/* Top performer glow effect */}
-        {isTopPerformer && (
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 pointer-events-none" />
-        )}
-        
         {/* Header row */}
         <div className="flex items-start justify-between gap-3 relative">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -324,7 +366,7 @@ function ExerciseCard({
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.2, type: "spring" }}
                 >
-                  <Zap className="w-4 h-4 text-primary fill-primary" />
+                  <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
                 </motion.div>
               )}
             </div>
@@ -368,11 +410,12 @@ function ExerciseCard({
             <Badge 
               variant="outline" 
               className={cn(
-                "text-xs font-medium border",
+                "text-xs font-medium border gap-1",
                 style.borderColor, 
                 style.textColor
               )}
             >
+              <span>{style.emoji}</span>
               {style.label}
             </Badge>
             <motion.div
@@ -391,7 +434,7 @@ function ExerciseCard({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <PercentileGauge percentile={percentile} />
+            <PercentileGauge percentile={percentile} compact />
           </motion.div>
         )}
       </div>
@@ -604,7 +647,12 @@ export default function ExerciseComparisonGrid({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <motion.div 
+      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+    >
       {sortedExercises.map((exercise) => (
         <ExerciseCard
           key={exercise.exercise_name}
@@ -617,6 +665,6 @@ export default function ExerciseComparisonGrid({
           onToggle={() => handleToggle(exercise.exercise_name)}
         />
       ))}
-    </div>
+    </motion.div>
   );
 }
