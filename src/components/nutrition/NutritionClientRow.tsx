@@ -56,7 +56,7 @@ export function NutritionClientRow({
   const lastActivity = formatLastActivity(stats.lastEntryDate);
   
   const handleClick = () => {
-    navigate(`/nutrition/${client.id}`);
+    navigate(`/nutrition/client/${client.id}`);
   };
 
   return (
