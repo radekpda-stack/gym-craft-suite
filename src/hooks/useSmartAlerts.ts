@@ -3,6 +3,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { differenceInDays, startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { useAuth } from './useAuth';
 
+// LocalStorage key for dismissed smart alerts (must match NotificationCenter)
+const DISMISSED_SMART_ALERTS_KEY = 'dismissed-smart-alerts';
+
+function getDismissedSmartAlerts(): Set<string> {
+  try {
+    const stored = localStorage.getItem(DISMISSED_SMART_ALERTS_KEY);
+    if (!stored) return new Set();
+    const data = JSON.parse(stored);
+    // Filter out old dismissals (older than 24 hours)
+    const now = Date.now();
+    const valid = Object.entries(data).filter(([_, ts]) => now - (ts as number) < 24 * 60 * 60 * 1000);
+    return new Set(valid.map(([id]) => id));
+  } catch {
+    return new Set();
+  }
+}
+
 export interface SmartAlert {
   id: string;
   type: 'no_training_scheduled' | 'low_credit' | 'birthdays_this_month' | 'profit_trend' | 'inactive_nutrition' | 'new_badge' | 'client_milestone';
@@ -284,18 +301,22 @@ export function useSmartAlerts() {
         getRecentBadges(user.id),
       ]);
 
-      const alerts: SmartAlert[] = [
+      const allAlerts: SmartAlert[] = [
         ...recentBadges,
         ...noTraining,
         ...lowCredit,
       ];
 
-      if (birthdays) alerts.push(birthdays);
-      if (profitTrend) alerts.push(profitTrend);
-      if (inactiveNutrition) alerts.push(inactiveNutrition);
+      if (birthdays) allAlerts.push(birthdays);
+      if (profitTrend) allAlerts.push(profitTrend);
+      if (inactiveNutrition) allAlerts.push(inactiveNutrition);
+
+      // Filter out dismissed alerts
+      const dismissed = getDismissedSmartAlerts();
+      const activeAlerts = allAlerts.filter(alert => !dismissed.has(alert.id));
 
       // Sort by severity and recency
-      return alerts.sort((a, b) => {
+      return activeAlerts.sort((a, b) => {
         const severityOrder = { warning: 0, success: 1, info: 2 };
         if (severityOrder[a.severity] !== severityOrder[b.severity]) {
           return severityOrder[a.severity] - severityOrder[b.severity];
