@@ -1,157 +1,156 @@
 
-# Oprava notifikačního centra - Persistentní dismissal a respektování preferencí
+# Přesun Žebříčku na Přehled klientského portálu
 
-## Shrnutí problému
+## Shrnutí změn
+Přesuneme kompletní Žebříček (srovnání cviků - síla, kardio, plyometrika) ze záložky "Soutěže" na hlavní dashboard "Přehled". Stránka "Soutěže" bude obsahovat pouze Výzvy.
 
-Trenér hlásí tři klíčové problémy:
-1. Notifikace "Chybí trénink" a "Nízký kredit" se objevují opakovaně i po odmítnutí
-2. Důležité notifikace (feedback, strava) nejsou viditelné kvůli přeplnění méně důležitými
-3. Chybí možnost tyto "Smart Alerts" trvale vypnout
-
-## Analýza příčin
-
-### 1. Dočasný dismissal (pouze 24h)
-Smart Alerts používají `localStorage` s 24-hodinovou expirací:
-```javascript
-// src/hooks/useSmartAlerts.ts, řádek 14-16
-const valid = Object.entries(data).filter(
-  ([_, ts]) => now - (ts as number) < 24 * 60 * 60 * 1000 // 24h expiruje
-);
-```
-Po uplynutí 24 hodin se alert znovu vypočítá a zobrazí.
-
-### 2. Smart Alerts ignorují uživatelské preference
-Hook `useSmartAlerts` nekontroluje nastavení z `app_settings.notification_preferences`. I když má trenér vypnuté "lowCreditAlerts", Smart Alerts pro nízký kredit se stále generují.
-
-### 3. Chybějící nastavení pro "No Training" alerty
-V `InlineNotificationSettings` a `NotificationSettings` chybí toggle pro typ `noTrainingAlerts`, takže trenér nemá jak tyto notifikace vypnout.
-
----
-
-## Navrhované řešení
-
-### Krok 1: Prodloužit expiraci dismissed alertů na 7 dní
-
-**Soubor:** `src/hooks/useSmartAlerts.ts`
-
-Změna expirace z 24 hodin na 7 dní (nebo neomezeně pro specifické typy):
+## Vizuální návrh
 
 ```text
-Před:  24 * 60 * 60 * 1000 (24 hodin)
-Po:    7 * 24 * 60 * 60 * 1000 (7 dní)
+┌─────────────────────────────────────┐
+│  Ahoj, Jano!                        │
+│  Tvůj tréninkový přehled            │
+├─────────────────────────────────────┤
+│  [Action Required] (pokud existuje) │
+├─────────────────────────────────────┤
+│  [HeroStats - Kredit + Trénink]     │
+├─────────────────────────────────────┤
+│  [Quick Stats - 3 metriky]          │
+├─────────────────────────────────────┤
+│  [Overall Performance Card]         │
+├─────────────────────────────────────┤
+│  [Quick Actions]                    │
+├─────────────────────────────────────┤
+│ ┌─────────────────────────────────┐ │
+│ │ 🏆 Žebříček            [Zobrazit]│ │  ← NOVÁ KARTA
+│ │ Srovnej se s ostatními          │ │
+│ │                                 │ │
+│ │ 💪 Síla (12)    ⚡ Plyo (5)     │ │
+│ │ ❤️ Kardio (8)                   │ │
+│ └─────────────────────────────────┘ │
+├─────────────────────────────────────┤
+│  [Active Challenges] (pokud existují)│
+└─────────────────────────────────────┘
 ```
 
-### Krok 2: Přidat kontrolu preferencí do useSmartAlerts
+## Detailní kroky implementace
 
-**Soubor:** `src/hooks/useSmartAlerts.ts`
+### Krok 1: Vytvořit novou komponentu LeaderboardPreviewCard
+**Nový soubor:** `src/components/client-portal/dashboard/LeaderboardPreviewCard.tsx`
 
-Přidat načítání `notification_preferences` a filtrování alertů podle nich:
+Kompaktní karta s:
+- Ikonou žebříčku a nadpisem
+- Souhrnem kategorií (síla, plyometrika, kardio) s počtem cviků
+- Tlačítkem "Zobrazit vše" které otevře modální okno s kompletním žebříčkem
+- Využije existující komponenty z `/leaderboard/`
 
-```text
-1. Načíst app_settings.notification_preferences
-2. Přidat mapování: 
-   - low_credit → lowCreditAlerts
-   - no_training_scheduled → noTrainingAlerts (nová preference)
-   - birthdays_this_month → birthdayAlerts
-3. Filtrovat generované alerty podle preferencí
-```
+### Krok 2: Upravit ClientPortalOverview
+**Soubor:** `src/pages/client-portal/ClientPortalOverview.tsx`
 
-### Krok 3: Přidat chybějící nastavení
-
-**Soubory:**
-- `src/components/notifications/InlineNotificationSettings.tsx`
-- `src/components/settings/NotificationSettings.tsx`
-
-Přidat toggle pro:
-- `noTrainingAlerts` - "Chybějící tréninky" (aby trenér mohl tyto alerty vypnout)
-
-### Krok 4: Změnit prioritu Smart Alerts
-
-**Soubor:** `src/hooks/useAggregatedNotifications.ts`
-
-Přidat mapování typu `no_training_scheduled` na prioritu `info` místo výchozí hodnoty, aby se tyto alerty zobrazovaly až pod důležitějšími.
-
----
-
-## Technické detaily implementace
-
-### useSmartAlerts.ts - Hlavní změny
-
+Přidat `LeaderboardPreviewCard` pod Quick Actions:
 ```javascript
-// 1. Prodloužit expiraci na 7 dní
-const DISMISSAL_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 dní
+// Existující importy...
+import { LeaderboardPreviewCard } from '@/components/client-portal/dashboard/LeaderboardPreviewCard';
 
-// 2. Načíst preference
-const { data: settingsData } = await supabase
-  .from('app_settings')
-  .select('value')
-  .eq('key', 'notification_preferences')
-  .maybeSingle();
-
-const prefs = settingsData?.value as Record<string, boolean> | null;
-
-// 3. Podmíněně generovat alerty
-const alerts = [];
-
-if (prefs?.noTrainingAlerts !== false) {
-  alerts.push(...await getClientsWithoutTraining(userId));
-}
-
-if (prefs?.lowCreditAlerts !== false) {
-  alerts.push(...await getClientsWithLowCredit(userId));
-}
-// ... atd.
+// V JSX - před ActiveChallengeWidget
+{clientId && <LeaderboardPreviewCard />}
 ```
 
-### InlineNotificationSettings.tsx - Přidat toggle
+### Krok 3: Zjednodušit stránku Soutěže
+**Soubor:** `src/pages/client-portal/ClientPortalCompetitions.tsx`
 
+Odstranit záložky a přímo zobrazit pouze Výzvy:
+- Odstranit Tabs komponentu
+- Odstranit import LeaderboardContent
+- Zachovat pouze ChallengesContent
+
+### Krok 4: Aktualizovat navigační odkazy
+**Soubor:** `src/components/client-portal/dashboard/OverallPerformanceCard.tsx`
+
+Změnit odkaz z `/zona/competitions?tab=leaderboard` na otevření modálního okna nebo přechod na dedikovanou stránku žebříčku.
+
+### Krok 5: Případně přejmenovat "Soutěže" na "Výzvy"
+**Soubor:** `src/components/client-portal/ClientPortalLayout.tsx`
+
+Zvážit přejmenování navigačního bodu:
 ```javascript
-const QUICK_SETTINGS = [
-  { key: 'chatNotifications', label: 'Zprávy', icon: '💬' },
-  { key: 'lowCreditAlerts', label: 'Finance & balíčky', icon: '💰' },
-  { key: 'noTrainingAlerts', label: 'Chybějící tréninky', icon: '📅' }, // NOVÉ
-  { key: 'prAlerts', label: 'Osobní rekordy', icon: '🏆' },
-  { key: 'birthdayAlerts', label: 'Narozeniny & výročí', icon: '🎂' },
-  { key: 'feedbackAlerts', label: 'Zpětná vazba', icon: '📝' },
-];
-```
-
-### NotificationSettings.tsx - Přidat do kategorií
-
-```javascript
-// V kategorii "Tréninky"
-{
-  key: "noTrainingAlerts",
-  label: "Chybějící tréninky tento týden",
-  description: "Upozornění na klienty bez naplánovaného tréninku",
-}
-```
-
-### useAggregatedNotifications.ts - Upravit priority
-
-```javascript
-const TYPE_PRIORITY = {
-  // ... existující
-  no_training_scheduled: 'info', // Snížit prioritu na Info (modrá)
-};
+// Před
+{ to: `${base}/competitions`, icon: Trophy, label: 'Soutěže' }
+// Po  
+{ to: `${base}/competitions`, icon: Trophy, label: 'Výzvy' }
 ```
 
 ---
 
-## Výsledek po implementaci
+## Technické detaily
 
-| Problém | Řešení |
-|---------|--------|
-| Alerty se znovu objevují po 24h | Expirace prodloužena na 7 dní |
-| Ignorují se uživatelské preference | Smart Alerts kontrolují `notification_preferences` |
-| Chybí toggle pro "chybějící tréninky" | Přidán `noTrainingAlerts` toggle |
-| Méně důležité alerty přeplňují inbox | Priorita `no_training_scheduled` snížena na "Info" |
+### LeaderboardPreviewCard.tsx - Struktura
+
+```typescript
+import { useState } from 'react';
+import { Trophy, Dumbbell, Heart, Zap, ChevronRight } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useClientPortal } from '@/contexts/ClientPortalContext';
+import { useExercisesWithPercentiles } from '@/hooks/useExercisePercentiles';
+import ClientPortalLeaderboard from '@/pages/client-portal/ClientPortalLeaderboard';
+
+// Kompaktní karta s přehledem kategorií
+// Po kliknutí otevře Sheet s kompletním žebříčkem
+// Použije existující ExerciseComparisonGrid komponenty
+```
+
+### Upravený ClientPortalCompetitions.tsx
+
+```typescript
+// Zjednodušená verze - pouze Výzvy
+import { lazy, Suspense } from 'react';
+import { Trophy } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
+
+const ChallengesContent = lazy(() => import('./ClientPortalChallenges'));
+
+export default function ClientPortalCompetitions() {
+  useClientPortalPageTracking('client_portal_competitions');
+  
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <Trophy className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold">Výzvy</h1>
+          <p className="text-sm text-muted-foreground">
+            Plň výzvy a získávej body
+          </p>
+        </div>
+      </div>
+      
+      <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+        <ChallengesContent />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+---
 
 ## Ovlivněné soubory
 
 | Soubor | Změna |
 |--------|-------|
-| `src/hooks/useSmartAlerts.ts` | Prodloužit expiraci, přidat kontrolu preferencí |
-| `src/hooks/useAggregatedNotifications.ts` | Přidat mapování priority pro `no_training_scheduled` |
-| `src/components/notifications/InlineNotificationSettings.tsx` | Přidat `noTrainingAlerts` toggle |
-| `src/components/settings/NotificationSettings.tsx` | Přidat `noTrainingAlerts` do interface a kategorie |
+| `src/components/client-portal/dashboard/LeaderboardPreviewCard.tsx` | **NOVÝ** - Kompaktní karta žebříčku s Sheet pro detail |
+| `src/pages/client-portal/ClientPortalOverview.tsx` | Přidat LeaderboardPreviewCard |
+| `src/pages/client-portal/ClientPortalCompetitions.tsx` | Odstranit záložku Žebříček, ponechat pouze Výzvy |
+| `src/components/client-portal/ClientPortalLayout.tsx` | Přejmenovat "Soutěže" → "Výzvy" v navigaci |
+| `src/components/client-portal/dashboard/OverallPerformanceCard.tsx` | Aktualizovat odkaz na žebříček |
+
+## Výhody nového uspořádání
+
+1. **Lepší přístupnost** - Žebříček přímo na dashboardu, klient nemusí hledat v submenu
+2. **Čistší navigace** - "Výzvy" jako samostatný bod je jasnější než "Soutěže" se dvěma záložkami
+3. **Konzistence** - Dashboard soustřeďuje všechny klíčové metriky a porovnání
