@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
-import { Check, CreditCard, MoreHorizontal, Users, X, TrendingUp, FileText, Trash2 } from 'lucide-react';
+import { Check, CreditCard, MoreHorizontal, Users, X, TrendingUp, FileText, Trash2, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TrainingSession } from '@/hooks/useTrainingSessions';
 import { Client } from '@/hooks/useClients';
@@ -24,6 +24,7 @@ interface AgendaItemProps {
   onProgress?: (session: TrainingSession) => void;
   onNote?: (session: TrainingSession) => void;
   onDelete?: (session: TrainingSession) => void;
+  onRepeat?: (session: TrainingSession) => void;
 }
 
 const SWIPE_THRESHOLD = 80;
@@ -37,6 +38,7 @@ export function AgendaItem({
   onProgress,
   onNote,
   onDelete,
+  onRepeat,
 }: AgendaItemProps) {
   const sessionDate = new Date(session.date);
   const endTime = new Date(sessionDate.getTime() + session.duration * 60000);
@@ -233,11 +235,16 @@ export function AgendaItem({
           </ContextMenuItem>
           {isScheduled && (
             <>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={() => onRepeat?.(session)} className="gap-2">
+                <Repeat className="w-4 h-4 text-primary" />
+                Opakovat trénink
+              </ContextMenuItem>
+              <ContextMenuSeparator />
               <ContextMenuItem onClick={() => onCancel?.(session)} className="gap-2 text-destructive">
                 <X className="w-4 h-4" />
                 Zrušit trénink
               </ContextMenuItem>
-              <ContextMenuSeparator />
               <ContextMenuItem onClick={() => onDelete?.(session)} className="gap-2 text-destructive">
                 <Trash2 className="w-4 h-4" />
                 Smazat trénink
