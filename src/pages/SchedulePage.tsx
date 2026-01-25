@@ -38,7 +38,7 @@ import {
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
 import { CalendarSyncSettings } from '@/components/settings/CalendarSyncSettings';
-
+import { RepeatTrainingDialog } from '@/components/trainings/RepeatTrainingDialog';
 
 // Pomocná funkce pro generování volných slotů mezi tréninky
 function generateFreeSlots(
@@ -92,6 +92,7 @@ export default function SchedulePage() {
   const [cancelDialog, setCancelDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
   const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
+  const [repeatDialog, setRepeatDialog] = useState<{ open: boolean; session: any | null }>({ open: false, session: null });
   const [calendarSettingsOpen, setCalendarSettingsOpen] = useState(false);
 
   const { data: sessions = [], isLoading: sessionsLoading } = useTrainingSessions();
@@ -294,6 +295,10 @@ export default function SchedulePage() {
 
   const handleDelete = (session: any) => {
     setDeleteDialog({ open: true, session });
+  };
+
+  const handleRepeat = (session: any) => {
+    setRepeatDialog({ open: true, session });
   };
 
   const confirmDelete = async () => {
@@ -517,6 +522,7 @@ export default function SchedulePage() {
                   onProgress={handleProgress}
                   onNote={handleNote}
                   onDelete={handleDelete}
+                  onRepeat={handleRepeat}
                 />
               );
             })}
@@ -592,6 +598,16 @@ export default function SchedulePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Repeat Training Dialog */}
+      {repeatDialog.session && (
+        <RepeatTrainingDialog
+          open={repeatDialog.open}
+          onOpenChange={(open) => setRepeatDialog({ open, session: open ? repeatDialog.session : null })}
+          session={repeatDialog.session}
+          clientName={getClient(repeatDialog.session.client_id)?.name || 'Klient'}
+        />
+      )}
 
       {/* Calendar Settings Dialog */}
       <Dialog open={calendarSettingsOpen} onOpenChange={setCalendarSettingsOpen}>
