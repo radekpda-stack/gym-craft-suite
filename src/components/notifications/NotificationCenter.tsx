@@ -368,7 +368,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
             </Button>
           )}
         </SheetTrigger>
-        <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
+        <SheetContent className="w-full sm:max-w-md p-0 flex flex-col z-[80]">
           {/* Header - fixed pr-12 to avoid overlap with close button */}
           <SheetHeader className="px-4 py-3 border-b flex flex-row items-center justify-between shrink-0 pr-12">
             <SheetTitle className="text-lg">Notifikace</SheetTitle>
