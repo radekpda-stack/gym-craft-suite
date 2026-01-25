@@ -247,3 +247,97 @@ export const METRIC_EXPLANATIONS: Record<string, { label: string; description: s
     scale: '0-100%',
   },
 };
+
+/**
+ * Interpret a metric value into a human-readable status
+ * Returns status level, Czech label, and styling class
+ */
+export type MetricStatus = 'excellent' | 'good' | 'fair' | 'poor';
+
+export interface MetricInterpretation {
+  status: MetricStatus;
+  label: string;
+  emoji: string;
+  colorClass: string;
+  bgClass: string;
+}
+
+/**
+ * Interpret session fit / "Jak mu to sedí" value
+ */
+export function interpretSessionFit(value: number | null): MetricInterpretation | null {
+  if (value == null || isNaN(value)) return null;
+  
+  if (value >= 8) {
+    return { status: 'excellent', label: 'Výborně', emoji: '🟢', colorClass: 'text-success', bgClass: 'bg-success/10' };
+  } else if (value >= 6) {
+    return { status: 'good', label: 'Dobře', emoji: '🟡', colorClass: 'text-warning', bgClass: 'bg-warning/10' };
+  } else if (value >= 4) {
+    return { status: 'fair', label: 'Tak tak', emoji: '🟠', colorClass: 'text-orange-500', bgClass: 'bg-orange-500/10' };
+  } else {
+    return { status: 'poor', label: 'Špatně', emoji: '🔴', colorClass: 'text-destructive', bgClass: 'bg-destructive/10' };
+  }
+}
+
+/**
+ * Interpret pain value (inverted scale - lower is better)
+ */
+export function interpretPain(value: number | null): MetricInterpretation | null {
+  if (value == null || isNaN(value)) return null;
+  
+  if (value <= 2) {
+    return { status: 'excellent', label: 'Minimální', emoji: '✔️', colorClass: 'text-success', bgClass: 'bg-success/10' };
+  } else if (value <= 4) {
+    return { status: 'good', label: 'Mírná', emoji: '🟡', colorClass: 'text-warning', bgClass: 'bg-warning/10' };
+  } else if (value <= 6) {
+    return { status: 'fair', label: 'Pozor', emoji: '🟠', colorClass: 'text-orange-500', bgClass: 'bg-orange-500/10' };
+  } else {
+    return { status: 'poor', label: 'Vysoká', emoji: '🔴', colorClass: 'text-destructive', bgClass: 'bg-destructive/10' };
+  }
+}
+
+/**
+ * Interpret readiness value
+ */
+export function interpretReadiness(value: number | null): MetricInterpretation | null {
+  if (value == null || isNaN(value)) return null;
+  
+  if (value >= 8) {
+    return { status: 'excellent', label: 'Skvělá', emoji: '🟢', colorClass: 'text-success', bgClass: 'bg-success/10' };
+  } else if (value >= 6) {
+    return { status: 'good', label: 'Dobrá', emoji: '🟡', colorClass: 'text-warning', bgClass: 'bg-warning/10' };
+  } else if (value >= 4) {
+    return { status: 'fair', label: 'Nízká', emoji: '🟠', colorClass: 'text-orange-500', bgClass: 'bg-orange-500/10' };
+  } else {
+    return { status: 'poor', label: 'Špatná', emoji: '🔴', colorClass: 'text-destructive', bgClass: 'bg-destructive/10' };
+  }
+}
+
+/**
+ * Interpret RPE / session load intensity
+ */
+export function interpretIntensity(value: number | null): MetricInterpretation | null {
+  if (value == null || isNaN(value)) return null;
+  
+  if (value <= 4) {
+    return { status: 'excellent', label: 'Lehká', emoji: '🟢', colorClass: 'text-success', bgClass: 'bg-success/10' };
+  } else if (value <= 6) {
+    return { status: 'good', label: 'Střední', emoji: '🟡', colorClass: 'text-warning', bgClass: 'bg-warning/10' };
+  } else if (value <= 8) {
+    return { status: 'fair', label: 'Náročná', emoji: '🟠', colorClass: 'text-orange-500', bgClass: 'bg-orange-500/10' };
+  } else {
+    return { status: 'poor', label: 'Maximální', emoji: '🔴', colorClass: 'text-destructive', bgClass: 'bg-destructive/10' };
+  }
+}
+
+/**
+ * Simplified metric labels for trainers (Czech)
+ */
+export const SIMPLE_METRIC_LABELS = {
+  sessionFit: 'Jak mu to sedí?',
+  pain: 'Bolest po tréninku?',
+  readiness: 'Připravenost?',
+  intensity: 'Jak těžké to bylo?',
+  limitingFactor: 'Co ho brzdí?',
+  enjoyment: 'Baví ho to?',
+};
