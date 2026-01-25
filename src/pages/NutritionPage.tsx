@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, differenceInDays, isToday, isYesterday, subDays, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { NutritionClientRow } from '@/components/nutrition/NutritionClientRow';
 
 interface ClientNutritionStats {
   clientId: string;
@@ -547,86 +548,34 @@ export default function NutritionPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {sortedStats.map((stat) => (
-                <button
-                  key={stat.clientId}
-                  onClick={() => navigate(`/nutrition/client/${stat.clientId}`)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors text-left group"
-                >
-                  {/* Avatar with activity color */}
-                  <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium shrink-0",
-                    getActivityColor(stat.lastEntryDate, stat.hasWarning)
-                  )}>
-                    {stat.clientName.charAt(0).toUpperCase()}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{stat.clientName}</span>
-                      {stat.hasWarning && (
-                        <Badge variant="outline" className="text-destructive border-destructive/30 text-[10px] px-1.5 shrink-0">
-                          <AlertTriangle className="w-3 h-3 mr-0.5" />
-                          Pozornost
-                        </Badge>
-                      )}
-                      {stat.hasActiveSession && !stat.hasWarning && (
-                        <Badge variant="outline" className="text-success border-success/30 text-[10px] px-1.5 shrink-0">
-                          Aktivní
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatLastEntry(stat.lastEntryDate)}
-                      </span>
-                      {stat.weekEntries > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Apple className="w-3 h-3" />
-                          {stat.weekEntries} tento týden
-                        </span>
-                      )}
-                      {stat.emptyDays > 0 && stat.hasActiveSession && (
-                        <span className="flex items-center gap-1 text-destructive/70">
-                          {stat.emptyDays} prázdných dnů
-                        </span>
-                      )}
-                      {stat.lateCaffeineCount > 0 && (
-                        <span className="flex items-center gap-1 text-destructive/70">
-                          <Coffee className="w-3 h-3" />
-                          {stat.lateCaffeineCount}× po 18:00
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Activity indicators */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    {stat.recentFoodCount > 0 && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 gap-0.5">
-                        <Apple className="w-3 h-3" />
-                        {stat.recentFoodCount}
-                      </Badge>
-                    )}
-                    {stat.recentDrinkCount > 0 && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 gap-0.5">
-                        <Droplets className="w-3 h-3" />
-                        {stat.recentDrinkCount}
-                      </Badge>
-                    )}
-                    {stat.recentCoffeeCount > 0 && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 gap-0.5">
-                        <Coffee className="w-3 h-3" />
-                        {stat.recentCoffeeCount}
-                      </Badge>
-                    )}
-                  </div>
-
-                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                </button>
-              ))}
+              {sortedStats.map((stat) => {
+                // Parse client name into first and last name
+                const nameParts = stat.clientName.split(' ');
+                const lastName = nameParts[0] || '';
+                const firstName = nameParts.slice(1).join(' ') || '';
+                
+                return (
+                  <NutritionClientRow
+                    key={stat.clientId}
+                    client={{
+                      id: stat.clientId,
+                      first_name: firstName,
+                      last_name: lastName,
+                      photo_url: null,
+                    }}
+                    stats={{
+                      hasActiveSession: stat.hasActiveSession,
+                      lastEntryDate: stat.lastEntryDate,
+                      weeklyFoodCount: stat.weekEntries,
+                      weeklyDrinkCount: stat.recentDrinkCount,
+                      weeklyCoffeeCount: stat.recentCoffeeCount,
+                      emptyDays: stat.emptyDays,
+                      lateCaffeineCount: stat.lateCaffeineCount,
+                    }}
+                    needsAttention={stat.hasWarning}
+                  />
+                );
+              })}
             </div>
           )}
         </CardContent>
