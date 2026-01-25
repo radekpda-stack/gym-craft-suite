@@ -36,7 +36,7 @@ function formatTimeDisplay(seconds: number, ms?: number | null): string {
 
 export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: ExerciseHistoryTableProps) {
   const [page, setPage] = useState(0);
-  const [sortBy, setSortBy] = useState<'date' | 'weight' | 'time'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'weight' | 'time' | 'distance'>('date');
   const [editEntry, setEditEntry] = useState<{ id: string; metricCategory: string } | null>(null);
   const [detailEntryId, setDetailEntryId] = useState<string | null>(null);
 
@@ -94,6 +94,12 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
         exerciseQuery = exerciseQuery.order('weight_kg', { ascending: false, nullsFirst: false });
       } else if (sortBy === 'time') {
         exerciseQuery = exerciseQuery.order('time_seconds', { ascending: true, nullsFirst: false });
+      } else if (sortBy === 'distance') {
+        // For plyometric exercises: sort by distance_meters (descending - higher is better)
+        // Also use height_cm as secondary for height-based exercises
+        exerciseQuery = exerciseQuery
+          .order('distance_meters', { ascending: false, nullsFirst: false })
+          .order('height_cm', { ascending: false, nullsFirst: false });
       }
 
       const { data: exerciseEntries } = await exerciseQuery;
@@ -277,8 +283,9 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="date">Podle data</SelectItem>
-            {!isTimeBased && <SelectItem value="weight">Podle váhy</SelectItem>}
+            {!isTimeBased && !isJumpExercise && <SelectItem value="weight">Podle váhy</SelectItem>}
             {isTimeBased && <SelectItem value="time">Podle času</SelectItem>}
+            {isJumpExercise && <SelectItem value="distance">Podle vzdálenosti</SelectItem>}
           </SelectContent>
         </Select>
       </CardHeader>
