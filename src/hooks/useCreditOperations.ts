@@ -23,6 +23,8 @@ export interface CreditTransaction {
   group_id?: string | null;
 }
 
+export type SourceType = 'training_session' | 'sales_order' | 'admin_panel' | 'undo' | 'system';
+
 export interface CreateTransactionInput {
   client_id: string;
   amount: number;
@@ -33,6 +35,10 @@ export interface CreateTransactionInput {
   payment_method?: PaymentMethod;
   skip_credit_update?: boolean;
   clearPersonalDebt?: boolean;
+  /** Origin of the transaction for audit trail */
+  source_type?: SourceType;
+  /** Reference ID to source record (training_session.id, sales_order.id, etc.) */
+  source_id?: string;
 }
 
 export interface SharedBudgetInfo {
@@ -397,6 +403,21 @@ export function useCreateTransaction() {
         clearedDebt = await clearPersonalDebtToSharedBudget(input.client_id, groupId, user.id);
       }
 
+      // Determine source_type automatically if not provided
+      let sourceType = input.source_type;
+      let sourceId = input.source_id;
+      
+      if (!sourceType) {
+        if (input.training_session_id) {
+          sourceType = 'training_session';
+          sourceId = input.training_session_id;
+        } else if (input.product_id) {
+          sourceType = 'sales_order';
+        } else if (input.type === 'manual' || input.type === 'payment') {
+          sourceType = 'admin_panel';
+        }
+      }
+
       const { data: transaction, error: transactionError } = await supabase
         .from("credit_transactions")
         .insert({
@@ -409,6 +430,8 @@ export function useCreateTransaction() {
           payment_method: input.payment_method || 'credit',
           user_id: user.id,
           group_id: groupId,
+          source_type: sourceType || null,
+          source_id: sourceId || null,
         })
         .select()
         .single();
