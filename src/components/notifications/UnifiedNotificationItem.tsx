@@ -102,26 +102,38 @@ export function UnifiedNotificationItem({
   enableSwipe = true,
 }: UnifiedNotificationItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const x = useMotionValue(0);
   const background = useTransform(
     x,
     [-100, 0, 100],
     ['hsl(var(--destructive))', 'transparent', 'hsl(var(--success))']
   );
-  const opacity = useTransform(x, [-100, -50, 0, 50, 100], [1, 0.5, 0, 0.5, 1]);
+  const leftOpacity = useTransform(x, [0, 40, 100], [0, 0.5, 1]);
+  const rightOpacity = useTransform(x, [-100, -40, 0], [1, 0.5, 0]);
 
   const Icon = NOTIFICATION_ICONS[notification.type] || Bell;
   const styles = PRIORITY_STYLES[notification.priority];
 
+  const handleDragStart = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
   const handleDragEnd = useCallback(
     (_: any, info: PanInfo) => {
-      if (info.offset.x > 80) {
-        onMarkRead(notification.id);
-      } else if (info.offset.x < -80) {
+      setIsDragging(false);
+      const threshold = 80;
+      if (info.offset.x > threshold) {
+        // Swipe right = mark as read
+        if (!notification.is_read) {
+          onMarkRead(notification.id);
+        }
+      } else if (info.offset.x < -threshold) {
+        // Swipe left = delete
         onDelete(notification.id);
       }
     },
-    [notification.id, onMarkRead, onDelete]
+    [notification.id, notification.is_read, onMarkRead, onDelete]
   );
 
   const displayMessage = notification.message.replace(/\s*ID:\s*[a-f0-9-]+/i, '');
@@ -134,11 +146,11 @@ export function UnifiedNotificationItem({
           className="absolute inset-0 flex items-center justify-between px-4 rounded-xl"
           style={{ background }}
         >
-          <motion.div style={{ opacity }} className="text-white flex items-center gap-2">
+          <motion.div style={{ opacity: leftOpacity }} className="text-white flex items-center gap-2">
             <Check className="w-5 h-5" />
             <span className="text-sm font-medium">Přečteno</span>
           </motion.div>
-          <motion.div style={{ opacity }} className="text-white flex items-center gap-2">
+          <motion.div style={{ opacity: rightOpacity }} className="text-white flex items-center gap-2">
             <span className="text-sm font-medium">Smazat</span>
             <Trash2 className="w-5 h-5" />
           </motion.div>
@@ -148,11 +160,20 @@ export function UnifiedNotificationItem({
       {/* Main Content */}
       <motion.div
         drag={enableSwipe ? "x" : false}
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.1}
+        dragConstraints={{ left: -120, right: 120 }}
+        dragElastic={0.2}
+        dragSnapToOrigin
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         style={{ x }}
-        onClick={notification.isAggregated ? () => setIsExpanded(!isExpanded) : onClick}
+        onClick={() => {
+          if (isDragging) return;
+          if (notification.isAggregated) {
+            setIsExpanded(!isExpanded);
+          } else {
+            onClick?.();
+          }
+        }}
         className={cn(
           'relative flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer',
           'hover:shadow-sm active:scale-[0.99]',
