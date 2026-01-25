@@ -9,9 +9,10 @@ import { ClientQuickActions } from '@/components/client-portal/dashboard/ClientQ
 import { ClientActionRequired } from '@/components/client-portal/dashboard/ClientActionRequired';
 import { HeroStatsRow } from '@/components/client-portal/dashboard/HeroStatsRow';
 import { ClientQuickStats } from '@/components/client-portal/dashboard/ClientQuickStats';
+import { OverallPerformanceCard } from '@/components/client-portal/dashboard/OverallPerformanceCard';
 
 export default function ClientPortalOverview() {
-  const { clientProfile } = useClientPortal();
+  const { clientProfile, clientId } = useClientPortal();
   
   const { trackPageMount } = useClientPortalPageTracking('client_portal_overview');
 
@@ -38,7 +39,10 @@ export default function ClientPortalOverview() {
       {/* 4. Quick Stats - 3 metrics in a row */}
       <ClientQuickStats />
 
-      {/* 5. Quick Actions - Dynamic shortcuts */}
+      {/* 5. Overall Performance - Comparison with other clients */}
+      {clientId && <OverallPerformanceCard clientId={clientId} />}
+
+      {/* 6. Quick Actions - Dynamic shortcuts */}
       <ClientQuickActions />
 
       {/* 6. Active Challenges (only if any) - moved to bottom */}
