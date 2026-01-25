@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSmartAlerts, type SmartAlert } from './useSmartAlerts';
+import { useQueryClient } from '@tanstack/react-query';
 
 const SHOWN_ALERTS_KEY = 'shown-smart-alerts';
+const DISMISSED_SMART_ALERTS_KEY = 'dismissed-smart-alerts';
 const ALERT_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 interface ShownAlert {
@@ -35,8 +37,20 @@ function isAlertShown(id: string): boolean {
   return shown.some(a => a.id === id);
 }
 
+function dismissSmartAlert(id: string) {
+  try {
+    const stored = localStorage.getItem(DISMISSED_SMART_ALERTS_KEY);
+    const data = stored ? JSON.parse(stored) : {};
+    data[id] = Date.now();
+    localStorage.setItem(DISMISSED_SMART_ALERTS_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
 export function useSmartAlertToasts() {
   const { data: alerts = [] } = useSmartAlerts();
+  const queryClient = useQueryClient();
   const [pendingAlerts, setPendingAlerts] = useState<SmartAlert[]>([]);
   const [activeAlerts, setActiveAlerts] = useState<SmartAlert[]>([]);
   const processedIdsRef = useRef<Set<string>>(new Set());
@@ -82,12 +96,18 @@ export function useSmartAlertToasts() {
 
   const dismissAlert = useCallback((id: string) => {
     setActiveAlerts(prev => prev.filter(a => a.id !== id));
-  }, []);
+    // Also permanently dismiss so it doesn't reappear in notification center
+    dismissSmartAlert(id);
+    queryClient.invalidateQueries({ queryKey: ['smart-alerts'] });
+  }, [queryClient]);
 
   const dismissAll = useCallback(() => {
+    // Permanently dismiss all active and pending alerts
+    [...activeAlerts, ...pendingAlerts].forEach(a => dismissSmartAlert(a.id));
     setActiveAlerts([]);
     setPendingAlerts([]);
-  }, []);
+    queryClient.invalidateQueries({ queryKey: ['smart-alerts'] });
+  }, [activeAlerts, pendingAlerts, queryClient]);
 
   return {
     alerts: activeAlerts,

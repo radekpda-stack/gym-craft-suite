@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Bell, Check, AlertCircle, AlertTriangle, Info, MessageSquare, ChevronDown, ChevronRight, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,49 @@ import { NotificationEmptyState } from "./NotificationEmptyState";
 import { UnifiedNotificationItem, type UnifiedNotification } from "./UnifiedNotificationItem";
 import { InlineNotificationSettings } from "./InlineNotificationSettings";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+
+// Smart Alert ID prefixes - these are client-generated, not in DB
+const SMART_ALERT_PREFIXES = [
+  'no-training-',
+  'low-credit-',
+  'birthdays-this-month',
+  'profit-trend',
+  'inactive-nutrition',
+  'badge-',
+];
+
+function isSmartAlertId(id: string): boolean {
+  return SMART_ALERT_PREFIXES.some(prefix => id.startsWith(prefix));
+}
+
+// LocalStorage key for dismissed smart alerts
+const DISMISSED_SMART_ALERTS_KEY = 'dismissed-smart-alerts';
+
+function getDismissedSmartAlerts(): Set<string> {
+  try {
+    const stored = localStorage.getItem(DISMISSED_SMART_ALERTS_KEY);
+    if (!stored) return new Set();
+    const data = JSON.parse(stored);
+    // Filter out old dismissals (older than 24 hours)
+    const now = Date.now();
+    const valid = Object.entries(data).filter(([_, ts]) => now - (ts as number) < 24 * 60 * 60 * 1000);
+    return new Set(valid.map(([id]) => id));
+  } catch {
+    return new Set();
+  }
+}
+
+function dismissSmartAlert(id: string) {
+  try {
+    const stored = localStorage.getItem(DISMISSED_SMART_ALERTS_KEY);
+    const data = stored ? JSON.parse(stored) : {};
+    data[id] = Date.now();
+    localStorage.setItem(DISMISSED_SMART_ALERTS_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore localStorage errors
+  }
+}
 
 // Priority section config
 const PRIORITY_SECTIONS = {
@@ -67,6 +110,7 @@ interface NotificationCenterProps {
 
 export function NotificationCenter({ onOpenChange, children }: NotificationCenterProps = {}) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const deleteNotification = useDeleteNotification();
@@ -78,6 +122,28 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   
   const { urgent, important, info, all, unreadCount, isLoading } = useAggregatedNotifications();
   const totalUnread = unreadCount + unreadConversations.reduce((sum, c) => sum + c.unreadCount, 0);
+
+  // Handle marking notification as read - route Smart Alerts to localStorage
+  const handleMarkRead = useCallback((id: string) => {
+    if (isSmartAlertId(id)) {
+      dismissSmartAlert(id);
+      // Force refetch smart alerts to update UI
+      queryClient.invalidateQueries({ queryKey: ['smart-alerts'] });
+    } else {
+      markRead.mutate(id);
+    }
+  }, [markRead, queryClient]);
+
+  // Handle deleting notification - route Smart Alerts to localStorage
+  const handleDelete = useCallback((id: string) => {
+    if (isSmartAlertId(id)) {
+      dismissSmartAlert(id);
+      // Force refetch smart alerts to update UI
+      queryClient.invalidateQueries({ queryKey: ['smart-alerts'] });
+    } else {
+      deleteNotification.mutate(id);
+    }
+  }, [deleteNotification, queryClient]);
 
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<TrainingFeedback | null>(null);
@@ -135,15 +201,23 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     navigate(`/clients/${clientId}?tab=chat`);
   };
 
-  // Mark all as read
-  const handleMarkAllAsRead = () => {
+  // Mark all as read (including Smart Alerts)
+  const handleMarkAllAsRead = useCallback(() => {
+    // Mark all DB notifications as read
     if (unreadCount > 0) {
       markAllRead.mutate();
     }
+    // Mark all unread messages as read
     if (unreadConversations.length > 0) {
       markAllMessagesRead.mutate();
     }
-  };
+    // Dismiss all Smart Alerts
+    const smartAlertIds = all.filter(n => isSmartAlertId(n.id)).map(n => n.id);
+    if (smartAlertIds.length > 0) {
+      smartAlertIds.forEach(id => dismissSmartAlert(id));
+      queryClient.invalidateQueries({ queryKey: ['smart-alerts'] });
+    }
+  }, [unreadCount, markAllRead, unreadConversations.length, markAllMessagesRead, all, queryClient]);
 
   // Handle notification click with feedback dialog support
   const handleNotificationClick = async (notification: UnifiedNotification) => {
@@ -264,8 +338,8 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
               >
                 <UnifiedNotificationItem
                   notification={notification}
-                  onMarkRead={(id) => markRead.mutate(id)}
-                  onDelete={(id) => deleteNotification.mutate(id)}
+                  onMarkRead={handleMarkRead}
+                  onDelete={handleDelete}
                   onClick={() => handleNotificationClick(notification)}
                   enableSwipe={true}
                 />
