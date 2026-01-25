@@ -3,19 +3,17 @@ import { NavLink, useLocation, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   TrendingUp, 
-  LogOut,
   Settings,
   Trophy,
   BookOpen,
   Award,
-  Users,
   ShoppingBag,
-  Dumbbell,
-  MessageCircle
+  MessageCircle,
+  MoreHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { trackEvent } from '@/lib/analytics/trackEvent';
 import { sessionManager } from '@/lib/analytics/SessionManager';
 import { ClientNotificationCenter } from './ClientNotificationCenter';
@@ -24,6 +22,12 @@ import { LogoutConfirmDialog } from './common/LogoutConfirmDialog';
 import { useClientPortalDemo } from '@/hooks/useClientPortalDemo';
 import { DemoModeBanner } from './DemoModeBanner';
 import { AvatarCelebration } from './celebrations';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -36,36 +40,31 @@ type NavItem = {
   trackName: string;
 };
 
-function buildBaseNavItems(base: string): NavItem[] {
+// Primary navigation items (4 items)
+function buildPrimaryNavItems(base: string): NavItem[] {
   return [
     { to: base, icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
     { to: `${base}/diary`, icon: BookOpen, label: 'Deník', trackName: 'diary' },
     { to: `${base}/progress`, icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
     { to: `${base}/chat`, icon: MessageCircle, label: 'Chat', trackName: 'chat' },
-    { to: `${base}/leaderboard`, icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
-    { to: `${base}/challenges`, icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
-    { to: `${base}/badges`, icon: Award, label: 'Odznaky', trackName: 'badges' },
   ];
 }
 
-// Nutrition nav item removed - now accessible via Diary tab
-
-function buildPurchasesNavItem(base: string): NavItem {
-  return { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' };
-}
-
-function buildSettingsNavItem(base: string): NavItem {
-  return { to: `${base}/settings`, icon: Settings, label: 'Nastavení', trackName: 'settings' };
-}
-
-function buildMobileNavItems(base: string): NavItem[] {
+// Secondary navigation items (in "Více" dropdown)
+function buildSecondaryNavItems(base: string): NavItem[] {
   return [
-    { to: base, icon: LayoutDashboard, label: 'Přehled', trackName: 'overview' },
-    { to: `${base}/diary`, icon: BookOpen, label: 'Deník', trackName: 'diary' },
-    { to: `${base}/progress`, icon: TrendingUp, label: 'Pokrok', trackName: 'progress' },
-    { to: `${base}/chat`, icon: MessageCircle, label: 'Chat', trackName: 'chat' },
-    { to: `${base}/leaderboard`, icon: Users, label: 'Žebříček', trackName: 'leaderboard' },
-    { to: `${base}/challenges`, icon: Trophy, label: 'Výzvy', trackName: 'challenges' },
+    { to: `${base}/competitions`, icon: Trophy, label: 'Soutěže', trackName: 'competitions' },
+    { to: `${base}/badges`, icon: Award, label: 'Odznaky', trackName: 'badges' },
+    { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
+    { to: `${base}/settings`, icon: Settings, label: 'Nastavení', trackName: 'settings' },
+  ];
+}
+
+// Desktop sidebar gets all items
+function buildDesktopNavItems(base: string): NavItem[] {
+  return [
+    ...buildPrimaryNavItems(base),
+    { to: `${base}/competitions`, icon: Trophy, label: 'Soutěže', trackName: 'competitions' },
     { to: `${base}/badges`, icon: Award, label: 'Odznaky', trackName: 'badges' },
     { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
     { to: `${base}/settings`, icon: Settings, label: 'Nastavení', trackName: 'settings' },
@@ -90,13 +89,13 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   // Keep navigation inside the currently used portal prefix
   // ("/zona" for short URL portal, "/client" for legacy portal)
   const basePath = location.pathname.startsWith('/zona') ? '/zona' : '/client';
-  const baseNavItems = buildBaseNavItems(basePath);
-  const purchasesNavItem = buildPurchasesNavItem(basePath);
-  const settingsNavItem = buildSettingsNavItem(basePath);
-  const mobileNavItems = buildMobileNavItems(basePath);
+  const primaryNavItems = buildPrimaryNavItems(basePath);
+  const secondaryNavItems = buildSecondaryNavItems(basePath);
+  const desktopNavItems = buildDesktopNavItems(basePath);
 
   const sessionInitialized = useRef(false);
   const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   
   // Demo mode support
   const { isDemo, demoClientProfile, demoClientId } = useClientPortalDemo();
@@ -113,12 +112,14 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
     }
   }, [shouldShowCredentialsReminder, showCredentialsDialog, isDemo]);
 
-  // Build desktop nav items dynamically (nutrition is now in diary tab)
-  const allNavItems = [
-    ...baseNavItems,
-    purchasesNavItem,
-    settingsNavItem,
-  ];
+  // All nav items for tracking purposes
+  const allNavItems = [...primaryNavItems, ...secondaryNavItems];
+  
+  // Check if current path is in secondary items (for "Více" button active state)
+  const isSecondaryActive = secondaryNavItems.some(item => 
+    location.pathname === item.to || 
+    (item.to !== basePath && location.pathname.startsWith(item.to))
+  );
 
   // Initialize session tracking for client portal - skip in demo mode
   useEffect(() => {
@@ -226,9 +227,9 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         </div>
         
         <nav className="flex-1 flex flex-col gap-2">
-          {allNavItems.map((item) => {
+          {desktopNavItems.map((item) => {
             const isActive = location.pathname === item.to || 
-              (item.to !== '/client' && location.pathname.startsWith(item.to));
+              (item.to !== '/client' && item.to !== '/zona' && location.pathname.startsWith(item.to));
             
             return (
               <NavLink
@@ -285,10 +286,11 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         </motion.div>
       </main>
 
-      {/* Mobile Bottom Navigation - Scrollable floating bar with all items */}
+      {/* Mobile Bottom Navigation - 5 items: 4 primary + "Více" dropdown */}
       <nav className="fixed bottom-4 left-4 right-4 bg-card/95 backdrop-blur-md border rounded-[20px] shadow-lg z-50 md:hidden">
-        <div className="flex items-center h-14 px-2 overflow-x-auto scrollbar-hide">
-          {mobileNavItems.map((item) => {
+        <div className="flex items-center justify-around h-14 px-2">
+          {/* Primary nav items */}
+          {primaryNavItems.map((item) => {
             const isActive = location.pathname === item.to || 
               (item.to !== '/client' && item.to !== '/zona' && location.pathname.startsWith(item.to));
             
@@ -297,7 +299,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 min-w-[56px] py-1.5 px-2 rounded-xl transition-all relative shrink-0",
+                  "flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-xl transition-all relative",
                   isActive 
                     ? "text-primary" 
                     : "text-muted-foreground"
@@ -317,6 +319,54 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
               </NavLink>
             );
           })}
+          
+          {/* "Více" dropdown for secondary items */}
+          <DropdownMenu open={moreMenuOpen} onOpenChange={setMoreMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-xl transition-all relative",
+                  isSecondaryActive 
+                    ? "text-primary" 
+                    : "text-muted-foreground"
+                )}
+              >
+                <MoreHorizontal className={cn(
+                  "w-5 h-5 transition-transform shrink-0",
+                  isSecondaryActive && "scale-110"
+                )} />
+                <span className="text-[9px] font-medium whitespace-nowrap">Více</span>
+                {isSecondaryActive && (
+                  <motion.div
+                    layoutId="clientActiveTabMore"
+                    className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary"
+                  />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="top" className="w-48 mb-2">
+              {secondaryNavItems.map((item) => {
+                const isActive = location.pathname === item.to || 
+                  (item.to !== basePath && location.pathname.startsWith(item.to));
+                
+                return (
+                  <DropdownMenuItem key={item.to} asChild>
+                    <NavLink
+                      to={item.to}
+                      onClick={() => setMoreMenuOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 cursor-pointer",
+                        isActive && "text-primary font-medium"
+                      )}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </nav>
     </div>

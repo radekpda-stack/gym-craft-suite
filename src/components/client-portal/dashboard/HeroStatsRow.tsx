@@ -17,6 +17,8 @@ interface HeroStatsRowProps {
   period?: PeriodDays;
 }
 
+// Remove period prop as it's no longer needed from parent
+
 function formatRelativeDate(dateStr: string): string {
   const date = parseISO(dateStr);
   
