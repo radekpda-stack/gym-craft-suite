@@ -29,6 +29,7 @@ import {
   UserCircle,
   Trophy,
   ClipboardCheck,
+  Database,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
@@ -293,16 +294,24 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         ],
       },
       {
-        label: 'Záznamy',
+        label: 'Data',
         items: [
-          { id: 'performance', to: '/performance', icon: Zap, label: 'Výkonnost' },
-          { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
-          ...(isModuleEnabled('nutrition') ? [{
-            id: 'nutrition',
-            to: '/nutrition',
-            icon: Utensils,
-            label: 'Strava',
-          }] : []),
+          { 
+            id: 'data', 
+            to: '/performance', 
+            icon: Database, 
+            label: 'Data & Výkonnost',
+            children: [
+              { id: 'performance', to: '/performance', icon: Zap, label: 'Výkonnost' },
+              { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
+              ...(isModuleEnabled('nutrition') ? [{
+                id: 'nutrition',
+                to: '/nutrition',
+                icon: Utensils,
+                label: 'Strava',
+              }] : []),
+            ],
+          },
         ],
       },
       {

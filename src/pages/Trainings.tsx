@@ -22,6 +22,8 @@ import { TimeFilterToggle } from '@/components/trainings/TimeFilterToggle';
 import { CancelTrainingDialog } from '@/components/trainings/CancelTrainingDialog';
 import { TrainingListSkeleton } from '@/components/skeletons';
 import { QuickPaymentDialog } from '@/components/calendar/QuickPaymentDialog';
+import { QuickCompleteDialog } from '@/components/trainings/QuickCompleteDialog';
+import { CompleteTrainingDialog } from '@/components/trainings/CompleteTrainingDialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { HorizontalChipScroller } from '@/components/ui/HorizontalChipScroller';
 import { toast } from '@/hooks/use-toast';
@@ -38,6 +40,10 @@ export default function Trainings() {
   const [duplicateDefaults, setDuplicateDefaults] = useState<Partial<TrainingFormValues> | undefined>(undefined);
   const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; trainingId: string; clientName: string } | null>(null);
   const [cancelDialog, setCancelDialog] = useState<{ open: boolean; session: typeof sessions[0] | null }>({ open: false, session: null });
+  
+  // Quick Complete state
+  const [quickCompleteSession, setQuickCompleteSession] = useState<typeof sessions[0] | null>(null);
+  const [fullCompleteSession, setFullCompleteSession] = useState<typeof sessions[0] | null>(null);
 
   // Persistent page state
   const { timeFilter, statusFilter, setTimeFilter, setStatusFilter } = useTrainingsPageState();
@@ -104,16 +110,23 @@ export default function Trainings() {
     };
   }, [timeFilteredSessions]);
 
-  const handleCompleteTraining = async (sessionId: string) => {
-    try {
-      await updateTraining.mutateAsync({
-        id: sessionId,
-        input: { status: 'completed' },
-        trainingPrices,
-      });
-      toast({ title: 'Trénink dokončen' });
-    } catch (error) {
-      toast({ title: 'Chyba při dokončování', variant: 'destructive' });
+  const handleCompleteTraining = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) {
+      setQuickCompleteSession(session);
+    }
+  };
+
+  const handleCompleteSuccess = () => {
+    setQuickCompleteSession(null);
+    setFullCompleteSession(null);
+    toast({ title: 'Trénink dokončen' });
+  };
+
+  const handleNeedFullDialog = () => {
+    if (quickCompleteSession) {
+      setFullCompleteSession(quickCompleteSession);
+      setQuickCompleteSession(null);
     }
   };
 
@@ -451,6 +464,23 @@ export default function Trainings() {
         session={cancelDialog.session}
         onConfirm={handleConfirmCancel}
         trainingPrice={getCancelTrainingPrice()}
+      />
+
+      {/* Quick Complete Dialog */}
+      <QuickCompleteDialog
+        open={!!quickCompleteSession}
+        onOpenChange={(open) => !open && setQuickCompleteSession(null)}
+        session={quickCompleteSession}
+        onSuccess={handleCompleteSuccess}
+        onNeedFullDialog={handleNeedFullDialog}
+      />
+
+      {/* Full Complete Dialog (for multi-participant) */}
+      <CompleteTrainingDialog
+        open={!!fullCompleteSession}
+        onOpenChange={(open) => !open && setFullCompleteSession(null)}
+        session={fullCompleteSession}
+        onSuccess={handleCompleteSuccess}
       />
     </div>
   );
