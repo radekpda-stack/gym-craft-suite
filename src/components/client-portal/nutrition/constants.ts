@@ -19,10 +19,16 @@ export const MEAL_TYPES = [
 ] as const;
 
 export const PORTION_SIZES = [
-  { id: 'small', label: 'Malá', icon: '🥄' },
-  { id: 'medium', label: 'Střední', icon: '🍽️' },
-  { id: 'large', label: 'Velká', icon: '🍳' },
+  { id: 'small', label: 'Malá', icon: '🥄', grams: '~100-150g' },
+  { id: 'medium', label: 'Střední', icon: '🍽️', grams: '~200-300g' },
+  { id: 'large', label: 'Velká', icon: '🍳', grams: '~350-500g' },
 ] as const;
+
+export const PORTION_GRAMS: Record<string, string> = {
+  small: '~100-150g',
+  medium: '~200-300g',
+  large: '~350-500g',
+};
 
 export const QUALITY_OPTIONS = [
   { id: 'good', label: 'Kvalitní', icon: '💚' },

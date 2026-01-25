@@ -12,6 +12,8 @@ import {
   Send,
   Loader2,
   Ban,
+  Copy,
+  Download,
   Pencil,
   Clock,
   CheckCircle2,
@@ -43,6 +45,7 @@ import { analyzeCaffeineForPeriod } from '@/components/client-portal/nutrition/C
 import { NutritionFoodCard } from '@/components/nutrition/NutritionFoodCard';
 import { HabitSettingsForm } from '@/components/client-portal/nutrition/HabitSettingsForm';
 import { TrainerFeedbackDialog, NutritionRatingDisplay } from '@/components/nutrition/TrainerFeedbackDialog';
+import { ChatGPTExportDialog } from '@/components/nutrition/ChatGPTExportDialog';
 import { useTrainerFeedback } from '@/hooks/useNutritionFeedback';
 import {
   MEAL_TYPES,
@@ -239,8 +242,11 @@ export default function NutritionClientDetail() {
   const queryClient = useQueryClient();
   const { data: client, isLoading: clientLoading } = useClient(clientId);
   
-  // Period selection: 7 or 10 days
-  const [periodDays, setPeriodDays] = useState<7 | 10>(7);
+  // Fixed 10-day period (recommended duration)
+  const periodDays = 10;
+  
+  // ChatGPT export dialog state
+  const [chatGPTExportOpen, setChatGPTExportOpen] = useState(false);
   
   // Calculate date range based on period
   const today = new Date();
@@ -585,10 +591,16 @@ export default function NutritionClientDetail() {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={exportToPDF} className="gap-2">
-          <FileDown className="w-4 h-4" />
-          <span className="hidden sm:inline">Export PDF</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setChatGPTExportOpen(true)} className="gap-2">
+            <Copy className="w-4 h-4" />
+            <span className="hidden sm:inline">Pro ChatGPT</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportToPDF} className="gap-2">
+            <FileDown className="w-4 h-4" />
+            <span className="hidden sm:inline">PDF</span>
+          </Button>
+        </div>
       </div>
 
       {/* Period Stats */}
@@ -625,19 +637,18 @@ export default function NutritionClientDetail() {
         </div>
       </div>
 
-      {/* Period Toggle + Settings */}
+      {/* Period Info + Settings */}
       <div className="flex items-center justify-between gap-3">
-        <Tabs value={periodDays.toString()} onValueChange={(v) => setPeriodDays(parseInt(v) as 7 | 10)}>
-          <TabsList>
-            <TabsTrigger value="7">7 dní</TabsTrigger>
-            <TabsTrigger value="10">10 dní</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        
         <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-xs">
+            Posledních {periodDays} dní
+          </Badge>
           <span className="text-xs text-muted-foreground">
             {format(periodStart, 'd.M.', { locale: cs })} - {format(periodEnd, 'd.M.yyyy', { locale: cs })}
           </span>
+        </div>
+        
+        <div className="flex items-center gap-2">
           <HabitSettingsForm
             clientId={clientId!}
             editedBy="trainer"
@@ -881,6 +892,17 @@ export default function NutritionClientDetail() {
           })}
         </div>
       )}
+
+      {/* ChatGPT Export Dialog */}
+      <ChatGPTExportDialog
+        open={chatGPTExportOpen}
+        onOpenChange={setChatGPTExportOpen}
+        clientName={client.name}
+        periodStart={periodStart}
+        periodEnd={periodEnd}
+        entriesByDate={entriesByDate}
+        periodDates={periodDates}
+      />
 
       {/* Trainer Feedback Dialog */}
       <TrainerFeedbackDialog

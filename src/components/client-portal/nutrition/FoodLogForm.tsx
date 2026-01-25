@@ -349,14 +349,22 @@ export function FoodLogForm({
               key={size.id}
               onClick={() => setPortionSize(size.id)}
               className={cn(
-                "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
+                "flex flex-col items-center gap-1 p-3 rounded-lg transition-colors",
                 portionSize === size.id 
                   ? "bg-primary text-primary-foreground" 
                   : "bg-muted/50 hover:bg-muted"
               )}
             >
-              <span>{size.icon}</span>
-              <span>{size.label}</span>
+              <span className="text-lg">{size.icon}</span>
+              <span className="text-xs font-medium">{size.label}</span>
+              <span className={cn(
+                "text-[10px]",
+                portionSize === size.id 
+                  ? "text-primary-foreground/80" 
+                  : "text-muted-foreground"
+              )}>
+                {size.grams}
+              </span>
             </button>
           ))}
         </div>
