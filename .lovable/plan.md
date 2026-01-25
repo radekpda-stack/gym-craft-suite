@@ -1,227 +1,146 @@
 
 
-# Revize sekce Feedbacky - Audit UI a návrh vylepšení
+# Vylepšení komponenty "Feedback podle tagů" + Integrace do Statistik
 
-## Aktuální stav modulu
+## Současný stav
 
-Feedback modul (`/feedback-overview`) obsahuje 4 hlavní záložky:
-- **K odeslání** - Tréninky čekající na odeslání feedbacku
-- **Statistiky** - Trendy a metriky (míra odpovědí, bolesti, energie atd.)
-- **Historie** - Seznam všech feedbacků s filtry
-- **Nastavení** - Konfigurace dotazníku a thresholdů
+Komponenta `FeedbackTagCorrelation.tsx` zobrazuje cenná data z feedbacků agregovaná podle tréninkových tagů (Typ tréninku, Partie, Intenzita). 
 
-### Aktuální analytické komponenty
-
-| Komponenta | Funkce | Typ dat |
-|------------|--------|---------|
-| `FeedbackStatusCards` | 5 KPI karet (K odeslání, Čekající, Vyplněno, Expirováno, Red Flags) | Absolutní počty |
-| `FeedbackTrendsOverview` | Míra odpovědí, průměry metrik, grafy v čase | Agregovaná data bez kontextu tréninku |
-| `FeedbackAttentionInbox` | Prioritní inbox red flagů a čekajících | Akční seznam |
-| `FeedbackActivityTimeline` | Poslední aktivita | Chronologický přehled |
+### Nalezené problémy na screenshotu:
+1. **Tabulka zobrazuje pouze 3 sloupce** (Tag, Počet, Ø Svalovka) - chybí ostatní metriky (Energie, Bolest, Pocit)
+2. **Vizuálně málo atraktivní** - pouze text a čísla bez grafických prvků
+3. **Badge může přetékat** - při delších názvech tagů
+4. **Chybí vizuální indikace** hodnot (např. škála 0-10 není graficky znázorněna)
 
 ---
 
-## Nalezené problémy
+## Navrhované změny UI
 
-### 1. Chybí korelace tréninku s feedbackem
+### 1. Kompaktnější mobilní zobrazení s vizuálními metrikami
 
-Aktuálně existuje pouze `RecoveryInsightsCard` v detailu klienta, který ukazuje spánek vs. energie. **Chybí**:
-- Zobrazení obsahu tréninku (cviky, objem, trvání) vedle feedbackových metrik
-- Graf "Objem vs. Svalovka" nebo "RPE z tréninku vs. Pocit těla D+1"
-- Identifikace, které typy tréninků vedou k lepšímu/horšímu feedbacku
+Místo 6 sloupců v tabulce použít:
+- **Mobilní view**: Karta pro každý tag s progress bary
+- **Desktop view**: Vylepšená tabulka s mini-grafy
 
-### 2. Chybí historické porovnání období
+**Nový mobilní layout (karty):**
+```text
+┌─────────────────────────────────────────────┐
+│ [Max síla]                        30× ▼     │
+│ ─────────────────────────────────────────── │
+│ Svalovka   ████████░░░░░░░░ 3.4             │
+│ Energie    ██████████████░░ 7.2             │
+│ Bolest     ██░░░░░░░░░░░░░░ 1.5             │
+│ Pocit      ████████████░░░░ 6.8             │
+└─────────────────────────────────────────────┘
+```
 
-`FeedbackTrendsOverview` ukazuje pouze trend za jedno období. **Chybí**:
-- Možnost porovnat 2 období (např. Leden vs. Prosinec)
-- Porovnání klienta s průměrem všech klientů (trenérský baseline)
-- Vizualizace "Tento měsíc vs. Minulý měsíc"
+### 2. Mini progress bar pro hodnoty
 
-### 3. Nevyužitá data z feedbacku
+Nahradit textové hodnoty (3.4, 4.4, 3.0...) vizuálním progress barem:
+- Škála 0-10 převedena na % šířky
+- Barva: `bg-primary` (cyan/teal z designu)
+- Background: `bg-muted` 
 
-Data se sbírají, ale nevyužívají pro:
-- Doporučení úprav programu (např. "Vysoká svalovka po silových = snížit objem")
-- Identifikaci vzorců (např. "Po tréninku nohou vždy nízká energie")
-- Korelaci s tagy tréninků (fokus, část těla, intenzita)
+### 3. Vylepšená tabulka pro desktop
 
-### 4. Záložka Statistiky - chybí kontext
+```text
+┌────────────────┬───────┬─────────────────────────────────────┐
+│ Tag            │ Počet │ Metriky (Svalovka | Energie | Pocit)│
+├────────────────┼───────┼─────────────────────────────────────┤
+│ Max síla       │  30   │ ████ 3.4  ████████ 7.2  ██████ 6.8  │
+│ Hypertrofie    │   9   │ █████ 4.4 ███████ 6.5   █████ 5.2   │
+│ Plyometrie     │   3   │ ███ 3.0   ██████ 6.0    ████ 4.5    │
+└────────────────┴───────┴─────────────────────────────────────┘
+```
 
-`FeedbackTrendsOverview` zobrazuje:
-- Míra odpovědí, průměrné metriky, grafy
-- **Ale bez porovnání** - není jasné, jestli 6.5/10 je dobré nebo špatné
+### 4. Fixní šířky sloupců pro prevenci přetékání
 
-### 5. UI neoptimální pro rychlé rozhodování
-
-- Status karty nahoře jsou velké (zabírají výšku)
-- Attention inbox je v bočním panelu, ale trenér ho potřebuje vidět jako první
-- Chybí "Dashboard summary" - rychlý přehled bez scrollování
+- Tag sloupec: `max-w-[120px] truncate`
+- Počet: `w-16 text-center`
+- Metriky: `flex-1` s mini-bar vizualizací
 
 ---
 
-## Navrhované změny
+## Nová komponenta: `FeedbackTagCard` (pro mobilní karty)
 
-### Fáze 1: Korelace tréninku s feedbackem
+Nová sub-komponenta pro zobrazení jednoho tagu jako karty:
+- Název tagu jako header s badge
+- 4 mini progress bary pro metriky
+- Collapsible pro rozbalení detailů
 
-**Nová komponenta `TrainingFeedbackCorrelationCard`:**
+---
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ 📊 Trénink → Reakce                                          │
-├─────────────────────────────────────────────────────────────┤
-│ [Scatter plot: X = Objem tréninku, Y = Svalovka D+1]         │
-│                                                              │
-│ Poznámky:                                                    │
-│ • Po silovém tréninku nohou: Ø svalovka 7.2/10              │
-│ • Po kardio: Ø svalovka 3.1/10                              │
-│ • Korelace objemu a svalovky: 0.72 (silná)                  │
-└─────────────────────────────────────────────────────────────┘
+## Nová komponenta: `MetricMiniBar`
+
+Reusable komponenta pro mini progress bar:
+```tsx
+interface MetricMiniBarProps {
+  value: number | null;  // 0-10
+  label?: string;
+  showValue?: boolean;
+  size?: 'sm' | 'md';
+}
 ```
 
-**Nový hook `useTrainingFeedbackCorrelation`:**
-- Propojí `exercise_entries` s `training_feedback` přes `training_session_id`
-- Vypočítá korelaci mezi objemem/RPE a feedbackovými metrikami
-- Agreguje podle tagů tréninku (fokus, část těla)
+Vizualizace:
+- Výška 4px (sm) nebo 6px (md)
+- Zaoblené konce (`rounded-full`)
+- Tooltip s hodnotou při hover
 
-### Fáze 2: Historické porovnání období
+---
 
-**Rozšíření `FeedbackTrendsOverview` o comparison mode:**
+## Integrace do Statistik tréninků
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ 📈 Porovnání období                                          │
-│ [Toto období: Leden 2026 ▾] vs [Minulé období: Prosinec ▾]   │
-├─────────────────────────────────────────────────────────────┤
-│ Metrika          │ Leden  │ Prosinec │ Změna                │
-│ ─────────────────┼────────┼──────────┼─────────────────     │
-│ Pocit těla       │ 7.2    │ 6.8      │ +0.4 ↑               │
-│ Svalovka         │ 5.1    │ 6.3      │ -1.2 ↓ (lepší)       │
-│ Bolest           │ 2.8    │ 3.5      │ -0.7 ↓               │
-│ Energie          │ 6.9    │ 6.4      │ +0.5 ↑               │
-│ Red Flags        │ 2      │ 5        │ -3 ↓                 │
-└─────────────────────────────────────────────────────────────┘
+### Kam přidat:
+
+Do `TrainingStatsSection.tsx` jako novou sekci pod `GlobalTagDistributionCard`:
+
+```tsx
+{/* Feedback by Tags - Training insights */}
+<FeedbackTagCorrelation days={dateRange === 'all' ? 365 : dateRange} />
 ```
 
-### Fáze 3: Porovnání klient vs. trenérský průměr
+### Úprava props:
 
-**Nová komponenta `ClientVsBaselineCard`:**
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ 👤 Jan Novák vs. Průměr všech klientů                        │
-├─────────────────────────────────────────────────────────────┤
-│ [Bar chart - dvojité pruhy: klient | průměr]                │
-│                                                              │
-│ Pocit těla:  ████████░░ 7.8  vs  ████████░░ 7.2 (+0.6)       │
-│ Svalovka:    █████░░░░░ 4.9  vs  ██████░░░░ 5.8 (-0.9)       │
-│ Energie:     ███████░░░ 6.5  vs  ███████░░░ 6.7 (-0.2)       │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Fáze 4: Vzory a korelace podle tagů
-
-**Nová komponenta `FeedbackTagCorrelation`:**
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ 🏷️ Feedback podle typu tréninku                             │
-├─────────────────────────────────────────────────────────────┤
-│ Tag             │ Počet │ Ø Svalovka │ Ø Energie │ Ø Bolest │
-│ ────────────────┼───────┼────────────┼───────────┼──────────│
-│ Silový          │ 23    │ 6.8        │ 5.9       │ 2.1      │
-│ Kardio          │ 15    │ 3.2        │ 7.2       │ 1.5      │
-│ Nohy            │ 12    │ 7.5        │ 5.4       │ 2.8      │
-│ Horní tělo      │ 11    │ 5.2        │ 6.8       │ 1.9      │
-│ Vysoká intenzita│ 8     │ 7.1        │ 5.1       │ 3.2      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Fáze 5: Redesign záložky Statistiky
-
-**Nový layout:**
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ [Období: 30 dní ▾] [Klient: Všichni ▾] [Porovnat s ▾]       │
-├─────────────────────────────────────────────────────────────┤
-│ ┌────────────────┐ ┌────────────────┐ ┌────────────────┐    │
-│ │ Míra odpovědí  │ │ Ø Pocit těla   │ │ Red Flags      │    │
-│ │     76%        │ │     7.2/10     │ │     3          │    │
-│ │ ↑ vs min. měsíc│ │ +0.4 vs min.   │ │ -2 vs min.     │    │
-│ └────────────────┘ └────────────────┘ └────────────────┘    │
-├─────────────────────────────────────────────────────────────┤
-│ [Trendy] [Korelace] [Podle tagů]                             │
-│                                                              │
-│ ┌─ Trendy ──────────────────────────────────────────────┐   │
-│ │ [Chart: Vývoj metrik v čase s comparison overlay]     │   │
-│ └───────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Fáze 6: Praktické využití dat (Coach Insights)
-
-**Rozšíření `FeedbackAttentionInbox` o akční doporučení:**
-
-Aktuálně `src/lib/coachSuggestions.ts` obsahuje logiku pro generování doporučení. Integrace do přehledu:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ 💡 Postřehy z feedbacku                                      │
-├─────────────────────────────────────────────────────────────┤
-│ • Jan Novák: Opakovaná bolest ramene (3× za 14 dní)         │
-│   → Zvážit úpravu tlakových cviků                           │
-│                                                              │
-│ • Petra K.: Klesající energie posledních 5 tréninků         │
-│   → Možná přetrénování, zkontrolovat spánek                 │
-│                                                              │
-│ • Celkově: Po silových trénincích nohou vysoká svalovka     │
-│   → 45% klientů hlásí 7+/10                                 │
-└─────────────────────────────────────────────────────────────┘
-```
+Komponenta již podporuje `days` prop, takže bude reagovat na `periodRange` ze Statistics.
 
 ---
 
 ## Technické kroky implementace
 
-### Krok 1: Nový hook `useTrainingFeedbackCorrelation`
+### Krok 1: Vytvořit `MetricMiniBar` komponentu
 ```text
-- Propojit training_feedback s exercise_entries přes training_session_id
-- Vypočítat objem tréninku (sets × reps × weight)
-- Korelovat s feedback metrikami (soreness, body_feel, energy)
-- Agregovat podle training_type z training_sessions
+- Nová komponenta src/components/feedback/MetricMiniBar.tsx
+- Props: value (0-10), label, showValue, size
+- Vizualizace jako tenký progress bar s hodnotou vpravo
 ```
 
-### Krok 2: Komponenta `TrainingFeedbackCorrelationCard`
+### Krok 2: Vytvořit `FeedbackTagRow` pro desktop tabulku
 ```text
-- Scatter chart: X = objem, Y = svalovka (recharts)
-- Tabulka: agregace podle typu tréninku
-- Neutrální prezentace (bez hodnocení)
+- Nová sub-komponenta místo současného TableRow
+- Zobrazí tag badge + počet + 4 mini-bary v řádku
+- Tooltips pro jednotlivé metriky
 ```
 
-### Krok 3: Rozšíření `FeedbackTrendsOverview`
+### Krok 3: Vytvořit `FeedbackTagCard` pro mobilní view
 ```text
-- Přidat comparison mode toggle
-- Přidat period selector pro 2 období
-- Vypočítat rozdíly a zobrazit neutrálně (bez barev zelená/červená)
+- Nová komponenta pro card-based layout
+- Kompaktní zobrazení všech 4 metrik
+- Expandable pro více detailů
 ```
 
-### Krok 4: Komponenta `FeedbackTagCorrelation`
+### Krok 4: Refaktorovat `FeedbackTagCorrelation`
 ```text
-- Načíst tagy z training_sessions
-- Agregovat feedback metriky podle tagů
-- Zobrazit jako tabulku s fakty
+- Použít responsive layout: karty na mobilu, tabulka na desktopu
+- Přepnout na MetricMiniBar místo textových hodnot
+- Přidat truncate a max-w na tag names
 ```
 
-### Krok 5: Hook pro trenérský baseline
+### Krok 5: Přidat do `TrainingStatsSection`
 ```text
-- useTrainerFeedbackBaseline: Ø metriky ze všech klientů
-- Slouží jako referenční vrstva pro porovnání
-```
-
-### Krok 6: Integrace coach suggestions
-```text
-- Rozšířit FeedbackAttentionInbox o sekci "Postřehy"
-- Využít existující coachSuggestions.ts logiku
-- Zobrazit top 3-5 postřehů
+- Import FeedbackTagCorrelation
+- Přidat pod GlobalTagDistributionCard
+- Předat days prop z periodRange
 ```
 
 ---
@@ -230,41 +149,50 @@ Aktuálně `src/lib/coachSuggestions.ts` obsahuje logiku pro generování doporu
 
 | Oblast | Před | Po |
 |--------|------|-----|
-| Korelace trénink-feedback | Žádná | Scatter chart + tabulka |
-| Porovnání období | Chybí | Period vs Period view |
-| Porovnání klient vs baseline | Chybí | Client vs Trainer Average |
-| Agregace podle tagů | Chybí | Tag correlation table |
-| Využití dat | Pouze red flags | Coach insights + patterns |
-| KPI trendy | Absolutní hodnoty | Relativní změny vs minulé období |
+| Zobrazení metrik | Pouze text "3.4" | Mini progress bar + text |
+| Mobilní layout | Horizontální tabulka | Vertikální karty |
+| Přetékání textu | Možné u dlouhých tagů | `truncate` + `max-w` |
+| Počet viditelných metrik | 3 (na screenshotu) | 4 (Svalovka, Energie, Bolest, Pocit) |
+| Integrace do Stats | Chybí | Nová sekce v Tréninky tab |
+
+---
+
+## Vizuální návrh finální karty
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ 🏷️ Feedback podle tagů                          21 tagů    │
+├─────────────────────────────────────────────────────────────┤
+│ [Typ tréninku ✓ 5] [Partie 14] [Intenzita]                  │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌─ Max síla ───────────────────────────────── 30× ────┐    │
+│  │ Svalovka  ████░░░░░░ 3.4   Energie ████████░░ 7.2   │    │
+│  │ Bolest    ██░░░░░░░░ 1.5   Pocit   ███████░░░ 6.8   │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  ┌─ Hypertrofie ──────────────────────────────  9× ────┐    │
+│  │ Svalovka  █████░░░░░ 4.4   Energie ███████░░░ 6.5   │    │
+│  │ Bolest    ███░░░░░░░ 2.1   Pocit   ██████░░░░ 5.8   │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Prioritizace
 
-**Vysoká priorita (největší hodnota):**
-1. Korelace tréninku s feedbackem (nový hook + komponenta)
-2. Porovnání období (rozšíření FeedbackTrendsOverview)
+**Vysoká priorita:**
+1. Přidat `MetricMiniBar` pro vizualizaci hodnot
+2. Opravit přetékání textu u tagů
+3. Přidat komponentu do Training stats
 
 **Střední priorita:**
-3. Agregace podle tagů tréninku
-4. Client vs Baseline porovnání
+4. Responzivní layout (karty/tabulka)
+5. Zobrazit všechny 4 metriky
 
 **Nižší priorita:**
-5. Coach insights integrace
-6. UI redesign statistik (kompaktnější layout)
-
----
-
-## Datové zdroje pro implementaci
-
-**Již dostupné:**
-- `training_feedback` - všechny feedback metriky
-- `exercise_entries` - cviky, objem, váhy, RPE
-- `training_sessions` - datum, trvání, tagy (focus, body_part, intensity)
-- `feedback_requests` - propojení feedback → trénink
-
-**Nové kalkulace:**
-- Session volume = Σ(sets × reps × weight) pro všechny cviky v tréninku
-- Tag correlation = Ø feedback metrika grouped by training tag
-- Period comparison = Current period metrics - Previous period metrics
+6. Tooltips a micro-interakce
+7. Collapsible karty
 
