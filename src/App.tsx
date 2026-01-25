@@ -20,6 +20,7 @@ import { PageLoader } from "@/components/PageLoader";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { InteractionTracker } from "@/lib/analytics/interaction";
 import { LazyRouteWrapper } from "@/components/LazyRouteWrapper";
+import { OrientationLock } from "@/components/OrientationLock";
 
 // Eagerly loaded (critical path)
 import UnifiedLogin from "./pages/UnifiedLogin";
@@ -104,6 +105,7 @@ const App = () => (
         <LanguageProvider>
           <UndoProvider>
             <TooltipProvider>
+              <OrientationLock />
               <OfflineBanner />
               <Toaster />
               <Sonner />
