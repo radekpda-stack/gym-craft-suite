@@ -1,150 +1,216 @@
 
 
-# Zjednodušení nutričního deníku + export pro ChatGPT
+# Vylepšení Notifikačního centra - Kompletní redesign
 
-## Shrnutí změn
+## Identifikované problémy
 
-1. **Odstranit volbu 7/10 dní** - klient může zapisovat průběžně neomezeně
-2. **Přidat gramáže k porcím** - orientační rozsahy pro lepší představu klienta
-3. **Export pro ChatGPT** - kopírovatelný text s přesnými časy, jídly, porcemi
+### 1. UI problém - Překrývání tlačítek
+V `SheetContent` (sheet.tsx) je křížek na pozici `right-4 top-4`, zatímco header v `NotificationCenter.tsx` má také tlačítko nastavení na pozici `right-4`. To způsobuje vizuální překrytí.
 
----
+### 2. Fragmentované notifikační systémy
+Aplikace má **tři oddělené** notifikační systémy:
+- `NotificationCenter` - klasické notifikace z databáze
+- `SmartAlerts` - analytické alerty generované na klientu
+- `SmartAlertToast` - toast notifikace pro smart alerts
 
-## 1. Odstranění přepínače 7/10 dní
+Tyto systémy nejsou propojené a duplikují funkcionalitu.
 
-Na stránce `NutritionClientDetail` je přepínač:
-```
-<Tabs value={periodDays.toString()} onValueChange={...}>
-  <TabsList>
-    <TabsTrigger value="7">7 dní</TabsTrigger>
-    <TabsTrigger value="10">10 dní</TabsTrigger>
-  </TabsList>
-</Tabs>
-```
+### 3. Chybějící funkce
+- Žádné filtry/vyhledávání v notifikacích
+- Chybí prioritizace (urgentní vs. informativní)
+- Žádná možnost "odložit" notifikaci
+- Chybí agregace podobných notifikací (5× nízký kredit = 1 souhrnná)
 
-**Řešení:** Místo přepínače nastavím výchozí období na 10 dní a odstraním Tabs. Trenér uvidí fixně posledních 10 dní (doporučená délka).
-
----
-
-## 2. Přidání gramáží k velikostem porce
-
-### Nová definice v `constants.ts`
-
-```typescript
-export const PORTION_SIZES = [
-  { id: 'small', label: 'Malá', icon: '🥄', grams: '~100-150g' },
-  { id: 'medium', label: 'Střední', icon: '🍽️', grams: '~200-300g' },
-  { id: 'large', label: 'Velká', icon: '🍳', grams: '~350-500g' },
-] as const;
-
-export const PORTION_GRAMS: Record<string, string> = {
-  small: '~100-150g',
-  medium: '~200-300g',
-  large: '~350-500g',
-};
-```
-
-### Úprava zobrazení v `FoodLogForm.tsx`
-
-Aktuální tlačítka:
-```
-[🥄 Malá] [🍽️ Střední] [🍳 Velká]
-```
-
-Nové tlačítka s gramáží:
-```
-[🥄 Malá       ] [🍽️ Střední    ] [🍳 Velká       ]
-[~100-150g     ] [~200-300g      ] [~350-500g      ]
-```
+### 4. UI/UX nedostatky
+- Příliš mnoho kategorií (7 kategorií může být overwhelming)
+- Malé touch targety na mobilech
+- Chybí prázdný stav s doporučeními
+- Nastavení je v separátním dialogu místo inline
 
 ---
 
-## 3. Export pro ChatGPT
+## Navrhované změny
 
-### Nové tlačítko vedle "Export PDF"
+### Krok 1: Opravit překrývání tlačítek v headeru
 
-V headeru `NutritionClientDetail`:
-```
-[📄 PDF] [📋 Pro ChatGPT]
-```
+**Problém:** `SheetContent` automaticky přidává `X` křížek na `right-4 top-4`, ale header v `NotificationCenter` má vlastní tlačítka na stejné pozici.
 
-### Formát exportovaného textu
+**Řešení:** Upravit header tak, aby tlačítka měla dostatečný padding vpravo:
 
-```text
-Nutriční deník: Lenka Deák
-Období: 15.1. - 24.1.2026
-
-=== Sobota 24.1.2026 ===
-
-JÍDLO:
-• 07:30 - Snídaně: Ovesná kaše s ovocem, střední porce (~200-300g)
-• 12:00 - Oběd: Kuřecí prsa s rýží, velká porce (~350-500g)
-• 18:30 - Večeře: Salát s tuňákem, střední porce (~200-300g)
-
-NÁPOJE:
-• 08:00 - Voda 300ml
-• 14:00 - Voda 500ml
-
-KOFEIN:
-• 07:00 - Espresso (1×)
-• 14:30 - Cappuccino (1×)
-
-=== Pátek 23.1.2026 ===
-...
+```tsx
+// NotificationCenter.tsx - SheetHeader
+<SheetHeader className="px-4 py-3 border-b flex flex-row items-center justify-between shrink-0 pr-12">
+  {/* pr-12 dává prostor pro X křížek */}
 ```
 
-### Dialog s exportem
+### Krok 2: Sjednotit notifikace a Smart Alerts
+
+Vytvořit nový "Unified Inbox" pohled, který kombinuje:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 📋 Export pro ChatGPT                                [✕]   │
+│ 🔔 Notifikace                                        [✕]   │
+├─────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ 🔍 Hledat...                     [📊 Filtry] [⚙️]      │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                              │
+│ ═══ VYŽADUJE AKCI (3) ════════════════════════════════════ │
+│                                                              │
+│ 🔴 5 klientů má záporný kredit                              │
+│    Lenka, Petr, Jana a 2 další                [Zobrazit →] │
+│                                                              │
+│ 🟠 3 tréninky čekají na dokončení                          │
+│    Dnes: 14:00, 16:00, 18:00                   [Dokončit →] │
+│                                                              │
+│ ═══ NOVÉ (12) ═══════════════════════════════════════════ │
+│                                                              │
+│ 💬 2 nové zprávy                                            │
+│    Lenka Deák, Petr Novák                    [Otevřít chat] │
+│                                                              │
+│ 🏆 Nový osobní rekord!                                      │
+│    Jana dosáhla PR: Squat 80kg × 5                          │
+│                                                              │
+│ ═══ DŘÍVĚJŠÍ ════════════════════════════════════════════ │
+│                                                              │
+│ 🎂 3 narozeniny tento měsíc                                │
+│ 📈 Příjmy +15% oproti minulému měsíci                      │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Krok 3: Agregace podobných notifikací
+
+Místo 5 separátních notifikací "nízký kredit" zobrazit jednu souhrnnou:
+
+```tsx
+// Nová funkce pro agregaci
+function aggregateNotifications(notifications: Notification[]): AggregatedNotification[] {
+  // Seskupit podle typu
+  // Vytvořit summary pro skupiny > 2
+}
+```
+
+Výsledek:
+```
+❌ Před: 5× "Nízký kredit: Lenka", "Nízký kredit: Petr"...
+✅ Po:   1× "5 klientů má nízký kredit" [Zobrazit všechny]
+```
+
+### Krok 4: Prioritizace notifikací
+
+Zavést 3 úrovně priority:
+
+| Priorita | Barva | Příklady |
+|----------|-------|----------|
+| **Urgentní** | 🔴 Červená | Záporný kredit, Red flag feedback, Nedokončený trénink |
+| **Důležité** | 🟠 Oranžová | Nízký kredit, Expirující balíček, Neaktivní klient |
+| **Informativní** | 🔵 Modrá | PR, Narozeniny, Milníky, Chat |
+
+### Krok 5: Inline Quick Actions
+
+Přidat rychlé akce přímo do notifikací:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 💬 Nová zpráva od Lenky Deák                               │
+│ "Ahoj, mám dotaz ohledně..."              před 5 min       │
+│                                                              │
+│ [📝 Odpovědět]  [✓ Přečteno]  [🔕 Ztlumit]                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Krok 6: Nastavení jako inline panel
+
+Místo separátního dialogu přidat toggle pro nastavení:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ ⚙️ Nastavení notifikací                         [Skrýt ▲]  │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│ [═══════════════════════════════════════════════════════]   │
-│ │ Nutriční deník: Lenka Deák                            │   │
-│ │ Období: 15.1. - 24.1.2026                            │   │
-│ │                                                       │   │
-│ │ === Sobota 24.1.2026 ===                             │   │
-│ │ JÍDLO:                                               │   │
-│ │ • 07:30 - Snídaně: Ovesná kaše...                    │   │
-│ [═══════════════════════════════════════════════════════]   │
+│ 💬 Zprávy                                            [✓]   │
+│ 💰 Finance & balíčky                                 [✓]   │
+│ 🏆 Osobní rekordy                                    [✓]   │
+│ 🎂 Narozeniny & výročí                               [○]   │
 │                                                              │
-│              [📋 Kopírovat]  [💾 Stáhnout .txt]             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Krok 7: Vylepšený prázdný stav
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                              │
+│                    🎉                                        │
+│                                                              │
+│              Vše je vyřízeno!                               │
+│                                                              │
+│        Žádné nové notifikace. Super práce!                  │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ 💡 Tip: Zapni upozornění na narozeniny klientů     │    │
+│  │    a nikdy nezapomeň popřát!                        │    │
+│  │                                    [Zapnout →]      │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Technické kroky
+## Technické kroky implementace
 
-### Krok 1: Aktualizovat `constants.ts`
-- Rozšířit `PORTION_SIZES` o pole `grams`
-- Přidat `PORTION_GRAMS` mapování pro snadný přístup
+### Krok 1: Opravit překrývání headeru
+```
+Soubor: src/components/notifications/NotificationCenter.tsx
+- Přidat pr-12 nebo pr-14 do SheetHeader pro prostor křížku
+- Alternativně: přesunout X křížek do vlastní pozice v headeru
+```
 
-### Krok 2: Aktualizovat `FoodLogForm.tsx`
-- Zobrazit gramáže pod labely tlačítek porcí
-- Upravit styl pro přehlednější zobrazení
+### Krok 2: Vytvořit UnifiedNotificationItem komponentu
+```
+Nový soubor: src/components/notifications/UnifiedNotificationItem.tsx
+- Kombinuje vizuály z NotificationCenter a SmartAlertItem
+- Podporuje inline akce
+- Podporuje agregované notifikace (expandable)
+```
 
-### Krok 3: Upravit `NutritionClientDetail.tsx`
-- Odstranit `<Tabs>` pro 7/10 dní, nastavit fixně 10 dní
-- Přidat tlačítko "Pro ChatGPT"
-- Přidat funkci `generateChatGPTExport()` pro formátování textu
-- Přidat dialog `ChatGPTExportDialog` s textareaou a tlačítky
+### Krok 3: Přidat agregační logiku
+```
+Soubor: src/hooks/useNotifications.ts nebo nový useAggregatedNotifications.ts
+- Funkce aggregateByType()
+- Threshold pro agregaci: 3+ stejného typu
+```
 
-### Krok 4: Vytvořit komponentu `ChatGPTExportDialog.tsx`
-- Zobrazuje formátovaný text
-- Tlačítko "Kopírovat" (navigator.clipboard)
-- Tlačítko "Stáhnout .txt" (Blob download)
+### Krok 4: Sjednotit SmartAlerts do NotificationCenter
+```
+Soubor: src/components/notifications/NotificationCenter.tsx
+- Importovat useSmartAlerts
+- Mergovat smart alerts s klasickými notifikacemi
+- Řadit podle priority
+```
 
----
+### Krok 5: Přidat inline nastavení
+```
+Soubor: src/components/notifications/NotificationCenter.tsx
+- Přidat Collapsible sekci pro nastavení
+- Zjednodušit na 4-5 hlavních kategorií místo 7
+```
 
-## Výsledek
+### Krok 6: Vylepšit prázdný stav
+```
+Soubor: src/components/notifications/NotificationCenter.tsx
+- Přidat EmptyState komponentu s tipem
+- Dynamický tip podle vypnutých kategorií
+```
 
-| Změna | Před | Po |
-|-------|------|-----|
-| Období | Přepínač 7/10 dní | Fixně 10 dní (doporučení) |
-| Porce | Malá, Střední, Velká | + gramáže (~100-150g, ~200-300g, ~350-500g) |
-| Export | Pouze PDF | + Kopírovatelný text pro ChatGPT |
+### Krok 7: Přidat Swipe-to-dismiss na mobilu
+```
+Soubor: src/components/notifications/UnifiedNotificationItem.tsx
+- Využít framer-motion drag gesture
+- Swipe left = smazat, swipe right = označit přečtené
+```
 
 ---
 
@@ -152,8 +218,43 @@ KOFEIN:
 
 | Soubor | Změna |
 |--------|-------|
-| `src/components/client-portal/nutrition/constants.ts` | Přidat gramáže k porcím |
-| `src/components/client-portal/nutrition/FoodLogForm.tsx` | Zobrazit gramáže u tlačítek |
-| `src/pages/NutritionClientDetail.tsx` | Odstranit Tabs, přidat export ChatGPT |
-| `src/components/nutrition/ChatGPTExportDialog.tsx` | Nová komponenta pro export |
+| `src/components/notifications/NotificationCenter.tsx` | Hlavní refaktoring - sjednocení, agregace, inline nastavení |
+| `src/components/notifications/UnifiedNotificationItem.tsx` | Nová komponenta pro jednotnou notifikaci |
+| `src/components/notifications/NotificationEmptyState.tsx` | Nová komponenta pro prázdný stav |
+| `src/components/notifications/InlineNotificationSettings.tsx` | Nová komponenta pro inline nastavení |
+| `src/hooks/useAggregatedNotifications.ts` | Nový hook pro agregaci |
+| `src/components/ui/sheet.tsx` | Možná úprava pozice X křížku |
+
+---
+
+## Prioritizace implementace
+
+**Fáze 1 - Kritické opravy (okamžitě):**
+1. Opravit překrývání Settings a X křížku
+2. Přidat pr-12/pr-14 do headeru
+
+**Fáze 2 - UX vylepšení:**
+3. Sjednotit SmartAlerts do NotificationCenter
+4. Přidat prioritizaci (urgentní/důležité/informativní)
+5. Vylepšit prázdný stav
+
+**Fáze 3 - Pokročilé funkce:**
+6. Agregace podobných notifikací
+7. Inline quick actions
+8. Inline nastavení místo dialogu
+9. Swipe gestures na mobilu
+
+---
+
+## Výsledek změn
+
+| Aspekt | Před | Po |
+|--------|------|-----|
+| Překrývání tlačítek | Ano | Opraveno |
+| Notifikační systémy | 3 oddělené | 1 sjednocený |
+| Podobné notifikace | 5× duplicitní | 1× agregovaná |
+| Prioritizace | Žádná | 3 úrovně |
+| Prázdný stav | Strohý | S tipem |
+| Nastavení | Dialog | Inline collapsible |
+| Mobile UX | Tap only | + Swipe gestures |
 
