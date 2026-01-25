@@ -1,202 +1,225 @@
 
-# Oprava feedbackových statistik - Nesmyslná data a vylepšení UX
+# Zjednodušení feedbackových statistik pro trenéry
 
-## Identifikované problémy na screenshotech
+## Identifikovaný problém
 
-### 1. Míra odpovědí zobrazuje tisíce procent (4600%, 3100%)
+Na screenshotu vidím kartu "Koučovací profil" s těmito daty:
+- **Nejčastější limit**: "—" (žádná data)
+- **Průměr enjoyment**: "—" (žádná data)  
+- **Feedbacků celkem**: "2"
 
-**Příčina:**
-- Hooky `useFeedbackPeriodComparison.ts`, `useFeedbackAnalytics.ts`, `useTrainerFeedbackBaseline.ts` počítají response rate ručně bez omezení na 100%
-- Funkce `responseRate()` v `feedbackCalculations.ts` je správná (obsahuje `Math.min(100, ...)`), ale není všude použita
+A nad tím jsou karty "Bolest 1.0/10" a "Session Fit 8.0/10" s mini-grafy.
 
-**Kód problému:**
-```typescript
-// V useFeedbackPeriodComparison.ts řádek 107:
-const responseRate = totalSent > 0 ? Math.round((totalCompleted / totalSent) * 100) : 0;
-// Může vrátit >100% pokud totalCompleted > totalSent
-```
-
-### 2. NaN/10 pro Energii
-
-**Příčina:**
-- Pole `energy` neexistuje v databázi - správný název je `energy_rating`
-- `safeAverage()` vrací `null`, ale komponenta nezpracovává `null` správně a zobrazí `NaN`
-
-### 3. Vyplněno 31 z 1 odeslaných (logický nesmysl)
-
-**Příčina:**
-- Porovnávají se nekonzistentní datasety
-- `totalSent` se počítá z requests s `sent_at`, ale `totalCompleted` zahrnuje všechny completed bez ohledu na `sent_at`
-
-### 4. Změna +2375% (nerealistická procentuální změna)
-
-**Příčina:**
-- Procentuální změna není omezena rozumným rozsahem
-- Když minulé období má 1 a aktuální 32, výsledek je +3100%
-
-### 5. Chybí vysvětlení metrik pro trenéra
-
-**Příčina:**
-- Metriky nemají tooltip nebo popis co znamenají
-- Trenér neví co je "normální" hodnota
+**Problém z pohledu trenéra:**
+1. Čísla jako "1.0/10" nebo "8.0/10" bez kontextu neříkají, jestli je to dobré nebo špatné
+2. "Session Fit" - anglický termín, nejasné co znamená
+3. "sRPE" - odborná zkratka, kterou běžný trenér nezná
+4. Mini-grafy jsou hezké, ale bez interpretace nepomáhají
+5. "Koučovací profil" zobrazuje pouze prázdná data ("—") s číslem 2 feedbacků
+6. Chybí jasný závěr: "Co mám jako trenér udělat?"
 
 ---
 
-## Navrhované opravy
+## Návrh řešení: Přeměnit čísla na srozumitelné statusy
 
-### Fáze 1: Oprava kalkulací v hooks
+### Filozofie změny
 
-**1.1 Opravit `useFeedbackPeriodComparison.ts`:**
-- Importovat a použít `responseRate()` z feedbackCalculations
-- Přidat validaci `totalCompleted <= totalSent`
+Inspirace z již fungující komponenty `ClientHealthSnapshot`, která používá:
+- Jednoslovné statusy: "stabilní", "pozor", "ok"
+- Emoji/ikony místo čísel
+- Barevné kódování (zelená = ok, oranžová = pozor, červená = problém)
+- Žádné analytické termíny
 
-**1.2 Opravit `useFeedbackAnalytics.ts`:**
-- Použít `responseRate()` místo ruční kalkulace
-- Opravit field name `energy` → `energy_rating`
+### Nový design "Koučovací profil"
 
-**1.3 Opravit `useTrainerFeedbackBaseline.ts`:**
-- Použít `responseRate()` místo ruční kalkulace
-
-### Fáze 2: Bezpečné zobrazení metrik
-
-**2.1 Vytvořit helper pro zobrazení:**
-```typescript
-// V feedbackCalculations.ts
-export function safeResponseRate(completed: number, sent: number): number {
-  // Nikdy nepřekročí 100%, nikdy není záporné
-  if (sent <= 0 || !isFinite(sent)) return 0;
-  if (!isFinite(completed) || completed < 0) return 0;
-  const capped = Math.min(completed, sent); // completed nemůže být > sent
-  return Math.min(100, Math.round((capped / sent) * 100));
-}
-
-export function safePercentageChange(current: number, previous: number): number | null {
-  // Omezit na rozumný rozsah ±500%
-  if (previous === 0) return current > 0 ? null : 0; // Nelze vypočítat z 0
-  const change = Math.round(((current - previous) / previous) * 100);
-  return Math.max(-500, Math.min(500, change));
-}
+**Současný stav:**
+```
+Nejčastější limit    Průměr enjoyment    Feedbacků celkem
+—                    —                    2
 ```
 
-**2.2 Opravit komponenty:**
-- `FeedbackTrendsOverview.tsx`: Zobrazit "—" místo NaN
-- `FeedbackPeriodComparison.tsx`: Omezit změny na ±500%
-
-### Fáze 3: Opravit database field names
-
-V `useFeedbackAnalytics.ts` a dalších hooks:
-- `energy` → `energy_rating` (skutečný název sloupce v DB)
-
-### Fáze 4: Přidat vysvětlující tooltips
-
-**Pro každou metriku přidat:**
-- Pocit těla: "Jak se klient celkově cítil (1=špatně, 10=skvěle)"
-- Svalovka: "Míra svalové bolesti po tréninku (1=žádná, 10=extrémní)"
-- Energie: "Energetická hladina klienta (1=vyčerpaný, 10=plný energie)"
-- Bolest: "Intenzita bolesti (1=žádná, 10=silná)"
-- Zábava: "Jak moc klienta trénink bavil (1=nudný, 10=super)"
-
-### Fáze 5: Vylepšit vizuální prezentaci
-
-**5.1 Přidat reference pro hodnoty:**
-```text
-Míra odpovědí:
-- < 50%: Nízká (zvážit jiný čas odesílání)
-- 50-80%: Průměrná
-- > 80%: Vysoká
-
-Metriky 1-10:
-- Zobrazit progress bar s barevným indikátorem
-- Hodnoty bez dat zobrazit jako "—" s popisem "Bez dat"
+**Nový design - srozumitelný pro trenéra:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 🎯 Jak na klienta                                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│ Trénink mu sedí?     🟢 Výborně                             │
+│                      (8/10 průměrně)                        │
+│                                                              │
+│ Bolest po tréninku?  ✔️ Minimální                           │
+│                      (1/10 průměrně)                        │
+│                                                              │
+│ Co ho brzdí?         —                                      │
+│                      (málo dat)                             │
+│                                                              │
+│ Baví ho to?          —                                      │
+│                      (málo dat)                             │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**5.2 Zobrazit absolutní čísla vedle procent:**
-```text
-Míra odpovědí: 76% (38 z 50)
+### Nové labely pro metriky
+
+| Současný název | Nový název | Vysvětlení |
+|----------------|-----------|------------|
+| sRPE | Jak těžké to bylo | Subjektivní náročnost |
+| Session Fit | Jak mu to sedí | Shoda tréninku s očekáváním |
+| Připravenost | Jak připravený byl | Stav před tréninkem |
+| Bolest | Bolest po tréninku | Intenzita bolesti |
+
+### Interpretace hodnot do slov
+
+**Pro Session Fit / "Jak mu to sedí":**
+- 8-10: "🟢 Výborně" 
+- 6-7.9: "🟡 Dobře"
+- 4-5.9: "🟠 Tak tak"
+- 1-3.9: "🔴 Špatně"
+
+**Pro Bolest:**
+- 1-2: "✔️ Minimální"
+- 3-4: "🟡 Mírná"
+- 5-6: "🟠 Pozor"
+- 7+: "🔴 Vysoká"
+
+**Pro Připravenost:**
+- 8-10: "🟢 Skvělá"
+- 6-7.9: "🟡 Dobrá"
+- 4-5.9: "🟠 Nízká"
+- 1-3.9: "🔴 Špatná"
+
+### Nová sekce: "Co dělat příště"
+
+Místo surových dat zobrazit **akční doporučení**:
+
 ```
-místo jen "76%"
+┌─────────────────────────────────────────────────────────────┐
+│ 💡 Co dělat příště                                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│ ✓ Pokračuj stejným stylem - trénink mu sedí                 │
+│                                                              │
+│   nebo                                                       │
+│                                                              │
+│ ⚠️ Uber intenzitu - příliš náročné pro jeho aktuální stav   │
+│ ⚠️ Vynechat rameno - opakovaná bolest                       │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Toto již existuje v `coachSuggestions.ts` - stačí to zobrazit prominentněji.
 
 ---
 
 ## Technické kroky implementace
 
-### Krok 1: Rozšířit `feedbackCalculations.ts`
-```text
-- Přidat safeResponseRate() s validací completed <= sent
-- Přidat safePercentageChange() s omezením na ±500%
-- Přidat formátovací funkce pro konzistentní zobrazení
+### Krok 1: Vytvořit helper pro interpretaci hodnot
+```
+- Nová funkce v feedbackCalculations.ts: interpretMetricValue()
+- Mapování číselných hodnot na statusy: 'excellent' | 'good' | 'fair' | 'poor'
+- Pro každý status: emoji, label, className
 ```
 
-### Krok 2: Opravit `useFeedbackPeriodComparison.ts`
-```text
-- Import responseRate z feedbackCalculations
-- Nahradit ruční kalkulaci na řádku 107
-- Opravit field names pro energy
+### Krok 2: Vytvořit novou komponentu `SimplifiedCoachingProfile`
+```
+- Nahradí současnou sekci "Koučovací profil" v ClientFeedbackRecovery
+- Layout inspirovaný ClientHealthSnapshot
+- Jednoslovné statusy místo čísel
+- Číselná hodnota jako subtle subtitle (volitelně)
 ```
 
-### Krok 3: Opravit `useFeedbackAnalytics.ts`
-```text
-- Import responseRate z feedbackCalculations
-- Nahradit ruční kalkulaci na řádku 75
-- Změnit 'energy' na 'energy_rating' v metrics
+### Krok 3: Zjednodušit názvy metrik
+```
+- sRPE → Náročnost
+- Session Fit → Jak mu to sedí  
+- Připravenost → Připravenost (ponechat)
+- Bolest → Bolest (ponechat)
 ```
 
-### Krok 4: Opravit `useTrainerFeedbackBaseline.ts`
-```text
-- Import responseRate z feedbackCalculations
-- Nahradit ruční kalkulace na řádcích 80 a 178
+### Krok 4: Přidat sekci "Co dělat příště"
+```
+- Využít existující getCoachSuggestions() z coachSuggestions.ts
+- Zobrazit 1-2 nejdůležitější doporučení
+- Pokud žádná: "✓ Pokračuj stejným stylem"
 ```
 
-### Krok 5: Vylepšit `FeedbackTrendsOverview.tsx`
-```text
-- Přidat Tooltip s vysvětlením metrik
-- Použít formatMetric() pro bezpečné zobrazení
-- Přidat reference hodnot (co je normální)
+### Krok 5: Skrýt mini-grafy za toggle
+```
+- Výchozí stav: jednoduché statusy
+- Tlačítko "📊 Detaily" pro zobrazení grafů
+- Grafy jsou optional, ne hlavní obsah
 ```
 
-### Krok 6: Vylepšit `FeedbackPeriodComparison.tsx`
-```text
-- Omezit zobrazení změn na ±500%
-- Zobrazit ">" pro větší změny
-- Přidat vysvětlující tooltip pro změny
+### Krok 6: Vylepšit prázdný stav
 ```
-
-### Krok 7: Přidat metric explanations komponenta
-```text
-- Nová komponenta FeedbackMetricTooltip
-- Obsahuje popis a referenční hodnoty pro každou metriku
+- Místo "—" zobrazit "Málo dat"
+- Přidat CTA: "Pošli feedback odkaz pro více dat"
 ```
 
 ---
 
-## Výsledek po úpravách
+## Výsledek změn
 
-| Problém | Před | Po |
-|---------|------|-----|
-| Response rate | 4600%, 3100% | Max 100%, nikdy nepřekročí |
-| NaN hodnoty | "NaN/10" | "—" s popisem "Bez dat" |
-| Absurdní změny | +2375% | Max ±500% s indikátorem ">" |
-| Nesmyslná čísla | "31 z 1 odeslaných" | Validované: completed ≤ sent |
-| Chybějící kontext | Čísla bez vysvětlení | Tooltips s popisem metrik |
-| Referenční hodnoty | Žádné | Barevné indikátory + popisy |
+| Aspekt | Před | Po |
+|--------|------|-----|
+| Hlavní obsah | Čísla (8.0/10) | Statusy ("Výborně") |
+| Terminologie | sRPE, Session Fit | Náročnost, Jak mu to sedí |
+| Akční výstup | Žádný | "Co dělat příště" sekce |
+| Grafy | Vždy viditelné | Skryté za "Detaily" |
+| Prázdná data | "—" | "Málo dat + CTA" |
+| Cílová skupina | Analytik | Běžný trenér |
+
+---
+
+## Vizuální návrh finální karty
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 🎯 Jak na klienta                    [📊 Detaily]           │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│ Jak mu to sedí?      🟢 Výborně                             │
+│ Bolest               ✔️ Minimální                           │
+│ Náročnost            🟡 Střední                             │
+│ Připravenost         🟢 Dobrá                               │
+│                                                              │
+├─────────────────────────────────────────────────────────────┤
+│ 💡 Tip: Pokračuj stejným stylem                             │
+│    Trénink mu sedí a bolest je minimální.                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Soubory k úpravě
+
+1. **`src/lib/feedbackCalculations.ts`**
+   - Přidat `interpretMetricValue()` funkci
+   - Přidat mapování hodnot na statusy
+
+2. **`src/components/clients/ClientFeedbackRecovery.tsx`**
+   - Přejmenovat metriky na české názvy
+   - Vytvořit novou sekci `SimplifiedCoachingProfile`
+   - Skrýt grafy za toggle
+   - Přidat "Co dělat příště" sekci
+
+3. **`src/components/feedback/SimplifiedCoachingProfile.tsx`** (nový soubor)
+   - Nová komponenta inspirovaná `ClientHealthSnapshot`
+   - Jednoduchý, srozumitelný layout
 
 ---
 
 ## Prioritizace
 
-**Kritická (způsobují zmatení):**
-1. Opravit response rate limit na 100%
-2. Opravit NaN zobrazení
-3. Validovat completed ≤ sent
-
-**Vysoká priorita:**
-4. Omezit procentuální změny na ±500%
-5. Opravit field name energy → energy_rating
+**Kritická (hlavní problém):**
+1. Přejmenovat metriky na srozumitelné české názvy
+2. Přidat interpretaci hodnot (číslo → status)
+3. Přidat sekci "Co dělat příště"
 
 **Střední priorita:**
-6. Přidat tooltips s vysvětlením metrik
-7. Přidat referenční hodnoty
+4. Skrýt grafy za toggle
+5. Vylepšit prázdný stav s CTA
 
 **Nižší priorita:**
-8. Vizuální vylepšení progress barů
-9. Barevné kódování hodnot
+6. Animace a micro-interakce
+7. Tooltips pro pokročilé uživatele
