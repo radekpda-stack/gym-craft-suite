@@ -60,6 +60,7 @@ export function CompleteTrainingDialog({
   const [participantPayments, setParticipantPayments] = useState<ParticipantPayment[]>([]);
   const [completeNotes, setCompleteNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fixedTotalPrice, setFixedTotalPrice] = useState<number>(0);
   const lastInitializedSessionId = useRef<string | null>(null);
 
   // Get effective credit balance (includes shared budget)
@@ -86,6 +87,7 @@ export function CompleteTrainingDialog({
       lastInitializedSessionId.current = null;
       setParticipantPayments([]);
       setCompleteNotes('');
+      setFixedTotalPrice(0);
       return;
     }
 
@@ -157,6 +159,7 @@ export function CompleteTrainingDialog({
     }
 
     setParticipantPayments(payments);
+    setFixedTotalPrice(totalPrice);
   }, [open, session?.id, clients.length, existingParticipants.length]);
 
   const handleParticipantPaymentChange = (clientId: string, method: IndividualPaymentMethod) => {
@@ -171,16 +174,15 @@ export function CompleteTrainingDialog({
       
       // Only auto-distribute for multi-participant trainings
       if (participantCount <= 1) {
+        // For single participant, also update the fixed total
+        setFixedTotalPrice(newPrice);
         return prev.map(p =>
           p.client_id === clientId ? { ...p, price_share: newPrice } : p
         );
       }
       
-      // Use current total (sum of all shares) as baseline, not default price
-      const currentTotal = prev.reduce((sum, p) => sum + p.price_share, 0);
-      
-      // Calculate remaining amount for other participants
-      const remainingAmount = Math.max(0, currentTotal - newPrice);
+      // Use fixed total price as baseline for redistribution
+      const remainingAmount = Math.max(0, fixedTotalPrice - newPrice);
       const otherParticipants = prev.filter(p => p.client_id !== clientId);
       const pricePerOther = otherParticipants.length > 0 
         ? Math.round(remainingAmount / otherParticipants.length) 
@@ -188,7 +190,7 @@ export function CompleteTrainingDialog({
       
       // Distribute remaining amount evenly, with last participant getting the rounding difference
       let distributed = 0;
-      return prev.map((p, index) => {
+      return prev.map((p) => {
         if (p.client_id === clientId) {
           return { ...p, price_share: newPrice };
         }
@@ -203,8 +205,9 @@ export function CompleteTrainingDialog({
     });
   };
 
-  // Handle total price change - distribute proportionally
+  // Handle total price change - distribute proportionally and update fixed total
   const handleTotalPriceChange = (newTotal: number) => {
+    setFixedTotalPrice(newTotal);
     setParticipantPayments(prev => {
       const currentTotal = prev.reduce((sum, p) => sum + p.price_share, 0);
       if (currentTotal === 0 || prev.length === 0) return prev;
