@@ -10,11 +10,13 @@ export function OrientationLock() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Check if device is mobile
-    const checkMobile = () => {
+    // Check if device is a mobile phone (not tablet or desktop)
+    const checkMobilePhone = () => {
       const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      const isSmallScreen = Math.min(window.innerWidth, window.innerHeight) <= 1024;
-      setIsMobile(isTouchDevice && isSmallScreen);
+      // Use smaller threshold to exclude tablets - phones are typically < 768px on shortest side
+      const shortestSide = Math.min(window.innerWidth, window.innerHeight);
+      const isPhone = isTouchDevice && shortestSide <= 480;
+      setIsMobile(isPhone);
     };
 
     // Check orientation
@@ -35,13 +37,13 @@ export function OrientationLock() {
       }
     };
 
-    checkMobile();
+    checkMobilePhone();
     checkOrientation();
     lockOrientation();
 
     // Listen for resize events to detect orientation changes
     const handleResize = () => {
-      checkMobile();
+      checkMobilePhone();
       checkOrientation();
     };
 
