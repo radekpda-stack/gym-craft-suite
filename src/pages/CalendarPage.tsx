@@ -142,6 +142,29 @@ export default function CalendarPage() {
   };
 
   const handleCreateTraining = async (data: TrainingFormValues) => {
+    // Calculate recurrence end date if recurring
+    let recurrence_end_date: string | undefined;
+    let recurrence_type: 'weekly' | 'biweekly' | 'monthly' | undefined;
+    
+    if (data.is_recurring && data.recurrence_type && data.recurrence_count) {
+      const startDate = new Date(data.date);
+      recurrence_type = data.recurrence_type;
+      
+      const endDate = new Date(startDate);
+      switch (data.recurrence_type) {
+        case 'weekly':
+          endDate.setDate(endDate.getDate() + (data.recurrence_count * 7));
+          break;
+        case 'biweekly':
+          endDate.setDate(endDate.getDate() + (data.recurrence_count * 14));
+          break;
+        case 'monthly':
+          endDate.setMonth(endDate.getMonth() + data.recurrence_count);
+          break;
+      }
+      recurrence_end_date = endDate.toISOString();
+    }
+
     const result = await createTraining.mutateAsync({
       client_id: data.client_id,
       date: data.date,
@@ -149,6 +172,8 @@ export default function CalendarPage() {
       participant_count: data.participant_count,
       notes: data.notes,
       status: data.status,
+      recurrence_type,
+      recurrence_end_date,
       trainingPrices,
     });
     
