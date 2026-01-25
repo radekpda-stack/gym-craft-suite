@@ -15,6 +15,7 @@ import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientAttendanceStats } from '@/hooks/useClientPortalStats';
 import { useClientStreak } from '@/hooks/useClientXPLevel';
 import { useMyPRs } from '@/hooks/useClientPRs';
+import { useNavigate } from 'react-router-dom';
 
 interface QuickStatProps {
   icon: typeof Dumbbell;
@@ -23,11 +24,15 @@ interface QuickStatProps {
   iconClassName?: string;
   valueClassName?: string;
   isLoading?: boolean;
+  onClick?: () => void;
 }
 
-function QuickStat({ icon: Icon, label, value, iconClassName, valueClassName, isLoading }: QuickStatProps) {
+function QuickStat({ icon: Icon, label, value, iconClassName, valueClassName, isLoading, onClick }: QuickStatProps) {
   return (
-    <Card className="bg-card/50 border-border/50">
+    <Card 
+      className="bg-card/50 border-border/50 cursor-pointer hover:border-primary/30 transition-colors"
+      onClick={onClick}
+    >
       <CardContent className="p-3 flex flex-col items-center justify-center gap-1">
         <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center bg-muted/50", iconClassName)}>
           <Icon className="w-3.5 h-3.5 text-muted-foreground" />
@@ -45,6 +50,7 @@ function QuickStat({ icon: Icon, label, value, iconClassName, valueClassName, is
 
 export function ClientQuickStats() {
   const { clientId } = useClientPortal();
+  const navigate = useNavigate();
   
   const { data: attendanceStats, isLoading: attendanceLoading } = useClientAttendanceStats(clientId ?? undefined, 30);
   const { data: streakData, isLoading: streakLoading } = useClientStreak(clientId ?? undefined);
@@ -53,8 +59,6 @@ export function ClientQuickStats() {
   const trainingsThisMonth = attendanceStats?.trainingsInPeriod ?? 0;
   const currentStreak = streakData?.currentStreak ?? 0;
   const totalPRs = prs?.length ?? 0;
-  
-  const isLoading = attendanceLoading || streakLoading || prsLoading;
 
   return (
     <motion.div
@@ -68,6 +72,7 @@ export function ClientQuickStats() {
         label="Tréninků"
         value={trainingsThisMonth}
         isLoading={attendanceLoading}
+        onClick={() => navigate('/zona/diary')}
       />
       <QuickStat
         icon={Trophy}
@@ -75,6 +80,7 @@ export function ClientQuickStats() {
         value={totalPRs}
         iconClassName="bg-amber-500/10"
         isLoading={prsLoading}
+        onClick={() => navigate('/zona/progress')}
       />
       <QuickStat
         icon={Flame}
@@ -83,6 +89,7 @@ export function ClientQuickStats() {
         iconClassName={currentStreak >= 4 ? "bg-orange-500/10" : undefined}
         valueClassName={currentStreak >= 4 ? "text-orange-500" : undefined}
         isLoading={streakLoading}
+        onClick={() => navigate('/zona/competitions?tab=leaderboard')}
       />
     </motion.div>
   );
