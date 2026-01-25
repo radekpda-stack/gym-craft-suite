@@ -30,6 +30,7 @@ export interface CoffeeEntryInput {
   entry_time?: string; // Format "HH:mm"
   is_caffeinated?: boolean; // Default true
   coffee_amount_ml?: number; // Optional volume in ml
+  coffee_name?: string; // Required when coffee_type is 'other'
 }
 
 export function useAddFoodEntry() {
@@ -213,6 +214,7 @@ export function useAddCoffeeEntry() {
           note: entry.note,
           is_caffeinated: entry.is_caffeinated !== false, // Default true
           coffee_amount_ml: entry.coffee_amount_ml,
+          coffee_name: entry.coffee_name,
           created_from: 'web',
         })
         .select()
@@ -409,6 +411,7 @@ export function useUpdateCoffeeEntry() {
       if (entry.note !== undefined) updateData.note = entry.note;
       if (entry.is_caffeinated !== undefined) updateData.is_caffeinated = entry.is_caffeinated;
       if (entry.coffee_amount_ml !== undefined) updateData.coffee_amount_ml = entry.coffee_amount_ml;
+      if (entry.coffee_name !== undefined) updateData.coffee_name = entry.coffee_name;
       
       // Handle entry_time update with occurred_at recalculation
       if (entry.entry_time !== undefined) {

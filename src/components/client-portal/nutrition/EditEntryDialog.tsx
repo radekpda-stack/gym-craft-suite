@@ -64,6 +64,7 @@ export function EditEntryDialog({
   const [coffeeCount, setCoffeeCount] = useState(1);
   const [isCaffeinated, setIsCaffeinated] = useState(true);
   const [coffeeAmountMl, setCoffeeAmountMl] = useState<number | undefined>(undefined);
+  const [coffeeName, setCoffeeName] = useState<string>('');
 
   const updateFood = useUpdateFoodEntry();
   const updateDrink = useUpdateDrinkEntry();
@@ -102,6 +103,7 @@ export function EditEntryDialog({
         setCoffeeCount(entry.count || 1);
         setIsCaffeinated(entry.is_caffeinated !== false);
         setCoffeeAmountMl(entry.coffee_amount_ml || undefined);
+        setCoffeeName(entry.coffee_name || '');
       }
     }
   }, [entry, type]);
@@ -128,6 +130,11 @@ export function EditEntryDialog({
           },
         });
       } else if (type === 'drink') {
+        // Validate: if "other" is selected, drink name is required
+        if (drinkType === 'other' && !drinkName.trim()) {
+          toast.error('Zadej konkrétní název nápoje');
+          return;
+        }
         await updateDrink.mutateAsync({
           entryId: entry.id,
           sessionId,
@@ -141,6 +148,11 @@ export function EditEntryDialog({
           },
         });
       } else if (type === 'coffee') {
+        // Validate: if "other" is selected, coffee name is required
+        if (coffeeType === 'other' && !coffeeName.trim()) {
+          toast.error('Zadej konkrétní název nápoje');
+          return;
+        }
         await updateCoffee.mutateAsync({
           entryId: entry.id,
           sessionId,
@@ -151,6 +163,7 @@ export function EditEntryDialog({
             count: coffeeCount,
             is_caffeinated: isCaffeinated,
             coffee_amount_ml: coffeeAmountMl,
+            coffee_name: coffeeType === 'other' && coffeeName.trim() ? coffeeName.trim() : undefined,
             entry_time: entryTime,
           },
         });
@@ -331,7 +344,10 @@ export function EditEntryDialog({
                   {COFFEE_TYPES.map((t) => (
                     <button
                       key={t.id}
-                      onClick={() => setCoffeeType(t.id)}
+                      onClick={() => {
+                        setCoffeeType(t.id);
+                        if (t.id !== 'other') setCoffeeName('');
+                      }}
                       className={cn(
                         "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors text-xs",
                         coffeeType === t.id 
@@ -345,6 +361,20 @@ export function EditEntryDialog({
                   ))}
                 </div>
               </div>
+
+              {/* Coffee Name (for "other" type) - required */}
+              {coffeeType === 'other' && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Jaký nápoj? *</Label>
+                  <Input
+                    value={coffeeName}
+                    onChange={(e) => setCoffeeName(e.target.value)}
+                    placeholder="např. Matcha, Kakao, Horká čokoláda..."
+                    maxLength={50}
+                    required
+                  />
+                </div>
+              )}
 
               {/* Count */}
               <div className="space-y-2">

@@ -368,7 +368,11 @@ export function TodayEntries({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">
-                          {entry.drink_name || DRINK_LABELS[entry.drink_type] || entry.drink_type}
+                          {entry.drink_name 
+                            ? entry.drink_name 
+                            : entry.drink_type === 'other' 
+                              ? 'Jiný nápoj (nespecifikováno)' 
+                              : DRINK_LABELS[entry.drink_type] || entry.drink_type}
                         </span>
                         {entry.amount_ml && (
                           <span className="text-xs text-muted-foreground">
@@ -376,9 +380,6 @@ export function TodayEntries({
                           </span>
                         )}
                       </div>
-                      {entry.drink_name && entry.drink_type === 'other' && (
-                        <span className="text-xs text-muted-foreground">(Jiné)</span>
-                      )}
                     </div>
                     {(canEdit || canDelete) && (
                       <EntryMenu
@@ -430,7 +431,11 @@ export function TodayEntries({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">
-                          {COFFEE_LABELS[entry.coffee_type] || entry.coffee_type}
+                          {entry.coffee_name 
+                            ? entry.coffee_name 
+                            : entry.coffee_type === 'other' 
+                              ? 'Jiný nápoj (nespecifikováno)' 
+                              : COFFEE_LABELS[entry.coffee_type] || entry.coffee_type}
                         </span>
                         {entry.count > 1 && (
                           <span className="text-xs bg-muted px-1.5 py-0.5 rounded">

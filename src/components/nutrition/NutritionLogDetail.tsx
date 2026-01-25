@@ -477,16 +477,22 @@ function DrinkEntryCard({ entry, onDelete }: { entry: NutritionDrinkEntry; onDel
   const ml = calculateDrinkMl(entry);
   const drinkTypes: Record<string, string> = {
     water: 'Voda', mineral: 'Minerálka', cola: 'Cola', juice: 'Džus',
-    sports: 'Ionťák', tea: 'Čaj', alcohol: 'Alkohol', other: 'Jiné'
+    sports: 'Ionťák', tea: 'Čaj', alcohol: 'Alkohol', sugary: 'Slazené', other: 'Jiné'
   };
+
+  // Prioritize drink_name for "other" type, show "(nespecifikováno)" if missing
+  const displayName = entry.drink_name 
+    ? entry.drink_name 
+    : entry.drink_type === 'other' 
+      ? 'Jiný nápoj (nespecifikováno)' 
+      : drinkTypes[entry.drink_type] || entry.drink_type;
 
   return (
     <div className="p-2 rounded-lg bg-muted/50 text-sm group">
       <div className="flex items-start justify-between">
         <div>
           <div className="font-medium">
-            {drinkTypes[entry.drink_type] || entry.drink_type}
-            {entry.drink_name && ` (${entry.drink_name})`}
+            {displayName}
           </div>
           <div className="text-xs text-muted-foreground">
             {entry.entry_time.slice(0, 5)} · {ml} ml
@@ -518,18 +524,25 @@ function DrinkEntryCard({ entry, onDelete }: { entry: NutritionDrinkEntry; onDel
 function CoffeeEntryCard({ entry, onDelete }: { entry: NutritionCoffeeEntry; onDelete: () => void }) {
   const coffeeTypes: Record<string, string> = {
     espresso: 'Espresso', lungo: 'Lungo', cappuccino: 'Cappuccino',
-    latte: 'Latte', filter: 'Filtrovaná', other: 'Jiné'
+    latte: 'Latte', filter: 'Filtrovaná', tea: 'Čaj', energy: 'Energy drink', other: 'Jiné'
   };
   const milkLabels: Record<string, string> = {
     none: 'bez mléka', little: 'trochu mléka', normal: 'mléko', much: 'hodně mléka'
   };
+
+  // Prioritize coffee_name for "other" type, show "(nespecifikováno)" if missing
+  const displayName = (entry as any).coffee_name 
+    ? (entry as any).coffee_name 
+    : entry.coffee_type === 'other' 
+      ? 'Jiný nápoj (nespecifikováno)' 
+      : coffeeTypes[entry.coffee_type] || entry.coffee_type;
 
   return (
     <div className="p-2 rounded-lg bg-muted/50 text-sm group">
       <div className="flex items-start justify-between">
         <div>
           <div className="font-medium">
-            {coffeeTypes[entry.coffee_type] || entry.coffee_type}
+            {displayName}
             {entry.count > 1 && ` ×${entry.count}`}
           </div>
           <div className="text-xs text-muted-foreground">
