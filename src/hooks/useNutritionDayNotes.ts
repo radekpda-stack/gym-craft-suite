@@ -13,6 +13,8 @@ export interface NutritionDayNote {
   date: string;
   client_note: string | null;
   trainer_note: string | null;
+  is_checked: boolean;
+  checked_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -93,11 +95,13 @@ export function useUpsertDayNote() {
       date,
       clientNote,
       trainerNote,
+      isChecked,
     }: {
       clientId: string;
       date: Date | string;
       clientNote?: string | null;
       trainerNote?: string | null;
+      isChecked?: boolean;
     }) => {
       const dateStr = date instanceof Date ? format(date, 'yyyy-MM-dd') : date;
 
@@ -112,6 +116,10 @@ export function useUpsertDayNote() {
       if (trainerNote !== undefined) {
         updateData.trainer_note = trainerNote || null;
       }
+      if (isChecked !== undefined) {
+        updateData.is_checked = isChecked;
+        updateData.checked_at = isChecked ? new Date().toISOString() : null;
+      }
 
       // First check if note exists
       const { data: existing } = await supabase
@@ -124,9 +132,13 @@ export function useUpsertDayNote() {
       let result;
       if (existing) {
         // Update existing
-        const updateFields: Record<string, string | null> = {};
+        const updateFields: Record<string, string | boolean | null> = {};
         if (clientNote !== undefined) updateFields.client_note = clientNote || null;
         if (trainerNote !== undefined) updateFields.trainer_note = trainerNote || null;
+        if (isChecked !== undefined) {
+          updateFields.is_checked = isChecked;
+          updateFields.checked_at = isChecked ? new Date().toISOString() : null;
+        }
         
         const { data, error } = await supabase
           .from('nutrition_day_notes')
@@ -145,6 +157,8 @@ export function useUpsertDayNote() {
             date: dateStr,
             client_note: clientNote || null,
             trainer_note: trainerNote || null,
+            is_checked: isChecked || false,
+            checked_at: isChecked ? new Date().toISOString() : null,
           })
           .select()
           .single();

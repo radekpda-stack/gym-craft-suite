@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Pencil, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, Pencil, MessageCircle, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,8 @@ interface NutritionFoodCardProps {
   satiation?: string | null;
   clientNote?: string | null;
   trainerNote?: string | null;
+  trainerRating?: number | null;
+  clientReply?: string | null;
   trainerEdited?: boolean;
   onEdit?: () => void;
   onComment?: () => void;
@@ -34,6 +36,15 @@ const MEAL_ICONS: Record<string, string> = {
   snack: '🍎',
 };
 
+// Rating color helper
+const getRatingColor = (rating: number): string => {
+  if (rating <= 3) return 'text-destructive';
+  if (rating <= 6) return 'text-warning';
+  if (rating <= 8) return 'text-success';
+  return 'text-emerald-500';
+};
+
+
 export function NutritionFoodCard({
   time,
   mealType,
@@ -43,6 +54,8 @@ export function NutritionFoodCard({
   satiation,
   clientNote,
   trainerNote,
+  trainerRating,
+  clientReply,
   trainerEdited,
   onEdit,
   onComment,
@@ -55,9 +68,8 @@ export function NutritionFoodCard({
   const mealIcon = MEAL_ICONS[mealType] || '🍽️';
   const portionLabel = portionSize ? PORTION_LABELS[portionSize] || portionSize : null;
   const satiationLabel = satiation ? SATIATION_LABELS[satiation] || satiation : null;
-  
   const isLongDescription = description.length > 80;
-  const shouldShowExpand = isLongDescription || clientNote || trainerNote;
+  const shouldShowExpand = isLongDescription || clientNote || trainerNote || clientReply;
 
   return (
     <div 
@@ -80,6 +92,12 @@ export function NutritionFoodCard({
           {quality && (
             <span className="text-xs" title={QUALITY_LABELS[quality] || quality}>
               {qualityStyle?.icon}
+            </span>
+          )}
+          {trainerRating && (
+            <span className={cn("flex items-center gap-0.5 text-xs font-medium", getRatingColor(trainerRating))}>
+              <Star className="w-3 h-3 fill-current" />
+              {trainerRating}/10
             </span>
           )}
           {trainerEdited && (
@@ -162,6 +180,12 @@ export function NutritionFoodCard({
                 <div className="rounded bg-primary/10 border border-primary/20 px-2 py-1.5 text-xs">
                   <span className="text-primary font-medium">💬 Trenér: </span>
                   {trainerNote}
+                </div>
+              )}
+              {clientReply && (
+                <div className="rounded bg-muted/50 border px-2 py-1.5 text-xs">
+                  <span className="text-muted-foreground font-medium">↳ Odpověď: </span>
+                  {clientReply}
                 </div>
               )}
             </motion.div>
