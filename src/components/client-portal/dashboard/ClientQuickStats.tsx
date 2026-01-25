@@ -4,19 +4,19 @@
  * Displays 3 quick metrics in a row:
  * - Trainings this month
  * - Total PRs
- * - Current streak
+ * - Current weight with trend
  */
 import { motion } from 'framer-motion';
-import { Dumbbell, Trophy, Flame } from 'lucide-react';
+import { Dumbbell, Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientAttendanceStats } from '@/hooks/useClientPortalStats';
-import { useClientStreak } from '@/hooks/useClientXPLevel';
 import { useMyPRs } from '@/hooks/useClientPRs';
 import { useClientExercisePRs } from '@/hooks/useClientExercisePRs';
 import { useNavigate } from 'react-router-dom';
+import { WeightStatCard } from './WeightStatCard';
 
 interface QuickStatProps {
   icon: typeof Dumbbell;
@@ -54,12 +54,10 @@ export function ClientQuickStats() {
   const navigate = useNavigate();
   
   const { data: attendanceStats, isLoading: attendanceLoading } = useClientAttendanceStats(clientId ?? undefined, 30);
-  const { data: streakData, isLoading: streakLoading } = useClientStreak(clientId ?? undefined);
   const { data: definedPrs, isLoading: definedPrsLoading } = useMyPRs();
   const { data: exercisePrs, isLoading: exercisePrsLoading } = useClientExercisePRs(clientId);
   
   const trainingsThisMonth = attendanceStats?.trainingsInPeriod ?? 0;
-  const currentStreak = streakData?.currentStreak ?? 0;
   
   // Combine PRs from both sources: defined PRs (client_prs table) + exercise PRs (exercise_entries)
   const totalPRs = (definedPrs?.length ?? 0) + (exercisePrs?.length ?? 0);
@@ -87,15 +85,7 @@ export function ClientQuickStats() {
         isLoading={prsLoading}
         onClick={() => navigate('/zona/progress')}
       />
-      <QuickStat
-        icon={Flame}
-        label={currentStreak === 1 ? 'Týden série' : currentStreak < 5 ? 'Týdny série' : 'Týdnů série'}
-        value={currentStreak}
-        iconClassName={currentStreak >= 4 ? "bg-orange-500/10" : undefined}
-        valueClassName={currentStreak >= 4 ? "text-orange-500" : undefined}
-        isLoading={streakLoading}
-        onClick={() => navigate('/zona/competitions?tab=leaderboard')}
-      />
+      <WeightStatCard />
     </motion.div>
   );
 }
