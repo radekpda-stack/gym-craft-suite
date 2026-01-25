@@ -10,6 +10,7 @@ import { ClientActionRequired } from '@/components/client-portal/dashboard/Clien
 import { HeroStatsRow } from '@/components/client-portal/dashboard/HeroStatsRow';
 import { ClientQuickStats } from '@/components/client-portal/dashboard/ClientQuickStats';
 import { OverallPerformanceCard } from '@/components/client-portal/dashboard/OverallPerformanceCard';
+import { LeaderboardPreviewCard } from '@/components/client-portal/dashboard/LeaderboardPreviewCard';
 
 export default function ClientPortalOverview() {
   const { clientProfile, clientId } = useClientPortal();
@@ -45,7 +46,10 @@ export default function ClientPortalOverview() {
       {/* 6. Quick Actions - Dynamic shortcuts */}
       <ClientQuickActions />
 
-      {/* 6. Active Challenges (only if any) - moved to bottom */}
+      {/* 7. Leaderboard Preview - Compare with others */}
+      <LeaderboardPreviewCard />
+
+      {/* 8. Active Challenges (only if any) - moved to bottom */}
       <ActiveChallengeWidget />
     </div>
   );

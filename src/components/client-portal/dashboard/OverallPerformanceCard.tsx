@@ -1,11 +1,10 @@
 import { motion } from 'framer-motion';
-import { TrendingUp, Trophy, Target, Dumbbell, ChevronRight } from 'lucide-react';
+import { TrendingUp, Trophy, Target, Dumbbell } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePerformanceBenchmarks } from '@/hooks/usePerformanceBenchmarks';
-import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 interface OverallPerformanceCardProps {
@@ -36,7 +35,6 @@ function getPercentileStyle(percentile: number) {
 }
 
 export function OverallPerformanceCard({ clientId }: OverallPerformanceCardProps) {
-  const navigate = useNavigate();
   const { data: benchmarks, isLoading } = usePerformanceBenchmarks(clientId);
 
   if (isLoading) {
@@ -68,17 +66,11 @@ export function OverallPerformanceCard({ clientId }: OverallPerformanceCardProps
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
     >
-      <Card 
-        className="cursor-pointer hover:border-primary/30 transition-colors"
-        onClick={() => navigate('/zona/competitions?tab=leaderboard')}
-      >
+      <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              Můj celkový výkon
-            </span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            Můj celkový výkon
           </CardTitle>
           <p className="text-xs text-muted-foreground">
             Jak si vedeš ve srovnání s ostatními klienty

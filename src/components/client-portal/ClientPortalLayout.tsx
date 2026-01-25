@@ -53,7 +53,7 @@ function buildPrimaryNavItems(base: string): NavItem[] {
 // Secondary navigation items (in "Více" dropdown)
 function buildSecondaryNavItems(base: string): NavItem[] {
   return [
-    { to: `${base}/competitions`, icon: Trophy, label: 'Soutěže', trackName: 'competitions' },
+    { to: `${base}/competitions`, icon: Trophy, label: 'Výzvy', trackName: 'competitions' },
     { to: `${base}/badges`, icon: Award, label: 'Odznaky', trackName: 'badges' },
     { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
     { to: `${base}/settings`, icon: Settings, label: 'Nastavení', trackName: 'settings' },
@@ -64,7 +64,7 @@ function buildSecondaryNavItems(base: string): NavItem[] {
 function buildDesktopNavItems(base: string): NavItem[] {
   return [
     ...buildPrimaryNavItems(base),
-    { to: `${base}/competitions`, icon: Trophy, label: 'Soutěže', trackName: 'competitions' },
+    { to: `${base}/competitions`, icon: Trophy, label: 'Výzvy', trackName: 'competitions' },
     { to: `${base}/badges`, icon: Award, label: 'Odznaky', trackName: 'badges' },
     { to: `${base}/purchases`, icon: ShoppingBag, label: 'Nákupy', trackName: 'purchases' },
     { to: `${base}/settings`, icon: Settings, label: 'Nastavení', trackName: 'settings' },
