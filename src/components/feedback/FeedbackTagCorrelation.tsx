@@ -1,21 +1,16 @@
 /**
  * FeedbackTagCorrelation - Shows feedback metrics aggregated by training tags
+ * Enhanced with visual progress bars and responsive layout
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tags, Dumbbell, Activity, Flame } from 'lucide-react';
 import { useTrainingFeedbackCorrelation, TagAggregation } from '@/hooks/useTrainingFeedbackCorrelation';
+import { MetricMiniBar } from './MetricMiniBar';
+import { FeedbackTagCard } from './FeedbackTagCard';
 import { cn } from '@/lib/utils';
 
 interface FeedbackTagCorrelationProps {
@@ -24,12 +19,47 @@ interface FeedbackTagCorrelationProps {
   className?: string;
 }
 
-const formatMetric = (value: number | null): string => {
-  if (value === null) return '—';
-  return value.toFixed(1);
-};
+// Desktop table row with mini-bars
+const TagTableRow = ({ agg }: { agg: TagAggregation }) => (
+  <div className="grid grid-cols-[140px_60px_1fr] gap-2 items-center py-2 border-b border-border/50 last:border-0">
+    {/* Tag name */}
+    <div className="min-w-0">
+      <Badge variant="secondary" className="font-normal truncate max-w-[130px]">
+        {agg.tagName}
+      </Badge>
+    </div>
+    
+    {/* Count */}
+    <div className="text-center text-sm text-muted-foreground tabular-nums">
+      {agg.count}×
+    </div>
+    
+    {/* Metrics with mini-bars */}
+    <div className="grid grid-cols-4 gap-3">
+      <MetricMiniBar value={agg.avgSoreness} label="Sval." showValue size="sm" />
+      <MetricMiniBar value={agg.avgEnergy} label="Ener." showValue size="sm" />
+      <MetricMiniBar value={agg.avgPain} label="Bol." showValue size="sm" />
+      <MetricMiniBar value={agg.avgBodyFeel} label="Pocit" showValue size="sm" />
+    </div>
+  </div>
+);
 
-const TagTable = ({ 
+// Desktop table header
+const TagTableHeader = () => (
+  <div className="grid grid-cols-[140px_60px_1fr] gap-2 items-center pb-2 border-b border-border text-xs text-muted-foreground font-medium">
+    <div>Tag</div>
+    <div className="text-center">Počet</div>
+    <div className="grid grid-cols-4 gap-3">
+      <div>Svalovka</div>
+      <div>Energie</div>
+      <div>Bolest</div>
+      <div>Pocit</div>
+    </div>
+  </div>
+);
+
+// Content renderer - responsive: cards on mobile, table on desktop
+const TagContent = ({ 
   aggregations, 
   emptyMessage 
 }: { 
@@ -38,43 +68,39 @@ const TagTable = ({
 }) => {
   if (aggregations.length === 0) {
     return (
-      <div className="py-8 text-center text-muted-foreground text-sm">
+      <div className="py-6 text-center text-muted-foreground text-sm">
         {emptyMessage}
       </div>
     );
   }
   
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[140px]">Tag</TableHead>
-            <TableHead className="text-center">Počet</TableHead>
-            <TableHead className="text-center">Ø Svalovka</TableHead>
-            <TableHead className="text-center">Ø Energie</TableHead>
-            <TableHead className="text-center">Ø Bolest</TableHead>
-            <TableHead className="text-center">Ø Pocit</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+    <>
+      {/* Mobile: Cards */}
+      <div className="md:hidden space-y-2">
+        {aggregations.map((agg) => (
+          <FeedbackTagCard
+            key={agg.tagName}
+            tagName={agg.tagName}
+            count={agg.count}
+            avgSoreness={agg.avgSoreness}
+            avgEnergy={agg.avgEnergy}
+            avgPain={agg.avgPain}
+            avgBodyFeel={agg.avgBodyFeel}
+          />
+        ))}
+      </div>
+
+      {/* Desktop: Table */}
+      <div className="hidden md:block">
+        <TagTableHeader />
+        <div className="divide-y divide-border/30">
           {aggregations.map((agg) => (
-            <TableRow key={agg.tagName}>
-              <TableCell className="font-medium">
-                <Badge variant="secondary" className="font-normal">
-                  {agg.tagName}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-center">{agg.count}</TableCell>
-              <TableCell className="text-center">{formatMetric(agg.avgSoreness)}</TableCell>
-              <TableCell className="text-center">{formatMetric(agg.avgEnergy)}</TableCell>
-              <TableCell className="text-center">{formatMetric(agg.avgPain)}</TableCell>
-              <TableCell className="text-center">{formatMetric(agg.avgBodyFeel)}</TableCell>
-            </TableRow>
+            <TagTableRow key={agg.tagName} agg={agg} />
           ))}
-        </TableBody>
-      </Table>
-    </div>
+        </div>
+      </div>
+    </>
   );
 };
 
@@ -88,9 +114,9 @@ export function FeedbackTagCorrelation({
   if (isLoading) {
     return (
       <Card className={cn("glass", className)}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Tags className="w-5 h-5" />
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Tags className="w-4 h-4" />
             Feedback podle tagů
           </CardTitle>
         </CardHeader>
@@ -104,15 +130,15 @@ export function FeedbackTagCorrelation({
   if (!data || data.tagAggregations.length === 0) {
     return (
       <Card className={cn("glass", className)}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Tags className="w-5 h-5" />
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Tags className="w-4 h-4" />
             Feedback podle tagů
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Tags className="w-12 h-12 text-muted-foreground/30 mb-4" />
-          <p className="text-muted-foreground">Zatím žádná data</p>
+        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+          <Tags className="w-10 h-10 text-muted-foreground/30 mb-3" />
+          <p className="text-muted-foreground text-sm">Zatím žádná data</p>
           <p className="text-xs text-muted-foreground mt-1">
             Přidejte tagy k tréninkům a sbírejte feedback.
           </p>
@@ -130,63 +156,63 @@ export function FeedbackTagCorrelation({
     <Card className={cn("glass", className)}>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Tags className="w-5 h-5" />
+          <div className="flex items-center gap-2 text-base">
+            <Tags className="w-4 h-4" />
             Feedback podle tagů
           </div>
-          <span className="text-sm font-normal text-muted-foreground">
+          <span className="text-xs font-normal text-muted-foreground">
             {data.tagAggregations.length} tagů
           </span>
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         <Tabs defaultValue="focus" className="w-full">
-          <TabsList className="mb-3">
-            <TabsTrigger value="focus" className="gap-1.5 text-xs">
-              <Dumbbell className="w-3.5 h-3.5" />
-              Typ tréninku
+          <TabsList className="mb-3 w-full grid grid-cols-3">
+            <TabsTrigger value="focus" className="gap-1.5 text-xs px-2">
+              <Dumbbell className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Typ</span>
               {focusTags.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-xs">
+                <Badge variant="secondary" className="ml-0.5 text-[10px] px-1.5 py-0">
                   {focusTags.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="body_part" className="gap-1.5 text-xs">
-              <Activity className="w-3.5 h-3.5" />
-              Partie
+            <TabsTrigger value="body_part" className="gap-1.5 text-xs px-2">
+              <Activity className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Partie</span>
               {bodyPartTags.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-xs">
+                <Badge variant="secondary" className="ml-0.5 text-[10px] px-1.5 py-0">
                   {bodyPartTags.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="intensity" className="gap-1.5 text-xs">
-              <Flame className="w-3.5 h-3.5" />
-              Intenzita
+            <TabsTrigger value="intensity" className="gap-1.5 text-xs px-2">
+              <Flame className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Intenzita</span>
               {intensityTags.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-xs">
+                <Badge variant="secondary" className="ml-0.5 text-[10px] px-1.5 py-0">
                   {intensityTags.length}
                 </Badge>
               )}
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="focus">
-            <TagTable 
+          <TabsContent value="focus" className="mt-0">
+            <TagContent 
               aggregations={focusTags} 
               emptyMessage="Žádné feedbacky s tagy typu zaměření"
             />
           </TabsContent>
           
-          <TabsContent value="body_part">
-            <TagTable 
+          <TabsContent value="body_part" className="mt-0">
+            <TagContent 
               aggregations={bodyPartTags} 
               emptyMessage="Žádné feedbacky s tagy partií těla"
             />
           </TabsContent>
           
-          <TabsContent value="intensity">
-            <TagTable 
+          <TabsContent value="intensity" className="mt-0">
+            <TagContent 
               aggregations={intensityTags} 
               emptyMessage="Žádné feedbacky s tagy intenzity"
             />
