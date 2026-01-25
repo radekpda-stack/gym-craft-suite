@@ -14,6 +14,7 @@ import {
   Ban,
   Pencil,
   Clock,
+  CheckCircle2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
@@ -40,6 +42,8 @@ import { useDayNotes, useUpsertDayNote } from '@/hooks/useNutritionDayNotes';
 import { analyzeCaffeineForPeriod } from '@/components/client-portal/nutrition/CaffeineWindowWidget';
 import { NutritionFoodCard } from '@/components/nutrition/NutritionFoodCard';
 import { HabitSettingsForm } from '@/components/client-portal/nutrition/HabitSettingsForm';
+import { TrainerFeedbackDialog, NutritionRatingDisplay } from '@/components/nutrition/TrainerFeedbackDialog';
+import { useTrainerFeedback } from '@/hooks/useNutritionFeedback';
 import {
   MEAL_TYPES,
   PORTION_SIZES,
@@ -212,6 +216,8 @@ interface CommentDialogState {
   type: 'food' | 'drink' | 'coffee';
   entryId: string;
   currentComment: string;
+  currentRating: number | null;
+  clientReply: string | null;
 }
 
 interface EditDialogState {
@@ -267,7 +273,7 @@ export default function NutritionClientDetail() {
   );
   const upsertDayNote = useUpsertDayNote();
 
-  const trainerComment = useTrainerComment();
+  const trainerFeedback = useTrainerFeedback();
   const trainerUpdate = useTrainerUpdateEntry();
 
   const [commentDialog, setCommentDialog] = useState<CommentDialogState>({
@@ -275,6 +281,8 @@ export default function NutritionClientDetail() {
     type: 'food',
     entryId: '',
     currentComment: '',
+    currentRating: null,
+    clientReply: null,
   });
   const [commentText, setCommentText] = useState('');
 
@@ -373,16 +381,17 @@ export default function NutritionClientDetail() {
     return dayNotes?.find(n => n.date === dateStr);
   };
 
-  const openCommentDialog = (type: 'food' | 'drink' | 'coffee', entryId: string, currentComment: string) => {
-    setCommentDialog({ open: true, type, entryId, currentComment });
+  const openCommentDialog = (type: 'food' | 'drink' | 'coffee', entryId: string, currentComment: string, currentRating: number | null = null, clientReply: string | null = null) => {
+    setCommentDialog({ open: true, type, entryId, currentComment, currentRating, clientReply });
     setCommentText(currentComment || '');
   };
 
-  const saveComment = async () => {
-    await trainerComment.mutateAsync({
+  const saveComment = async (rating: number | null, comment: string) => {
+    await trainerFeedback.mutateAsync({
       type: commentDialog.type,
       entryId: commentDialog.entryId,
-      comment: commentText.trim(),
+      rating,
+      comment,
     });
     setCommentDialog({ ...commentDialog, open: false });
   };
@@ -659,22 +668,59 @@ export default function NutritionClientDetail() {
                 !hasEntries && "opacity-60"
               )}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
+                  <CardTitle className="text-sm flex items-center gap-2 flex-wrap">
                     <Calendar className="w-4 h-4" />
                     {format(day, 'EEEE d. M.', { locale: cs })}
                     {isTodays && <Badge variant="outline" className="text-[10px]">Dnes</Badge>}
                     {!hasEntries && <span className="text-muted-foreground font-normal">(prázdné)</span>}
                     
-                    {/* Trainer note button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ml-auto h-7 gap-1 text-xs"
-                      onClick={() => openTrainerNoteDialog(dateStr, dayNote?.trainer_note || '')}
-                    >
-                      <MessageSquare className="w-3 h-3" />
-                      {dayNote?.trainer_note ? 'Upravit poznámku' : 'Přidat poznámku'}
-                    </Button>
+                    <div className="flex items-center gap-2 ml-auto">
+                      {/* Checked toggle */}
+                      <div 
+                        className={cn(
+                          "flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer transition-colors",
+                          dayNote?.is_checked 
+                            ? "bg-success/10 text-success" 
+                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                        )}
+                        onClick={() => {
+                          if (!clientId) return;
+                          upsertDayNote.mutate({
+                            clientId,
+                            date: dateStr,
+                            isChecked: !dayNote?.is_checked,
+                          });
+                        }}
+                      >
+                        <Checkbox
+                          checked={dayNote?.is_checked || false}
+                          className="h-3.5 w-3.5"
+                          onCheckedChange={(checked) => {
+                            if (!clientId) return;
+                            upsertDayNote.mutate({
+                              clientId,
+                              date: dateStr,
+                              isChecked: !!checked,
+                            });
+                          }}
+                        />
+                        <span className="text-xs font-medium">
+                          {dayNote?.is_checked ? 'Zkontrolováno' : 'Kontrola'}
+                        </span>
+                        {dayNote?.is_checked && <CheckCircle2 className="w-3 h-3" />}
+                      </div>
+                      
+                      {/* Trainer note button */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 text-xs"
+                        onClick={() => openTrainerNoteDialog(dateStr, dayNote?.trainer_note || '')}
+                      >
+                        <MessageSquare className="w-3 h-3" />
+                        {dayNote?.trainer_note ? 'Poznámka' : 'Přidat'}
+                      </Button>
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 
@@ -730,9 +776,11 @@ export default function NutritionClientDetail() {
                               satiation={f.satiation}
                               clientNote={f.client_note}
                               trainerNote={f.trainer_comment}
+                              trainerRating={f.trainer_rating}
+                              clientReply={f.client_reply}
                               trainerEdited={f.trainer_edited}
                               onEdit={() => openEditDialog('food', f)}
-                              onComment={() => openCommentDialog('food', f.id, f.trainer_comment)}
+                              onComment={() => openCommentDialog('food', f.id, f.trainer_comment, f.trainer_rating, f.client_reply)}
                             />
                           ))}
                         </div>
@@ -767,7 +815,7 @@ export default function NutritionClientDetail() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-5 w-5"
-                                    onClick={() => openCommentDialog('drink', d.id, d.trainer_comment)}
+                                    onClick={() => openCommentDialog('drink', d.id, d.trainer_comment, d.trainer_rating, d.client_reply)}
                                   >
                                     <MessageSquare className="w-2.5 h-2.5" />
                                   </Button>
@@ -814,7 +862,7 @@ export default function NutritionClientDetail() {
                                       variant="ghost"
                                       size="icon"
                                       className="h-5 w-5"
-                                      onClick={() => openCommentDialog('coffee', c.id, c.trainer_comment)}
+                                      onClick={() => openCommentDialog('coffee', c.id, c.trainer_comment, c.trainer_rating, c.client_reply)}
                                     >
                                       <MessageSquare className="w-2.5 h-2.5" />
                                     </Button>
@@ -834,45 +882,16 @@ export default function NutritionClientDetail() {
         </div>
       )}
 
-      {/* Comment Dialog */}
-      <Dialog open={commentDialog.open} onOpenChange={(open) => setCommentDialog({ ...commentDialog, open })}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" />
-              Komentář k záznamu
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Textarea
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Napište komentář pro klienta..."
-              className="min-h-[100px]"
-            />
-            <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setCommentDialog({ ...commentDialog, open: false })}
-              >
-                Zrušit
-              </Button>
-              <Button 
-                onClick={saveComment} 
-                disabled={trainerComment.isPending}
-                className="gap-2"
-              >
-                {trainerComment.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-                Uložit
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Trainer Feedback Dialog */}
+      <TrainerFeedbackDialog
+        open={commentDialog.open}
+        onOpenChange={(open) => setCommentDialog({ ...commentDialog, open })}
+        currentRating={commentDialog.currentRating}
+        currentComment={commentDialog.currentComment}
+        clientReply={commentDialog.clientReply}
+        onSave={saveComment}
+        isLoading={trainerFeedback.isPending}
+      />
 
       {/* Trainer Note Dialog */}
       <Dialog open={trainerNoteDialog.open} onOpenChange={(open) => setTrainerNoteDialog({ ...trainerNoteDialog, open })}>

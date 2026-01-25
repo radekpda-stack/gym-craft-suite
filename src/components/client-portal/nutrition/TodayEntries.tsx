@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { format, isToday, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Utensils, Droplets, Coffee, MoreVertical, Pencil, Trash2, MessageSquare, Ban } from 'lucide-react';
+import { Utensils, Droplets, Coffee, MoreVertical, Pencil, Trash2, MessageSquare, Ban, Star, Reply } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { ClientReplyDialog } from './ClientReplyDialog';
+import { useClientReply } from '@/hooks/useNutritionFeedback';
 
 interface TodayEntriesProps {
   food: any[];
@@ -74,6 +77,21 @@ const getSatiationLabel = (satiation: string | null | undefined) => {
   }
 };
 
+// Rating color helper
+const getRatingColor = (rating: number): string => {
+  if (rating <= 3) return 'text-destructive';
+  if (rating <= 6) return 'text-warning';
+  if (rating <= 8) return 'text-success';
+  return 'text-emerald-500';
+};
+
+const getRatingLabel = (rating: number): string => {
+  if (rating <= 3) return 'Potřebuje zlepšit';
+  if (rating <= 6) return 'Průměrné';
+  if (rating <= 8) return 'Dobré';
+  return 'Výborné!';
+};
+
 // Get time from entry (prefer occurred_at, fallback to entry_time, then created_at)
 const getEntryTime = (entry: any): string => {
   if (entry.occurred_at) {
@@ -116,6 +134,15 @@ export function TodayEntries({
   const hasEntries = food.length > 0 || drinks.length > 0 || coffee.length > 0;
   const canEdit = onEditFood || onEditDrink || onEditCoffee;
   const canDelete = onDeleteFood || onDeleteDrink || onDeleteCoffee;
+
+  const clientReply = useClientReply();
+  const [replyDialog, setReplyDialog] = useState<{
+    open: boolean;
+    type: 'food' | 'drink' | 'coffee';
+    entryId: string;
+    trainerComment: string;
+    currentReply: string | null;
+  } | null>(null);
 
   // Calculate stats for header
   const totalWaterMl = drinks
@@ -281,11 +308,43 @@ export function TodayEntries({
                       />
                     )}
                   </div>
-                  {/* Trainer Comment */}
-                  {entry.trainer_comment && (
-                    <div className="flex items-start gap-2 ml-11 p-2 rounded-md bg-primary/5 border border-primary/10">
-                      <MessageSquare className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                      <p className="text-xs text-primary">{entry.trainer_comment}</p>
+                  {/* Trainer Rating & Comment */}
+                  {(entry.trainer_rating || entry.trainer_comment) && (
+                    <div className="flex flex-col gap-1 ml-11 p-2 rounded-md bg-primary/5 border border-primary/10">
+                      {entry.trainer_rating && (
+                        <div className={cn("flex items-center gap-1 text-sm font-medium", getRatingColor(entry.trainer_rating))}>
+                          <Star className="w-4 h-4 fill-current" />
+                          <span>{entry.trainer_rating}/10 - {getRatingLabel(entry.trainer_rating)}</span>
+                        </div>
+                      )}
+                      {entry.trainer_comment && (
+                        <div className="flex items-start gap-2">
+                          <MessageSquare className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                          <p className="text-xs text-primary">{entry.trainer_comment}</p>
+                        </div>
+                      )}
+                      {entry.client_reply && (
+                        <div className="mt-1 pl-5 text-xs text-muted-foreground">
+                          <span className="font-medium">Vaše odpověď:</span> {entry.client_reply}
+                        </div>
+                      )}
+                      {entry.trainer_comment && !entry.client_reply && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="self-start h-6 text-xs mt-1"
+                          onClick={() => setReplyDialog({
+                            open: true,
+                            type: 'food',
+                            entryId: entry.id,
+                            trainerComment: entry.trainer_comment,
+                            currentReply: entry.client_reply,
+                          })}
+                        >
+                          <Reply className="w-3 h-3 mr-1" />
+                          Odpovědět
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -428,6 +487,25 @@ export function TodayEntries({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Client Reply Dialog */}
+      {replyDialog && (
+        <ClientReplyDialog
+          open={replyDialog.open}
+          onOpenChange={(open) => !open && setReplyDialog(null)}
+          trainerComment={replyDialog.trainerComment}
+          currentReply={replyDialog.currentReply}
+          onSave={async (reply) => {
+            await clientReply.mutateAsync({
+              type: replyDialog.type,
+              entryId: replyDialog.entryId,
+              reply,
+            });
+            setReplyDialog(null);
+          }}
+          isLoading={clientReply.isPending}
+        />
+      )}
     </>
   );
 }

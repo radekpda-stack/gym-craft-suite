@@ -5869,6 +5869,7 @@ export type Database = {
         Row: {
           after_16: boolean | null
           client_id: string
+          client_reply: string | null
           client_request_id: string | null
           coffee_amount_ml: number | null
           coffee_type: string
@@ -5888,11 +5889,13 @@ export type Database = {
           trainer_comment: string | null
           trainer_edited: boolean
           trainer_edited_at: string | null
+          trainer_rating: number | null
           user_id: string | null
         }
         Insert: {
           after_16?: boolean | null
           client_id: string
+          client_reply?: string | null
           client_request_id?: string | null
           coffee_amount_ml?: number | null
           coffee_type: string
@@ -5912,11 +5915,13 @@ export type Database = {
           trainer_comment?: string | null
           trainer_edited?: boolean
           trainer_edited_at?: string | null
+          trainer_rating?: number | null
           user_id?: string | null
         }
         Update: {
           after_16?: boolean | null
           client_id?: string
+          client_reply?: string | null
           client_request_id?: string | null
           coffee_amount_ml?: number | null
           coffee_type?: string
@@ -5936,6 +5941,7 @@ export type Database = {
           trainer_comment?: string | null
           trainer_edited?: boolean
           trainer_edited_at?: string | null
+          trainer_rating?: number | null
           user_id?: string | null
         }
         Relationships: [
@@ -5964,29 +5970,35 @@ export type Database = {
       }
       nutrition_day_notes: {
         Row: {
+          checked_at: string | null
           client_id: string
           client_note: string | null
           created_at: string
           date: string
           id: string
+          is_checked: boolean | null
           trainer_note: string | null
           updated_at: string
         }
         Insert: {
+          checked_at?: string | null
           client_id: string
           client_note?: string | null
           created_at?: string
           date: string
           id?: string
+          is_checked?: boolean | null
           trainer_note?: string | null
           updated_at?: string
         }
         Update: {
+          checked_at?: string | null
           client_id?: string
           client_note?: string | null
           created_at?: string
           date?: string
           id?: string
+          is_checked?: boolean | null
           trainer_note?: string | null
           updated_at?: string
         }
@@ -6013,6 +6025,7 @@ export type Database = {
           amount_container_type: string | null
           amount_ml: number | null
           client_id: string
+          client_reply: string | null
           client_request_id: string | null
           created_at: string
           created_from: string | null
@@ -6027,6 +6040,7 @@ export type Database = {
           trainer_comment: string | null
           trainer_edited: boolean
           trainer_edited_at: string | null
+          trainer_rating: number | null
           user_id: string | null
         }
         Insert: {
@@ -6034,6 +6048,7 @@ export type Database = {
           amount_container_type?: string | null
           amount_ml?: number | null
           client_id: string
+          client_reply?: string | null
           client_request_id?: string | null
           created_at?: string
           created_from?: string | null
@@ -6048,6 +6063,7 @@ export type Database = {
           trainer_comment?: string | null
           trainer_edited?: boolean
           trainer_edited_at?: string | null
+          trainer_rating?: number | null
           user_id?: string | null
         }
         Update: {
@@ -6055,6 +6071,7 @@ export type Database = {
           amount_container_type?: string | null
           amount_ml?: number | null
           client_id?: string
+          client_reply?: string | null
           client_request_id?: string | null
           created_at?: string
           created_from?: string | null
@@ -6069,6 +6086,7 @@ export type Database = {
           trainer_comment?: string | null
           trainer_edited?: boolean
           trainer_edited_at?: string | null
+          trainer_rating?: number | null
           user_id?: string | null
         }
         Relationships: [
@@ -6100,6 +6118,7 @@ export type Database = {
           calorie_estimate_high: number | null
           calorie_estimate_low: number | null
           client_id: string
+          client_reply: string | null
           client_request_id: string | null
           created_at: string
           created_from: string | null
@@ -6123,6 +6142,7 @@ export type Database = {
           trainer_comment: string | null
           trainer_edited: boolean
           trainer_edited_at: string | null
+          trainer_rating: number | null
           units_count: number | null
           units_label: string | null
           user_id: string | null
@@ -6131,6 +6151,7 @@ export type Database = {
           calorie_estimate_high?: number | null
           calorie_estimate_low?: number | null
           client_id: string
+          client_reply?: string | null
           client_request_id?: string | null
           created_at?: string
           created_from?: string | null
@@ -6154,6 +6175,7 @@ export type Database = {
           trainer_comment?: string | null
           trainer_edited?: boolean
           trainer_edited_at?: string | null
+          trainer_rating?: number | null
           units_count?: number | null
           units_label?: string | null
           user_id?: string | null
@@ -6162,6 +6184,7 @@ export type Database = {
           calorie_estimate_high?: number | null
           calorie_estimate_low?: number | null
           client_id?: string
+          client_reply?: string | null
           client_request_id?: string | null
           created_at?: string
           created_from?: string | null
@@ -6185,6 +6208,7 @@ export type Database = {
           trainer_comment?: string | null
           trainer_edited?: boolean
           trainer_edited_at?: string | null
+          trainer_rating?: number | null
           units_count?: number | null
           units_label?: string | null
           user_id?: string | null
