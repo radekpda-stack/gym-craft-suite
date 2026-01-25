@@ -9,6 +9,7 @@ import { TrainingDurationCard } from './TrainingDurationCard';
 import { GlobalTagDistributionCard } from './GlobalTagDistributionCard';
 import { InteractiveHeatmapCard } from './InteractiveHeatmapCard';
 import { HeatmapSummary } from './HeatmapSummary';
+import { FeedbackTagCorrelation } from '@/components/feedback/FeedbackTagCorrelation';
 import type { StatsPeriodRange } from './StatsPeriodSelector';
 import { differenceInDays, subMonths } from 'date-fns';
 
@@ -96,6 +97,11 @@ export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps)
         focusDistribution={stats.focusDistribution}
         bodyPartDistribution={stats.bodyPartDistribution}
         intensityDistribution={stats.intensityDistribution}
+      />
+
+      {/* Feedback by Training Tags - correlates feedback with tag types */}
+      <FeedbackTagCorrelation 
+        days={dateRange === 'all' ? 365 : (typeof dateRange === 'number' ? dateRange : 90)} 
       />
     </div>
   );
