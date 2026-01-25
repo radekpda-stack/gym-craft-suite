@@ -36,11 +36,11 @@ export function MetricMiniBar({
   const content = (
     <div className={cn('flex items-center gap-2 min-w-0', className)}>
       {label && (
-        <span className="text-xs text-muted-foreground shrink-0 w-16 truncate">
+        <span className="text-xs text-muted-foreground shrink-0 w-14 truncate">
           {label}
         </span>
       )}
-      <div className={cn('flex-1 bg-muted rounded-full overflow-hidden min-w-8', barHeight)}>
+      <div className={cn('flex-1 bg-muted rounded-full overflow-hidden min-w-6', barHeight)}>
         {hasValue && (
           <div
             className="h-full bg-primary rounded-full transition-all duration-300"
@@ -49,7 +49,7 @@ export function MetricMiniBar({
         )}
       </div>
       {showValue && (
-        <span className="text-xs font-medium tabular-nums shrink-0 w-8 text-right">
+        <span className="text-xs font-medium tabular-nums shrink-0 w-7 text-right">
           {displayValue}
         </span>
       )}

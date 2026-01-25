@@ -40,8 +40,8 @@ export function FeedbackTagCard({
         </span>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+      {/* Metrics - Single column on mobile for no overflow */}
+      <div className="space-y-1.5">
         <MetricMiniBar 
           value={avgSoreness} 
           label="Svalovka" 
