@@ -1,146 +1,166 @@
 
-
-# Vylepšení komponenty "Feedback podle tagů" + Integrace do Statistik
+# Revize sekce Strava - Audit UI a návrh vylepšení
 
 ## Současný stav
 
-Komponenta `FeedbackTagCorrelation.tsx` zobrazuje cenná data z feedbacků agregovaná podle tréninkových tagů (Typ tréninku, Partie, Intenzita). 
+Na základě screenshotů a analýzy kódu jsou identifikovány dva hlavní problematické pohledy:
 
-### Nalezené problémy na screenshotu:
-1. **Tabulka zobrazuje pouze 3 sloupce** (Tag, Počet, Ø Svalovka) - chybí ostatní metriky (Energie, Bolest, Pocit)
-2. **Vizuálně málo atraktivní** - pouze text a čísla bez grafických prvků
-3. **Badge může přetékat** - při delších názvech tagů
-4. **Chybí vizuální indikace** hodnot (např. škála 0-10 není graficky znázorněna)
+### 1. Detail klienta (`NutritionClientDetail.tsx`)
+**Problémy:**
+- Popisy jídel se zalamují nešťastně (každé slovo na nový řádek)
+- Timeline layout je příliš vertikální a zabírá hodně místa
+- Badge pro typ jídla (Snídaně, Svačina) a čas jsou oddělené, ale mohly by být kompaktnější
+- Chybí vizuální hierarchie mezi typy záznamů (jídlo vs. nápoje vs. káva)
+
+### 2. Přehled klientů (`NutritionPage.tsx`)
+**Problémy:**
+- Jména klientů jsou useknutá ("L...", "T...")
+- Metriky přetékají horizontálně ("prázdných dnů", "1× po 18:00")
+- Badge "Pozornost" se ořezává
+- Příliš husté horizontální rozložení metrik na mobilu
 
 ---
 
-## Navrhované změny UI
+## Navrhované změny
 
-### 1. Kompaktnější mobilní zobrazení s vizuálními metrikami
+### Fáze 1: Redesign zobrazení jídla v detailu klienta
 
-Místo 6 sloupců v tabulce použít:
-- **Mobilní view**: Karta pro každý tag s progress bary
-- **Desktop view**: Vylepšená tabulka s mini-grafy
-
-**Nový mobilní layout (karty):**
+**Současný layout:**
 ```text
-┌─────────────────────────────────────────────┐
-│ [Max síla]                        30× ▼     │
-│ ─────────────────────────────────────────── │
-│ Svalovka   ████████░░░░░░░░ 3.4             │
-│ Energie    ██████████████░░ 7.2             │
-│ Bolest     ██░░░░░░░░░░░░░░ 1.5             │
-│ Pocit      ████████████░░░░ 6.8             │
-└─────────────────────────────────────────────┘
+09:00 [Snídaně] Cottage light, banán, maliny, červené hrozny, oříšky
+                Porce: střední
 ```
 
-### 2. Mini progress bar pro hodnoty
-
-Nahradit textové hodnoty (3.4, 4.4, 3.0...) vizuálním progress barem:
-- Škála 0-10 převedena na % šířky
-- Barva: `bg-primary` (cyan/teal z designu)
-- Background: `bg-muted` 
-
-### 3. Vylepšená tabulka pro desktop
-
+**Nový layout - kompaktní karta:**
 ```text
-┌────────────────┬───────┬─────────────────────────────────────┐
-│ Tag            │ Počet │ Metriky (Svalovka | Energie | Pocit)│
-├────────────────┼───────┼─────────────────────────────────────┤
-│ Max síla       │  30   │ ████ 3.4  ████████ 7.2  ██████ 6.8  │
-│ Hypertrofie    │   9   │ █████ 4.4 ███████ 6.5   █████ 5.2   │
-│ Plyometrie     │   3   │ ███ 3.0   ██████ 6.0    ████ 4.5    │
-└────────────────┴───────┴─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ 🕘 09:00 • Snídaně                                [✏️] [💬] │
+│ ─────────────────────────────────────────────────────────── │
+│ Cottage light, banán, maliny, červené hrozny, oříšky       │
+│ Porce: střední                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 4. Fixní šířky sloupců pro prevenci přetékání
+**Klíčové změny:**
+- Čas + typ jídla na jednom řádku jako header karty
+- Popis jídla pod tím s `line-clamp-2` pro zkrácení (rozbalitelné)
+- Akční tlačítka (Edit, Comment) vpravo v headeru, vždy viditelná na mobilu
+- Porce jako subtle metadata pod popisem
 
-- Tag sloupec: `max-w-[120px] truncate`
-- Počet: `w-16 text-center`
-- Metriky: `flex-1` s mini-bar vizualizací
+### Fáze 2: Vylepšení přehledu klientů
 
----
+**Současný layout řádku:**
+```text
+[L] L... [⚠ Pozornost] 🕐 Dnes  🍎 12 tento týden  📅 3 prázdných dnů  ☕ 1× po 18:00
+```
 
-## Nová komponenta: `FeedbackTagCard` (pro mobilní karty)
+**Nový layout - 2 řádky:**
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ [B] Bobáková Petra                    [⚠ Pozornost] [→]    │
+│     🕐 Dnes • 🍎 12 • 📅 3 prázdných • ☕ 1× pozdě         │
+└─────────────────────────────────────────────────────────────┘
+```
 
-Nová sub-komponenta pro zobrazení jednoho tagu jako karty:
-- Název tagu jako header s badge
-- 4 mini progress bary pro metriky
-- Collapsible pro rozbalení detailů
+**Klíčové změny:**
+- Jméno klienta s `truncate` ale větší `max-w` (min 120px)
+- Metriky na druhém řádku s kompaktnějším formátováním
+- Zkrácené popisky ("prázdných" místo "prázdných dnů", "pozdě" místo "po 18:00")
+- Badge indikátory (🍎, 💧, ☕) jako ikony bez textů na mobilu
 
----
+### Fáze 3: Nová komponenta `NutritionFoodCard`
 
-## Nová komponenta: `MetricMiniBar`
+Vytvořit reusable komponentu pro zobrazení jednoho jídla:
 
-Reusable komponenta pro mini progress bar:
 ```tsx
-interface MetricMiniBarProps {
-  value: number | null;  // 0-10
-  label?: string;
-  showValue?: boolean;
-  size?: 'sm' | 'md';
+interface NutritionFoodCardProps {
+  time: string;
+  mealType: string;
+  description: string;
+  portionSize?: string;
+  quality?: 'good' | 'normal' | 'poor';
+  trainerComment?: string;
+  onEdit?: () => void;
+  onComment?: () => void;
 }
 ```
 
-Vizualizace:
-- Výška 4px (sm) nebo 6px (md)
-- Zaoblené konce (`rounded-full`)
-- Tooltip s hodnotou při hover
+**Vizuální prvky:**
+- Barevný indikátor kvality (levý okraj)
+- Rozbalitelný popis pro dlouhé texty
+- Kompaktní metadata layout
 
----
+### Fáze 4: Responzivní layout pro metriky klientů
 
-## Integrace do Statistik tréninků
-
-### Kam přidat:
-
-Do `TrainingStatsSection.tsx` jako novou sekci pod `GlobalTagDistributionCard`:
-
-```tsx
-{/* Feedback by Tags - Training insights */}
-<FeedbackTagCorrelation days={dateRange === 'all' ? 365 : dateRange} />
+**Mobilní view (< 640px):**
+```text
+┌─────────────────────────────────────┐
+│ [B] Bobáková Petra      [⚠ Pozor]  │
+│     🕐 Dnes                         │
+│     🍎 12  📅 3  ☕ 1               │
+└─────────────────────────────────────┘
 ```
 
-### Úprava props:
+**Desktop view (≥ 640px):**
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│ [B] Bobáková Petra           [⚠ Pozornost]                       │
+│     🕐 Dnes • 🍎 12 tento týden • 📅 3 prázdných • ☕ 1× pozdě   │
+└──────────────────────────────────────────────────────────────────┘
+```
 
-Komponenta již podporuje `days` prop, takže bude reagovat na `periodRange` ze Statistics.
+### Fáze 5: Vizuální vylepšení timeline
+
+**Barevné kódování typů záznamu:**
+- Jídlo: `bg-warning/5 border-l-2 border-warning`
+- Nápoje: `bg-blue-500/5 border-l-2 border-blue-500`
+- Káva: `bg-amber-600/5 border-l-2 border-amber-600`
+
+**Ikony pro kvalitu:**
+- 💚 Kvalitní (good)
+- 🟡 Běžná (normal)
+- 🔴 Nezdravá (poor)
 
 ---
 
 ## Technické kroky implementace
 
-### Krok 1: Vytvořit `MetricMiniBar` komponentu
+### Krok 1: Vytvořit komponentu `NutritionFoodCard`
 ```text
-- Nová komponenta src/components/feedback/MetricMiniBar.tsx
-- Props: value (0-10), label, showValue, size
-- Vizualizace jako tenký progress bar s hodnotou vpravo
+- Nová komponenta src/components/nutrition/NutritionFoodCard.tsx
+- Props: time, mealType, description, portionSize, quality, trainerComment
+- Expandable popis s line-clamp-2
+- Barevný border podle typu/kvality
+- Akční tlačítka v headeru
 ```
 
-### Krok 2: Vytvořit `FeedbackTagRow` pro desktop tabulku
+### Krok 2: Vytvořit komponentu `NutritionClientRow`
 ```text
-- Nová sub-komponenta místo současného TableRow
-- Zobrazí tag badge + počet + 4 mini-bary v řádku
-- Tooltips pro jednotlivé metriky
+- Nová komponenta src/components/nutrition/NutritionClientRow.tsx
+- Optimalizovaný 2-řádkový layout pro klienta
+- Responzivní zkracování metrik
+- Správné truncation pro jméno
 ```
 
-### Krok 3: Vytvořit `FeedbackTagCard` pro mobilní view
+### Krok 3: Refaktorovat `NutritionClientDetail.tsx`
 ```text
-- Nová komponenta pro card-based layout
-- Kompaktní zobrazení všech 4 metrik
-- Expandable pro více detailů
+- Nahradit inline food entry rendering komponentou NutritionFoodCard
+- Přidat barevné kódování sekcí (jídlo/nápoje/káva)
+- Zlepšit spacing a vizuální hierarchii
 ```
 
-### Krok 4: Refaktorovat `FeedbackTagCorrelation`
+### Krok 4: Refaktorovat `NutritionPage.tsx` - client list
 ```text
-- Použít responsive layout: karty na mobilu, tabulka na desktopu
-- Přepnout na MetricMiniBar místo textových hodnot
-- Přidat truncate a max-w na tag names
+- Nahradit inline client rendering komponentou NutritionClientRow
+- Přidat responsive layout pro metriky
+- Zkrátit popisky na mobilu
 ```
 
-### Krok 5: Přidat do `TrainingStatsSection`
+### Krok 5: Přidat rozbalitelný popis
 ```text
-- Import FeedbackTagCorrelation
-- Přidat pod GlobalTagDistributionCard
-- Předat days prop z periodRange
+- Pro dlouhé popisy (>80 znaků) zobrazit zkráceně
+- Přidat tlačítko "více" pro rozbalení
+- Použít framer-motion pro smooth animaci
 ```
 
 ---
@@ -149,34 +169,51 @@ Komponenta již podporuje `days` prop, takže bude reagovat na `periodRange` ze 
 
 | Oblast | Před | Po |
 |--------|------|-----|
-| Zobrazení metrik | Pouze text "3.4" | Mini progress bar + text |
-| Mobilní layout | Horizontální tabulka | Vertikální karty |
-| Přetékání textu | Možné u dlouhých tagů | `truncate` + `max-w` |
-| Počet viditelných metrik | 3 (na screenshotu) | 4 (Svalovka, Energie, Bolest, Pocit) |
-| Integrace do Stats | Chybí | Nová sekce v Tréninky tab |
+| Popis jídla | Awkward word wrapping | Kompaktní karta s line-clamp |
+| Jméno klienta | "L..." (useknuté) | Plné jméno nebo smart truncate |
+| Metriky klienta | Horizontální overflow | 2-řádkový responzivní layout |
+| Badge "Pozornost" | Ořezaný | Vždy viditelný |
+| Vizuální hierarchie | Jednotné šedé pozadí | Barevné kódování podle typu |
+| Kvalita jídla | Textové | Emoji indikátory (💚🟡🔴) |
+| Akční tlačítka | Pouze on hover | Viditelná na mobilu |
 
 ---
 
-## Vizuální návrh finální karty
+## Vizuální návrh finální karty jídla
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ 🏷️ Feedback podle tagů                          21 tagů    │
+┌─ 💚 ────────────────────────────────────────────────────────┐
+│ 🕘 09:00 • Snídaně                              [✏️] [💬]   │
 ├─────────────────────────────────────────────────────────────┤
-│ [Typ tréninku ✓ 5] [Partie 14] [Intenzita]                  │
-├─────────────────────────────────────────────────────────────┤
+│ Cottage light, banán, maliny, červené hrozny, oříšky       │
 │                                                              │
-│  ┌─ Max síla ───────────────────────────────── 30× ────┐    │
-│  │ Svalovka  ████░░░░░░ 3.4   Energie ████████░░ 7.2   │    │
-│  │ Bolest    ██░░░░░░░░ 1.5   Pocit   ███████░░░ 6.8   │    │
-│  └─────────────────────────────────────────────────────┘    │
+│ 📏 Střední porce                                             │
 │                                                              │
-│  ┌─ Hypertrofie ──────────────────────────────  9× ────┐    │
-│  │ Svalovka  █████░░░░░ 4.4   Energie ███████░░░ 6.5   │    │
-│  │ Bolest    ███░░░░░░░ 2.1   Pocit   ██████░░░░ 5.8   │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                              │
+│ ┌─ 💬 Trenér ─────────────────────────────────────────────┐ │
+│ │ Super volba bílkovin! Zkus přidat více zeleniny.        │ │
+│ └─────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Vizuální návrh finální řádku klienta
+
+**Mobilní:**
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ [🔴B] Bobáková Petra               [⚠ Pozornost]           │
+│       🕐 Dnes                                               │
+│       🍎 12   📅 3   ☕ 1                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Desktop:**
+```text
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ [🔴B] Bobáková Petra                                         [⚠ Pozornost]     │
+│       🕐 Dnes • 🍎 12 tento týden • 📅 3 prázdných dnů • ☕ 1× po 18:00   [→]   │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -184,15 +221,14 @@ Komponenta již podporuje `days` prop, takže bude reagovat na `periodRange` ze 
 ## Prioritizace
 
 **Vysoká priorita:**
-1. Přidat `MetricMiniBar` pro vizualizaci hodnot
-2. Opravit přetékání textu u tagů
-3. Přidat komponentu do Training stats
+1. Opravit přetékání metrik na přehledu klientů (NutritionPage)
+2. Vytvořit NutritionFoodCard pro lepší zobrazení jídla
+3. Přidat barevné kódování kvality
 
 **Střední priorita:**
-4. Responzivní layout (karty/tabulka)
-5. Zobrazit všechny 4 metriky
+4. Responzivní 2-řádkový layout pro klienty
+5. Expandable popisy jídla
 
 **Nižší priorita:**
-6. Tooltips a micro-interakce
-7. Collapsible karty
-
+6. Animace pro rozbalení
+7. Emoji indikátory místo textů
