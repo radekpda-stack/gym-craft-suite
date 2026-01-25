@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import { motion, useAnimation, PanInfo } from 'framer-motion';
 import { addDays, subDays, isSameDay, format, startOfWeek, endOfWeek } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Plus, List, Calendar as CalendarIcon, Settings2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, List, Calendar as CalendarIcon, Settings2, Dumbbell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useTrainingSessions, useCreateTrainingSession, useUpdateTrainingSession, useCancelTrainingSession, useDeleteTrainingSession, TrainingSession } from '@/hooks/useTrainingSessions';
@@ -312,6 +312,15 @@ export default function SchedulePage() {
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-foreground">Rozvrh</h1>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/training-mode')}
+              className="h-8 px-2.5 rounded-lg bg-card/60 backdrop-blur-sm border border-border/50 hover:bg-primary/10 hover:border-primary/30 transition-all"
+            >
+              <Dumbbell className="w-4 h-4 text-primary" />
+              <span className="text-xs font-medium text-foreground/80 ml-1.5 hidden sm:inline">Tréninkový režim</span>
+            </Button>
             <Button
               variant="ghost"
               size="icon"
