@@ -15,6 +15,7 @@ import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientAttendanceStats } from '@/hooks/useClientPortalStats';
 import { useClientStreak } from '@/hooks/useClientXPLevel';
 import { useMyPRs } from '@/hooks/useClientPRs';
+import { useClientExercisePRs } from '@/hooks/useClientExercisePRs';
 import { useNavigate } from 'react-router-dom';
 
 interface QuickStatProps {
@@ -54,11 +55,15 @@ export function ClientQuickStats() {
   
   const { data: attendanceStats, isLoading: attendanceLoading } = useClientAttendanceStats(clientId ?? undefined, 30);
   const { data: streakData, isLoading: streakLoading } = useClientStreak(clientId ?? undefined);
-  const { data: prs, isLoading: prsLoading } = useMyPRs();
+  const { data: definedPrs, isLoading: definedPrsLoading } = useMyPRs();
+  const { data: exercisePrs, isLoading: exercisePrsLoading } = useClientExercisePRs(clientId);
   
   const trainingsThisMonth = attendanceStats?.trainingsInPeriod ?? 0;
   const currentStreak = streakData?.currentStreak ?? 0;
-  const totalPRs = prs?.length ?? 0;
+  
+  // Combine PRs from both sources: defined PRs (client_prs table) + exercise PRs (exercise_entries)
+  const totalPRs = (definedPrs?.length ?? 0) + (exercisePrs?.length ?? 0);
+  const prsLoading = definedPrsLoading || exercisePrsLoading;
 
   return (
     <motion.div
