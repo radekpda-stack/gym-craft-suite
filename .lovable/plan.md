@@ -1,44 +1,48 @@
 
+
 # Unilaterální cviky: Volba strany L/R a výpočet asymetrie
 
-## Shrnutí
+## Souhrn změn
 
-Požadavek: Při zápisu jednoručních/jednonožních cviků umožnit výběr strany (L/R) a automaticky počítat procentuální rozdíl síly mezi končetinami. Funkce bude dostupná jak pro trenéra, tak pro klienty.
+Implementace umožní klientům a trenérům zaznamenávat stranu (levá/pravá/obě) u jednostranných cviků a automaticky počítat procentuální rozdíl síly mezi končetinami.
 
-## Co již existuje
+---
 
-Systém má solidní základ:
+## Databázová změna
 
-| Komponenta | Stav | Kde se používá |
-|------------|------|----------------|
-| `exercises.is_unilateral` | Hotovo | 16 cviků označeno (Pistole, Bird dog, Single Leg Jump...) |
-| `exercise_entries.side` | Hotovo | Sloupec s hodnotami `left`/`right`/`both`/`none` |
-| `SideSelector` | Hotovo | Pouze v trenérské aplikaci (QuickLogDialog, QuickExerciseAdd) |
-| `SideBadge` | Hotovo | K dispozici, ale málo používané |
-| `useAsymmetryAnalysis` | Hotovo | Počítá procentuální rozdíl L vs R |
-| `AsymmetryCard` | Hotovo | Pouze v trenérském detailu klienta |
+### Přidání sloupce `side` do `client_workout_exercises`
 
-## Co chybí a bude implementováno
-
-### 1. Přidání výběru strany do klientského formuláře
-
-V `SimpleAddWorkoutDialog.tsx` klient aktuálně nemůže zvolit stranu. Rozšíření:
-
-```text
-┌─────────────────────────────────────────────┐
-│ Single Leg Glute Bridge              [X]    │
-├─────────────────────────────────────────────┤
-│ 🦵 Unilaterální cvik                        │
-│ ┌─────┬─────────┬─────┐                     │
-│ │  L  │   Obě   │  R  │  ← SideSelector     │
-│ └─────┴─────────┴─────┘                     │
-├─────────────────────────────────────────────┤
-│ Série: [3]  Opakování: [10]  Váha: [0]     │
-└─────────────────────────────────────────────┘
+```sql
+ALTER TABLE client_workout_exercises
+ADD COLUMN side TEXT DEFAULT 'none' 
+CHECK (side IN ('left', 'right', 'both', 'none'));
 ```
 
-### 2. Rozšíření interface ExerciseInput
+**Důvod:** Tabulka `exercise_entries` (trenérská) už má sloupec `side`, ale klientská tabulka `client_workout_exercises` ho postrádá.
 
+---
+
+## Změny v kódu
+
+### 1. Rozšíření `useExerciseDetailsLookup.ts`
+
+Přidat `is_unilateral` do interface a dotazu:
+
+```typescript
+export interface ExerciseLookupData {
+  // ... existing fields
+  is_unilateral: boolean;  // NOVÉ
+}
+
+// V dotazu přidat:
+.select('id, name, name_cs, description_cs, instructions_cs, equipment, muscle_groups, is_unilateral')
+```
+
+---
+
+### 2. Úprava `SimpleAddWorkoutDialog.tsx`
+
+**Rozšíření interface:**
 ```typescript
 interface ExerciseInput {
   name: string;
@@ -51,75 +55,15 @@ interface ExerciseInput {
 }
 ```
 
-### 3. Přidání AsymmetryCard do klientského portálu
+**Při přidání cviku:**
+- Detekovat `is_unilateral` z exercise lookup
+- Defaultně nastavit `side: 'both'` pro unilaterální cviky
 
-Na stránce `ClientPortalProgress.tsx` přidat kartu asymetrie:
+**UI změna:**
+- Pod názvem unilaterálního cviku zobrazit `SideSelector` (L / Obě / R)
+- Vizuální indikace pomocí badge pro jednostranné cviky
 
-```text
-┌──────────────────────────────────────────────┐
-│ ⚖️ ASYMETRIE L vs R                         │
-├──────────────────────────────────────────────┤
-│ Single Leg Glute Bridge         [15%]       │
-│ L ████████████░░░ 25kg | 30kg ███████████ R │
-│      → Pravá strana silnější                 │
-├──────────────────────────────────────────────┤
-│ Pistole                          [8%]        │
-│ L ██████████████ 12× | 13× ██████████████ R │
-│          Symetrický výkon                    │
-└──────────────────────────────────────────────┘
-│ Legenda: <10% ● | 10-20% ● | >20% ●         │
-└──────────────────────────────────────────────┘
-```
-
-### 4. Zobrazení badge L/R ve workout diary
-
-V seznamu cviků (SimpleWorkoutCard, WorkoutDateDetailDialog) přidat vizuální indikátor strany:
-
-```text
-Single Leg Glute Bridge [L]  3×10 • 25kg
-Single Leg Glute Bridge [R]  3×10 • 30kg
-```
-
----
-
-## Implementační kroky
-
-| Krok | Soubor | Změna |
-|------|--------|-------|
-| 1 | `src/components/client-portal/workout-diary/SimpleAddWorkoutDialog.tsx` | Rozšířit `ExerciseInput` o `side`, detekovat `is_unilateral` z exercise lookup, zobrazit `SideSelector` |
-| 2 | `src/hooks/useExerciseDetailsLookup.ts` | Přidat `is_unilateral` do lookup dat |
-| 3 | `src/pages/client-portal/ClientPortalProgress.tsx` | Přidat `AsymmetryCard` do stránky pokroku |
-| 4 | `src/components/client-portal/workout-diary/SimpleWorkoutCard.tsx` | Zobrazit `SideBadge` u unilaterálních cviků |
-| 5 | `src/components/client-portal/workout-diary/WorkoutDateDetailDialog.tsx` | Zobrazit `SideBadge` u unilaterálních cviků |
-| 6 | `src/components/client-portal/workout-diary/PlannedWorkoutDetailSheet.tsx` | Zobrazit `SideBadge` u unilaterálních cviků |
-
----
-
-## Technické detaily
-
-### Detekce unilaterálního cviku
-
-Při výběru cviku v `SimpleAddWorkoutDialog` se načte `is_unilateral` z exercise lookup:
-
-```typescript
-const handleExerciseSelect = (exercise) => {
-  const details = exerciseLookup.get(exercise.name.toLowerCase());
-  setExercises(prev => [...prev, {
-    name: exercise.name,
-    exerciseId: exercise.id,
-    sets: '',
-    reps: '',
-    weight: '',
-    isUnilateral: details?.is_unilateral || false,
-    side: details?.is_unilateral ? 'both' : undefined,
-  }]);
-};
-```
-
-### Uložení strany do databáze
-
-V handleSave předat `side`:
-
+**Úprava handleSave:**
 ```typescript
 exercises: exercises.map(e => ({
   exercise_name: e.name,
@@ -127,11 +71,70 @@ exercises: exercises.map(e => ({
   sets: parseInt(e.sets) || undefined,
   reps: parseInt(e.reps) || undefined,
   weight_kg: parseFloat(e.weight) || undefined,
-  side: e.isUnilateral ? e.side : 'none',
+  side: e.isUnilateral ? e.side : 'none',  // NOVÉ
 })),
 ```
 
-### Výpočet asymetrie
+---
+
+### 3. Úprava `useClientWorkoutLogs.ts`
+
+**Rozšíření `WorkoutExercise` interface:**
+```typescript
+export interface WorkoutExercise {
+  // ... existing fields
+  side?: 'left' | 'right' | 'both' | 'none' | null;  // NOVÉ
+}
+```
+
+**Při insertu cviků:**
+```typescript
+const exercisesToInsert = input.exercises.map((ex, idx) => ({
+  // ... existing fields
+  side: ex.side || 'none',  // NOVÉ
+}));
+```
+
+---
+
+### 4. Úprava `useUnifiedDiary.ts`
+
+**Rozšíření `DiaryExercise` interface:**
+```typescript
+export interface DiaryExercise {
+  // ... existing fields
+  side?: 'left' | 'right' | 'both' | 'none' | null;  // NOVÉ
+}
+```
+
+---
+
+### 5. Zobrazení `SideBadge` ve workout kartách
+
+**Soubory k úpravě:**
+- `SimpleWorkoutCard.tsx` - zobrazit badge u cviků v rozbalené sekci
+- `WorkoutDateDetailDialog.tsx` - zobrazit badge u seznamu cviků
+- `PlannedWorkoutDetailSheet.tsx` - zobrazit badge u plánovaných cviků
+
+**Příklad zobrazení:**
+```
+Single Leg Glute Bridge [L]  3×10 • 25kg
+Pistole [R]  3×8
+Bird Dog [L+R]  3×12
+```
+
+---
+
+### 6. Přidání `AsymmetryCard` do `ClientPortalProgress.tsx`
+
+Import existující komponenty a přidání do stránky:
+
+```tsx
+import { AsymmetryCard } from '@/components/client-portal/progress/AsymmetryCard';
+
+// V renderovací části:
+{clientId && <AsymmetryCard clientId={clientId} />}
+```
 
 Hook `useAsymmetryAnalysis` již existuje a automaticky:
 - Seskupí záznamy podle cviku a strany
@@ -141,22 +144,71 @@ Hook `useAsymmetryAnalysis` již existuje a automaticky:
 
 ---
 
-## Vedlejší benefity
+## Vizuální návrh
 
-1. **Vzdělávání klientů** - Klienti uvidí své nerovnováhy a pochopí proč trénují jednostranně
-2. **Motivace** - Sledování pokroku vyrovnávání asymetrií
-3. **Konzistence** - Stejná funkcionalita pro trenéra i klienta
-4. **Přesnost dat** - Oddělené PR pro levou a pravou stranu
+### Výběr strany v dialogu přidání tréninku:
+
+```
+┌─────────────────────────────────────────────┐
+│ Pistole                              [X]    │
+├─────────────────────────────────────────────┤
+│ 🦵 Jednostranný cvik                        │
+│ ┌─────┬─────────┬─────┐                     │
+│ │  L  │   Obě   │  R  │                     │
+│ └─────┴─────────┴─────┘                     │
+├─────────────────────────────────────────────┤
+│ Série: [3]  Opakování: [8]                  │
+└─────────────────────────────────────────────┘
+```
+
+### Karta asymetrie na stránce Pokrok:
+
+```
+┌──────────────────────────────────────────────┐
+│ ⚖️ ASYMETRIE L vs R                          │
+├──────────────────────────────────────────────┤
+│ Single Leg Glute Bridge         [15%]        │
+│ L ████████░░░░ 25kg | 30kg ██████████████ R  │
+│      → Pravá strana silnější                 │
+├──────────────────────────────────────────────┤
+│ Pistole                          [8%]        │
+│ L ██████████ 12× | 13× ██████████████████ R  │
+│          Symetrický výkon                    │
+└──────────────────────────────────────────────┘
+│ Legenda: <10% ● | 10-20% ● | >20% ●          │
+└──────────────────────────────────────────────┘
+```
 
 ---
 
-## Časový odhad
+## Soubory k úpravě
 
-| Krok | Čas |
-|------|-----|
-| Rozšíření lookup hooku | 5 min |
-| Úprava SimpleAddWorkoutDialog | 25 min |
-| Přidání AsymmetryCard do Progress | 5 min |
-| Přidání SideBadge do workout karet | 15 min |
-| Testování | 10 min |
-| **Celkem** | **~60 min** |
+| Soubor | Typ změny |
+|--------|-----------|
+| Databáze `client_workout_exercises` | Migrace - přidat sloupec `side` |
+| `src/hooks/useExerciseDetailsLookup.ts` | Přidat `is_unilateral` |
+| `src/hooks/useClientWorkoutLogs.ts` | Přidat `side` do interface a insert |
+| `src/hooks/useUnifiedDiary.ts` | Přidat `side` do `DiaryExercise` |
+| `src/components/client-portal/workout-diary/SimpleAddWorkoutDialog.tsx` | Přidat `SideSelector` pro unilaterální cviky |
+| `src/components/client-portal/workout-diary/SimpleWorkoutCard.tsx` | Zobrazit `SideBadge` |
+| `src/components/client-portal/workout-diary/WorkoutDateDetailDialog.tsx` | Zobrazit `SideBadge` |
+| `src/components/client-portal/workout-diary/PlannedWorkoutDetailSheet.tsx` | Zobrazit `SideBadge` |
+| `src/pages/client-portal/ClientPortalProgress.tsx` | Přidat `AsymmetryCard` |
+
+---
+
+## Existující komponenty k využití
+
+- `SideSelector` - UI pro výběr strany (L / Obě / R)
+- `SideBadge` - vizuální badge [L], [R], [L+R]
+- `useAsymmetryAnalysis` - hook pro výpočet asymetrie
+- `AsymmetryCard` - karta s vizualizací asymetrie
+
+---
+
+## Poznámky
+
+- **16 cviků** je již označeno jako `is_unilateral` v databázi (Pistole, Bird dog, Single Leg Jump, atd.)
+- Hook `useAsymmetryAnalysis` automaticky počítá asymetrie z `exercise_entries` - bude fungovat pro trenérské záznamy ihned
+- Pro klientské záznamy bude potřeba rozšířit hook, aby zahrnoval i `client_workout_exercises`
+
