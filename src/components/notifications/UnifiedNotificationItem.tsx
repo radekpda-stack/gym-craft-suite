@@ -11,24 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, isToday, isYesterday, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
-
-export type NotificationPriority = 'urgent' | 'important' | 'info';
-
-export interface UnifiedNotification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
-  client_id?: string | null;
-  entity_type?: string | null;
-  entity_id?: string | null;
-  priority: NotificationPriority;
-  isAggregated?: boolean;
-  aggregatedCount?: number;
-  aggregatedItems?: UnifiedNotification[];
-}
+import type { NotificationCategory, UnifiedNotification } from '@/hooks/useAggregatedNotifications';
 
 const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   low_credit: CreditCard,
@@ -58,24 +41,30 @@ const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   client_workout_logged: Dumbbell,
 };
 
-const PRIORITY_STYLES: Record<NotificationPriority, { bg: string; border: string; icon: string; badge: string }> = {
-  urgent: {
-    bg: 'bg-destructive/5',
-    border: 'border-destructive/30',
-    icon: 'text-destructive',
-    badge: 'bg-destructive text-destructive-foreground',
+const CATEGORY_STYLES: Record<NotificationCategory, { bg: string; border: string; icon: string; badge: string }> = {
+  training: {
+    bg: 'bg-orange-50 dark:bg-orange-900/20',
+    border: 'border-orange-200 dark:border-orange-800/50',
+    icon: 'text-orange-600 dark:text-orange-400',
+    badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
   },
-  important: {
-    bg: 'bg-warning/5',
-    border: 'border-warning/30',
-    icon: 'text-warning',
-    badge: 'bg-warning text-warning-foreground',
+  nutrition: {
+    bg: 'bg-green-50 dark:bg-green-900/20',
+    border: 'border-green-200 dark:border-green-800/50',
+    icon: 'text-green-600 dark:text-green-400',
+    badge: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
   },
-  info: {
-    bg: 'bg-primary/5',
-    border: 'border-primary/20',
-    icon: 'text-primary',
-    badge: 'bg-primary/10 text-primary',
+  forms: {
+    bg: 'bg-blue-50 dark:bg-blue-900/20',
+    border: 'border-blue-200 dark:border-blue-800/50',
+    icon: 'text-blue-600 dark:text-blue-400',
+    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
+  },
+  admin: {
+    bg: 'bg-muted/50',
+    border: 'border-border',
+    icon: 'text-muted-foreground',
+    badge: 'bg-muted text-muted-foreground',
   },
 };
 
@@ -113,7 +102,7 @@ export function UnifiedNotificationItem({
   const rightOpacity = useTransform(x, [-100, -40, 0], [1, 0.5, 0]);
 
   const Icon = NOTIFICATION_ICONS[notification.type] || Bell;
-  const styles = PRIORITY_STYLES[notification.priority];
+  const styles = CATEGORY_STYLES[notification.category];
 
   const handleDragStart = useCallback(() => {
     setIsDragging(true);
@@ -278,3 +267,6 @@ export function UnifiedNotificationItem({
     </div>
   );
 }
+
+// Re-export types for backward compatibility
+export type { UnifiedNotification, NotificationCategory };

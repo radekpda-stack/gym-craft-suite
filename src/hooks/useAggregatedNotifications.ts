@@ -1,56 +1,73 @@
 import { useMemo } from 'react';
 import { useNotifications, type Notification } from './useNotifications';
-import { useSmartAlerts, type SmartAlert } from './useSmartAlerts';
-import type { NotificationPriority, UnifiedNotification } from '@/components/notifications/UnifiedNotificationItem';
+
+// Notification categories based on activity type
+export type NotificationCategory = 'training' | 'nutrition' | 'forms' | 'admin';
+
+export interface UnifiedNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+  client_id?: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  category: NotificationCategory;
+  isAggregated?: boolean;
+  aggregatedCount?: number;
+  aggregatedItems?: UnifiedNotification[];
+}
+
+// Map notification types to categories
+const TYPE_CATEGORY: Record<string, NotificationCategory> = {
+  // Tréninky & Cvičení
+  client_workout_logged: 'training',
+  pr_created: 'training',
+  pr_updated: 'training',
+  pr_achieved: 'training',
+  training_streak: 'training',
+  incomplete_training: 'training',
+  
+  // Výživa & Zdraví
+  nutrition_entry_added: 'nutrition',
+  client_nutrition_started: 'nutrition',
+  client_weight_added: 'nutrition',
+  nutrition_inactive: 'nutrition',
+  
+  // Formuláře & Zpětná vazba
+  feedback_received: 'forms',
+  feedback_red_flag: 'forms',
+  feedback_trend_alert: 'forms',
+  feedback_pending: 'forms',
+  diagnostic_completed: 'forms',
+  pre_diagnostic_completed: 'forms',
+  client_profile_updated: 'forms',
+  
+  // Administrativa
+  low_credit: 'admin',
+  negative_credit: 'admin',
+  package_low: 'admin',
+  package_expiring: 'admin',
+  inactivity_warning: 'admin',
+  client_anniversary: 'admin',
+  birthday: 'admin',
+  milestone_100: 'admin',
+  milestone_500: 'admin',
+  milestone_1000: 'admin',
+};
 
 // Types that should be aggregated when there are 3+ of the same type
 const AGGREGATABLE_TYPES = [
-  'low_credit',
-  'negative_credit',
-  'incomplete_training',
-  'birthday',
-  'package_expiring',
-  'inactivity_warning',
+  'client_workout_logged',
+  'nutrition_entry_added',
+  'feedback_received',
+  'pr_achieved',
 ];
 
-// Map notification types to priority levels
-const TYPE_PRIORITY: Record<string, NotificationPriority> = {
-  // Urgent (red)
-  negative_credit: 'urgent',
-  feedback_red_flag: 'urgent',
-  inactivity_warning: 'urgent',
-  
-  // Important (orange)
-  low_credit: 'important',
-  package_expiring: 'important',
-  package_low: 'important',
-  incomplete_training: 'important',
-  feedback_trend_alert: 'important',
-  nutrition_inactive: 'important',
-  
-  // Info (blue) - lower priority alerts
-  no_training_scheduled: 'info', // Demoted from default to explicitly info
-  birthday: 'info',
-  birthdays_this_month: 'info',
-  client_anniversary: 'info',
-  pr_achieved: 'info',
-  pr_created: 'info',
-  pr_updated: 'info',
-  milestone_100: 'info',
-  milestone_500: 'info',
-  milestone_1000: 'info',
-  training_streak: 'info',
-  feedback_received: 'info',
-  feedback_pending: 'info',
-  diagnostic_completed: 'info',
-  pre_diagnostic_completed: 'info',
-  nutrition_entry_added: 'info',
-  client_weight_added: 'info',
-  client_workout_logged: 'info',
-};
-
-function getPriority(type: string): NotificationPriority {
-  return TYPE_PRIORITY[type] || 'info';
+function getCategory(type: string): NotificationCategory {
+  return TYPE_CATEGORY[type] || 'admin';
 }
 
 function convertNotification(notification: Notification): UnifiedNotification {
@@ -64,20 +81,7 @@ function convertNotification(notification: Notification): UnifiedNotification {
     client_id: notification.client_id,
     entity_type: notification.entity_type,
     entity_id: notification.entity_id,
-    priority: getPriority(notification.type),
-  };
-}
-
-function convertSmartAlert(alert: SmartAlert): UnifiedNotification {
-  return {
-    id: alert.id,
-    type: alert.type,
-    title: alert.title,
-    message: alert.message,
-    is_read: false, // Smart alerts are always "unread"
-    created_at: alert.createdAt.toISOString(),
-    client_id: alert.clientId,
-    priority: alert.severity === 'warning' ? 'important' : alert.severity === 'success' ? 'info' : 'info',
+    category: getCategory(notification.type),
   };
 }
 
@@ -131,17 +135,15 @@ function aggregateNotifications(notifications: UnifiedNotification[]): UnifiedNo
 
 function getAggregatedTitle(type: string, count: number): string {
   const titles: Record<string, string> = {
-    low_credit: `${count} klientů má nízký kredit`,
-    negative_credit: `${count} klientů má záporný kredit`,
-    incomplete_training: `${count} tréninků čeká na dokončení`,
-    birthday: `${count} narozenin tento měsíc`,
-    package_expiring: `${count} balíčků brzy expiruje`,
-    inactivity_warning: `${count} klientů dlouho netrénuje`,
+    client_workout_logged: `${count} klientů cvičilo`,
+    nutrition_entry_added: `${count} záznamů stravy`,
+    feedback_received: `${count} nových zpětných vazeb`,
+    pr_achieved: `${count} nových osobních rekordů`,
   };
   return titles[type] || `${count} notifikací`;
 }
 
-function getAggregatedMessage(type: string, notifications: UnifiedNotification[]): string {
+function getAggregatedMessage(_type: string, notifications: UnifiedNotification[]): string {
   const names = notifications
     .slice(0, 3)
     .map((n) => n.title.split(':')[0] || n.title)
@@ -155,78 +157,58 @@ function getAggregatedMessage(type: string, notifications: UnifiedNotification[]
   return names;
 }
 
-export interface AggregatedNotificationsResult {
-  urgent: UnifiedNotification[];
-  important: UnifiedNotification[];
-  info: UnifiedNotification[];
+export interface CategorizedNotificationsResult {
+  training: UnifiedNotification[];
+  nutrition: UnifiedNotification[];
+  forms: UnifiedNotification[];
+  admin: UnifiedNotification[];
   all: UnifiedNotification[];
   unreadCount: number;
   isLoading: boolean;
 }
 
-export function useAggregatedNotifications(): AggregatedNotificationsResult {
-  const { data: notifications = [], isLoading: notificationsLoading } = useNotifications();
-  const { data: smartAlerts = [], isLoading: alertsLoading } = useSmartAlerts();
+export function useAggregatedNotifications(): CategorizedNotificationsResult {
+  // Only use database notifications - Smart Alerts are on dashboard
+  const { data: notifications = [], isLoading } = useNotifications();
 
   const result = useMemo(() => {
-    // Convert and merge all notifications
+    // Convert DB notifications only
     const dbNotifications = notifications.map(convertNotification);
-    const alertNotifications = smartAlerts.map(convertSmartAlert);
-    
-    // Merge, avoiding duplicates (smart alerts with similar titles)
-    const merged = [...dbNotifications];
-    alertNotifications.forEach((alert) => {
-      const isDuplicate = merged.some(
-        (n) => n.type === alert.type && n.client_id === alert.client_id
-      );
-      if (!isDuplicate) {
-        merged.push(alert);
-      }
-    });
 
     // Aggregate similar notifications
-    const aggregated = aggregateNotifications(merged);
+    const aggregated = aggregateNotifications(dbNotifications);
 
-    // Sort by priority and recency
+    // Sort by recency (newest first), unread first
     const sorted = aggregated.sort((a, b) => {
-      const priorityOrder: Record<NotificationPriority, number> = { 
-        urgent: 0, 
-        important: 1, 
-        info: 2 
-      };
-      
       // First by read status (unread first)
       if (a.is_read !== b.is_read) {
         return a.is_read ? 1 : -1;
-      }
-      
-      // Then by priority
-      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
       }
       
       // Then by date (newest first)
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
-    // Split by priority
-    const urgent = sorted.filter((n) => n.priority === 'urgent' && !n.is_read);
-    const important = sorted.filter((n) => n.priority === 'important' && !n.is_read);
-    const info = sorted.filter((n) => n.priority === 'info' || n.is_read);
+    // Split by category
+    const training = sorted.filter((n) => n.category === 'training');
+    const nutrition = sorted.filter((n) => n.category === 'nutrition');
+    const forms = sorted.filter((n) => n.category === 'forms');
+    const admin = sorted.filter((n) => n.category === 'admin');
 
     const unreadCount = sorted.filter((n) => !n.is_read).length;
 
     return {
-      urgent,
-      important,
-      info,
+      training,
+      nutrition,
+      forms,
+      admin,
       all: sorted,
       unreadCount,
     };
-  }, [notifications, smartAlerts]);
+  }, [notifications]);
 
   return {
     ...result,
-    isLoading: notificationsLoading || alertsLoading,
+    isLoading,
   };
 }

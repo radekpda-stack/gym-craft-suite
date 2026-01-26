@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { Bell, Check, AlertCircle, AlertTriangle, Info, MessageSquare, ChevronDown, ChevronRight, Search, X } from "lucide-react";
+import { Bell, Check, MessageSquare, ChevronDown, ChevronRight, Search, X, Dumbbell, Utensils, FileText, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -18,7 +18,7 @@ import {
   useDeleteNotification,
 } from "@/hooks/useNotifications";
 import { useTrainerConversations, useMarkMessagesAsRead, useMarkAllMessagesAsRead } from "@/hooks/useChatMessages";
-import { useAggregatedNotifications } from "@/hooks/useAggregatedNotifications";
+import { useAggregatedNotifications, type NotificationCategory, type UnifiedNotification } from "@/hooks/useAggregatedNotifications";
 import { formatDistanceToNow, isToday, isYesterday, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -27,72 +27,46 @@ import { FeedbackDetailDialog } from "@/components/feedback/FeedbackDetailDialog
 import { supabase } from "@/integrations/supabase/client";
 import type { TrainingFeedback } from "@/hooks/useTrainingFeedback";
 import { NotificationEmptyState } from "./NotificationEmptyState";
-import { UnifiedNotificationItem, type UnifiedNotification } from "./UnifiedNotificationItem";
+import { UnifiedNotificationItem } from "./UnifiedNotificationItem";
 import { InlineNotificationSettings } from "./InlineNotificationSettings";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQueryClient } from "@tanstack/react-query";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
-// Smart Alert ID prefixes - these are client-generated, not in DB
-const SMART_ALERT_PREFIXES = [
-  'no-training-',
-  'low-credit-',
-  'birthdays-this-month',
-  'profit-trend',
-  'inactive-nutrition',
-  'badge-',
-];
-
-function isSmartAlertId(id: string): boolean {
-  return SMART_ALERT_PREFIXES.some(prefix => id.startsWith(prefix));
-}
-
-// LocalStorage key for dismissed smart alerts
-const DISMISSED_SMART_ALERTS_KEY = 'dismissed-smart-alerts';
-
-function getDismissedSmartAlerts(): Set<string> {
-  try {
-    const stored = localStorage.getItem(DISMISSED_SMART_ALERTS_KEY);
-    if (!stored) return new Set();
-    const data = JSON.parse(stored);
-    // Filter out old dismissals (older than 24 hours)
-    const now = Date.now();
-    const valid = Object.entries(data).filter(([_, ts]) => now - (ts as number) < 24 * 60 * 60 * 1000);
-    return new Set(valid.map(([id]) => id));
-  } catch {
-    return new Set();
-  }
-}
-
-function dismissSmartAlert(id: string) {
-  try {
-    const stored = localStorage.getItem(DISMISSED_SMART_ALERTS_KEY);
-    const data = stored ? JSON.parse(stored) : {};
-    data[id] = Date.now();
-    localStorage.setItem(DISMISSED_SMART_ALERTS_KEY, JSON.stringify(data));
-  } catch {
-    // Ignore localStorage errors
-  }
-}
-
-// Priority section config
-const PRIORITY_SECTIONS = {
-  urgent: {
-    label: "Vyžaduje akci",
-    icon: AlertCircle,
-    color: "text-destructive",
-    bgColor: "bg-destructive/10",
+// Category section config
+const CATEGORY_SECTIONS: Record<NotificationCategory, {
+  label: string;
+  icon: typeof Bell;
+  color: string;
+  bgColor: string;
+  emoji: string;
+}> = {
+  training: {
+    label: "Tréninky & Cvičení",
+    icon: Dumbbell,
+    color: "text-orange-600 dark:text-orange-400",
+    bgColor: "bg-orange-100 dark:bg-orange-900/30",
+    emoji: "🏋️",
   },
-  important: {
-    label: "Důležité",
-    icon: AlertTriangle,
-    color: "text-warning",
-    bgColor: "bg-warning/10",
+  nutrition: {
+    label: "Výživa & Zdraví",
+    icon: Utensils,
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-900/30",
+    emoji: "🍎",
   },
-  info: {
-    label: "Informativní",
-    icon: Info,
-    color: "text-primary",
-    bgColor: "bg-primary/10",
+  forms: {
+    label: "Formuláře & Zpětná vazba",
+    icon: FileText,
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    emoji: "📝",
+  },
+  admin: {
+    label: "Administrativa",
+    icon: Briefcase,
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
+    emoji: "💼",
   },
 };
 
@@ -110,7 +84,6 @@ interface NotificationCenterProps {
 
 export function NotificationCenter({ onOpenChange, children }: NotificationCenterProps = {}) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const deleteNotification = useDeleteNotification();
@@ -120,30 +93,26 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const markAllMessagesRead = useMarkAllMessagesAsRead();
   const unreadConversations = conversations.filter(c => c.unreadCount > 0);
   
-  const { urgent, important, info, all, unreadCount, isLoading } = useAggregatedNotifications();
+  const { training, nutrition, forms, admin, all, unreadCount, isLoading } = useAggregatedNotifications();
+  const { data: settings } = useAppSettings();
+  
+  // Check if admin category should be shown (default: hidden)
+  const prefs = (settings?.notification_preferences as Record<string, boolean>) || {};
+  const showAdmin = prefs.adminNotifications ?? false;
+  
   const totalUnread = unreadCount + unreadConversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
-  // Handle marking notification as read - route Smart Alerts to localStorage
   const handleMarkRead = useCallback((id: string) => {
-    if (isSmartAlertId(id)) {
-      dismissSmartAlert(id);
-      // Force refetch smart alerts to update UI
-      queryClient.invalidateQueries({ queryKey: ['smart-alerts'] });
-    } else {
+    if (!id.startsWith('aggregated-')) {
       markRead.mutate(id);
     }
-  }, [markRead, queryClient]);
+  }, [markRead]);
 
-  // Handle deleting notification - route Smart Alerts to localStorage
   const handleDelete = useCallback((id: string) => {
-    if (isSmartAlertId(id)) {
-      dismissSmartAlert(id);
-      // Force refetch smart alerts to update UI
-      queryClient.invalidateQueries({ queryKey: ['smart-alerts'] });
-    } else {
+    if (!id.startsWith('aggregated-')) {
       deleteNotification.mutate(id);
     }
-  }, [deleteNotification, queryClient]);
+  }, [deleteNotification]);
 
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<TrainingFeedback | null>(null);
@@ -152,7 +121,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const [sheetOpen, setSheetOpen] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["messages", "urgent", "important"]));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["messages", "training", "nutrition", "forms"]));
 
   const handleSheetOpenChange = (open: boolean) => {
     setSheetOpen(open);
@@ -176,7 +145,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   // Filter notifications by search query
   const filteredNotifications = useMemo(() => {
     if (!searchQuery.trim()) {
-      return { urgent, important, info };
+      return { training, nutrition, forms, admin };
     }
     
     const query = searchQuery.toLowerCase();
@@ -188,11 +157,12 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
       );
 
     return {
-      urgent: filter(urgent),
-      important: filter(important),
-      info: filter(info),
+      training: filter(training),
+      nutrition: filter(nutrition),
+      forms: filter(forms),
+      admin: filter(admin),
     };
-  }, [urgent, important, info, searchQuery]);
+  }, [training, nutrition, forms, admin, searchQuery]);
 
   // Handle chat notification click
   const handleChatClick = (clientId: string, conversationId: string) => {
@@ -201,23 +171,15 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     navigate(`/clients/${clientId}?tab=chat`);
   };
 
-  // Mark all as read (including Smart Alerts)
+  // Mark all as read
   const handleMarkAllAsRead = useCallback(() => {
-    // Mark all DB notifications as read
     if (unreadCount > 0) {
       markAllRead.mutate();
     }
-    // Mark all unread messages as read
     if (unreadConversations.length > 0) {
       markAllMessagesRead.mutate();
     }
-    // Dismiss all Smart Alerts
-    const smartAlertIds = all.filter(n => isSmartAlertId(n.id)).map(n => n.id);
-    if (smartAlertIds.length > 0) {
-      smartAlertIds.forEach(id => dismissSmartAlert(id));
-      queryClient.invalidateQueries({ queryKey: ['smart-alerts'] });
-    }
-  }, [unreadCount, markAllRead, unreadConversations.length, markAllMessagesRead, all, queryClient]);
+  }, [unreadCount, markAllRead, unreadConversations.length, markAllMessagesRead]);
 
   // Handle notification click with feedback dialog support
   const handleNotificationClick = async (notification: UnifiedNotification) => {
@@ -283,20 +245,23 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
 
   const hasAnyNotifications = all.length > 0 || unreadConversations.length > 0;
 
-  const renderPrioritySection = (
-    priority: 'urgent' | 'important' | 'info',
+  const renderCategorySection = (
+    category: NotificationCategory,
     notifications: UnifiedNotification[]
   ) => {
+    // Skip admin if not enabled
+    if (category === 'admin' && !showAdmin) return null;
     if (notifications.length === 0) return null;
 
-    const config = PRIORITY_SECTIONS[priority];
+    const config = CATEGORY_SECTIONS[category];
     const Icon = config.icon;
     const unreadInSection = notifications.filter(n => !n.is_read).length;
 
     return (
       <Collapsible
-        open={expandedSections.has(priority)}
-        onOpenChange={() => toggleSection(priority)}
+        key={category}
+        open={expandedSections.has(category)}
+        onOpenChange={() => toggleSection(category)}
       >
         <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-muted/50 transition-colors">
           <div className="flex items-center gap-2">
@@ -313,13 +278,13 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
           <div className="flex items-center gap-2">
             {unreadInSection > 0 && (
               <Badge 
-                variant={priority === 'urgent' ? 'destructive' : 'secondary'} 
+                variant="secondary" 
                 className="text-[10px]"
               >
                 {unreadInSection} nové
               </Badge>
             )}
-            {expandedSections.has(priority) ? (
+            {expandedSections.has(category) ? (
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             ) : (
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
@@ -369,7 +334,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
           )}
         </SheetTrigger>
         <SheetContent className="w-full sm:max-w-md p-0 flex flex-col z-[80]">
-          {/* Header - fixed pr-12 to avoid overlap with close button */}
+          {/* Header */}
           <SheetHeader className="px-4 py-3 border-b flex flex-row items-center justify-between shrink-0 pr-12">
             <SheetTitle className="text-lg">Notifikace</SheetTitle>
             <div className="flex items-center gap-1">
@@ -479,16 +444,18 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
                     </Collapsible>
                   )}
 
-                  {/* Priority Sections */}
-                  {renderPrioritySection('urgent', filteredNotifications.urgent)}
-                  {renderPrioritySection('important', filteredNotifications.important)}
-                  {renderPrioritySection('info', filteredNotifications.info)}
+                  {/* Category Sections */}
+                  {renderCategorySection('training', filteredNotifications.training)}
+                  {renderCategorySection('nutrition', filteredNotifications.nutrition)}
+                  {renderCategorySection('forms', filteredNotifications.forms)}
+                  {renderCategorySection('admin', filteredNotifications.admin)}
 
                   {/* No results for search */}
                   {searchQuery && 
-                   filteredNotifications.urgent.length === 0 && 
-                   filteredNotifications.important.length === 0 && 
-                   filteredNotifications.info.length === 0 && (
+                   filteredNotifications.training.length === 0 && 
+                   filteredNotifications.nutrition.length === 0 && 
+                   filteredNotifications.forms.length === 0 &&
+                   filteredNotifications.admin.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <Search className="w-8 h-8 mx-auto mb-2 opacity-30" />
                       <p className="text-sm">Žádné výsledky pro "{searchQuery}"</p>
