@@ -1,65 +1,83 @@
 
-# Přidání popisků cviků pro klienty
+# Unilaterální cviky: Volba strany L/R a výpočet asymetrie
 
-## Shrnutí situace
+## Shrnutí
 
-Dobrá zpráva: **Databáze už popisky podporuje!** Sloupce `description_cs` (popis) a `instructions_cs` (instrukce) již existují. Problém je, že:
-1. Pouze 7 ze 195 cviků má vyplněné instrukce
-2. Klientská aplikace tyto popisky nezobrazuje
+Požadavek: Při zápisu jednoručních/jednonožních cviků umožnit výběr strany (L/R) a automaticky počítat procentuální rozdíl síly mezi končetinami. Funkce bude dostupná jak pro trenéra, tak pro klienty.
 
----
+## Co již existuje
 
-## Co bude implementováno
+Systém má solidní základ:
 
-### 1. Rozšíření interface DiaryExercise
-Přidání polí pro popis cviku do datového modelu
+| Komponenta | Stav | Kde se používá |
+|------------|------|----------------|
+| `exercises.is_unilateral` | Hotovo | 16 cviků označeno (Pistole, Bird dog, Single Leg Jump...) |
+| `exercise_entries.side` | Hotovo | Sloupec s hodnotami `left`/`right`/`both`/`none` |
+| `SideSelector` | Hotovo | Pouze v trenérské aplikaci (QuickLogDialog, QuickExerciseAdd) |
+| `SideBadge` | Hotovo | K dispozici, ale málo používané |
+| `useAsymmetryAnalysis` | Hotovo | Počítá procentuální rozdíl L vs R |
+| `AsymmetryCard` | Hotovo | Pouze v trenérském detailu klienta |
 
-### 2. Obohacení dat o popisky z exercises tabulky
-Při načítání cviků v deníku se přidají popisy přímo z hlavní tabulky cviků
+## Co chybí a bude implementováno
 
-### 3. Rozkliknutelný detail cviku v klientské zóně
-- Klient klikne na název cviku → otevře se modal/sheet s:
-  - **Název cviku**
-  - **Popis** (co cvik je, na co je zaměřen)
-  - **Instrukce k provedení** (jak správně cvičit)
-  - **Vybavení** (pokud relevantní)
-  - **Svalové skupiny** (pokud relevantní)
+### 1. Přidání výběru strany do klientského formuláře
 
-### 4. Vizuální indikace dostupnosti popisu
-Cviky s popisem budou mít ikonu "info" u názvu
-
----
-
-## Návrh UI pro klienta
+V `SimpleAddWorkoutDialog.tsx` klient aktuálně nemůže zvolit stranu. Rozšíření:
 
 ```text
-┌─────────────────────────────────────────┐
-│  BENCH PRESS                          ℹ️│  ← Kliknutelný
-│  3×10 • 80 kg                           │
-└─────────────────────────────────────────┘
-         ↓ Po kliknutí se otevře:
-┌─────────────────────────────────────────┐
-│ ← Bench press                           │
-├─────────────────────────────────────────┤
-│                                         │
-│ 📝 POPIS                                │
-│ Základní tlakový cvik na lavici pro     │
-│ rozvoj hrudníku, ramen a tricepsů.      │
-│                                         │
-│ 📋 JAK CVIČIT                           │
-│ 1. Lehni si na lavici, nohy pevně na    │
-│    zemi                                 │
-│ 2. Uchop činku šířeji než ramena        │
-│ 3. Spusť činku kontrolovaně k hrudníku  │
-│ 4. Vytlač zpět do výchozí pozice        │
-│                                         │
-│ 🏋️ VYBAVENÍ                             │
-│ [Činka] [Lavice]                        │
-│                                         │
-│ 💪 SVALOVÉ SKUPINY                       │
-│ [Hrudník] [Ramena] [Triceps]            │
-│                                         │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│ Single Leg Glute Bridge              [X]    │
+├─────────────────────────────────────────────┤
+│ 🦵 Unilaterální cvik                        │
+│ ┌─────┬─────────┬─────┐                     │
+│ │  L  │   Obě   │  R  │  ← SideSelector     │
+│ └─────┴─────────┴─────┘                     │
+├─────────────────────────────────────────────┤
+│ Série: [3]  Opakování: [10]  Váha: [0]     │
+└─────────────────────────────────────────────┘
+```
+
+### 2. Rozšíření interface ExerciseInput
+
+```typescript
+interface ExerciseInput {
+  name: string;
+  exerciseId?: string;
+  sets: string;
+  reps: string;
+  weight: string;
+  isUnilateral?: boolean;  // NOVÉ
+  side?: 'left' | 'right' | 'both';  // NOVÉ
+}
+```
+
+### 3. Přidání AsymmetryCard do klientského portálu
+
+Na stránce `ClientPortalProgress.tsx` přidat kartu asymetrie:
+
+```text
+┌──────────────────────────────────────────────┐
+│ ⚖️ ASYMETRIE L vs R                         │
+├──────────────────────────────────────────────┤
+│ Single Leg Glute Bridge         [15%]       │
+│ L ████████████░░░ 25kg | 30kg ███████████ R │
+│      → Pravá strana silnější                 │
+├──────────────────────────────────────────────┤
+│ Pistole                          [8%]        │
+│ L ██████████████ 12× | 13× ██████████████ R │
+│          Symetrický výkon                    │
+└──────────────────────────────────────────────┘
+│ Legenda: <10% ● | 10-20% ● | >20% ●         │
+└──────────────────────────────────────────────┘
+```
+
+### 4. Zobrazení badge L/R ve workout diary
+
+V seznamu cviků (SimpleWorkoutCard, WorkoutDateDetailDialog) přidat vizuální indikátor strany:
+
+```text
+Single Leg Glute Bridge [L]  3×10 • 25kg
+Single Leg Glute Bridge [R]  3×10 • 30kg
 ```
 
 ---
@@ -68,70 +86,77 @@ Cviky s popisem budou mít ikonu "info" u názvu
 
 | Krok | Soubor | Změna |
 |------|--------|-------|
-| 1 | `src/hooks/useUnifiedDiary.ts` | Rozšířit `DiaryExercise` o `description_cs`, `instructions_cs`, a přidat JOIN na `exercises` tabulku |
-| 2 | Nový soubor: `src/components/client-portal/workout-diary/ExerciseDetailSheet.tsx` | Nová komponenta pro zobrazení detailu cviku |
-| 3 | `src/components/client-portal/workout-diary/PlannedWorkoutDetailSheet.tsx` | Přidat kliknutelnost na cviky a otevírání detailu |
-| 4 | `src/components/client-portal/workout-diary/WorkoutDateDetailDialog.tsx` | Přidat stejnou funkcionalitu |
+| 1 | `src/components/client-portal/workout-diary/SimpleAddWorkoutDialog.tsx` | Rozšířit `ExerciseInput` o `side`, detekovat `is_unilateral` z exercise lookup, zobrazit `SideSelector` |
+| 2 | `src/hooks/useExerciseDetailsLookup.ts` | Přidat `is_unilateral` do lookup dat |
+| 3 | `src/pages/client-portal/ClientPortalProgress.tsx` | Přidat `AsymmetryCard` do stránky pokroku |
+| 4 | `src/components/client-portal/workout-diary/SimpleWorkoutCard.tsx` | Zobrazit `SideBadge` u unilaterálních cviků |
+| 5 | `src/components/client-portal/workout-diary/WorkoutDateDetailDialog.tsx` | Zobrazit `SideBadge` u unilaterálních cviků |
+| 6 | `src/components/client-portal/workout-diary/PlannedWorkoutDetailSheet.tsx` | Zobrazit `SideBadge` u unilaterálních cviků |
 
 ---
 
 ## Technické detaily
 
-### Rozšíření DiaryExercise interface
+### Detekce unilaterálního cviku
+
+Při výběru cviku v `SimpleAddWorkoutDialog` se načte `is_unilateral` z exercise lookup:
 
 ```typescript
-export interface DiaryExercise {
-  id: string;
-  exercise_name: string;
-  exercise_id?: string | null;
-  // ... existující pole
-  
-  // Nové pole pro popisy (z exercises tabulky)
-  description_cs?: string | null;
-  instructions_cs?: string | null;
-  equipment?: string[] | null;
-  muscle_groups?: string[] | null;
-}
+const handleExerciseSelect = (exercise) => {
+  const details = exerciseLookup.get(exercise.name.toLowerCase());
+  setExercises(prev => [...prev, {
+    name: exercise.name,
+    exerciseId: exercise.id,
+    sets: '',
+    reps: '',
+    weight: '',
+    isUnilateral: details?.is_unilateral || false,
+    side: details?.is_unilateral ? 'both' : undefined,
+  }]);
+};
 ```
 
-### Obohacení dat v useUnifiedDiary
+### Uložení strany do databáze
 
-Buď:
-- **Varianta A**: JOIN při dotazu (složitější, ale efektivní)
-- **Varianta B**: Samostatný dotaz na exercises a merge v JS (jednodušší)
-
-Doporučuji Variantu B - při načtení deníku se sesbírají exercise_id, udělá se jeden dotaz na exercises tabulku, a popisy se přimapují.
-
-### Nová komponenta ExerciseDetailSheet
+V handleSave předat `side`:
 
 ```typescript
-interface ExerciseDetailSheetProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  exercise: {
-    name: string;
-    description_cs?: string | null;
-    instructions_cs?: string | null;
-    equipment?: string[] | null;
-    muscle_groups?: string[] | null;
-  } | null;
-}
+exercises: exercises.map(e => ({
+  exercise_name: e.name,
+  exercise_id: e.exerciseId,
+  sets: parseInt(e.sets) || undefined,
+  reps: parseInt(e.reps) || undefined,
+  weight_kg: parseFloat(e.weight) || undefined,
+  side: e.isUnilateral ? e.side : 'none',
+})),
 ```
 
----
+### Výpočet asymetrie
 
-## Poznámky k datům
-
-Aktuálně máte vyplněno:
-- **143/195** cviků má popis (`description_cs`)
-- **7/195** cviků má instrukce (`instructions_cs`)
-
-Po implementaci můžete průběžně doplňovat instrukce v knihovně cviků → záložka "Poznámky".
+Hook `useAsymmetryAnalysis` již existuje a automaticky:
+- Seskupí záznamy podle cviku a strany
+- Vybere nejlepší výkon pro každou stranu
+- Vypočítá procento: `((max - min) / max) * 100`
+- Určí dominantní stranu
 
 ---
 
 ## Vedlejší benefity
 
-1. **Motivace k vyplnění** - Jakmile klienti uvidí, že některé cviky mají popis a jiné ne, budete mít motivaci doplnit chybějící
-2. **Vzdělávání klientů** - Klienti pochopí, co cvičili
-3. **Konzistence** - Jeden zdroj pravdy (exercises tabulka)
+1. **Vzdělávání klientů** - Klienti uvidí své nerovnováhy a pochopí proč trénují jednostranně
+2. **Motivace** - Sledování pokroku vyrovnávání asymetrií
+3. **Konzistence** - Stejná funkcionalita pro trenéra i klienta
+4. **Přesnost dat** - Oddělené PR pro levou a pravou stranu
+
+---
+
+## Časový odhad
+
+| Krok | Čas |
+|------|-----|
+| Rozšíření lookup hooku | 5 min |
+| Úprava SimpleAddWorkoutDialog | 25 min |
+| Přidání AsymmetryCard do Progress | 5 min |
+| Přidání SideBadge do workout karet | 15 min |
+| Testování | 10 min |
+| **Celkem** | **~60 min** |
