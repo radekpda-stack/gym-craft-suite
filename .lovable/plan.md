@@ -1,149 +1,184 @@
 
-# Audit fixace ceny a přechodu na nový ceník (1.2.2026)
+# Refaktoring Notifikačního centra pro trenéra
 
-## Shrnutí stavu
+## Shrnutí požadavků
 
-Systém fixace ceny je **připraven z 70%**, ale obsahuje několik kritických mezer, které je nutné opravit před spuštěním nového ceníku.
-
----
-
-## Nalezené problémy
-
-### KRITICKÉ (musí být opraveno)
-
-| # | Problém | Popis | Dopad |
-|---|---------|-------|-------|
-| 1 | **Chybí databázový trigger** | Funkce `check_and_disable_legacy_pricing` existuje, ale trigger `tr_check_legacy_pricing_exhausted` není vytvořen | Fixace se NIKDY automaticky nevypne po vyčerpání kreditu |
-| 2 | **Špatné ceny v nastavení** | `training_prices` = 800/1000/1200 (staré ceny), chybí `legacy_training_prices` | Systém neví, jaké jsou nové vs. staré ceny |
-| 3 | **Dialog nepoužívá fixaci** | `CompleteTrainingDialog` a `QuickCompleteDialog` používají `useTrainingPrices()` místo `useClientTrainingPrice()` | Klient s fixací platí stejné ceny jako ostatní |
-| 4 | **Nekonzistentní data klientů** | Zuzka Kratochvílová: `use_legacy_pricing=true`, ale `grandfathered_credit=null` | Systém nemůže vypočítat zbývající fixovaný kredit |
-
-### STŘEDNÍ PRIORITA
-
-| # | Problém | Popis |
-|---|---------|-------|
-| 5 | **Chybí přehled klientů s fixací** | Není jednoduché vidět seznam všech klientů, u kterých je fixace aktivní |
-| 6 | **Přepínač není dobře viditelný** | `LegacyPriceFixSection` je schovaný v rozbalovacím menu "Nastavení" |
+Uživatel chce:
+1. **Odstranit Smart Alerts** z notifikačního centra (nízký kredit, chybějící tréninky, narozeniny atd.) - tyto informace už jsou na dashboardu
+2. **Zobrazovat pouze akce klientů** - co klient přidal, změnil nebo dokončil
+3. **Logické kategorizování** notifikací pro přehlednost
+4. **Jednoduchý a přehledný systém**
 
 ---
 
-## Aktuální stav komponent
+## Současný stav vs. Cílový stav
 
-### Co funguje ✅
-- Sloupce v DB: `use_legacy_pricing`, `grandfathered_credit`, `grandfathered_at`
-- Komponenta `LegacyPriceFixSection` pro ruční nastavení fixace
-- Hook `useClientTrainingPrice` pro výpočet efektivní ceny
-- Logika v `usePriceTransition.ts` pro přepínání starých/nových cen
-
-### Co nefunguje ❌
-- Trigger pro automatické vypnutí fixace
-- Správné nastavení ceníků v `app_settings`
-- Integrace fixace do procesu dokončení tréninku
+| Současný stav | Cílový stav |
+|---------------|-------------|
+| Smart Alerts + DB notifikace smíchané | Pouze DB notifikace od klientů |
+| Kategorie: Urgent/Important/Info | Kategorie podle typu akce klienta |
+| Agregace 3+ podobných notifikací | Zachovat agregaci pro přehlednost |
+| Smart Alerts zabírají místo | Čistý feed akcí klientů |
 
 ---
 
-## Plán oprav
+## Nové kategorie notifikací
 
-### Krok 1: Vytvořit chybějící trigger (SQL migrace)
-Přidat trigger na tabulku `credit_consumptions`, který spustí funkci `check_and_disable_legacy_pricing` po každém INSERT.
+Místo priorit (Urgent/Important/Info) navrhujeme kategorie podle **typu aktivity klienta**:
 
-```sql
-DROP TRIGGER IF EXISTS tr_check_legacy_pricing_exhausted ON credit_consumptions;
-CREATE TRIGGER tr_check_legacy_pricing_exhausted
-AFTER INSERT ON credit_consumptions
-FOR EACH ROW
-EXECUTE FUNCTION check_and_disable_legacy_pricing();
+```text
+┌─────────────────────────────────────────────────┐
+│  📬 NOTIFIKAČNÍ CENTRUM                         │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  🏋️ TRÉNINKY & CVIČENÍ                          │
+│  ├─ client_workout_logged (Klient cvičil)       │
+│  ├─ pr_created/updated/achieved (Osobní rekord) │
+│  └─ training_streak (Milestone dosažen)         │
+│                                                 │
+│  🍎 VÝŽIVA & ZDRAVÍ                             │
+│  ├─ nutrition_entry_added (Zapisuje stravu)     │
+│  ├─ client_nutrition_started (Začal výživu)     │
+│  ├─ client_weight_added (Přidal váhu)           │
+│  └─ nutrition_inactive (Nezapisuje stravu)      │
+│                                                 │
+│  📝 FORMULÁŘE & ZPĚTNÁ VAZBA                    │
+│  ├─ feedback_received (Zpětná vazba)            │
+│  ├─ feedback_red_flag (Kritická zpětná vazba)   │
+│  ├─ diagnostic_completed (Diagnostika)          │
+│  ├─ pre_diagnostic_completed (Pre-diagnostika)  │
+│  └─ client_profile_updated (Aktualizace profilu)│
+│                                                 │
+│  💰 ADMINISTRATIVA (volitelně skryté)           │
+│  ├─ package_low (Nízký balíček)                 │
+│  ├─ package_expiring (Končící balíček)          │
+│  └─ inactivity_warning (Neaktivní klient)       │
+│                                                 │
+└─────────────────────────────────────────────────┘
 ```
 
-### Krok 2: Nastavit správné ceny (SQL migrace)
-Aktualizovat `app_settings`:
-- `training_prices` = **900/1100/1300** (nové ceny od 1.2.2026)
-- `legacy_training_prices` = **800/1000/1200** (staré ceny pro fixované klienty)
+---
 
-```sql
--- Nové ceny (platí pro klienty BEZ fixace)
-UPDATE app_settings SET value = '{"1": 900, "2": 1100, "3": 1300, "first_training": 1000}'
-WHERE key = 'training_prices';
+## Plán implementace
 
--- Staré ceny (platí pro klienty S fixací)
-INSERT INTO app_settings (key, value, user_id)
-VALUES ('legacy_training_prices', '{"1": 800, "2": 1000, "3": 1200}', '[USER_ID]')
-ON CONFLICT (key, user_id) DO UPDATE SET value = '{"1": 800, "2": 1000, "3": 1200}';
+### Krok 1: Odpojit Smart Alerts z NotificationCenter
+
+**Soubor:** `src/hooks/useAggregatedNotifications.ts`
+
+Změny:
+- Přestat volat `useSmartAlerts()` 
+- Nebo přidat filtr, který Smart Alerts vylučuje z agregace
+- Ponechat pouze databázové notifikace (`notifications` tabulka)
+
+```text
+PŘED:
+const { data: smartAlerts = [] } = useSmartAlerts();
+const alertNotifications = smartAlerts.map(convertSmartAlert);
+merged = [...dbNotifications, ...alertNotifications];
+
+PO:
+// Smart Alerts NEPŘIDÁVAT - jsou na dashboardu
+const merged = dbNotifications;
 ```
 
-### Krok 3: Opravit nekonzistentní data klientů
-Opravit klienty, kteří mají `use_legacy_pricing=true` ale chybí `grandfathered_credit`:
+### Krok 2: Změnit kategorizaci z priorit na typy aktivit
 
-```sql
--- Zuzka Kratochvílová - nastavit grandfathered_credit na aktuální zůstatek
-UPDATE clients 
-SET grandfathered_credit = credit_balance
-WHERE id = '446748ff-adbd-482d-8a20-415ed808b51e' AND grandfathered_credit IS NULL;
+**Soubor:** `src/hooks/useAggregatedNotifications.ts`
+
+Nové mapování typů na kategorie:
+
+```typescript
+type NotificationCategory = 'training' | 'nutrition' | 'forms' | 'admin';
+
+const TYPE_CATEGORY: Record<string, NotificationCategory> = {
+  // Tréninky & Cvičení
+  client_workout_logged: 'training',
+  pr_created: 'training',
+  pr_updated: 'training', 
+  pr_achieved: 'training',
+  training_streak: 'training',
+  
+  // Výživa & Zdraví
+  nutrition_entry_added: 'nutrition',
+  client_nutrition_started: 'nutrition',
+  client_weight_added: 'nutrition',
+  nutrition_inactive: 'nutrition',
+  
+  // Formuláře & Zpětná vazba
+  feedback_received: 'forms',
+  feedback_red_flag: 'forms',
+  diagnostic_completed: 'forms',
+  pre_diagnostic_completed: 'forms',
+  client_profile_updated: 'forms',
+  
+  // Administrativa (může být skrytá)
+  package_low: 'admin',
+  package_expiring: 'admin',
+  inactivity_warning: 'admin',
+  incomplete_training: 'admin',
+};
 ```
 
-### Krok 4: Integrovat fixaci do dokončení tréninku
-Upravit `CompleteTrainingDialog.tsx` a `QuickCompleteDialog.tsx`:
-- Použít `useClientTrainingPrice(clientId)` pro získání efektivní ceny
-- Pokud klient má fixaci, použít `effectivePrices` (legacy), jinak nové ceny
+### Krok 3: Upravit NotificationCenter UI
 
-**Soubory k úpravě:**
-- `src/components/trainings/CompleteTrainingDialog.tsx`
-- `src/components/trainings/QuickCompleteDialog.tsx`
+**Soubor:** `src/components/notifications/NotificationCenter.tsx`
 
-### Krok 5: Vylepšit viditelnost přepínače fixace
-Přesunout `LegacyPriceFixSection` výše v administraci klienta nebo přidat vizuální indikátor na kartě klienta.
+Změny:
+1. Nahradit sekce `urgent/important/info` sekcemi `training/nutrition/forms`
+2. Přidat ikony a barvy pro každou kategorii
+3. Zobrazovat "Administrativa" jako sbalitelnou sekci (nebo úplně skrýt)
+
+```text
+KATEGORIE UI:
+┌──────────────────────────────────┐
+│ 🏋️ Tréninky (3 nové)      ▼     │
+│   ├─ Jan cvičil - před 2h       │
+│   ├─ Eva: Nové PR! 80kg         │
+│   └─ Martin cvičil              │
+├──────────────────────────────────┤
+│ 🍎 Výživa (1 nová)        ▶     │
+├──────────────────────────────────┤
+│ 📝 Formuláře (0 nových)   ▶     │
+└──────────────────────────────────┘
+```
+
+### Krok 4: Přidat nastavení pro skrytí kategorií
+
+**Soubor:** `src/components/notifications/InlineNotificationSettings.tsx`
+
+Přidat přepínače pro jednotlivé kategorie:
+- ✅ Tréninky & Cvičení
+- ✅ Výživa & Zdraví  
+- ✅ Formuláře & Zpětná vazba
+- ☐ Administrativa (defaultně vypnutá)
+
+### Krok 5: Zachovat zprávy jako samostatnou sekci
+
+Nepřečtené zprávy (chat) zůstanou v horní sekci jako nyní - jsou oddělené od notifikací.
 
 ---
 
-## Testovací scénáře
-
-Po implementaci je nutné otestovat:
-
-1. **Nový klient bez fixace** → platí 900/1100/1300 Kč
-2. **Klient s fixací a dostatečným kreditem** → platí 800/1000/1200 Kč
-3. **Klient s fixací, zbývá < 800 Kč** → fixace se automaticky vypne, další trénink za 900 Kč
-4. **Klient dochodí fixovaný kredit** → automatické přepnutí na nové ceny
-
----
-
-## Ovlivněné soubory
+## Soubory k úpravě
 
 | Soubor | Změna |
 |--------|-------|
-| Nová SQL migrace | Vytvořit trigger + nastavit ceny + opravit data |
-| `src/components/trainings/CompleteTrainingDialog.tsx` | Použít `useClientTrainingPrice` |
-| `src/components/trainings/QuickCompleteDialog.tsx` | Použít `useClientTrainingPrice` |
+| `src/hooks/useAggregatedNotifications.ts` | Odstranit Smart Alerts, přidat kategorizaci |
+| `src/components/notifications/NotificationCenter.tsx` | Nové UI s kategoriemi místo priorit |
+| `src/components/notifications/UnifiedNotificationItem.tsx` | Přidat ikony pro kategorie |
+| `src/components/notifications/InlineNotificationSettings.tsx` | Přepínače pro kategorie |
 
 ---
 
-## Diagram logiky fixace
+## Vedlejší efekty
 
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                    DOKONČENÍ TRÉNINKU                               │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  1. Načti klienta                                                   │
-│     ↓                                                               │
-│  2. Má custom_training_price?                                       │
-│     ├─ ANO → Použij custom cenu                                     │
-│     └─ NE ↓                                                         │
-│                                                                     │
-│  3. Má use_legacy_pricing = true?                                   │
-│     ├─ NE → Použij training_prices (900/1100/1300)                  │
-│     └─ ANO ↓                                                        │
-│                                                                     │
-│  4. Má grandfathered_credit > 800 Kč?                               │
-│     ├─ ANO → Použij legacy_training_prices (800/1000/1200)          │
-│     └─ NE → Vypni fixaci, použij nové ceny                          │
-│                                                                     │
-│  5. Po dokončení tréninku:                                          │
-│     → INSERT do credit_consumptions                                 │
-│     → Trigger check_and_disable_legacy_pricing()                    │
-│     → Pokud zbývá < 800 Kč → UPDATE use_legacy_pricing = false      │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
+### Co zůstane zachováno:
+- Smart Alerts zůstanou na dashboardu (`SmartAlertsPanel`)
+- Toast notifikace pro nové Smart Alerts (pokud jsou povoleny)
+- Realtime aktualizace notifikací
+
+### Co bude odstraněno:
+- Smart Alerts z notifikačního centra
+- Míchání klient-side a server-side notifikací
 
 ---
 
@@ -151,7 +186,9 @@ Po implementaci je nutné otestovat:
 
 | Krok | Čas |
 |------|-----|
-| SQL migrace (trigger + ceny + data) | 5 min |
-| Úprava CompleteTrainingDialog | 10 min |
-| Úprava QuickCompleteDialog | 5 min |
-| **Celkem** | **~20 min** |
+| Odpojení Smart Alerts | 5 min |
+| Nová kategorizace | 15 min |
+| Úprava UI NotificationCenter | 20 min |
+| Nastavení kategorií | 10 min |
+| Testování | 10 min |
+| **Celkem** | **~60 min** |
