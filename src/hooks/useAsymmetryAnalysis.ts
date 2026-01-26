@@ -26,15 +26,41 @@ export function useAsymmetryAnalysis(clientId: string | null | undefined) {
     queryFn: async () => {
       if (!clientId) return [];
 
-      // Get all exercise entries with side = 'left' or 'right'
-      const { data: entries, error } = await supabase
+      // Get all exercise entries with side = 'left' or 'right' from trainer sessions
+      const { data: trainerEntries, error: trainerError } = await supabase
         .from('exercise_entries')
         .select('id, exercise_name, exercise_id, weight_kg, reps, time_seconds, distance_meters, height_cm, date, side')
         .eq('client_id', clientId)
         .in('side', ['left', 'right'])
         .order('date', { ascending: false });
 
-      if (error) throw error;
+      if (trainerError) throw trainerError;
+
+      // Get all client workout exercises with side = 'left' or 'right'
+      const { data: clientExercises, error: clientError } = await supabase
+        .from('client_workout_exercises')
+        .select('id, exercise_name, exercise_id, weight_kg, reps, duration_seconds, distance_meters, side, client_workout_logs!inner(date, client_id)')
+        .eq('client_workout_logs.client_id', clientId)
+        .in('side', ['left', 'right']);
+
+      if (clientError) throw clientError;
+
+      // Merge both sources into a unified format
+      const entries = [
+        ...(trainerEntries || []),
+        ...(clientExercises || []).map((ex: any) => ({
+          id: ex.id,
+          exercise_name: ex.exercise_name,
+          exercise_id: ex.exercise_id,
+          weight_kg: ex.weight_kg,
+          reps: ex.reps,
+          time_seconds: ex.duration_seconds,
+          distance_meters: ex.distance_meters,
+          height_cm: null,
+          date: ex.client_workout_logs?.date,
+          side: ex.side,
+        })),
+      ];
 
       // Group by exercise name and side
       const exerciseMap = new Map<string, {

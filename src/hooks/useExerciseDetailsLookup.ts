@@ -13,6 +13,7 @@ export interface ExerciseLookupData {
   instructions_cs: string | null;
   equipment: string[] | null;
   muscle_groups: string[] | null;
+  is_unilateral: boolean;
 }
 
 /**
@@ -30,7 +31,7 @@ export function useExerciseDetailsLookup(exerciseNames: string[]) {
       // Fetch exercises by name (case-insensitive match)
       const { data, error } = await supabase
         .from('exercises')
-        .select('id, name, name_cs, description_cs, instructions_cs, equipment, muscle_groups')
+        .select('id, name, name_cs, description_cs, instructions_cs, equipment, muscle_groups, is_unilateral')
         .or(exerciseNames.map(n => `name.ilike.${n}`).join(','))
         .eq('is_archived', false);
 
@@ -62,7 +63,7 @@ export function useAllExerciseDetails() {
     queryFn: async (): Promise<Map<string, ExerciseLookupData>> => {
       const { data, error } = await supabase
         .from('exercises')
-        .select('id, name, name_cs, description_cs, instructions_cs, equipment, muscle_groups')
+        .select('id, name, name_cs, description_cs, instructions_cs, equipment, muscle_groups, is_unilateral')
         .eq('is_archived', false);
 
       if (error) throw error;

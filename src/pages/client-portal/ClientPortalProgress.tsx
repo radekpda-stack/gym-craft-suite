@@ -19,6 +19,7 @@ import { ProgressSummaryCards } from '@/components/client-portal/progress/Progre
 import { ClientPortalPRsCard } from '@/components/client-portal/progress/ClientPortalPRsCard';
 import { ClientExerciseBenchmarks } from '@/components/client-portal/progress/ClientExerciseBenchmarks';
 import { MeasurementsHistoryCard } from '@/components/client-portal/progress/MeasurementsHistoryCard';
+import { AsymmetryCard } from '@/components/client-portal/progress/AsymmetryCard';
 import { PeriodFilter, type Period } from '@/components/client-portal/common/PeriodFilter';
 import { Bike, PersonStanding, TrendingUp } from 'lucide-react';
 
@@ -134,6 +135,9 @@ export default function ClientPortalProgress() {
 
       {/* Personal Records */}
       <ClientPortalPRsCard />
+
+      {/* Asymmetry L vs R - Strength imbalances */}
+      {clientId && <AsymmetryCard clientId={clientId} />}
 
       {/* Client Benchmarks - Comparison with others */}
       {clientId && <ClientExerciseBenchmarks clientId={clientId} />}

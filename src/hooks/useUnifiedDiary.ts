@@ -21,6 +21,7 @@ export interface DiaryExercise {
   notes?: string | null;
   is_personal_record?: boolean;
   is_pr?: boolean;
+  side?: 'left' | 'right' | 'both' | 'none' | null;
 }
 
 export interface DiaryTag {
@@ -102,7 +103,8 @@ export function useUnifiedDiary() {
             duration_seconds,
             rpe,
             notes,
-            is_personal_record
+            is_personal_record,
+            side
           )
         `)
         .eq('client_id', clientId)
@@ -136,7 +138,8 @@ export function useUnifiedDiary() {
             time_seconds,
             is_pr,
             rpe,
-            notes
+            notes,
+            side
           )
         `)
         .eq('client_id', clientId)
@@ -182,7 +185,10 @@ export function useUnifiedDiary() {
         trainer_comment: log.trainer_comment,
         trainer_commented_at: log.trainer_commented_at,
         scheduled_for: log.scheduled_for,
-        exercises: log.client_workout_exercises || [],
+        exercises: (log.client_workout_exercises || []).map((ex: any) => ({
+          ...ex,
+          side: ex.side as DiaryExercise['side'],
+        })),
         tags: [], // Client logs don't have tags yet
         created_at: log.created_at,
         is_coached: false,
@@ -203,6 +209,7 @@ export function useUnifiedDiary() {
           notes: ex.notes,
           is_personal_record: ex.is_pr,
           is_pr: ex.is_pr,
+          side: ex.side,
         }));
 
         return {
@@ -274,7 +281,8 @@ export function usePlannedWorkouts() {
             duration_seconds,
             distance_meters,
             rpe,
-            notes
+            notes,
+            side
           )
         `)
         .eq('client_id', clientId)
@@ -294,7 +302,10 @@ export function usePlannedWorkouts() {
         rpe: log.rpe,
         notes: log.notes,
         scheduled_for: log.scheduled_for,
-        exercises: log.client_workout_exercises || [],
+        exercises: (log.client_workout_exercises || []).map((ex: any) => ({
+          ...ex,
+          side: ex.side as DiaryExercise['side'],
+        })),
         created_at: log.created_at,
         is_coached: false,
         energy_before: null,

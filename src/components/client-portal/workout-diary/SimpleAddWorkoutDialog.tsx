@@ -27,6 +27,8 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExerciseAutocomplete } from './ExerciseAutocomplete';
 import { QuickExercisePicker } from './QuickExercisePicker';
+import { SideSelector, SideBadge, type Side } from '@/components/ui/side-selector';
+import { useAllExerciseDetails } from '@/hooks/useExerciseDetailsLookup';
 
 // Simplified workout types with large icons
 const SIMPLE_WORKOUT_TYPES = [
@@ -58,6 +60,8 @@ interface ExerciseInput {
   sets: string;
   reps: string;
   weight: string;
+  isUnilateral?: boolean;
+  side?: Side;
 }
 
 const emptyExercise: ExerciseInput = { name: '', sets: '', reps: '', weight: '' };
@@ -79,6 +83,7 @@ interface SimpleAddWorkoutDialogProps {
       sets?: number;
       reps?: number;
       weight_kg?: number;
+      side?: 'left' | 'right' | 'both' | 'none';
     }>;
   }) => Promise<void>;
   isSaving: boolean;
@@ -104,6 +109,9 @@ export function SimpleAddWorkoutDialog({
   
   // Strength exercises
   const [exercises, setExercises] = useState<ExerciseInput[]>([]);
+  
+  // Exercise lookup for unilateral detection
+  const { data: exerciseLookup } = useAllExerciseDetails();
 
   const resetForm = () => {
     setStep('type');
@@ -147,6 +155,7 @@ export function SimpleAddWorkoutDialog({
         sets: ex.sets ? parseInt(ex.sets) : undefined,
         reps: ex.reps ? parseInt(ex.reps) : undefined,
         weight_kg: ex.weight ? parseFloat(ex.weight) : undefined,
+        side: ex.isUnilateral ? (ex.side || 'both') : 'none' as const,
       }));
     
     await onSave({
@@ -174,12 +183,18 @@ export function SimpleAddWorkoutDialog({
     const alreadyAdded = exercises.some(ex => ex.exerciseId === exercise.id);
     if (alreadyAdded) return;
     
+    // Check if unilateral from lookup
+    const details = exerciseLookup?.get(exercise.name.toLowerCase());
+    const isUnilateral = details?.is_unilateral || false;
+    
     setExercises([...exercises, { 
       name: displayName, 
       exerciseId: exercise.id, 
       sets: '', 
       reps: '', 
-      weight: '' 
+      weight: '',
+      isUnilateral,
+      side: isUnilateral ? 'both' : undefined,
     }]);
   };
 
@@ -191,15 +206,30 @@ export function SimpleAddWorkoutDialog({
     setExercises(exercises.filter((_, i) => i !== index));
   };
 
-  const updateExercise = (index: number, field: keyof ExerciseInput, value: string) => {
+  const updateExercise = (index: number, field: keyof ExerciseInput, value: string | Side) => {
     const updated = [...exercises];
     updated[index] = { ...updated[index], [field]: value };
     setExercises(updated);
   };
 
+  const updateExerciseSide = (index: number, side: Side) => {
+    const updated = [...exercises];
+    updated[index] = { ...updated[index], side };
+    setExercises(updated);
+  };
+
   const updateExerciseName = (index: number, name: string, exerciseId?: string) => {
     const updated = [...exercises];
-    updated[index] = { ...updated[index], name, exerciseId };
+    // Check if unilateral
+    const details = exerciseLookup?.get(name.toLowerCase());
+    const isUnilateral = details?.is_unilateral || false;
+    updated[index] = { 
+      ...updated[index], 
+      name, 
+      exerciseId,
+      isUnilateral,
+      side: isUnilateral ? 'both' : undefined,
+    };
     setExercises(updated);
   };
 
@@ -373,12 +403,17 @@ export function SimpleAddWorkoutDialog({
                               if (exerciseId && exercises.some(ex => ex.exerciseId === exerciseId)) {
                                 return;
                               }
+                              // Check if unilateral
+                              const details = exerciseLookup?.get(name.toLowerCase());
+                              const isUnilateral = details?.is_unilateral || false;
                               setExercises([...exercises, { 
                                 name, 
                                 exerciseId, 
                                 sets: '', 
                                 reps: '', 
-                                weight: '' 
+                                weight: '',
+                                isUnilateral,
+                                side: isUnilateral ? 'both' : undefined,
                               }]);
                             }
                           }}
@@ -408,9 +443,24 @@ export function SimpleAddWorkoutDialog({
                             <X className="w-3 h-3" />
                           </Button>
                           
-                          <div className="font-medium text-sm pr-8 text-warning">
+                          <div className="font-medium text-sm pr-8 text-warning flex items-center gap-2">
                             {exercise.name}
+                            {exercise.isUnilateral && (
+                              <SideBadge side={exercise.side || 'both'} />
+                            )}
                           </div>
+                          
+                          {/* Side selector for unilateral exercises */}
+                          {exercise.isUnilateral && (
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Strana</Label>
+                              <SideSelector
+                                value={exercise.side || 'both'}
+                                onChange={(side) => updateExerciseSide(idx, side)}
+                                size="sm"
+                              />
+                            </div>
+                          )}
                           
                           <div className="grid grid-cols-3 gap-2">
                             <div className="space-y-1">

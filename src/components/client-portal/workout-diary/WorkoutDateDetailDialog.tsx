@@ -15,6 +15,7 @@ import { UnifiedDiaryEntry, DiaryExercise } from '@/hooks/useUnifiedDiary';
 import { getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkoutTypeColor } from './WorkoutTypeSelector';
 import { useAllExerciseDetails, ExerciseLookupData } from '@/hooks/useExerciseDetailsLookup';
 import { ExerciseDetailSheet, ExerciseDetailData } from './ExerciseDetailSheet';
+import { SideBadge } from '@/components/ui/side-selector';
 
 interface WorkoutDateDetailDialogProps {
   open: boolean;
@@ -108,6 +109,7 @@ export function WorkoutDateDetailDialog({
                           >
                             <Dumbbell className="w-3 h-3 text-muted-foreground shrink-0" />
                             <span className="truncate">{ex.exercise_name}</span>
+                            <SideBadge side={ex.side || null} />
                             {hasInfo && (
                               <Info className="w-3 h-3 text-primary shrink-0" />
                             )}

@@ -3068,6 +3068,7 @@ export type Database = {
           reps: number | null
           rpe: number | null
           sets: number | null
+          side: string | null
           sort_order: number
           weight_kg: number | null
           workout_log_id: string
@@ -3084,6 +3085,7 @@ export type Database = {
           reps?: number | null
           rpe?: number | null
           sets?: number | null
+          side?: string | null
           sort_order?: number
           weight_kg?: number | null
           workout_log_id: string
@@ -3100,6 +3102,7 @@ export type Database = {
           reps?: number | null
           rpe?: number | null
           sets?: number | null
+          side?: string | null
           sort_order?: number
           weight_kg?: number | null
           workout_log_id?: string

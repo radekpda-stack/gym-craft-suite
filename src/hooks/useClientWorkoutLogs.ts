@@ -16,6 +16,7 @@ export interface WorkoutExercise {
   notes?: string | null;
   sort_order: number;
   is_personal_record?: boolean;
+  side?: 'left' | 'right' | 'both' | 'none' | null;
 }
 
 export interface WorkoutLog {
@@ -136,6 +137,7 @@ export function useCreateWorkoutLog() {
           rpe: ex.rpe,
           notes: ex.notes,
           sort_order: idx,
+          side: ex.side || 'none',
         }));
 
         const { error: exercisesError } = await supabase
@@ -283,6 +285,7 @@ export function useUpdateWorkoutLog() {
             rpe: ex.rpe,
             notes: ex.notes,
             sort_order: idx,
+            side: ex.side || 'none',
           }));
 
           const { error: insertError } = await supabase
