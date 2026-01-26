@@ -1,194 +1,137 @@
 
-# Refaktoring Notifikačního centra pro trenéra
+# Přidání popisků cviků pro klienty
 
-## Shrnutí požadavků
+## Shrnutí situace
 
-Uživatel chce:
-1. **Odstranit Smart Alerts** z notifikačního centra (nízký kredit, chybějící tréninky, narozeniny atd.) - tyto informace už jsou na dashboardu
-2. **Zobrazovat pouze akce klientů** - co klient přidal, změnil nebo dokončil
-3. **Logické kategorizování** notifikací pro přehlednost
-4. **Jednoduchý a přehledný systém**
+Dobrá zpráva: **Databáze už popisky podporuje!** Sloupce `description_cs` (popis) a `instructions_cs` (instrukce) již existují. Problém je, že:
+1. Pouze 7 ze 195 cviků má vyplněné instrukce
+2. Klientská aplikace tyto popisky nezobrazuje
 
 ---
 
-## Současný stav vs. Cílový stav
+## Co bude implementováno
 
-| Současný stav | Cílový stav |
-|---------------|-------------|
-| Smart Alerts + DB notifikace smíchané | Pouze DB notifikace od klientů |
-| Kategorie: Urgent/Important/Info | Kategorie podle typu akce klienta |
-| Agregace 3+ podobných notifikací | Zachovat agregaci pro přehlednost |
-| Smart Alerts zabírají místo | Čistý feed akcí klientů |
+### 1. Rozšíření interface DiaryExercise
+Přidání polí pro popis cviku do datového modelu
+
+### 2. Obohacení dat o popisky z exercises tabulky
+Při načítání cviků v deníku se přidají popisy přímo z hlavní tabulky cviků
+
+### 3. Rozkliknutelný detail cviku v klientské zóně
+- Klient klikne na název cviku → otevře se modal/sheet s:
+  - **Název cviku**
+  - **Popis** (co cvik je, na co je zaměřen)
+  - **Instrukce k provedení** (jak správně cvičit)
+  - **Vybavení** (pokud relevantní)
+  - **Svalové skupiny** (pokud relevantní)
+
+### 4. Vizuální indikace dostupnosti popisu
+Cviky s popisem budou mít ikonu "info" u názvu
 
 ---
 
-## Nové kategorie notifikací
-
-Místo priorit (Urgent/Important/Info) navrhujeme kategorie podle **typu aktivity klienta**:
+## Návrh UI pro klienta
 
 ```text
-┌─────────────────────────────────────────────────┐
-│  📬 NOTIFIKAČNÍ CENTRUM                         │
-├─────────────────────────────────────────────────┤
-│                                                 │
-│  🏋️ TRÉNINKY & CVIČENÍ                          │
-│  ├─ client_workout_logged (Klient cvičil)       │
-│  ├─ pr_created/updated/achieved (Osobní rekord) │
-│  └─ training_streak (Milestone dosažen)         │
-│                                                 │
-│  🍎 VÝŽIVA & ZDRAVÍ                             │
-│  ├─ nutrition_entry_added (Zapisuje stravu)     │
-│  ├─ client_nutrition_started (Začal výživu)     │
-│  ├─ client_weight_added (Přidal váhu)           │
-│  └─ nutrition_inactive (Nezapisuje stravu)      │
-│                                                 │
-│  📝 FORMULÁŘE & ZPĚTNÁ VAZBA                    │
-│  ├─ feedback_received (Zpětná vazba)            │
-│  ├─ feedback_red_flag (Kritická zpětná vazba)   │
-│  ├─ diagnostic_completed (Diagnostika)          │
-│  ├─ pre_diagnostic_completed (Pre-diagnostika)  │
-│  └─ client_profile_updated (Aktualizace profilu)│
-│                                                 │
-│  💰 ADMINISTRATIVA (volitelně skryté)           │
-│  ├─ package_low (Nízký balíček)                 │
-│  ├─ package_expiring (Končící balíček)          │
-│  └─ inactivity_warning (Neaktivní klient)       │
-│                                                 │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  BENCH PRESS                          ℹ️│  ← Kliknutelný
+│  3×10 • 80 kg                           │
+└─────────────────────────────────────────┘
+         ↓ Po kliknutí se otevře:
+┌─────────────────────────────────────────┐
+│ ← Bench press                           │
+├─────────────────────────────────────────┤
+│                                         │
+│ 📝 POPIS                                │
+│ Základní tlakový cvik na lavici pro     │
+│ rozvoj hrudníku, ramen a tricepsů.      │
+│                                         │
+│ 📋 JAK CVIČIT                           │
+│ 1. Lehni si na lavici, nohy pevně na    │
+│    zemi                                 │
+│ 2. Uchop činku šířeji než ramena        │
+│ 3. Spusť činku kontrolovaně k hrudníku  │
+│ 4. Vytlač zpět do výchozí pozice        │
+│                                         │
+│ 🏋️ VYBAVENÍ                             │
+│ [Činka] [Lavice]                        │
+│                                         │
+│ 💪 SVALOVÉ SKUPINY                       │
+│ [Hrudník] [Ramena] [Triceps]            │
+│                                         │
+└─────────────────────────────────────────┘
 ```
 
 ---
 
-## Plán implementace
+## Implementační kroky
 
-### Krok 1: Odpojit Smart Alerts z NotificationCenter
+| Krok | Soubor | Změna |
+|------|--------|-------|
+| 1 | `src/hooks/useUnifiedDiary.ts` | Rozšířit `DiaryExercise` o `description_cs`, `instructions_cs`, a přidat JOIN na `exercises` tabulku |
+| 2 | Nový soubor: `src/components/client-portal/workout-diary/ExerciseDetailSheet.tsx` | Nová komponenta pro zobrazení detailu cviku |
+| 3 | `src/components/client-portal/workout-diary/PlannedWorkoutDetailSheet.tsx` | Přidat kliknutelnost na cviky a otevírání detailu |
+| 4 | `src/components/client-portal/workout-diary/WorkoutDateDetailDialog.tsx` | Přidat stejnou funkcionalitu |
 
-**Soubor:** `src/hooks/useAggregatedNotifications.ts`
+---
 
-Změny:
-- Přestat volat `useSmartAlerts()` 
-- Nebo přidat filtr, který Smart Alerts vylučuje z agregace
-- Ponechat pouze databázové notifikace (`notifications` tabulka)
+## Technické detaily
 
-```text
-PŘED:
-const { data: smartAlerts = [] } = useSmartAlerts();
-const alertNotifications = smartAlerts.map(convertSmartAlert);
-merged = [...dbNotifications, ...alertNotifications];
-
-PO:
-// Smart Alerts NEPŘIDÁVAT - jsou na dashboardu
-const merged = dbNotifications;
-```
-
-### Krok 2: Změnit kategorizaci z priorit na typy aktivit
-
-**Soubor:** `src/hooks/useAggregatedNotifications.ts`
-
-Nové mapování typů na kategorie:
+### Rozšíření DiaryExercise interface
 
 ```typescript
-type NotificationCategory = 'training' | 'nutrition' | 'forms' | 'admin';
-
-const TYPE_CATEGORY: Record<string, NotificationCategory> = {
-  // Tréninky & Cvičení
-  client_workout_logged: 'training',
-  pr_created: 'training',
-  pr_updated: 'training', 
-  pr_achieved: 'training',
-  training_streak: 'training',
+export interface DiaryExercise {
+  id: string;
+  exercise_name: string;
+  exercise_id?: string | null;
+  // ... existující pole
   
-  // Výživa & Zdraví
-  nutrition_entry_added: 'nutrition',
-  client_nutrition_started: 'nutrition',
-  client_weight_added: 'nutrition',
-  nutrition_inactive: 'nutrition',
-  
-  // Formuláře & Zpětná vazba
-  feedback_received: 'forms',
-  feedback_red_flag: 'forms',
-  diagnostic_completed: 'forms',
-  pre_diagnostic_completed: 'forms',
-  client_profile_updated: 'forms',
-  
-  // Administrativa (může být skrytá)
-  package_low: 'admin',
-  package_expiring: 'admin',
-  inactivity_warning: 'admin',
-  incomplete_training: 'admin',
-};
+  // Nové pole pro popisy (z exercises tabulky)
+  description_cs?: string | null;
+  instructions_cs?: string | null;
+  equipment?: string[] | null;
+  muscle_groups?: string[] | null;
+}
 ```
 
-### Krok 3: Upravit NotificationCenter UI
+### Obohacení dat v useUnifiedDiary
 
-**Soubor:** `src/components/notifications/NotificationCenter.tsx`
+Buď:
+- **Varianta A**: JOIN při dotazu (složitější, ale efektivní)
+- **Varianta B**: Samostatný dotaz na exercises a merge v JS (jednodušší)
 
-Změny:
-1. Nahradit sekce `urgent/important/info` sekcemi `training/nutrition/forms`
-2. Přidat ikony a barvy pro každou kategorii
-3. Zobrazovat "Administrativa" jako sbalitelnou sekci (nebo úplně skrýt)
+Doporučuji Variantu B - při načtení deníku se sesbírají exercise_id, udělá se jeden dotaz na exercises tabulku, a popisy se přimapují.
 
-```text
-KATEGORIE UI:
-┌──────────────────────────────────┐
-│ 🏋️ Tréninky (3 nové)      ▼     │
-│   ├─ Jan cvičil - před 2h       │
-│   ├─ Eva: Nové PR! 80kg         │
-│   └─ Martin cvičil              │
-├──────────────────────────────────┤
-│ 🍎 Výživa (1 nová)        ▶     │
-├──────────────────────────────────┤
-│ 📝 Formuláře (0 nových)   ▶     │
-└──────────────────────────────────┘
+### Nová komponenta ExerciseDetailSheet
+
+```typescript
+interface ExerciseDetailSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  exercise: {
+    name: string;
+    description_cs?: string | null;
+    instructions_cs?: string | null;
+    equipment?: string[] | null;
+    muscle_groups?: string[] | null;
+  } | null;
+}
 ```
 
-### Krok 4: Přidat nastavení pro skrytí kategorií
+---
 
-**Soubor:** `src/components/notifications/InlineNotificationSettings.tsx`
+## Poznámky k datům
 
-Přidat přepínače pro jednotlivé kategorie:
-- ✅ Tréninky & Cvičení
-- ✅ Výživa & Zdraví  
-- ✅ Formuláře & Zpětná vazba
-- ☐ Administrativa (defaultně vypnutá)
+Aktuálně máte vyplněno:
+- **143/195** cviků má popis (`description_cs`)
+- **7/195** cviků má instrukce (`instructions_cs`)
 
-### Krok 5: Zachovat zprávy jako samostatnou sekci
-
-Nepřečtené zprávy (chat) zůstanou v horní sekci jako nyní - jsou oddělené od notifikací.
+Po implementaci můžete průběžně doplňovat instrukce v knihovně cviků → záložka "Poznámky".
 
 ---
 
-## Soubory k úpravě
+## Vedlejší benefity
 
-| Soubor | Změna |
-|--------|-------|
-| `src/hooks/useAggregatedNotifications.ts` | Odstranit Smart Alerts, přidat kategorizaci |
-| `src/components/notifications/NotificationCenter.tsx` | Nové UI s kategoriemi místo priorit |
-| `src/components/notifications/UnifiedNotificationItem.tsx` | Přidat ikony pro kategorie |
-| `src/components/notifications/InlineNotificationSettings.tsx` | Přepínače pro kategorie |
-
----
-
-## Vedlejší efekty
-
-### Co zůstane zachováno:
-- Smart Alerts zůstanou na dashboardu (`SmartAlertsPanel`)
-- Toast notifikace pro nové Smart Alerts (pokud jsou povoleny)
-- Realtime aktualizace notifikací
-
-### Co bude odstraněno:
-- Smart Alerts z notifikačního centra
-- Míchání klient-side a server-side notifikací
-
----
-
-## Časový odhad
-
-| Krok | Čas |
-|------|-----|
-| Odpojení Smart Alerts | 5 min |
-| Nová kategorizace | 15 min |
-| Úprava UI NotificationCenter | 20 min |
-| Nastavení kategorií | 10 min |
-| Testování | 10 min |
-| **Celkem** | **~60 min** |
+1. **Motivace k vyplnění** - Jakmile klienti uvidí, že některé cviky mají popis a jiné ne, budete mít motivaci doplnit chybějící
+2. **Vzdělávání klientů** - Klienti pochopí, co cvičili
+3. **Konzistence** - Jeden zdroj pravdy (exercises tabulka)
