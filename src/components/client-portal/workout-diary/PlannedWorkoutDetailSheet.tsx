@@ -10,6 +10,7 @@ import { UnifiedDiaryEntry, DiaryExercise } from "@/hooks/useUnifiedDiary";
 import { formatTimeSeconds, detectExerciseMetricCategory } from "@/lib/exerciseMetrics";
 import { useAllExerciseDetails, ExerciseLookupData } from "@/hooks/useExerciseDetailsLookup";
 import { ExerciseDetailSheet, ExerciseDetailData } from "./ExerciseDetailSheet";
+import { SideBadge } from "@/components/ui/side-selector";
 
 interface PlannedWorkoutDetailSheetProps {
   open: boolean;
@@ -192,6 +193,7 @@ export function PlannedWorkoutDetailSheet({
                               <span className="font-medium text-sm truncate">
                                 {exercise.exercise_name}
                               </span>
+                              <SideBadge side={exercise.side || null} />
                               {hasInfo && (
                                 <Info className="h-3.5 w-3.5 text-primary shrink-0" />
                               )}
