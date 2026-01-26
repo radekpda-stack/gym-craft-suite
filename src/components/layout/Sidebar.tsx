@@ -283,6 +283,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         items: [
           { id: 'schedule', to: '/schedule', icon: Calendar, label: 'Rozvrh' },
           ...(isModuleEnabled('training_templates') ? [{ id: 'training-templates', to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' }] : []),
+          ...(isModuleEnabled('training_templates') ? [{ id: 'rx-workouts', to: '/rx-workouts', icon: Dumbbell, label: 'RX Workouty' }] : []),
           ...(isModuleEnabled('feedback') ? [{ id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Zpětná vazba' }] : []),
         ],
       },

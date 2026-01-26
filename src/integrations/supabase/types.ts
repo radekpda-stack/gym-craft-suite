@@ -10343,12 +10343,15 @@ export type Database = {
           rest_seconds: number | null
           rir: number | null
           rpe: number | null
+          rx_distance_m: number | null
+          rx_weight_kg: number | null
           sets: number | null
           sort_order: number | null
           template_id: string
           tempo: string | null
           time_ms: number | null
           time_seconds: number | null
+          unit_label: string | null
         }
         Insert: {
           block_type?: string | null
@@ -10362,12 +10365,15 @@ export type Database = {
           rest_seconds?: number | null
           rir?: number | null
           rpe?: number | null
+          rx_distance_m?: number | null
+          rx_weight_kg?: number | null
           sets?: number | null
           sort_order?: number | null
           template_id: string
           tempo?: string | null
           time_ms?: number | null
           time_seconds?: number | null
+          unit_label?: string | null
         }
         Update: {
           block_type?: string | null
@@ -10381,12 +10387,15 @@ export type Database = {
           rest_seconds?: number | null
           rir?: number | null
           rpe?: number | null
+          rx_distance_m?: number | null
+          rx_weight_kg?: number | null
           sets?: number | null
           sort_order?: number | null
           template_id?: string
           tempo?: string | null
           time_ms?: number | null
           time_seconds?: number | null
+          unit_label?: string | null
         }
         Relationships: [
           {
@@ -10413,9 +10422,11 @@ export type Database = {
           estimated_duration: number | null
           id: string
           is_public: boolean | null
+          is_rx_workout: boolean | null
           name: string
           rest_interval_seconds: number | null
           rounds: number | null
+          scoring_mode: string | null
           tags: string[] | null
           time_cap_seconds: number | null
           updated_at: string
@@ -10430,9 +10441,11 @@ export type Database = {
           estimated_duration?: number | null
           id?: string
           is_public?: boolean | null
+          is_rx_workout?: boolean | null
           name: string
           rest_interval_seconds?: number | null
           rounds?: number | null
+          scoring_mode?: string | null
           tags?: string[] | null
           time_cap_seconds?: number | null
           updated_at?: string
@@ -10447,9 +10460,11 @@ export type Database = {
           estimated_duration?: number | null
           id?: string
           is_public?: boolean | null
+          is_rx_workout?: boolean | null
           name?: string
           rest_interval_seconds?: number | null
           rounds?: number | null
+          scoring_mode?: string | null
           tags?: string[] | null
           time_cap_seconds?: number | null
           updated_at?: string
@@ -11563,9 +11578,11 @@ export type Database = {
           estimated_duration: number | null
           id: string
           is_public: boolean | null
+          is_rx_workout: boolean | null
           name: string
           rest_interval_seconds: number | null
           rounds: number | null
+          scoring_mode: string | null
           tags: string[] | null
           time_cap_seconds: number | null
           updated_at: string
