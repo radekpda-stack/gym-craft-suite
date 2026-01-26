@@ -21,7 +21,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useCompleteTrainingAtomic } from '@/hooks/useCompleteTrainingAtomic';
 import { useClients } from '@/hooks/useClients';
 import { useBudgetGroups } from '@/hooks/useClientBudgetGroups';
-import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
+import { useAppSettings, TrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
+import { getEffectiveTrainingPrice } from '@/hooks/usePriceTransition';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
@@ -57,8 +58,13 @@ export function QuickCompleteDialog({
 }: QuickCompleteDialogProps) {
   const { data: clients = [] } = useClients();
   const { data: budgetGroups = [] } = useBudgetGroups();
-  const trainingPrices = useTrainingPrices();
+  const { data: appSettings } = useAppSettings();
   const completeTrainingAtomic = useCompleteTrainingAtomic();
+
+  // Get prices from app settings
+  const currentPrices = (appSettings?.training_prices || { "1": 900, "2": 1100, "3": 1300, "first_training": 1000 }) as TrainingPrices;
+  const legacyPrices = (appSettings?.legacy_training_prices || { "1": 800, "2": 1000, "3": 1200 }) as TrainingPrices;
+  const isTransitionEnabled = appSettings?.price_transition_enabled;
 
   const [price, setPrice] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit');
@@ -97,11 +103,20 @@ export function QuickCompleteDialog({
       return;
     }
 
-    // Calculate default price
+    // Calculate default price - consider legacy pricing fixation
     const hasCustomPrice = client.custom_training_price != null;
+    
+    // Determine if client uses legacy pricing
+    const usesLegacyPricing = Boolean(
+      isTransitionEnabled &&
+      client.use_legacy_pricing &&
+      client.grandfathered_credit !== null &&
+      (client.credit_balance || 0) > 0
+    );
+    
     const defaultPrice = hasCustomPrice
       ? client.custom_training_price!
-      : getTrainingPrice(1, trainingPrices);
+      : getEffectiveTrainingPrice(1, usesLegacyPricing, legacyPrices, currentPrices);
     
     setPrice(defaultPrice);
 
@@ -113,7 +128,7 @@ export function QuickCompleteDialog({
     } else {
       setPaymentMethod('cash');
     }
-  }, [open, session, client, creditBalance, trainingPrices, onOpenChange, onNeedFullDialog]);
+  }, [open, session, client, creditBalance, isTransitionEnabled, legacyPrices, currentPrices, onOpenChange, onNeedFullDialog]);
 
   const handleComplete = async () => {
     if (!session || !client || isSubmitting) return;

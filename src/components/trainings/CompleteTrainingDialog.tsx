@@ -29,7 +29,8 @@ import { useTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import { useCompleteTrainingAtomic } from '@/hooks/useCompleteTrainingAtomic';
 import { useBudgetGroups } from '@/hooks/useClientBudgetGroups';
 import { useClients, Client } from '@/hooks/useClients';
-import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
+import { useAppSettings, TrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
+import { getEffectiveTrainingPrice } from '@/hooks/usePriceTransition';
 
 interface TrainingSession {
   id: string;
@@ -54,8 +55,13 @@ export function CompleteTrainingDialog({
   const { data: clients = [] } = useClients();
   const { data: existingParticipants = [] } = useTrainingParticipants(session?.id);
   const { data: budgetGroups = [] } = useBudgetGroups();
-  const trainingPrices = useTrainingPrices();
+  const { data: appSettings } = useAppSettings();
   const completeTrainingAtomic = useCompleteTrainingAtomic();
+
+  // Get prices from app settings
+  const currentPrices = (appSettings?.training_prices || { "1": 900, "2": 1100, "3": 1300, "first_training": 1000 }) as TrainingPrices;
+  const legacyPrices = (appSettings?.legacy_training_prices || { "1": 800, "2": 1000, "3": 1200 }) as TrainingPrices;
+  const isTransitionEnabled = appSettings?.price_transition_enabled;
 
   const [participantPayments, setParticipantPayments] = useState<ParticipantPayment[]>([]);
   const [completeNotes, setCompleteNotes] = useState('');
@@ -110,9 +116,18 @@ export function CompleteTrainingDialog({
 
     const primaryClient = clients.find(c => c.id === session.client_id);
     const hasCustomPrice = participantCount === 1 && primaryClient?.custom_training_price != null;
+    
+    // Determine if primary client uses legacy pricing
+    const usesLegacyPricing = Boolean(
+      isTransitionEnabled &&
+      primaryClient?.use_legacy_pricing &&
+      primaryClient?.grandfathered_credit !== null &&
+      (primaryClient?.credit_balance || 0) > 0
+    );
+    
     const totalPrice = hasCustomPrice
       ? primaryClient.custom_training_price!
-      : getTrainingPrice(participantCount, trainingPrices);
+      : getEffectiveTrainingPrice(participantCount, usesLegacyPricing, legacyPrices, currentPrices);
 
     let payments: ParticipantPayment[];
 
