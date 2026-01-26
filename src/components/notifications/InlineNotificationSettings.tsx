@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, Loader2, Dumbbell, Utensils, FileText, Briefcase } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useAppSettings, useUpdateSetting } from '@/hooks/useAppSettings';
 import { cn } from '@/lib/utils';
@@ -10,16 +9,40 @@ import { cn } from '@/lib/utils';
 interface SettingItem {
   key: string;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
+  description: string;
+  defaultValue: boolean;
 }
 
-const QUICK_SETTINGS: SettingItem[] = [
-  { key: 'chatNotifications', label: 'Zprávy', icon: '💬' },
-  { key: 'lowCreditAlerts', label: 'Finance & balíčky', icon: '💰' },
-  { key: 'noTrainingAlerts', label: 'Chybějící tréninky', icon: '📅' },
-  { key: 'prAlerts', label: 'Osobní rekordy', icon: '🏆' },
-  { key: 'birthdayAlerts', label: 'Narozeniny & výročí', icon: '🎂' },
-  { key: 'feedbackAlerts', label: 'Zpětná vazba', icon: '📝' },
+const CATEGORY_SETTINGS: SettingItem[] = [
+  { 
+    key: 'trainingNotifications', 
+    label: 'Tréninky & Cvičení', 
+    icon: <Dumbbell className="w-4 h-4 text-orange-600" />,
+    description: 'Klienti cvičí, osobní rekordy',
+    defaultValue: true,
+  },
+  { 
+    key: 'nutritionNotifications', 
+    label: 'Výživa & Zdraví', 
+    icon: <Utensils className="w-4 h-4 text-green-600" />,
+    description: 'Záznamy stravy, váha',
+    defaultValue: true,
+  },
+  { 
+    key: 'formsNotifications', 
+    label: 'Formuláře & Zpětná vazba', 
+    icon: <FileText className="w-4 h-4 text-blue-600" />,
+    description: 'Feedback, diagnostika',
+    defaultValue: true,
+  },
+  { 
+    key: 'adminNotifications', 
+    label: 'Administrativa', 
+    icon: <Briefcase className="w-4 h-4 text-muted-foreground" />,
+    description: 'Balíčky, neaktivita (doporučeno skryté)',
+    defaultValue: false,
+  },
 ];
 
 interface InlineNotificationSettingsProps {
@@ -66,7 +89,7 @@ export function InlineNotificationSettings({ isExpanded, onToggle }: InlineNotif
       >
         <div className="flex items-center gap-2 text-sm font-medium">
           <span>⚙️</span>
-          <span>Nastavení notifikací</span>
+          <span>Nastavení kategorií</span>
           {hasPendingChanges && (
             <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
           )}
@@ -93,20 +116,31 @@ export function InlineNotificationSettings({ isExpanded, onToggle }: InlineNotif
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                QUICK_SETTINGS.map((setting, index) => (
+                CATEGORY_SETTINGS.map((setting, index) => (
                   <div key={setting.key}>
-                    <div className="flex items-center justify-between py-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">{setting.icon}</span>
-                        <span className="text-sm">{setting.label}</span>
+                    <div className="flex items-center justify-between py-2.5">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-8 h-8 rounded-lg flex items-center justify-center",
+                          setting.key === 'adminNotifications' ? 'bg-muted' : 
+                          setting.key === 'trainingNotifications' ? 'bg-orange-100 dark:bg-orange-900/30' :
+                          setting.key === 'nutritionNotifications' ? 'bg-green-100 dark:bg-green-900/30' :
+                          'bg-blue-100 dark:bg-blue-900/30'
+                        )}>
+                          {setting.icon}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{setting.label}</p>
+                          <p className="text-xs text-muted-foreground">{setting.description}</p>
+                        </div>
                       </div>
                       <Switch
-                        checked={preferences[setting.key] ?? true}
+                        checked={preferences[setting.key] ?? setting.defaultValue}
                         onCheckedChange={(checked) => handleChange(setting.key, checked)}
                         disabled={updateSetting.isPending}
                       />
                     </div>
-                    {index < QUICK_SETTINGS.length - 1 && (
+                    {index < CATEGORY_SETTINGS.length - 1 && (
                       <Separator className="my-1" />
                     )}
                   </div>
