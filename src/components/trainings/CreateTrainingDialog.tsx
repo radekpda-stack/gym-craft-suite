@@ -1,7 +1,8 @@
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EnhancedTrainingForm, EnhancedTrainingFormValues } from "./EnhancedTrainingForm";
 import { useClients } from "@/hooks/useClients";
-import { useTrainingPrices } from "@/hooks/useAppSettings";
+import { useAppSettings, TrainingPrices } from "@/hooks/useAppSettings";
 import { useCreateTrainingSession } from "@/hooks/useTrainingSessions";
 import { useAddTrainingSessionTags } from "@/hooks/useTrainingSessionTags";
 import { toast } from "@/hooks/use-toast";
@@ -23,10 +24,37 @@ export function CreateTrainingDialog({
   defaultValues: propDefaultValues,
 }: CreateTrainingDialogProps) {
   const { data: clients = [] } = useClients();
-  const trainingPrices = useTrainingPrices();
+  const { data: settings } = useAppSettings();
   const createTraining = useCreateTrainingSession();
   const addTrainingTags = useAddTrainingSessionTags();
   const isMobile = useIsMobile();
+  
+  // Track selected client to determine effective prices
+  const [selectedClientId, setSelectedClientId] = useState<string | undefined>(defaultClientId);
+  
+  // Update selected client when defaultClientId changes
+  useEffect(() => {
+    if (defaultClientId) {
+      setSelectedClientId(defaultClientId);
+    }
+  }, [defaultClientId]);
+
+  // Get effective prices based on selected client's legacy pricing status
+  const selectedClient = clients.find(c => c.id === selectedClientId);
+  const isTransitionEnabled = settings?.price_transition_enabled;
+  const legacyPrices = settings?.legacy_training_prices as TrainingPrices | undefined;
+  const currentPrices = settings?.training_prices as TrainingPrices | undefined;
+  
+  const usesLegacyPricing = Boolean(
+    isTransitionEnabled &&
+    selectedClient?.use_legacy_pricing &&
+    selectedClient?.grandfathered_credit !== null &&
+    (selectedClient?.credit_balance || 0) > 0
+  );
+  
+  const effectivePrices: TrainingPrices = usesLegacyPricing && legacyPrices
+    ? legacyPrices
+    : (currentPrices || { "1": 900, "2": 1100, "3": 1300, "first_training": 1000 });
 
   const defaultValues: Partial<EnhancedTrainingFormValues> = { ...propDefaultValues };
   
@@ -85,10 +113,11 @@ export function CreateTrainingDialog({
             onSubmit={handleSubmit}
             isLoading={createTraining.isPending}
             clients={clients}
-            trainingPrices={trainingPrices}
+            trainingPrices={effectivePrices}
             defaultValues={Object.keys(defaultValues).length > 0 ? defaultValues : undefined}
             submitLabel="Vytvořit trénink"
             stickySubmit={isMobile}
+            onClientChange={setSelectedClientId}
           />
         </div>
       </DialogContent>

@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search, Check, AlertTriangle, Dumbbell, Plus, X, Users } from "lucide-react";
 import { TrainingTypeSelector } from "./TrainingTypeSelector";
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/popover";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Client } from "@/hooks/useClients";
+import { TrainingPrices } from "@/hooks/useAppSettings";
 import { cn } from "@/lib/utils";
 import { useSharedBudgetBalance } from "@/hooks/useSharedBudgetBalance";
 import { useFormTracking } from "@/hooks/useFormTracking";
@@ -50,9 +51,10 @@ interface EnhancedTrainingFormProps {
   clients: Client[];
   defaultValues?: Partial<EnhancedTrainingFormValues>;
   defaultTagIds?: string[];
-  trainingPrices: Record<string, number>;
+  trainingPrices: TrainingPrices;
   submitLabel?: string;
   stickySubmit?: boolean;
+  onClientChange?: (clientId: string | undefined) => void;
 }
 
 // Helper to remove diacritics for search
@@ -69,6 +71,7 @@ export function EnhancedTrainingForm({
   trainingPrices,
   submitLabel = "Vytvořit trénink",
   stickySubmit = false,
+  onClientChange,
 }: EnhancedTrainingFormProps) {
   const [clientSearch, setClientSearch] = useState("");
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
@@ -109,6 +112,11 @@ export function EnhancedTrainingForm({
 
   const selectedClientId = form.watch("client_id");
   const selectedClient = clients.find(c => c.id === selectedClientId);
+  
+  // Notify parent when client changes (for dynamic pricing)
+  useEffect(() => {
+    onClientChange?.(selectedClientId || undefined);
+  }, [selectedClientId, onClientChange]);
   
   // Calculate participant count from selected clients
   const participantCount = 1 + additionalClientIds.length;

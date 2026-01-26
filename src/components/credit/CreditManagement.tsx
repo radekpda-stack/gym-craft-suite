@@ -14,8 +14,8 @@ import { ClientAvatar } from '@/components/ui/client-avatar';
 import { useCreditTransactions, useCreateTransaction, useDeleteTransaction, CreditTransaction } from '@/hooks/useCreditTransactions';
 import { useSharedBudgetBalance, useSharedBudgetTransactions } from '@/hooks/useSharedBudgetBalance';
 import { useProducts } from '@/hooks/useProducts';
-import { useTrainingPrices, calculateRemainingTrainings } from '@/hooks/useAppSettings';
 import { useUndoTransaction } from '@/hooks/useUndoActions';
+import { useClientTrainingPrice } from '@/hooks/usePriceTransition';
 import { cn } from '@/lib/utils';
 import { exportTransactionsToCSV, exportTransactionsToPDF, TransactionExportData } from '@/lib/export';
 import { formatCurrency } from '@/lib/formatters';
@@ -32,7 +32,7 @@ interface CreditManagementProps {
 export function CreditManagement({ clientId, clientName, clientEmail, currentBalance }: CreditManagementProps) {
   const { data: individualTransactions = [] } = useCreditTransactions(clientId);
   const { data: products = [] } = useProducts(true);
-  const trainingPrices = useTrainingPrices();
+  const { effectivePrices, usesLegacyPricing } = useClientTrainingPrice(clientId);
   const createTransaction = useCreateTransaction();
   const deleteTransaction = useDeleteTransaction();
   const { registerTransactionUndo } = useUndoTransaction();
@@ -61,7 +61,7 @@ export function CreditManagement({ clientId, clientName, clientEmail, currentBal
   // Use shared transactions if in a group
   const transactions = isShared ? sharedTransactions : individualTransactions;
 
-  const remainingTrainings = calculateRemainingTrainings(actualBalance, trainingPrices);
+  const remainingTrainings = Math.floor(actualBalance / effectivePrices["1"]);
 
   const handleAddPayment = async () => {
     const amount = parseFloat(paymentAmount);
@@ -221,7 +221,8 @@ export function CreditManagement({ clientId, clientName, clientEmail, currentBal
             ~{Math.max(0, remainingTrainings)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            při ceně {formatCurrency(trainingPrices["1"])}/trénink
+            při ceně {formatCurrency(effectivePrices["1"])}/trénink
+            {usesLegacyPricing && <span className="ml-1 text-primary">(fixace)</span>}
           </p>
         </div>
         <div className="glass rounded-xl sm:rounded-2xl p-4 sm:p-5">
@@ -230,10 +231,13 @@ export function CreditManagement({ clientId, clientName, clientEmail, currentBal
             <span className="text-sm">Ceny tréninků</span>
           </div>
           <div className="text-sm text-foreground space-y-1">
-            <p>1 osoba: {formatCurrency(trainingPrices["1"])}</p>
-            <p>2 osoby: {formatCurrency(trainingPrices["2"])}</p>
-            <p>3+ osoby: {formatCurrency(trainingPrices["3"])}</p>
+            <p>1 osoba: {formatCurrency(effectivePrices["1"])}</p>
+            <p>2 osoby: {formatCurrency(effectivePrices["2"])}</p>
+            <p>3+ osoby: {formatCurrency(effectivePrices["3"])}</p>
           </div>
+          {usesLegacyPricing && (
+            <p className="text-xs text-primary mt-2">Fixovaná cena</p>
+          )}
         </div>
       </div>
 
