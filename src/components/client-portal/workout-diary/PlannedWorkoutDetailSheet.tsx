@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dumbbell, Timer, MapPin, Zap, MessageSquare, Calendar, Clock, Play } from "lucide-react";
+import { Dumbbell, Timer, MapPin, Zap, MessageSquare, Calendar, Clock, Play, Info } from "lucide-react";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { UnifiedDiaryEntry, DiaryExercise } from "@/hooks/useUnifiedDiary";
 import { formatTimeSeconds, detectExerciseMetricCategory } from "@/lib/exerciseMetrics";
+import { useAllExerciseDetails, ExerciseLookupData } from "@/hooks/useExerciseDetailsLookup";
+import { ExerciseDetailSheet, ExerciseDetailData } from "./ExerciseDetailSheet";
 
 interface PlannedWorkoutDetailSheetProps {
   open: boolean;
@@ -94,11 +97,39 @@ export function PlannedWorkoutDetailSheet({
   workout,
   onStartWorkout,
 }: PlannedWorkoutDetailSheetProps) {
+  const [selectedExercise, setSelectedExercise] = useState<ExerciseDetailData | null>(null);
+  const [exerciseDetailOpen, setExerciseDetailOpen] = useState(false);
+  
+  // Fetch exercise details for lookups
+  const { data: exerciseLookup } = useAllExerciseDetails();
+
   if (!workout) return null;
 
   const workoutType = workout.workout_type || "other";
   const WorkoutIcon = WORKOUT_TYPE_ICONS[workoutType] || Dumbbell;
   const workoutLabel = WORKOUT_TYPE_LABELS[workoutType] || workoutType;
+
+  const getExerciseDetails = (exerciseName: string): ExerciseLookupData | undefined => {
+    if (!exerciseLookup) return undefined;
+    return exerciseLookup.get(exerciseName.toLowerCase());
+  };
+
+  const handleExerciseClick = (exercise: DiaryExercise) => {
+    const details = getExerciseDetails(exercise.exercise_name);
+    setSelectedExercise({
+      name: exercise.exercise_name,
+      description_cs: details?.description_cs,
+      instructions_cs: details?.instructions_cs,
+      equipment: details?.equipment,
+      muscle_groups: details?.muscle_groups,
+    });
+    setExerciseDetailOpen(true);
+  };
+
+  const hasExerciseInfo = (exerciseName: string): boolean => {
+    const details = getExerciseDetails(exerciseName);
+    return !!(details?.description_cs || details?.instructions_cs);
+  };
 
   const scheduledDate = workout.scheduled_for 
     ? new Date(workout.scheduled_for) 
@@ -143,9 +174,14 @@ export function PlannedWorkoutDetailSheet({
               <div className="space-y-2">
                 {workout.exercises.map((exercise, index) => {
                   const details = formatExerciseDetails(exercise);
+                  const hasInfo = hasExerciseInfo(exercise.exercise_name);
 
                   return (
-                    <Card key={exercise.id || index} className="bg-secondary/30 border-border/50">
+                    <Card 
+                      key={exercise.id || index} 
+                      className="bg-secondary/30 border-border/50 cursor-pointer hover:bg-secondary/50 transition-colors"
+                      onClick={() => handleExerciseClick(exercise)}
+                    >
                       <CardContent className="p-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
@@ -156,6 +192,9 @@ export function PlannedWorkoutDetailSheet({
                               <span className="font-medium text-sm truncate">
                                 {exercise.exercise_name}
                               </span>
+                              {hasInfo && (
+                                <Info className="h-3.5 w-3.5 text-primary shrink-0" />
+                              )}
                             </div>
                             <div className="mt-1.5 pl-7 text-sm text-muted-foreground">
                               {details.primary}
@@ -226,6 +265,13 @@ export function PlannedWorkoutDetailSheet({
           </div>
         )}
       </SheetContent>
+
+      {/* Exercise Detail Sheet */}
+      <ExerciseDetailSheet
+        open={exerciseDetailOpen}
+        onOpenChange={setExerciseDetailOpen}
+        exercise={selectedExercise}
+      />
     </Sheet>
   );
 }
