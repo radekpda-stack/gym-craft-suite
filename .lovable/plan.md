@@ -1,214 +1,267 @@
 
+# RX Workout Šablony + Leaderboard Systém
 
-# Unilaterální cviky: Volba strany L/R a výpočet asymetrie
+## Přehled
 
-## Souhrn změn
-
-Implementace umožní klientům a trenérům zaznamenávat stranu (levá/pravá/obě) u jednostranných cviků a automaticky počítat procentuální rozdíl síly mezi končetinami.
+Implementuji kompletní systém pro:
+1. **RX Workout šablony** - standardizované tréninky (benchmarky)
+2. **Trenérský zápis výsledků** - formulář pro zadání skóre klientům
+3. **Gender-segmentovaný leaderboard** - oddělené žebříčky pro muže a ženy
+4. **Import z textu** - parser formátu JM_WORKOUT_V1
 
 ---
 
-## Databázová změna
+## Část 1: Databázové změny
 
-### Přidání sloupce `side` do `client_workout_exercises`
+### 1.1 Rozšíření tabulky `training_templates`
 
 ```sql
-ALTER TABLE client_workout_exercises
-ADD COLUMN side TEXT DEFAULT 'none' 
-CHECK (side IN ('left', 'right', 'both', 'none'));
+ALTER TABLE training_templates 
+ADD COLUMN is_rx_workout BOOLEAN DEFAULT false,
+ADD COLUMN scoring_mode TEXT DEFAULT 'standard' 
+  CHECK (scoring_mode IN ('standard', 'for_time', 'amrap', 'max_load', 'rounds_reps'));
 ```
 
-**Důvod:** Tabulka `exercise_entries` (trenérská) už má sloupec `side`, ale klientská tabulka `client_workout_exercises` ho postrádá.
+### 1.2 Rozšíření tabulky `training_template_exercises`
+
+```sql
+ALTER TABLE training_template_exercises
+ADD COLUMN rx_weight_kg NUMERIC,
+ADD COLUMN rx_distance_m NUMERIC,
+ADD COLUMN unit_label TEXT;
+```
+
+### 1.3 Rozšíření typu `workout_format`
+
+Přidat `max_load` do existujících hodnot (už máme: standard, amrap, emom, for_time, tabata, circuit).
 
 ---
 
-## Změny v kódu
+## Část 2: UI Komponenty
 
-### 1. Rozšíření `useExerciseDetailsLookup.ts`
+### 2.1 Nová stránka: RX Workouty (`/rx-workouts`)
 
-Přidat `is_unilateral` do interface a dotazu:
+Hlavní správa RX benchmarků s:
+- Seznam RX šablon (filtr: AMRAP, For Time, Max Load)
+- Import z textu (tlačítko "Import")
+- Propojení s Výzvami (vytvoř challenge z RX)
+
+### 2.2 Import Dialog (`RxImportDialog.tsx`)
+
+Textarea pro vložení textu ve formátu JM_WORKOUT_V1:
+```
+@name: Fran
+@type: for_time
+@timecap: 10:00
+
+21x Thruster | 43kg
+21x Pull-up
+15x Thruster | 43kg
+15x Pull-up
+9x Thruster | 43kg
+9x Pull-up
+```
+
+Parser provede:
+1. Extrakci metadat
+2. Rozpoznání cviků
+3. Mapování na `exercises` tabulku
+4. Zobrazení náhledu před uložením
+
+### 2.3 Trenérský formulář zápisu (`TrainerResultEntry.tsx`)
+
+Formulář v sekci Výsledky výzvy:
+- Výběr klienta (combobox)
+- Automatická detekce pohlaví z `clients.gender`
+- Vstupní pole podle typu výzvy:
+  - **For Time**: čas (MM:SS)
+  - **AMRAP**: kola + opakování (2 pole)
+  - **Max Load**: váha (kg)
+- Potvrzení trenérem
+
+### 2.4 Gender Leaderboard Tabs
+
+Rozšíření `ChallengeSubmissionsView.tsx`:
+- Záložky: Všichni | Muži | Ženy
+- Filtr podle `clients.gender`
+- Samostatné pořadí pro každou kategorii
+
+---
+
+## Část 3: Hooky a Logika
+
+### 3.1 Parser `useRxWorkoutParser.ts`
 
 ```typescript
-export interface ExerciseLookupData {
-  // ... existing fields
-  is_unilateral: boolean;  // NOVÉ
+interface ParsedRxWorkout {
+  valid: boolean;
+  errors: string[];
+  template: {
+    name: string;
+    workout_format: string;
+    time_cap_seconds?: number;
+    rounds?: number;
+    is_rx_workout: true;
+  };
+  exercises: Array<{
+    exercise_name: string;
+    exercise_id?: string; // mapováno z DB
+    reps_min?: number;
+    rx_weight_kg?: number;
+    rx_distance_m?: number;
+  }>;
+  unmapped_exercises: string[]; // cviky nenalezené v DB
 }
-
-// V dotazu přidat:
-.select('id, name, name_cs, description_cs, instructions_cs, equipment, muscle_groups, is_unilateral')
 ```
+
+### 3.2 Hook `useRxWorkouts.ts`
+
+- `useRxWorkouts()` - seznam RX šablon
+- `useCreateRxWorkout()` - vytvoření z parseru
+- `useRxWorkoutToChallenge()` - konverze na výzvu
+
+### 3.3 Hook `useTrainerResultEntry.ts`
+
+- Zápis výsledku trenérem
+- Automatické nastavení `confirmed_by: 'coach'`
+- Validace podle scoring_type
+
+### 3.4 Rozšíření `useChallengeSubmissions.ts`
+
+- Přidání gender filtru
+- Join s `clients.gender`
+- Výpočet pořadí v rámci kategorie
 
 ---
 
-### 2. Úprava `SimpleAddWorkoutDialog.tsx`
+## Část 4: Scoring Logika
 
-**Rozšíření interface:**
+### 4.1 AMRAP Kompozitní Skóre
+
 ```typescript
-interface ExerciseInput {
-  name: string;
-  exerciseId?: string;
-  sets: string;
-  reps: string;
-  weight: string;
-  isUnilateral?: boolean;  // NOVÉ
-  side?: 'left' | 'right' | 'both';  // NOVÉ
-}
+// 18 kol + 7 opak → 18.07
+const compositeScore = rounds + (reps / 1000);
 ```
 
-**Při přidání cviku:**
-- Detekovat `is_unilateral` z exercise lookup
-- Defaultně nastavit `side: 'both'` pro unilaterální cviky
+Uloženo do `score_primary`, sekundární do `score_secondary`.
 
-**UI změna:**
-- Pod názvem unilaterálního cviku zobrazit `SideSelector` (L / Obě / R)
-- Vizuální indikace pomocí badge pro jednostranné cviky
+### 4.2 For Time
 
-**Úprava handleSave:**
-```typescript
-exercises: exercises.map(e => ({
-  exercise_name: e.name,
-  exercise_id: e.exerciseId,
-  sets: parseInt(e.sets) || undefined,
-  reps: parseInt(e.reps) || undefined,
-  weight_kg: parseFloat(e.weight) || undefined,
-  side: e.isUnilateral ? e.side : 'none',  // NOVÉ
-})),
-```
+- `score_primary` = čas v sekundách
+- Nižší = lepší
+
+### 4.3 Max Load
+
+- `score_primary` = váha v kg
+- Vyšší = lepší
 
 ---
 
-### 3. Úprava `useClientWorkoutLogs.ts`
+## Část 5: Integrace
 
-**Rozšíření `WorkoutExercise` interface:**
-```typescript
-export interface WorkoutExercise {
-  // ... existing fields
-  side?: 'left' | 'right' | 'both' | 'none' | null;  // NOVÉ
-}
-```
+### 5.1 Propojení RX → Challenge
 
-**Při insertu cviků:**
-```typescript
-const exercisesToInsert = input.exercises.map((ex, idx) => ({
-  // ... existing fields
-  side: ex.side || 'none',  // NOVÉ
-}));
-```
+Tlačítko "Vytvořit výzvu" u RX workoutu:
+1. Předvyplní challenge z RX šablony
+2. Nastaví `training_template_id`
+3. Auto-generuje instrukce
+
+### 5.2 Navigace
+
+- Přidat položku "RX Workouty" do menu (pod Tréninkové šablony)
+- Route: `/rx-workouts`
 
 ---
 
-### 4. Úprava `useUnifiedDiary.ts`
+## Soubory k vytvoření/úpravě
 
-**Rozšíření `DiaryExercise` interface:**
-```typescript
-export interface DiaryExercise {
-  // ... existing fields
-  side?: 'left' | 'right' | 'both' | 'none' | null;  // NOVÉ
-}
-```
-
----
-
-### 5. Zobrazení `SideBadge` ve workout kartách
-
-**Soubory k úpravě:**
-- `SimpleWorkoutCard.tsx` - zobrazit badge u cviků v rozbalené sekci
-- `WorkoutDateDetailDialog.tsx` - zobrazit badge u seznamu cviků
-- `PlannedWorkoutDetailSheet.tsx` - zobrazit badge u plánovaných cviků
-
-**Příklad zobrazení:**
-```
-Single Leg Glute Bridge [L]  3×10 • 25kg
-Pistole [R]  3×8
-Bird Dog [L+R]  3×12
-```
-
----
-
-### 6. Přidání `AsymmetryCard` do `ClientPortalProgress.tsx`
-
-Import existující komponenty a přidání do stránky:
-
-```tsx
-import { AsymmetryCard } from '@/components/client-portal/progress/AsymmetryCard';
-
-// V renderovací části:
-{clientId && <AsymmetryCard clientId={clientId} />}
-```
-
-Hook `useAsymmetryAnalysis` již existuje a automaticky:
-- Seskupí záznamy podle cviku a strany
-- Vybere nejlepší výkon pro každou stranu
-- Vypočítá procento: `((max - min) / max) * 100`
-- Určí dominantní stranu
+| Soubor | Akce |
+|--------|------|
+| `src/pages/RxWorkouts.tsx` | NOVÝ - hlavní stránka |
+| `src/components/rx/RxImportDialog.tsx` | NOVÝ - import UI |
+| `src/components/rx/RxWorkoutCard.tsx` | NOVÝ - karta workoutu |
+| `src/components/rx/TrainerResultEntry.tsx` | NOVÝ - formulář zápisu |
+| `src/hooks/useRxWorkouts.ts` | NOVÝ - CRUD RX |
+| `src/hooks/useRxWorkoutParser.ts` | NOVÝ - parser |
+| `src/hooks/useTrainerResultEntry.ts` | NOVÝ - zápis výsledků |
+| `src/hooks/useTrainingTemplates.ts` | ROZŠÍŘIT - is_rx_workout |
+| `src/hooks/useChallenges.ts` | ROZŠÍŘIT - gender filtr |
+| `src/components/challenges/ChallengeSubmissionsView.tsx` | ROZŠÍŘIT - gender tabs |
+| `src/components/AppSidebar.tsx` | ROZŠÍŘIT - navigace |
+| `src/App.tsx` | ROZŠÍŘIT - route |
 
 ---
 
 ## Vizuální návrh
 
-### Výběr strany v dialogu přidání tréninku:
-
+### Import Dialog
 ```
-┌─────────────────────────────────────────────┐
-│ Pistole                              [X]    │
-├─────────────────────────────────────────────┤
-│ 🦵 Jednostranný cvik                        │
-│ ┌─────┬─────────┬─────┐                     │
-│ │  L  │   Obě   │  R  │                     │
-│ └─────┴─────────┴─────┘                     │
-├─────────────────────────────────────────────┤
-│ Série: [3]  Opakování: [8]                  │
-└─────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────┐
+│ 📥 Import RX Workoutu                        [X]   │
+├────────────────────────────────────────────────────┤
+│ ┌────────────────────────────────────────────────┐ │
+│ │ @name: Fran                                    │ │
+│ │ @type: for_time                                │ │
+│ │ @timecap: 10:00                                │ │
+│ │                                                │ │
+│ │ 21x Thruster | 43kg                            │ │
+│ │ 21x Pull-up                                    │ │
+│ │ ...                                            │ │
+│ └────────────────────────────────────────────────┘ │
+├────────────────────────────────────────────────────┤
+│ ✓ Parsováno: Fran (For Time, 10 min cap)           │
+│ ✓ 6 cviků nalezeno                                 │
+│ ⚠ 1 cvik nenalezen: "Thruster" → [Vytvořit]       │
+├────────────────────────────────────────────────────┤
+│                          [Zrušit] [Importovat]     │
+└────────────────────────────────────────────────────┘
 ```
 
-### Karta asymetrie na stránce Pokrok:
-
+### Trenérský zápis výsledku
 ```
 ┌──────────────────────────────────────────────┐
-│ ⚖️ ASYMETRIE L vs R                          │
+│ 🏋️ Zápis výsledku: Fran                      │
 ├──────────────────────────────────────────────┤
-│ Single Leg Glute Bridge         [15%]        │
-│ L ████████░░░░ 25kg | 30kg ██████████████ R  │
-│      → Pravá strana silnější                 │
-├──────────────────────────────────────────────┤
-│ Pistole                          [8%]        │
-│ L ██████████ 12× | 13× ██████████████████ R  │
-│          Symetrický výkon                    │
+│ Klient:  [▼ Vybrat klienta...]               │
+│                                              │
+│ Čas:     [ 4 ] min [ 23 ] sec                │
+│                                              │
+│ Poznámka: ____________________________        │
+│                                              │
+│               [Zrušit] [Zapsat výsledek]     │
 └──────────────────────────────────────────────┘
-│ Legenda: <10% ● | 10-20% ● | >20% ●          │
-└──────────────────────────────────────────────┘
+```
+
+### Gender Leaderboard
+```
+┌─────────────────────────────────────────────────────┐
+│ Výsledky: Fran                                      │
+├─────────────────────────────────────────────────────┤
+│ [Všichni (12)] [Muži (7)] [Ženy (5)]                │
+├─────────────────────────────────────────────────────┤
+│ 🥇 Jan Novák         4:23                           │
+│ 🥈 Petr Svoboda      4:58                           │
+│ 🥉 Martin Černý      5:12                           │
+│ 4. Tomáš Kučera      5:45                           │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Soubory k úpravě
+## Pořadí implementace
 
-| Soubor | Typ změny |
-|--------|-----------|
-| Databáze `client_workout_exercises` | Migrace - přidat sloupec `side` |
-| `src/hooks/useExerciseDetailsLookup.ts` | Přidat `is_unilateral` |
-| `src/hooks/useClientWorkoutLogs.ts` | Přidat `side` do interface a insert |
-| `src/hooks/useUnifiedDiary.ts` | Přidat `side` do `DiaryExercise` |
-| `src/components/client-portal/workout-diary/SimpleAddWorkoutDialog.tsx` | Přidat `SideSelector` pro unilaterální cviky |
-| `src/components/client-portal/workout-diary/SimpleWorkoutCard.tsx` | Zobrazit `SideBadge` |
-| `src/components/client-portal/workout-diary/WorkoutDateDetailDialog.tsx` | Zobrazit `SideBadge` |
-| `src/components/client-portal/workout-diary/PlannedWorkoutDetailSheet.tsx` | Zobrazit `SideBadge` |
-| `src/pages/client-portal/ClientPortalProgress.tsx` | Přidat `AsymmetryCard` |
+1. **Databázové migrace** - rozšíření tabulek
+2. **Parser JM_WORKOUT_V1** - jádro importu
+3. **RX Workouts stránka** - seznam + import dialog
+4. **Trenérský zápis výsledků** - formulář
+5. **Gender leaderboard** - záložky v submissions view
+6. **Navigace** - menu + routing
 
 ---
 
-## Existující komponenty k využití
+## Technické poznámky
 
-- `SideSelector` - UI pro výběr strany (L / Obě / R)
-- `SideBadge` - vizuální badge [L], [R], [L+R]
-- `useAsymmetryAnalysis` - hook pro výpočet asymetrie
-- `AsymmetryCard` - karta s vizualizací asymetrie
-
----
-
-## Poznámky
-
-- **16 cviků** je již označeno jako `is_unilateral` v databázi (Pistole, Bird dog, Single Leg Jump, atd.)
-- Hook `useAsymmetryAnalysis` automaticky počítá asymetrie z `exercise_entries` - bude fungovat pro trenérské záznamy ihned
-- Pro klientské záznamy bude potřeba rozšířit hook, aby zahrnoval i `client_workout_exercises`
-
+- Existující `challenges` systém plně využit
+- `training_templates` rozšířeno o `is_rx_workout` flag
+- `clients.gender` již existuje pro segmentaci
+- Kompozitní AMRAP skóre (rounds.reps) kompatibilní s existujícím `score_primary/score_secondary`
