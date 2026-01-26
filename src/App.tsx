@@ -61,6 +61,7 @@ const FinanceAnalytics = lazy(() => import("./pages/FinanceAnalytics"));
 const NutritionPage = lazy(() => import("./pages/NutritionPage"));
 const NutritionClientDetail = lazy(() => import("./pages/NutritionClientDetail"));
 const TrainingTemplates = lazy(() => import("./pages/TrainingTemplates"));
+const RxWorkouts = lazy(() => import("./pages/RxWorkouts"));
 const ClientPortalAdmin = lazy(() => import("./pages/ClientPortalAdmin"));
 const MyProfile = lazy(() => import("./pages/MyProfile"));
 const PriceMigration = lazy(() => import("./pages/PriceMigration"));
@@ -216,6 +217,7 @@ const App = () => (
                           {/* Legacy route - redirect to main nutrition page */}
                           <Route path="/nutrition/campaigns/:id" element={<Navigate to="/nutrition" replace />} />
                           <Route path="/training-templates" element={<LazyRouteWrapper><TrainingTemplates /></LazyRouteWrapper>} />
+                          <Route path="/rx-workouts" element={<LazyRouteWrapper><RxWorkouts /></LazyRouteWrapper>} />
                           <Route path="/client-portal" element={<LazyRouteWrapper><ClientPortalAdmin /></LazyRouteWrapper>} />
                           
                           <Route path="/my-profile" element={<LazyRouteWrapper><MyProfile /></LazyRouteWrapper>} />

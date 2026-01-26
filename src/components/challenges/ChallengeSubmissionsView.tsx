@@ -8,12 +8,14 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Challenge, useChallengeSubmissions } from '@/hooks/useChallenges';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Trophy, Medal, Award, Users, Image as ImageIcon } from 'lucide-react';
+import { Trophy, Medal, Award, Users, Image as ImageIcon, ClipboardEdit } from 'lucide-react';
 import { formatChallengeScore, getMetricLabel } from '@/lib/challengeUtils';
 import { SubmissionMediaGallery } from './SubmissionMediaGallery';
+import { TrainerResultEntry } from '@/components/rx/TrainerResultEntry';
 
 interface ChallengeSubmissionsViewProps {
   challenge: Challenge;
@@ -21,10 +23,14 @@ interface ChallengeSubmissionsViewProps {
   onOpenChange: (open: boolean) => void;
 }
 
+type GenderFilter = 'all' | 'male' | 'female';
+
 export function ChallengeSubmissionsView({ challenge, open, onOpenChange }: ChallengeSubmissionsViewProps) {
   const { data: submissions, isLoading } = useChallengeSubmissions(challenge.id);
   const [mediaGalleryOpen, setMediaGalleryOpen] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<{ urls: string[]; clientName: string; score: string } | null>(null);
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
+  const [resultEntryOpen, setResultEntryOpen] = useState(false);
 
   // Sort submissions
   const sortedSubmissions = [...(submissions || [])].sort((a, b) => {
@@ -51,12 +57,24 @@ export function ChallengeSubmissionsView({ challenge, open, onOpenChange }: Chal
     }
   }
 
-  const rankedSubmissions = Array.from(bestPerClient.values()).sort((a, b) => {
-    if (challenge.scoring_type === 'time_lower_better') {
-      return a.score_primary - b.score_primary;
-    }
-    return b.score_primary - a.score_primary;
-  });
+  // Filter by gender
+  const rankedSubmissions = Array.from(bestPerClient.values())
+    .filter(sub => {
+      if (genderFilter === 'all') return true;
+      const gender = (sub as any).clients?.gender;
+      return gender === genderFilter;
+    })
+    .sort((a, b) => {
+      if (challenge.scoring_type === 'time_lower_better') {
+        return a.score_primary - b.score_primary;
+      }
+      return b.score_primary - a.score_primary;
+    });
+
+  // Count by gender
+  const allSubmissions = Array.from(bestPerClient.values());
+  const maleCount = allSubmissions.filter(s => (s as any).clients?.gender === 'male').length;
+  const femaleCount = allSubmissions.filter(s => (s as any).clients?.gender === 'female').length;
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Trophy className="h-5 w-5 text-warning" />;
@@ -78,6 +96,31 @@ export function ChallengeSubmissionsView({ challenge, open, onOpenChange }: Chal
           </DialogDescription>
         </DialogHeader>
 
+        {/* Gender filter tabs */}
+        <div className="flex items-center justify-between">
+          <Tabs value={genderFilter} onValueChange={(v) => setGenderFilter(v as GenderFilter)}>
+            <TabsList>
+              <TabsTrigger value="all">
+                Všichni ({allSubmissions.length})
+              </TabsTrigger>
+              <TabsTrigger value="male">
+                Muži ({maleCount})
+              </TabsTrigger>
+              <TabsTrigger value="female">
+                Ženy ({femaleCount})
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setResultEntryOpen(true)}
+          >
+            <ClipboardEdit className="h-4 w-4 mr-2" />
+            Zapsat výsledek
+          </Button>
+        </div>
+
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
@@ -95,6 +138,7 @@ export function ChallengeSubmissionsView({ challenge, open, onOpenChange }: Chal
               const mediaUrls = (sub as any).media_urls as string[] | null;
               const hasMedia = mediaUrls && mediaUrls.length > 0;
               const clientName = (sub as any).clients?.name || 'Neznámý';
+              const clientGender = (sub as any).clients?.gender;
               
               return (
                 <div
@@ -107,7 +151,14 @@ export function ChallengeSubmissionsView({ challenge, open, onOpenChange }: Chal
                     {getRankIcon(index + 1)}
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">{clientName}</p>
+                    <p className="font-medium">
+                      {clientName}
+                      {clientGender && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ({clientGender === 'male' ? 'M' : 'Ž'})
+                        </span>
+                      )}
+                    </p>
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(sub.submitted_at), 'd. MMM yyyy HH:mm', { locale: cs })}
                     </p>
@@ -156,6 +207,13 @@ export function ChallengeSubmissionsView({ challenge, open, onOpenChange }: Chal
             score={selectedMedia.score}
           />
         )}
+
+        {/* Trainer Result Entry Dialog */}
+        <TrainerResultEntry
+          open={resultEntryOpen}
+          onOpenChange={setResultEntryOpen}
+          challenge={challenge}
+        />
       </DialogContent>
     </Dialog>
   );
