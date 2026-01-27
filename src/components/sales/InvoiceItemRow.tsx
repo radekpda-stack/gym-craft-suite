@@ -1,4 +1,4 @@
-import { Check, AlertTriangle, Package, Sparkles, Hash } from 'lucide-react';
+import { Check, AlertTriangle, Package, Sparkles, Hash, Tag } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { ParsedInvoiceItem } from '@/hooks/useInvoiceImport';
 import { formatCurrency } from '@/lib/formatters';
+import { Product } from '@/hooks/useProducts';
+import { ProductMatchSelector } from './ProductMatchSelector';
 
 const CATEGORIES = [
   { value: 'supplement', label: 'Doplněk' },
@@ -18,11 +20,19 @@ const CATEGORIES = [
 
 interface InvoiceItemRowProps {
   item: ParsedInvoiceItem;
+  products: Product[];
   onToggleSelection: () => void;
   onUpdate: (updates: Partial<ParsedInvoiceItem>) => void;
+  onChangeMatch: (productId: string | null) => void;
 }
 
-export function InvoiceItemRow({ item, onToggleSelection, onUpdate }: InvoiceItemRowProps) {
+export function InvoiceItemRow({ 
+  item, 
+  products,
+  onToggleSelection, 
+  onUpdate,
+  onChangeMatch,
+}: InvoiceItemRowProps) {
   const isNew = !item.matchedProductId;
   const hasLowMargin = item.editedPurchasePrice > 0 && item.editedSellPrice > 0 && 
     ((item.editedSellPrice - item.editedPurchasePrice) / item.editedSellPrice) < 0.2;
@@ -30,6 +40,22 @@ export function InvoiceItemRow({ item, onToggleSelection, onUpdate }: InvoiceIte
   const marginPercent = item.editedPurchasePrice > 0 && item.editedSellPrice > 0
     ? Math.round((1 - item.editedPurchasePrice / item.editedSellPrice) * 100)
     : 0;
+
+  // Check if AI is uncertain about the match
+  const isUncertainMatch = item.matchedProductId && item.confidence < 0.8;
+  const hasAlternatives = item.matchSuggestions && item.matchSuggestions.length > 1;
+
+  // Format extracted details
+  const detailsBadges = [];
+  if (item.extractedDetails?.brand) {
+    detailsBadges.push({ label: item.extractedDetails.brand, icon: Tag });
+  }
+  if (item.extractedDetails?.weight) {
+    detailsBadges.push({ label: item.extractedDetails.weight, icon: null });
+  }
+  if (item.extractedDetails?.flavor) {
+    detailsBadges.push({ label: item.extractedDetails.flavor, icon: null });
+  }
 
   return (
     <div className={cn(
@@ -64,6 +90,13 @@ export function InvoiceItemRow({ item, onToggleSelection, onUpdate }: InvoiceIte
               </Badge>
             )}
             
+            {isUncertainMatch && (
+              <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Ověřte shodu
+              </Badge>
+            )}
+            
             {hasMissingPrice && (
               <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
                 <AlertTriangle className="w-3 h-3 mr-1" />
@@ -78,6 +111,18 @@ export function InvoiceItemRow({ item, onToggleSelection, onUpdate }: InvoiceIte
               </Badge>
             )}
           </div>
+
+          {/* Extracted details badges */}
+          {detailsBadges.length > 0 && (
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
+              {detailsBadges.map((badge, i) => (
+                <Badge key={i} variant="secondary" className="text-[10px] h-5">
+                  {badge.icon && <badge.icon className="w-2.5 h-2.5 mr-0.5" />}
+                  {badge.label}
+                </Badge>
+              ))}
+            </div>
+          )}
           
           {/* SKU code */}
           {item.skuCode && (
@@ -87,14 +132,22 @@ export function InvoiceItemRow({ item, onToggleSelection, onUpdate }: InvoiceIte
             </span>
           )}
           
-          {item.matchedProductName && item.matchedProductName !== item.name && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              → Přiřazeno k: {item.matchedProductName}
-            </p>
+          {/* Product match selector */}
+          {item.selected && (
+            <div className="mt-2">
+              <ProductMatchSelector
+                matchedProductId={item.matchedProductId}
+                matchedProductName={item.matchedProductName}
+                confidence={item.confidence}
+                matchSuggestions={item.matchSuggestions}
+                products={products}
+                onSelect={onChangeMatch}
+              />
+            </div>
           )}
           
           {item.matchedProduct && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-1">
               <Package className="w-3 h-3 inline mr-1" />
               Na skladu: {item.matchedProduct.stock_quantity} ks
               {item.selected && ` (+${item.editedQuantity} ks)`}

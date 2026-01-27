@@ -24,6 +24,20 @@ interface ParsedInvoiceItem {
   matchedProductName: string | null;
   confidence: number;
   skuCode: string | null;
+  // Match suggestions for manual correction
+  matchSuggestions?: {
+    productId: string;
+    productName: string;
+    confidence: number;
+    matchReason: string;
+  }[];
+  // Extracted details for enrichment
+  extractedDetails?: {
+    brand?: string;
+    weight?: string;
+    flavor?: string;
+    size?: string;
+  };
 }
 
 interface ParsedInvoice {
@@ -69,26 +83,50 @@ serve(async (req) => {
       );
     }
 
-    // Prepare product list for matching - include SKU codes
+    // Prepare product list for matching - include SKU codes and more details
     const productList = existingProducts.map(p => {
       const skuPart = p.sku_code ? `, SKU: ${p.sku_code}` : '';
-      return `- ${p.name} (kategorie: ${p.category}, ID: ${p.id}${skuPart})`;
+      return `- "${p.name}" (kategorie: ${p.category}, ID: ${p.id}${skuPart})`;
     }).join('\n');
 
-    const systemPrompt = `Jsi asistent pro analýzu faktur od českých dodavatelů. Tvým úkolem je extrahovat položky produktů z faktur a porovnat je s existujícími produkty.
+    const systemPrompt = `Jsi expert na analýzu faktur od českých dodavatelů (zejména Vilgain, Aktin, MyProtein). Tvým úkolem je extrahovat položky produktů a PŘESNĚ je spárovat s existujícími produkty.
 
 DŮLEŽITÉ INSTRUKCE:
-1. Zpracuj VŠECHNY STRANY dokumentu - faktury mohou mít více stran
-2. Extrahuj SKU kódy z názvů produktů - obvykle ve formátu [PVXXXXX] nebo podobném
-3. Ignoruj položky typu doprava, poštovné, balné - extrahuj pouze produkty
+1. Zpracuj VŠECHNY STRANY dokumentu
+2. Extrahuj SKU kódy z názvů produktů - formáty: [PVXXXXX], [AKXXXXX], SKU:XXXXX
+3. Ignoruj položky typu doprava, poštovné, balné, sleva
 
-Pro každou položku produktu urči:
-- name: Název produktu (BEZ SKU kódu v závorce - ten extrahuj zvlášť)
-- skuCode: SKU/katalogové číslo (např. "PV44916" z "[PV44916]")
-- quantity: Počet kusů (pozor na české formátování "1,000 ks" = 1 kus)
-- purchasePrice: Cena za kus (použij cenu s DPH/Brutto pokud je k dispozici)
-- suggestedCategory: supplement (doplňky), drink (nápoje), snack (svačiny), equipment (vybavení), other
-- suggestedSellPrice: Navržená prodejní cena s marží podle kategorie
+EXTRAKCE DETAILŮ PRODUKTU:
+Pro každý produkt extrahuj tyto atributy (pokud jsou v názvu):
+- brand: Značka (Vilgain, Aktin, MyProtein, Nutrend, atd.)
+- weight: Gramáž/objem (25g, 500g, 1kg, 330ml, atd.)
+- flavor: Příchuť (čokoláda, vanilka, jahoda, peach fuzz, atd.)
+- size: Velikost balení nebo varianta
+
+INTELIGENTNÍ PÁROVÁNÍ PRODUKTŮ:
+Priorita při párování s existujícími produkty:
+1. PŘESNÁ SHODA SKU kódu → confidence 0.95-1.0
+2. Shoda značky + gramáže + příchutě → confidence 0.85-0.95
+3. Shoda značky + typu produktu (whey, bar, coffee) → confidence 0.7-0.85
+4. Podobný název (fuzzy) → confidence 0.5-0.7
+
+VELMI DŮLEŽITÉ pro párování:
+- "Vilgain Clear Whey Isolate Peach fuzz 25 g" by měl matchovat s produktem obsahujícím "Clear Whey", "Peach" a "25g"
+- Ignoruj drobné rozdíly v názvech (Isolate vs Isolát, fuzz vs Fuzz)
+- Pokud je více možných shod, vrať až 3 alternativy v matchSuggestions
+
+Pro každou položku produktu vrať:
+- name: Čistý název produktu (BEZ SKU kódu)
+- skuCode: Extrahované SKU (např. "PV44916")
+- quantity: Počet kusů (1,000 ks = 1 kus)
+- purchasePrice: Cena za kus (s DPH/Brutto)
+- suggestedCategory: supplement|drink|snack|equipment|other
+- suggestedSellPrice: Navržená prodejní cena podle marže
+- matchedProductId: UUID nejlepší shody nebo null
+- matchedProductName: Název matchovaného produktu nebo null
+- confidence: Jistota párování 0-1
+- matchSuggestions: Až 3 alternativní návrhy párování [{productId, productName, confidence, matchReason}]
+- extractedDetails: {brand, weight, flavor, size} - extrahované atributy
 
 Marže podle kategorií:
 - supplement: 60% (prodejní = nákupní * 2.5)
@@ -97,15 +135,10 @@ Marže podle kategorií:
 - equipment: 40% (prodejní = nákupní * 1.67)
 - other: 50% (prodejní = nákupní * 2)
 
-MAPOVÁNÍ NA EXISTUJÍCÍ PRODUKTY:
-1. Nejprve porovnej podle SKU kódu (pokud existuje)
-2. Pak porovnej podle podobnosti názvu (fuzzy matching)
-3. Confidence 0.9+ pokud je shoda SKU, 0.7-0.9 pro podobné názvy
-
 Existující produkty v systému:
 ${productList || '(žádné existující produkty)'}
 
-Vrať POUZE validní JSON bez jakéhokoliv dalšího textu v tomto formátu:
+Vrať POUZE validní JSON:
 {
   "invoice": {
     "supplier": "Název dodavatele nebo null",
@@ -115,26 +148,35 @@ Vrať POUZE validní JSON bez jakéhokoliv dalšího textu v tomto formátu:
   },
   "items": [
     {
-      "name": "Název položky BEZ SKU",
+      "name": "Čistý název produktu",
       "skuCode": "PV44916 nebo null",
       "quantity": číslo,
       "purchasePrice": číslo nebo null,
       "suggestedSellPrice": číslo nebo null,
       "suggestedCategory": "supplement|drink|snack|equipment|other",
-      "matchedProductId": "UUID existujícího produktu nebo null",
-      "matchedProductName": "Název existujícího produktu nebo null",
-      "confidence": číslo 0-1 (jistota rozpoznání/mapování)
+      "matchedProductId": "UUID nebo null",
+      "matchedProductName": "Název nebo null",
+      "confidence": 0-1,
+      "matchSuggestions": [
+        {"productId": "UUID", "productName": "Název", "confidence": 0-1, "matchReason": "SKU shoda / Podobný název"}
+      ],
+      "extractedDetails": {
+        "brand": "Vilgain",
+        "weight": "25g",
+        "flavor": "Peach fuzz",
+        "size": null
+      }
     }
   ]
 }`;
 
-    console.log('Calling Lovable AI to parse invoice...');
+    console.log('Calling Lovable AI to parse invoice with enhanced matching...');
     
     // Prepare content - same for PDF and images with Gemini
     const content = [
       {
         type: "text",
-        text: "Analyzuj tuto fakturu a extrahuj VŠECHNY položky produktů/zboží ze VŠECH STRAN podle instrukcí. Pozorně rozpoznej SKU kódy. Ignoruj poštovné a balné."
+        text: "Analyzuj tuto fakturu a extrahuj VŠECHNY položky produktů ze VŠECH STRAN. Přesně spáruj s existujícími produkty podle SKU, značky, gramáže a příchutě. Pro každou položku nabídni až 3 alternativní návrhy párování."
       },
       {
         type: "image_url",
@@ -156,7 +198,7 @@ Vrať POUZE validní JSON bez jakéhokoliv dalšího textu v tomto formátu:
           { role: "system", content: systemPrompt },
           { role: "user", content }
         ],
-        max_tokens: 8192, // Increased for multi-page invoices
+        max_tokens: 8192,
         temperature: 0.1,
       }),
     });
@@ -238,9 +280,11 @@ Vrať POUZE validní JSON bez jakéhokoliv dalšího textu v tomto formátu:
       matchedProductName: item.matchedProductName || null,
       confidence: Math.min(1, Math.max(0, item.confidence || 0.5)),
       skuCode: item.skuCode || null,
+      matchSuggestions: item.matchSuggestions || [],
+      extractedDetails: item.extractedDetails || {},
     }));
 
-    console.log(`Successfully parsed ${validatedItems.length} items from invoice`);
+    console.log(`Successfully parsed ${validatedItems.length} items from invoice with enhanced matching`);
 
     const result: ParseInvoiceResponse = {
       success: true,
