@@ -24,7 +24,7 @@ import {
   Copy,
   RefreshCw,
   Bell,
-  ExternalLink,
+  Eye,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
+import { FeedbackDetailDialog } from './FeedbackDetailDialog';
+import type { TrainingFeedback } from '@/hooks/useTrainingFeedback';
 
 interface AttentionItem {
   id: string;
@@ -44,6 +46,7 @@ interface AttentionItem {
   trainingId?: string;
   trainingDate?: string;
   feedbackRequestId: string;
+  feedbackId?: string; // For red flags - the actual feedback ID
   createdAt: string;
   sentAt: string | null;
   expiresAt: string;
@@ -118,6 +121,9 @@ export function FeedbackAttentionInbox({
   onItemClick,
 }: FeedbackAttentionInboxProps) {
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [selectedFeedback, setSelectedFeedback] = useState<TrainingFeedback | null>(null);
+  const [selectedMeta, setSelectedMeta] = useState<{ clientName?: string; trainingDate?: string }>({});
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: items, isLoading, refetch } = useQuery({
     queryKey: ['feedback-attention-inbox'],
@@ -164,6 +170,7 @@ export function FeedbackAttentionInbox({
             clientName: req.clients?.name || 'Neznámý klient',
             trainingId: req.training_session_id,
             feedbackRequestId: req.id,
+            feedbackId: fb.id, // Store the feedback ID for opening detail
             createdAt: fb.created_at,
             sentAt: req.sent_at,
             expiresAt: req.expires_at,
@@ -352,7 +359,37 @@ export function FeedbackAttentionInbox({
     }
   };
 
-  if (isLoading) {
+  const handleOpenFeedbackDetail = async (item: AttentionItem) => {
+    if (!item.feedbackId) return;
+    
+    setProcessingId(item.id);
+    
+    try {
+      const { data: feedback, error } = await supabase
+        .from('training_feedback')
+        .select('*')
+        .eq('id', item.feedbackId)
+        .single();
+
+      if (error) throw error;
+
+      setSelectedFeedback(feedback as TrainingFeedback);
+      setSelectedMeta({
+        clientName: item.clientName,
+        trainingDate: item.trainingDate,
+      });
+      setDialogOpen(true);
+    } catch (error) {
+      toast({
+        title: 'Chyba',
+        description: 'Nepodařilo se načíst detail feedbacku.',
+        variant: 'destructive',
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
     return (
       <Card className="glass">
         {showHeader && (
@@ -375,6 +412,7 @@ export function FeedbackAttentionInbox({
   const hasItems = items && items.length > 0;
 
   return (
+    <>
     <Card className="glass">
       {showHeader && (
         <CardHeader className="pb-2">
@@ -471,16 +509,14 @@ export function FeedbackAttentionInbox({
                       
                       {/* Actions */}
                       <div className="flex items-center gap-1 shrink-0">
-                        {item.type === 'red_flag' && item.trainingId && (
+                        {item.type === 'red_flag' && item.feedbackId && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            asChild
+                            onClick={() => handleOpenFeedbackDetail(item)}
                           >
-                            <Link to={`/trainings/${item.trainingId}`}>
-                              <ExternalLink className="w-4 h-4 mr-1" />
-                              Detail
-                            </Link>
+                            <Eye className="w-4 h-4 mr-1" />
+                            Detail
                           </Button>
                         )}
                         
@@ -555,5 +591,21 @@ export function FeedbackAttentionInbox({
         )}
       </CardContent>
     </Card>
+
+    {/* Feedback Detail Dialog */}
+    <FeedbackDetailDialog
+      feedback={selectedFeedback}
+      open={dialogOpen}
+      onOpenChange={(open) => {
+        setDialogOpen(open);
+        if (!open) {
+          setSelectedFeedback(null);
+          setSelectedMeta({});
+        }
+      }}
+      clientName={selectedMeta.clientName}
+      trainingDate={selectedMeta.trainingDate}
+    />
+    </>
   );
 }
