@@ -1,278 +1,246 @@
 
-# Vylepšený RX Workout Import + Zápis Výsledků
+# RX Workout V2 - Implementační plán
 
-## Analýza vašeho formátu
+## Přehled
 
-Váš formát je strukturovanější než současný parser podporuje:
+Implementuji kompletní vylepšení RX Workout systému s podporou vašeho formátu workoutů, automatickým mapováním cviků a přímým zápisem výsledků.
 
-```text
-WORKOUT: Engine + Strength Circuit     ← název
-TYPE: FOR_TIME                          ← typ hodnocení
-ROUNDS: 3                               ← počet kol
+---
 
-EXERCISE: TREADMILL                     ← název cviku
-DISTANCE: 500 m                         ← vzdálenost
-INCLINE: 15 %                           ← sklon (nový parametr)
-SPEED: INDIVIDUAL                       ← rychlost (nový parametr)
+## Část 1: Databázové změny
 
-EXERCISE: DUMBBELL_THRUSTER
-LOAD: 2x8 kg                            ← váha (formát 2xVÁHA)
-REPS: 20                                ← opakování
+### Nové sloupce v `training_template_exercises`
+```sql
+ALTER TABLE training_template_exercises
+ADD COLUMN incline_percent NUMERIC,      -- sklon (treadmill)
+ADD COLUMN speed_setting TEXT,           -- rychlost
+ADD COLUMN damper_resistance INTEGER,    -- odpor (rower/skierg)
+ADD COLUMN round_marker TEXT,            -- značka konce kola
+ADD COLUMN load_format TEXT;             -- formát váhy (2x8)
+```
 
-EXERCISE: ROW_ERG
-DISTANCE: 400 m
-DAMPER: 7                               ← odpor (nový parametr)
-
-ROUND_COMPLETE: AFTER_SKIERG            ← značka konce kola
-
-SCORE: TIME                             ← co měříme
+### Nová tabulka `rx_workout_results`
+```sql
+CREATE TABLE rx_workout_results (
+  id UUID PRIMARY KEY,
+  rx_workout_id UUID REFERENCES training_templates(id),
+  client_id UUID REFERENCES clients(id),
+  score_primary NUMERIC NOT NULL,
+  score_secondary NUMERIC,
+  performed_at DATE DEFAULT CURRENT_DATE,
+  notes TEXT,
+  recorded_by_user_id UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT unique_rx_result_per_day UNIQUE (rx_workout_id, client_id, performed_at)
+);
 ```
 
 ---
 
-## Část 1: Vylepšený Parser
+## Část 2: V2 Parser (`useRxWorkoutParserV2.ts`)
 
-### Nové podporované parametry
+### Podporované klíčové slova
 
-| Parametr | Popis | Příklad |
-|----------|-------|---------|
+| Klíč | Popis | Příklad |
+|------|-------|---------|
+| `WORKOUT:` | Název | `Engine + Strength Circuit` |
+| `TYPE:` | Typ hodnocení | `FOR_TIME`, `AMRAP` |
+| `ROUNDS:` | Počet kol | `3` |
 | `EXERCISE:` | Název cviku | `DUMBBELL_THRUSTER` |
 | `DISTANCE:` | Vzdálenost | `500 m` |
 | `REPS:` | Opakování | `20` |
-| `LOAD:` | Váha | `2x8 kg`, `24 kg` |
-| `INCLINE:` | Sklon (treadmill) | `15 %` |
-| `SPEED:` | Rychlost | `INDIVIDUAL`, `12 km/h` |
-| `DAMPER:` | Odpor (rower/skierg) | `7` |
-| `RESISTANCE:` | Odpor obecně | `7` |
-| `TIME:` | Čas cviku | `1:00` |
-| `ROUND_COMPLETE:` | Značka konce kola | `AFTER_SKIERG` |
+| `LOAD:` | Váha | `2x8 kg` |
+| `INCLINE:` | Sklon | `15 %` |
+| `SPEED:` | Rychlost | `INDIVIDUAL` |
+| `DAMPER:` | Odpor | `7` |
+| `ROUND_COMPLETE:` | Konec kola | `AFTER_SKIERG` |
 
-### Mapování názvů cviků
-
-Parser bude hledat cviky v databázi podle:
-1. **Přesná shoda** - `DUMBBELL_THRUSTER` → `Dumbbell Thruster`
-2. **Normalizovaná shoda** - odstraní podtržítka, převede na lowercase
-3. **Alias shoda** - využije tabulku `exercise_aliases`
-
-Pokud cvik neexistuje → **nabídne vytvoření**
+### Funkce parseru
+1. **Normalizace názvů**: `DUMBBELL_THRUSTER` → `Dumbbell Thruster`
+2. **Fuzzy matching**: Hledá podobné cviky v databázi
+3. **Automatické mapování**: Pokud shoda > 85%, automaticky přiřadí
+4. **Návrhy**: Zobrazí až 5 nejlepších shod
 
 ---
 
-## Část 2: UI pro Import s Mapováním Cviků
+## Část 3: Import s mapováním cviků
 
 ### Krok 1: Vložení textu
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ 📥 Import RX Workoutu                                  [X]  │
-├─────────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ WORKOUT: Engine + Strength Circuit                     │ │
-│ │ TYPE: FOR_TIME                                         │ │
-│ │ ROUNDS: 3                                              │ │
-│ │                                                        │ │
-│ │ EXERCISE: TREADMILL                                    │ │
-│ │ DISTANCE: 500 m                                        │ │
-│ │ ...                                                    │ │
-│ └─────────────────────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────────────────┤
-│ ✓ Parsováno: Engine + Strength Circuit (For Time, 3 kola)  │
-│ ✓ 5 cviků nalezeno                                          │
-│ ⚠ 2 cviky potřebují namapovat                               │
-├─────────────────────────────────────────────────────────────┤
-│                                [Zrušit] [Pokračovat →]      │
-└─────────────────────────────────────────────────────────────┘
-```
+- Textarea pro vložení workoutu
+- Real-time parsování
+- Zobrazení rozpoznaných cviků
 
-### Krok 2: Mapování nenamapovaných cviků
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ 🔗 Namapovat cviky                                     [X]  │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│ SKILLUP_SKIERG                                              │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ (○) Vybrat existující: [▼ Hledat cvik...             ] │ │
-│ │ (●) Vytvořit nový cvik                                 │ │
-│ │     Název: [SkillUp SkiErg                          ]  │ │
-│ │     Kategorie: [▼ Kardio                            ]  │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│                                                             │
-│ DUMBBELL_LUNGES                                             │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ (●) Vybrat existující: [▼ Dumbbell Lunges ✓         ]  │ │
-│ │ (○) Vytvořit nový cvik                                 │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│                                                             │
-├─────────────────────────────────────────────────────────────┤
-│                          [← Zpět] [Importovat workout]      │
-└─────────────────────────────────────────────────────────────┘
+### Krok 2: Mapování nenamapovaných cviků (`RxExerciseMappingStep.tsx`)
+```
+┌─────────────────────────────────────────────────────┐
+│ 🔗 Mapování cviků                                   │
+├─────────────────────────────────────────────────────┤
+│ SKILLUP_SKIERG                                      │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ (○) Vybrat existující cvik                      │ │
+│ │     [▼ Hledat... ]                              │ │
+│ │     Návrhy: SkiErg (78%), Ski Machine (65%)     │ │
+│ │ (●) Vytvořit nový cvik                          │ │
+│ │     Název: [SkillUp SkiErg            ]         │ │
+│ │     Kategorie: [▼ Kardio               ]        │ │
+│ └─────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────┤
+│                    [← Zpět] [Importovat]            │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Část 3: Přímý Zápis Výsledků na RX Workoutu
+## Část 4: Hook pro výsledky (`useRxWorkoutResults.ts`)
 
-Místo vytváření výzvy → **přímý zápis výsledku** na kartě workoutu:
+```typescript
+// Načtení výsledků
+useRxWorkoutResults(workoutId)
 
-### RX Workout karta s historií
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ Engine + Strength Circuit                        [⋮ Menu]  │
-├─────────────────────────────────────────────────────────────┤
-│ [For Time] [3 kola]                                         │
-│                                                             │
-│ 🏃 500m Treadmill (15% incline)                             │
-│ 💪 20x Dumbbell Thruster (2x8kg)                            │
-│ 🚣 400m Row Erg (damper 7)                                  │
-│ 🦵 12x Dumbbell Lunges (2x12kg)                             │
-│ ⛷️ 500m SkiErg (resistance 7)                               │
-├─────────────────────────────────────────────────────────────┤
-│ 📊 Výsledky (3)                                             │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ 🥇 Jan Novák      18:23  (27.1.2026)                    │ │
-│ │ 🥈 Petra Svobodová 19:45  (25.1.2026)                   │ │
-│ │ 🥉 Martin Černý    21:12  (24.1.2026)                   │ │
-│ └─────────────────────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────────────────┤
-│ [+ Zapsat výsledek]                      [🏆 Vytvořit výzvu]│
-└─────────────────────────────────────────────────────────────┘
+// Leaderboard s best-per-client
+useRxWorkoutLeaderboard(workoutId, scoringMode)
+
+// CRUD operace
+useCreateRxWorkoutResult()
+useUpdateRxWorkoutResult()
+useDeleteRxWorkoutResult()
+
+// Pomocné funkce
+formatRxScore(120, 'for_time') → "2:00"
+timeInputToSeconds(2, 30) → 150
+amrapInputToScore(5, 12) → { primary: 5.012, secondary: 12 }
 ```
 
 ---
 
-## Část 4: Nová tabulka `rx_workout_results`
+## Část 5: Dialog pro zápis výsledku (`RxResultEntryDialog.tsx`)
 
-Místo využití `challenge_submissions` vytvoříme dedikovanou tabulku:
+```
+┌─────────────────────────────────────────────────────┐
+│ 📝 Zápis výsledku: Engine + Strength Circuit        │
+├─────────────────────────────────────────────────────┤
+│ Klient:     [▼ Vybrat klienta...              ]     │
+│                                                     │
+│ Čas:        [ 18 ] min [ 23 ] sec                   │
+│                                                     │
+│ Datum:      [📅 27.1.2026]                          │
+│                                                     │
+│ Poznámka:   [________________________]              │
+├─────────────────────────────────────────────────────┤
+│                          [Zrušit] [Zapsat]          │
+└─────────────────────────────────────────────────────┘
+```
 
-```sql
-CREATE TABLE rx_workout_results (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  rx_workout_id UUID NOT NULL REFERENCES training_templates(id) ON DELETE CASCADE,
-  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-  
-  -- Výsledek
-  score_primary NUMERIC NOT NULL,        -- čas v sekundách / počet opakování / váha
-  score_secondary NUMERIC,                -- doplňkové (reps u AMRAP)
-  
-  -- Metadata
-  performed_at DATE NOT NULL DEFAULT CURRENT_DATE,
-  notes TEXT,
-  
-  -- Kdo zadal
-  recorded_by_user_id UUID REFERENCES auth.users(id),
-  
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  CONSTRAINT unique_rx_result_per_day UNIQUE (rx_workout_id, client_id, performed_at)
-);
+### Dynamický vstup podle typu workoutu
+- **For Time**: Minuty + Sekundy
+- **AMRAP**: Kola + Opakování
+- **Max Load**: Váha v kg
 
--- Index pro rychlé leaderboardy
-CREATE INDEX idx_rx_results_workout ON rx_workout_results(rx_workout_id, score_primary);
+---
+
+## Část 6: Leaderboard (`RxWorkoutLeaderboard.tsx`)
+
+```
+┌─────────────────────────────────────────────────────┐
+│ 📊 Výsledky                     [Všichni|M|Ž]       │
+├─────────────────────────────────────────────────────┤
+│ 🥇 Jan Novák (M)       18:23  (27.1.2026)           │
+│ 🥈 Petra Svobodová (Ž) 19:45  (25.1.2026)           │
+│ 🥉 Martin Černý (M)    21:12  (24.1.2026)           │
+│ 4. Tomáš Kučera (M)    22:30  (23.1.2026)           │
+└─────────────────────────────────────────────────────┘
+```
+
+### Funkce
+- Gender filtr (Všichni / Muži / Ženy)
+- Best result per client
+- Zobrazení data výkonu
+- Kliknutím na řádek → detail/editace
+
+---
+
+## Část 7: Aktualizovaná RxWorkoutCard
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Engine + Strength Circuit                    [⋮]    │
+├─────────────────────────────────────────────────────┤
+│ [For Time] [3 kola]                                 │
+│                                                     │
+│ 🏃 500m Treadmill (15% incline)                     │
+│ 💪 20x Dumbbell Thruster (2x8kg)                    │
+│ 🚣 400m Row Erg (damper 7)                          │
+│ 🦵 12x Dumbbell Lunges (2x12kg)                     │
+│ ⛷️ 500m SkiErg (resistance 7)                       │
+├─────────────────────────────────────────────────────┤
+│ Top 3:                                              │
+│ 🥇 Jan N. 18:23  🥈 Petra S. 19:45  🥉 Martin Č.    │
+├─────────────────────────────────────────────────────┤
+│ [+ Zapsat výsledek]                 [🏆 Výzva]      │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Část 5: Databázové změny pro rozšířené parametry
+## Část 8: Aktualizovaný Import Dialog
 
-### Rozšíření `training_template_exercises`
-
-```sql
-ALTER TABLE training_template_exercises
-ADD COLUMN incline_percent NUMERIC,        -- sklon (treadmill)
-ADD COLUMN speed_setting TEXT,             -- rychlost/tempo
-ADD COLUMN damper_resistance INTEGER,      -- odpor (rower/skierg)
-ADD COLUMN round_marker TEXT;              -- značka konce kola
-```
+Třístupňový wizard:
+1. **Vložení textu** → Parse + validace
+2. **Mapování cviků** → Přiřadit/vytvořit nenamapované
+3. **Potvrzení** → Import do databáze
 
 ---
 
-## Souhrn změn
+## Soubory k vytvoření
 
-### Nové soubory
 | Soubor | Popis |
 |--------|-------|
-| `src/hooks/useRxWorkoutParserV2.ts` | Vylepšený parser pro váš formát |
-| `src/hooks/useRxWorkoutResults.ts` | CRUD pro výsledky |
-| `src/components/rx/RxExerciseMappingStep.tsx` | UI pro mapování cviků |
-| `src/components/rx/RxResultEntryDialog.tsx` | Dialog pro zápis výsledku |
-| `src/components/rx/RxWorkoutLeaderboard.tsx` | Žebříček výsledků |
-| `src/components/rx/RxWorkoutDetailSheet.tsx` | Detail workoutu s historií |
+| `supabase/migrations/xxx_rx_workout_v2.sql` | DB migrace |
+| `src/hooks/useRxWorkoutParserV2.ts` | V2 parser |
+| `src/hooks/useRxWorkoutResults.ts` | CRUD výsledků |
+| `src/components/rx/RxExerciseMappingStep.tsx` | Mapování cviků |
+| `src/components/rx/RxResultEntryDialog.tsx` | Zápis výsledku |
+| `src/components/rx/RxWorkoutLeaderboard.tsx` | Žebříček |
+| `src/components/rx/RxWorkoutDetailSheet.tsx` | Detail workoutu |
 
-### Upravené soubory
+## Soubory k úpravě
+
 | Soubor | Změna |
 |--------|-------|
-| `RxImportDialog.tsx` | Přidat krok mapování cviků |
-| `RxWorkoutCard.tsx` | Přidat leaderboard a tlačítko zápisu |
-| `useRxWorkouts.ts` | Podpora nových parametrů |
+| `src/components/rx/RxImportDialog.tsx` | Třístupňový wizard |
+| `src/components/rx/RxWorkoutCard.tsx` | Leaderboard + zápis |
+| `src/hooks/useRxWorkouts.ts` | Podpora nových polí |
+| `src/integrations/supabase/types.ts` | Nové typy |
 
 ---
 
-## Workflow
+## Workflow uživatele
 
-```text
-┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
-│ 1. Import textu  │ →  │ 2. Mapování      │ →  │ 3. Uložení       │
-│    (parser V2)   │    │    cviků         │    │    workoutu      │
-└──────────────────┘    └──────────────────┘    └──────────────────┘
-                                                        ↓
-┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
-│ 6. Porovnání     │ ←  │ 5. Leaderboard   │ ←  │ 4. Zápis         │
-│    výsledků      │    │    gender/celkem │    │    výsledku      │
-└──────────────────┘    └──────────────────┘    └──────────────────┘
 ```
-
----
-
-## Příklad parsování vašeho workoutu
-
-**Vstup:**
-```
-WORKOUT: Engine + Strength Circuit
-TYPE: FOR_TIME
-ROUNDS: 3
-
-EXERCISE: TREADMILL
-DISTANCE: 500 m
-INCLINE: 15 %
-...
-```
-
-**Výstup parseru:**
-```typescript
-{
-  valid: true,
-  template: {
-    name: "Engine + Strength Circuit",
-    scoring_mode: "for_time",
-    rounds: 3,
-    is_rx_workout: true
-  },
-  exercises: [
-    {
-      exercise_name: "Treadmill",
-      exercise_id: "abc-123", // nebo null pokud nenalezeno
-      rx_distance_m: 500,
-      incline_percent: 15,
-      speed_setting: "INDIVIDUAL"
-    },
-    {
-      exercise_name: "Dumbbell Thruster",
-      reps_min: 20,
-      rx_weight_kg: 8,
-      load_format: "2x8" // 2 činky po 8kg
-    },
-    // ...
-  ],
-  unmapped_exercises: ["SKILLUP_SKIERG"]
-}
+1. Vloží text workoutu
+         ↓
+2. Parser rozpozná strukturu
+         ↓
+3. Zobrazí nenamapované cviky
+         ↓
+4. Uživatel přiřadí/vytvoří cviky
+         ↓
+5. Import do databáze
+         ↓
+6. Workout se zobrazí na kartě
+         ↓
+7. Klik "Zapsat výsledek"
+         ↓
+8. Vyplní klienta + skóre
+         ↓
+9. Výsledek v leaderboardu
 ```
 
 ---
 
-## Technické poznámky
+## Bonus funkce
 
-1. **Zpětná kompatibilita** - starý formát `@name:` bude stále fungovat
-2. **Fuzzy matching** - pro mapování cviků použiji Levenshtein distance pro návrhy
-3. **Automatické vytvoření cviku** - s rozumným defaultem (kategorie Kardio pro běžecký pás, etc.)
-4. **Gender leaderboard** - využije existující `clients.gender` pole
-5. **Export výsledků** - možnost exportu do CSV/PDF pro klienta
+1. **Export CSV** - Možnost exportu leaderboardu
+2. **Historie klienta** - Všechny pokusy jednoho klienta
+3. **PR (Personal Record)** - Označení osobních rekordů
+4. **Porovnání** - Graf progrese v čase
