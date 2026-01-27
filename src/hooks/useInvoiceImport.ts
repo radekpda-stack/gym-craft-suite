@@ -17,12 +17,7 @@ export interface ParsedInvoiceItem {
   matchedProduct?: Product;
   confidence: number;
   selected: boolean;
-  // New fields for enhanced invoice support
   skuCode: string | null;
-  unitPriceNet: number | null;
-  unitPriceGross: number | null;
-  vatRate: number | null;
-  isShipping: boolean;
   // User-editable fields
   editedQuantity: number;
   editedPurchasePrice: number;
@@ -32,12 +27,9 @@ export interface ParsedInvoiceItem {
 
 export interface ParsedInvoice {
   supplier: string | null;
-  supplierIco: string | null;
   invoiceNumber: string | null;
-  variableSymbol: string | null;
   date: string | null;
   totalAmount: number | null;
-  totalAmountNet: number | null;
 }
 
 export interface InvoiceImportState {
@@ -46,8 +38,7 @@ export interface InvoiceImportState {
   invoice: ParsedInvoice | null;
   items: ParsedInvoiceItem[];
   fileName: string | null;
-  useBruttoPrices: boolean; // true = use gross prices, false = use net prices
-  saveSkuCodes: boolean; // whether to save SKU codes to new products
+  saveSkuCodes: boolean;
 }
 
 export function useInvoiceImport() {
@@ -62,7 +53,6 @@ export function useInvoiceImport() {
     invoice: null,
     items: [],
     fileName: null,
-    useBruttoPrices: true,
     saveSkuCodes: true,
   });
 
@@ -73,28 +63,7 @@ export function useInvoiceImport() {
       invoice: null,
       items: [],
       fileName: null,
-      useBruttoPrices: true,
       saveSkuCodes: true,
-    });
-  };
-
-  const setUseBruttoPrices = (useBrutto: boolean) => {
-    setState(prev => {
-      // Recalculate purchase prices for all items based on the new setting
-      const updatedItems = prev.items.map(item => {
-        const newPurchasePrice = useBrutto 
-          ? (item.unitPriceGross || item.purchasePrice || 0)
-          : (item.unitPriceNet || item.purchasePrice || 0);
-        return {
-          ...item,
-          editedPurchasePrice: newPurchasePrice,
-        };
-      });
-      return {
-        ...prev,
-        useBruttoPrices: useBrutto,
-        items: updatedItems,
-      };
     });
   };
 
@@ -146,8 +115,7 @@ export function useInvoiceImport() {
           ? products.find(p => p.id === item.matchedProductId)
           : null;
 
-        // Use brutto price by default
-        const purchasePrice = item.unitPriceGross || item.purchasePrice || 0;
+        const purchasePrice = item.purchasePrice || 0;
 
         return {
           id: `item-${index}-${Date.now()}`,
@@ -160,14 +128,8 @@ export function useInvoiceImport() {
           matchedProductName: item.matchedProductName,
           matchedProduct,
           confidence: item.confidence,
-          // New fields
           skuCode: item.skuCode || null,
-          unitPriceNet: item.unitPriceNet || null,
-          unitPriceGross: item.unitPriceGross || null,
-          vatRate: item.vatRate || null,
-          isShipping: item.isShipping || false,
-          // Shipping items are NOT selected by default
-          selected: !item.isShipping,
+          selected: true,
           // Editable fields
           editedQuantity: item.quantity,
           editedPurchasePrice: purchasePrice,
@@ -176,23 +138,18 @@ export function useInvoiceImport() {
         };
       });
 
-      // Count product items vs shipping
-      const productCount = enhancedItems.filter(i => !i.isShipping).length;
-      const shippingCount = enhancedItems.filter(i => i.isShipping).length;
-
       setState({
         status: 'ready',
         error: null,
         invoice: data.invoice || null,
         items: enhancedItems,
         fileName: file.name,
-        useBruttoPrices: true,
         saveSkuCodes: true,
       });
 
       toast({
         title: 'Faktura zpracována',
-        description: `Rozpoznáno ${productCount} produktů${shippingCount > 0 ? ` a ${shippingCount} položek dopravy` : ''}`,
+        description: `Rozpoznáno ${enhancedItems.length} produktů`,
       });
 
     } catch (error) {
@@ -219,11 +176,7 @@ export function useInvoiceImport() {
   const toggleAllItems = (selected: boolean) => {
     setState(prev => ({
       ...prev,
-      // When selecting all, still exclude shipping items
-      items: prev.items.map(item => ({ 
-        ...item, 
-        selected: selected && !item.isShipping 
-      })),
+      items: prev.items.map(item => ({ ...item, selected })),
     }));
   };
 
@@ -333,31 +286,12 @@ export function useInvoiceImport() {
     }
   };
 
-  // Computed values - exclude shipping from calculations
-  const productItems = state.items.filter(item => !item.isShipping);
-  const shippingItems = state.items.filter(item => item.isShipping);
-  const selectedItems = productItems.filter(item => item.selected);
+  // Computed values
+  const selectedItems = state.items.filter(item => item.selected);
   const totalSelectedQuantity = selectedItems.reduce((sum, item) => sum + item.editedQuantity, 0);
   const totalPurchaseCost = selectedItems.reduce((sum, item) => sum + (item.editedPurchasePrice * item.editedQuantity), 0);
   const newProductsCount = selectedItems.filter(item => !item.matchedProductId).length;
   const existingProductsCount = selectedItems.filter(item => item.matchedProductId).length;
-  
-  // VAT breakdown
-  const vatBreakdown = selectedItems.reduce((acc, item) => {
-    const rate = item.vatRate || 0;
-    if (rate > 0) {
-      const netAmount = item.unitPriceNet ? item.unitPriceNet * item.editedQuantity : 0;
-      const vatAmount = item.unitPriceGross && item.unitPriceNet 
-        ? (item.unitPriceGross - item.unitPriceNet) * item.editedQuantity 
-        : 0;
-      if (!acc[rate]) {
-        acc[rate] = { net: 0, vat: 0 };
-      }
-      acc[rate].net += netAmount;
-      acc[rate].vat += vatAmount;
-    }
-    return acc;
-  }, {} as Record<number, { net: number; vat: number }>);
 
   return {
     state,
@@ -367,17 +301,13 @@ export function useInvoiceImport() {
     updateItem,
     importItems,
     reset,
-    setUseBruttoPrices,
     setSaveSkuCodes,
     // Computed
-    productItems,
-    shippingItems,
     selectedItems,
     totalSelectedQuantity,
     totalPurchaseCost,
     newProductsCount,
     existingProductsCount,
-    vatBreakdown,
   };
 }
 

@@ -1,11 +1,10 @@
 import { useState, useCallback } from 'react';
-import { FileText, Upload, Loader2, CheckCircle, AlertTriangle, Package, Receipt, Tag, Hash } from 'lucide-react';
+import { FileText, Upload, Loader2, CheckCircle, AlertTriangle, Package, Receipt, Hash } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useInvoiceImport } from '@/hooks/useInvoiceImport';
 import { InvoiceItemRow } from './InvoiceItemRow';
 import { formatCurrency } from '@/lib/formatters';
@@ -28,16 +27,12 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
     updateItem,
     importItems,
     reset,
-    setUseBruttoPrices,
     setSaveSkuCodes,
-    productItems,
-    shippingItems,
     selectedItems,
     totalSelectedQuantity,
     totalPurchaseCost,
     newProductsCount,
     existingProductsCount,
-    vatBreakdown,
   } = useInvoiceImport();
 
   const handleClose = () => {
@@ -80,8 +75,8 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
     }
   };
 
-  const allProductsSelected = productItems.length > 0 && productItems.every(i => i.selected);
-  const someProductsSelected = productItems.some(i => i.selected);
+  const allItemsSelected = state.items.length > 0 && state.items.every(i => i.selected);
+  const someItemsSelected = state.items.some(i => i.selected);
 
   // Check if any items have SKU codes
   const hasSkuCodes = state.items.some(i => i.skuCode);
@@ -170,8 +165,7 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
                   <div className="flex items-center gap-2 text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500" />
                     <span className="font-medium">
-                      Rozpoznáno {productItems.length} produktů
-                      {shippingItems.length > 0 && ` a ${shippingItems.length} položek dopravy`}
+                      Rozpoznáno {state.items.length} produktů
                     </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 text-xs text-muted-foreground">
@@ -179,18 +173,12 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
                       <div>
                         <span className="block font-medium text-foreground">Dodavatel</span>
                         {state.invoice.supplier}
-                        {state.invoice.supplierIco && (
-                          <span className="block text-[10px]">IČO: {state.invoice.supplierIco}</span>
-                        )}
                       </div>
                     )}
                     {state.invoice.invoiceNumber && (
                       <div>
                         <span className="block font-medium text-foreground">Č. faktury</span>
                         {state.invoice.invoiceNumber}
-                        {state.invoice.variableSymbol && (
-                          <span className="block text-[10px]">VS: {state.invoice.variableSymbol}</span>
-                        )}
                       </div>
                     )}
                     {state.invoice.date && (
@@ -203,64 +191,29 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
                       <div>
                         <span className="block font-medium text-foreground">Celkem</span>
                         {formatCurrency(state.invoice.totalAmount)}
-                        {state.invoice.totalAmountNet && (
-                          <span className="block text-[10px]">
-                            bez DPH: {formatCurrency(state.invoice.totalAmountNet)}
-                          </span>
-                        )}
                       </div>
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Price basis toggle */}
-              <div className="mb-3 p-3 rounded-lg bg-secondary/20 border border-border/30">
-                <Label className="text-xs font-medium mb-2 block">Cenová základna:</Label>
-                <RadioGroup 
-                  value={state.useBruttoPrices ? 'brutto' : 'netto'} 
-                  onValueChange={(v) => setUseBruttoPrices(v === 'brutto')}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="netto" id="netto" />
-                    <Label htmlFor="netto" className="text-sm cursor-pointer">Netto (bez DPH)</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="brutto" id="brutto" />
-                    <Label htmlFor="brutto" className="text-sm cursor-pointer">Brutto (s DPH)</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
               {/* Select all */}
               <div className="flex items-center gap-2 mb-3">
                 <Checkbox
-                  checked={allProductsSelected}
+                  checked={allItemsSelected}
                   onCheckedChange={(checked) => toggleAllItems(!!checked)}
                   className="data-[state=indeterminate]:bg-primary/50"
-                  {...(someProductsSelected && !allProductsSelected ? { "data-state": "indeterminate" } : {})}
+                  {...(someItemsSelected && !allItemsSelected ? { "data-state": "indeterminate" } : {})}
                 />
-                <Label className="text-sm cursor-pointer" onClick={() => toggleAllItems(!allProductsSelected)}>
-                  Vybrat vše ({productItems.length} produktů{shippingItems.length > 0 ? `, ${shippingItems.length} doprava` : ''})
+                <Label className="text-sm cursor-pointer" onClick={() => toggleAllItems(!allItemsSelected)}>
+                  Vybrat vše ({state.items.length} produktů)
                 </Label>
               </div>
 
               {/* Items list */}
               <ScrollArea className="flex-1 -mx-6 px-6">
                 <div className="space-y-2 pb-4">
-                  {/* Product items first */}
-                  {productItems.map((item) => (
-                    <InvoiceItemRow
-                      key={item.id}
-                      item={item}
-                      onToggleSelection={() => toggleItemSelection(item.id)}
-                      onUpdate={(updates) => updateItem(item.id, updates)}
-                    />
-                  ))}
-                  
-                  {/* Shipping items at the end */}
-                  {shippingItems.map((item) => (
+                  {state.items.map((item) => (
                     <InvoiceItemRow
                       key={item.id}
                       item={item}
@@ -282,17 +235,6 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
                     {formatCurrency(totalPurchaseCost)}
                   </span>
                 </div>
-
-                {/* VAT breakdown */}
-                {Object.keys(vatBreakdown).length > 0 && (
-                  <div className="text-xs text-muted-foreground flex gap-3 flex-wrap">
-                    {Object.entries(vatBreakdown).map(([rate, amounts]) => (
-                      <span key={rate}>
-                        DPH {rate}%: {formatCurrency(amounts.vat)}
-                      </span>
-                    ))}
-                  </div>
-                )}
 
                 {/* Create expense option */}
                 <div 
