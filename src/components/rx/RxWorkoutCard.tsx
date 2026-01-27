@@ -23,6 +23,7 @@ import { RxWorkout, useDeleteRxWorkout, RxScoringMode } from '@/hooks/useRxWorko
 import { CreateChallengeDialog } from './CreateChallengeDialog';
 import { RxResultEntryDialog } from './RxResultEntryDialog';
 import { RxWorkoutLeaderboard } from './RxWorkoutLeaderboard';
+import { RxWorkoutDetailSheet } from './RxWorkoutDetailSheet';
 import { 
   Timer, 
   Repeat, 
@@ -34,6 +35,8 @@ import {
   Plus,
   ChevronDown,
   ChevronUp,
+  Pencil,
+  ExternalLink,
 } from 'lucide-react';
 
 interface RxWorkoutCardProps {
@@ -52,6 +55,7 @@ export function RxWorkoutCard({ workout }: RxWorkoutCardProps) {
   const [showChallengeDialog, setShowChallengeDialog] = useState(false);
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [showFullLeaderboard, setShowFullLeaderboard] = useState(false);
+  const [showDetailSheet, setShowDetailSheet] = useState(false);
   const deleteRxWorkout = useDeleteRxWorkout();
 
   const config = scoringModeConfig[workout.scoring_mode || 'for_time'] || scoringModeConfig['for_time'];
@@ -99,8 +103,13 @@ export function RxWorkoutCard({ workout }: RxWorkoutCardProps) {
       <Card className="hover:shadow-md transition-shadow">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-lg">{workout.name}</CardTitle>
+            <div 
+              className="space-y-1 cursor-pointer flex-1"
+              onClick={() => setShowDetailSheet(true)}
+            >
+              <CardTitle className="text-lg hover:text-primary transition-colors">
+                {workout.name}
+              </CardTitle>
               {workout.description && (
                 <p className="text-sm text-muted-foreground line-clamp-2">
                   {workout.description}
@@ -114,6 +123,10 @@ export function RxWorkoutCard({ workout }: RxWorkoutCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowDetailSheet(true)}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Detail
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowChallengeDialog(true)}>
                   <Trophy className="h-4 w-4 mr-2" />
                   Vytvořit výzvu
@@ -197,6 +210,7 @@ export function RxWorkoutCard({ workout }: RxWorkoutCardProps) {
             
             <RxWorkoutLeaderboard
               workoutId={workout.id}
+              workoutName={workout.name}
               scoringMode={scoringMode}
               compact={!showFullLeaderboard}
               maxItems={showFullLeaderboard ? 10 : 3}
@@ -257,6 +271,13 @@ export function RxWorkoutCard({ workout }: RxWorkoutCardProps) {
       <RxResultEntryDialog
         open={showResultDialog}
         onOpenChange={setShowResultDialog}
+        workout={workout}
+      />
+
+      {/* Detail sheet */}
+      <RxWorkoutDetailSheet
+        open={showDetailSheet}
+        onOpenChange={setShowDetailSheet}
         workout={workout}
       />
     </>
