@@ -19,7 +19,7 @@ const formSchema = z.object({
   name: z.string().min(1, 'Název je povinný'),
   amount: z.number().min(1, 'Částka musí být větší než 0'),
   date: z.date(),
-  category: z.enum(['rent', 'equipment', 'education', 'marketing', 'software', 'transport', 'insurance', 'other']),
+  category: z.enum(['rent', 'inventory', 'equipment', 'education', 'marketing', 'software', 'transport', 'insurance', 'other']),
   description: z.string().optional(),
   notes: z.string().optional(),
   is_recurring: z.boolean().default(false),
