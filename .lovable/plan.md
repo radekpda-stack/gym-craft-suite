@@ -1,267 +1,129 @@
 
-# RX Workout Šablony + Leaderboard Systém
+# Připomínka měření klienta
 
 ## Přehled
 
-Implementuji kompletní systém pro:
-1. **RX Workout šablony** - standardizované tréninky (benchmarky)
-2. **Trenérský zápis výsledků** - formulář pro zadání skóre klientům
-3. **Gender-segmentovaný leaderboard** - oddělené žebříčky pro muže a ženy
-4. **Import z textu** - parser formátu JM_WORKOUT_V1
+Když zadáte měření klienta, aplikace vám automaticky připomene zvážit klienta při prvním tréninku po zadaném intervalu. Například:
+- Zadáte měření **27.1.** s intervalem **1 měsíc**
+- První trénink po **27.2.** zobrazí upozornění: **"Zvážit klienta"**
 
 ---
 
-## Část 1: Databázové změny
+## Jak to bude fungovat
 
-### 1.1 Rozšíření tabulky `training_templates`
+### Při zadávání měření
+
+```text
+┌─────────────────────────────────────────────────┐
+│  Nové měření                                    │
+├─────────────────────────────────────────────────┤
+│  Klient: [Jan Novák ▼]                          │
+│  Datum:  [27.1.2026]                            │
+│  Váha:   [85.5] kg                              │
+│  ...                                            │
+├─────────────────────────────────────────────────┤
+│  ⏰ Připomenout další měření                    │
+│  ┌───────────────────────────────────────────┐  │
+│  │ [✓] Připomenout zvážení                   │  │
+│  │     za: [▼ 1 měsíc  ]                     │  │
+│  │         • 2 týdny                         │  │
+│  │         • 1 měsíc  ← nejčastější          │  │
+│  │         • 6 týdnů                         │  │
+│  │         • 2 měsíce                        │  │
+│  │         • 3 měsíce                        │  │
+│  └───────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────┤
+│                          [Zrušit] [Uložit]      │
+└─────────────────────────────────────────────────┘
+```
+
+### Na kartě tréninku
+
+Když přijde první trénink po datu připomínky, zobrazí se upozornění:
+
+```text
+┌─────────────────────────────────────────────────┐
+│  🔔 Připomenutí                                 │
+├─────────────────────────────────────────────────┤
+│  ⚖️ Zvážit klienta                              │
+│     Poslední měření: 27.1.2026 (před 32 dny)   │
+│                              [✓ Hotovo]         │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+## Technický plán
+
+### 1. Databázové změny
+
+Přidám nový sloupec do tabulky `measurements`:
 
 ```sql
-ALTER TABLE training_templates 
-ADD COLUMN is_rx_workout BOOLEAN DEFAULT false,
-ADD COLUMN scoring_mode TEXT DEFAULT 'standard' 
-  CHECK (scoring_mode IN ('standard', 'for_time', 'amrap', 'max_load', 'rounds_reps'));
+ALTER TABLE measurements 
+ADD COLUMN next_measurement_date DATE;
 ```
 
-### 1.2 Rozšíření tabulky `training_template_exercises`
+Tento sloupec bude obsahovat datum, kdy má být připomenuto další měření.
 
-```sql
-ALTER TABLE training_template_exercises
-ADD COLUMN rx_weight_kg NUMERIC,
-ADD COLUMN rx_distance_m NUMERIC,
-ADD COLUMN unit_label TEXT;
-```
+### 2. Rozšíření formuláře měření
 
-### 1.3 Rozšíření typu `workout_format`
+Upravím `MeasurementForm.tsx` a `CreateMeasurementSheet.tsx`:
+- Přidám checkbox "Připomenout další měření"
+- Přidám select s intervaly (2 týdny, 1 měsíc, 6 týdnů, 2 měsíce, 3 měsíce)
+- Při uložení vypočítám `next_measurement_date = datum_měření + interval`
 
-Přidat `max_load` do existujících hodnot (už máme: standard, amrap, emom, for_time, tabata, circuit).
+### 3. Vytvoření follow-up připomínky
+
+Rozšířím existující systém `training_followups`:
+- Přidám nový typ: `measurement` do `FollowupType`
+- Při vytvoření měření s připomínkou automaticky vytvořím follow-up záznam
+- Follow-up nebude vázán na konkrétní trénink (`training_session_id = null`)
+- Bude mít nastavené `remind_after_date` pro aktivaci
+
+### 4. Zobrazení na kartě tréninku
+
+Rozšířím `PreviousFollowupAlert.tsx`:
+- Přidám vizuální styl pro typ `measurement` (modrá ikona váhy)
+- Zobrazím datum posledního měření a počet dní od měření
+- Tlačítko "Hotovo" označí připomínku jako vyřešenou
+
+### 5. Hook pro kontrolu připomínek měření
+
+Vytvořím hook `useMeasurementReminders.ts`:
+- Dotaz na nevyřešené measurement followupy pro daného klienta
+- Filtr: `remind_after_date <= aktuální_datum` AND `is_resolved = false`
+- Zobrazí se pouze pokud datum tréninku >= remind_after_date
 
 ---
 
-## Část 2: UI Komponenty
+## Soubory k úpravě
 
-### 2.1 Nová stránka: RX Workouty (`/rx-workouts`)
-
-Hlavní správa RX benchmarků s:
-- Seznam RX šablon (filtr: AMRAP, For Time, Max Load)
-- Import z textu (tlačítko "Import")
-- Propojení s Výzvami (vytvoř challenge z RX)
-
-### 2.2 Import Dialog (`RxImportDialog.tsx`)
-
-Textarea pro vložení textu ve formátu JM_WORKOUT_V1:
-```
-@name: Fran
-@type: for_time
-@timecap: 10:00
-
-21x Thruster | 43kg
-21x Pull-up
-15x Thruster | 43kg
-15x Pull-up
-9x Thruster | 43kg
-9x Pull-up
-```
-
-Parser provede:
-1. Extrakci metadat
-2. Rozpoznání cviků
-3. Mapování na `exercises` tabulku
-4. Zobrazení náhledu před uložením
-
-### 2.3 Trenérský formulář zápisu (`TrainerResultEntry.tsx`)
-
-Formulář v sekci Výsledky výzvy:
-- Výběr klienta (combobox)
-- Automatická detekce pohlaví z `clients.gender`
-- Vstupní pole podle typu výzvy:
-  - **For Time**: čas (MM:SS)
-  - **AMRAP**: kola + opakování (2 pole)
-  - **Max Load**: váha (kg)
-- Potvrzení trenérem
-
-### 2.4 Gender Leaderboard Tabs
-
-Rozšíření `ChallengeSubmissionsView.tsx`:
-- Záložky: Všichni | Muži | Ženy
-- Filtr podle `clients.gender`
-- Samostatné pořadí pro každou kategorii
+| Soubor | Změna |
+|--------|-------|
+| `src/components/measurements/MeasurementForm.tsx` | Přidat sekci pro připomínku intervalu |
+| `src/components/measurements/CreateMeasurementSheet.tsx` | Předat interval do submission |
+| `src/hooks/useMeasurements.ts` | Přidat `next_measurement_date` do create mutace |
+| `src/hooks/useTrainingFollowups.ts` | Přidat typ `measurement`, rozšířit interface |
+| `src/components/trainings/PreviousFollowupAlert.tsx` | Přidat vizuál pro measurement typ |
+| `src/components/trainings/TrainingDetailView.tsx` | Integrovat measurement reminder |
 
 ---
 
-## Část 3: Hooky a Logika
+## Uživatelský příběh
 
-### 3.1 Parser `useRxWorkoutParser.ts`
-
-```typescript
-interface ParsedRxWorkout {
-  valid: boolean;
-  errors: string[];
-  template: {
-    name: string;
-    workout_format: string;
-    time_cap_seconds?: number;
-    rounds?: number;
-    is_rx_workout: true;
-  };
-  exercises: Array<{
-    exercise_name: string;
-    exercise_id?: string; // mapováno z DB
-    reps_min?: number;
-    rx_weight_kg?: number;
-    rx_distance_m?: number;
-  }>;
-  unmapped_exercises: string[]; // cviky nenalezené v DB
-}
-```
-
-### 3.2 Hook `useRxWorkouts.ts`
-
-- `useRxWorkouts()` - seznam RX šablon
-- `useCreateRxWorkout()` - vytvoření z parseru
-- `useRxWorkoutToChallenge()` - konverze na výzvu
-
-### 3.3 Hook `useTrainerResultEntry.ts`
-
-- Zápis výsledku trenérem
-- Automatické nastavení `confirmed_by: 'coach'`
-- Validace podle scoring_type
-
-### 3.4 Rozšíření `useChallengeSubmissions.ts`
-
-- Přidání gender filtru
-- Join s `clients.gender`
-- Výpočet pořadí v rámci kategorie
+1. **Trenér zadá měření** (27.1.) a vybere interval "1 měsíc"
+2. **Systém vypočítá** datum připomínky (27.2.)
+3. **Systém vytvoří** follow-up záznám typu "measurement"
+4. **Trenér trénuje s klientem** 15.2. - žádná připomínka (před datem)
+5. **Trenér trénuje s klientem** 1.3. - zobrazí se připomínka "Zvážit klienta"
+6. **Trenér klikne "Hotovo"** - připomínka se označí jako vyřešená
+7. **Při dalším měření** se cyklus opakuje
 
 ---
 
-## Část 4: Scoring Logika
+## Výchozí nastavení
 
-### 4.1 AMRAP Kompozitní Skóre
-
-```typescript
-// 18 kol + 7 opak → 18.07
-const compositeScore = rounds + (reps / 1000);
-```
-
-Uloženo do `score_primary`, sekundární do `score_secondary`.
-
-### 4.2 For Time
-
-- `score_primary` = čas v sekundách
-- Nižší = lepší
-
-### 4.3 Max Load
-
-- `score_primary` = váha v kg
-- Vyšší = lepší
-
----
-
-## Část 5: Integrace
-
-### 5.1 Propojení RX → Challenge
-
-Tlačítko "Vytvořit výzvu" u RX workoutu:
-1. Předvyplní challenge z RX šablony
-2. Nastaví `training_template_id`
-3. Auto-generuje instrukce
-
-### 5.2 Navigace
-
-- Přidat položku "RX Workouty" do menu (pod Tréninkové šablony)
-- Route: `/rx-workouts`
-
----
-
-## Soubory k vytvoření/úpravě
-
-| Soubor | Akce |
-|--------|------|
-| `src/pages/RxWorkouts.tsx` | NOVÝ - hlavní stránka |
-| `src/components/rx/RxImportDialog.tsx` | NOVÝ - import UI |
-| `src/components/rx/RxWorkoutCard.tsx` | NOVÝ - karta workoutu |
-| `src/components/rx/TrainerResultEntry.tsx` | NOVÝ - formulář zápisu |
-| `src/hooks/useRxWorkouts.ts` | NOVÝ - CRUD RX |
-| `src/hooks/useRxWorkoutParser.ts` | NOVÝ - parser |
-| `src/hooks/useTrainerResultEntry.ts` | NOVÝ - zápis výsledků |
-| `src/hooks/useTrainingTemplates.ts` | ROZŠÍŘIT - is_rx_workout |
-| `src/hooks/useChallenges.ts` | ROZŠÍŘIT - gender filtr |
-| `src/components/challenges/ChallengeSubmissionsView.tsx` | ROZŠÍŘIT - gender tabs |
-| `src/components/AppSidebar.tsx` | ROZŠÍŘIT - navigace |
-| `src/App.tsx` | ROZŠÍŘIT - route |
-
----
-
-## Vizuální návrh
-
-### Import Dialog
-```
-┌────────────────────────────────────────────────────┐
-│ 📥 Import RX Workoutu                        [X]   │
-├────────────────────────────────────────────────────┤
-│ ┌────────────────────────────────────────────────┐ │
-│ │ @name: Fran                                    │ │
-│ │ @type: for_time                                │ │
-│ │ @timecap: 10:00                                │ │
-│ │                                                │ │
-│ │ 21x Thruster | 43kg                            │ │
-│ │ 21x Pull-up                                    │ │
-│ │ ...                                            │ │
-│ └────────────────────────────────────────────────┘ │
-├────────────────────────────────────────────────────┤
-│ ✓ Parsováno: Fran (For Time, 10 min cap)           │
-│ ✓ 6 cviků nalezeno                                 │
-│ ⚠ 1 cvik nenalezen: "Thruster" → [Vytvořit]       │
-├────────────────────────────────────────────────────┤
-│                          [Zrušit] [Importovat]     │
-└────────────────────────────────────────────────────┘
-```
-
-### Trenérský zápis výsledku
-```
-┌──────────────────────────────────────────────┐
-│ 🏋️ Zápis výsledku: Fran                      │
-├──────────────────────────────────────────────┤
-│ Klient:  [▼ Vybrat klienta...]               │
-│                                              │
-│ Čas:     [ 4 ] min [ 23 ] sec                │
-│                                              │
-│ Poznámka: ____________________________        │
-│                                              │
-│               [Zrušit] [Zapsat výsledek]     │
-└──────────────────────────────────────────────┘
-```
-
-### Gender Leaderboard
-```
-┌─────────────────────────────────────────────────────┐
-│ Výsledky: Fran                                      │
-├─────────────────────────────────────────────────────┤
-│ [Všichni (12)] [Muži (7)] [Ženy (5)]                │
-├─────────────────────────────────────────────────────┤
-│ 🥇 Jan Novák         4:23                           │
-│ 🥈 Petr Svoboda      4:58                           │
-│ 🥉 Martin Černý      5:12                           │
-│ 4. Tomáš Kučera      5:45                           │
-└─────────────────────────────────────────────────────┘
-```
-
----
-
-## Pořadí implementace
-
-1. **Databázové migrace** - rozšíření tabulek
-2. **Parser JM_WORKOUT_V1** - jádro importu
-3. **RX Workouts stránka** - seznam + import dialog
-4. **Trenérský zápis výsledků** - formulář
-5. **Gender leaderboard** - záložky v submissions view
-6. **Navigace** - menu + routing
-
----
-
-## Technické poznámky
-
-- Existující `challenges` systém plně využit
-- `training_templates` rozšířeno o `is_rx_workout` flag
-- `clients.gender` již existuje pro segmentaci
-- Kompozitní AMRAP skóre (rounds.reps) kompatibilní s existujícím `score_primary/score_secondary`
+- Interval: **1 měsíc** (nejčastější volba)
+- Checkbox: **zapnutý** (doporučené)
+- Priorita připomínky: **medium**
