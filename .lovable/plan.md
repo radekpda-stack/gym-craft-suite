@@ -1,192 +1,220 @@
 
-# Vylepšení RX Workout systému
+# AI Import Faktur do Skladu
 
 ## Přehled
 
-Rozšíření stávajícího RX Workout systému o 5 klíčových funkcí, které zlepší uživatelskou zkušenost a umožní pokročilou analýzu výsledků.
+Přidání nové funkce **Import faktury** do sekce Prodej → Sklad, která pomocí AI automaticky extrahuje položky z nahrané faktury (PDF/obrázek) a umožní je hromadně naskladnit s možností zápisu do nákladů.
 
 ---
 
-## 1. Time Cap / CAP výsledky
-
-Umožní zaznamenat výsledky workoutů, které klient nedokončil v časovém limitu.
-
-### Jak to bude fungovat
+## Workflow uživatele
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│ Zápis výsledku: Cindy (20 min cap)                  │
-├─────────────────────────────────────────────────────┤
-│ Klient: [Jan Novák ▼]                               │
-│                                                     │
-│ [●] Dokončeno v čase   [○] CAP (nedokončeno)        │
-│                                                     │
-│ Pokud dokončeno:                                    │
-│ Čas: [18] min [23] sec                              │
-│                                                     │
-│ Pokud CAP:                                          │
-│ Počet kol: [18] kol  Zbývající opakování: [12]      │
-│                                                     │
-└─────────────────────────────────────────────────────┘
-```
-
-### V leaderboardu
-
-```text
-🥇 Jan Novák       18:23
-🥈 Petra Svobodová 19:45
-🥉 Martin Černý    CAP + 18+12
+1. Klikne na "Import faktury"
+         ↓
+2. Nahraje fakturu (PDF, JPG, PNG)
+         ↓
+3. AI zpracuje a extrahuje položky
+         ↓
+4. Zobrazí se tabulka s položkami:
+   ☑ Protein bar     10 ks   25 Kč   45 Kč
+   ☐ BCAA 500g       5 ks    180 Kč  349 Kč
+   ☑ Shaker          3 ks    35 Kč   89 Kč
+         ↓
+5. Uživatel vybere položky checkboxem
+         ↓
+6. Zvolí: [x] Přidat do nákladů
+         ↓
+7. Klikne "Naskladnit vybrané (3 položky)"
+         ↓
+8. Položky se přidají/aktualizují v produktech
+   + vytvoří se záznam v nákladech
 ```
 
 ---
 
-## 2. Editace RX Workoutu
+## UI komponenty
 
-Možnost upravit parametry existujícího workoutu bez nutnosti mazat a importovat znovu.
-
-### UI pro editaci
+### Tlačítko v StockManagement
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│ ✏️ Upravit workout: Engine Circuit           [X]    │
-├─────────────────────────────────────────────────────┤
-│ Název: [Engine + Strength Circuit          ]        │
-│ Popis: [Hybridní workout kombinující...    ]        │
-│                                                     │
-│ Typ:    [▼ For Time]    Time Cap: [20] min         │
-│ Kola:   [3]                                         │
-│                                                     │
-│ ─────────────────────────────────────────────────── │
-│ Cviky:                                              │
-│ ┌─────────────────────────────────────────────────┐ │
-│ │ 1. Treadmill                           [↑][↓][🗑]│ │
-│ │    Vzdálenost: [500] m  Sklon: [15] %           │ │
-│ ├─────────────────────────────────────────────────┤ │
-│ │ 2. Dumbbell Thruster                   [↑][↓][🗑]│ │
-│ │    Reps: [20]  Váha: [2x8] kg                   │ │
-│ └─────────────────────────────────────────────────┘ │
-│                                                     │
-│ [+ Přidat cvik]                                     │
-├─────────────────────────────────────────────────────┤
-│                               [Zrušit] [Uložit]     │
-└─────────────────────────────────────────────────────┘
+[Zobrazit marži]       [Příjem zboží] [📄 Import faktury] [+ Přidat položku]
+```
+
+### Dialog pro import faktury
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ 📄 Import faktury                                          [X] │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │                                                             │ │
+│ │     📤 Přetáhněte fakturu sem nebo klikněte pro výběr       │ │
+│ │                                                             │ │
+│ │     Podporované formáty: PDF, JPG, PNG                      │ │
+│ │                                                             │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ [Zpracovat AI]                                                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Po zpracování AI
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ 📄 Import faktury                                          [X] │
+├─────────────────────────────────────────────────────────────────┤
+│ ✅ Rozpoznáno 5 položek z faktury                               │
+│                                                                 │
+│ Dodavatel: FitShop s.r.o.                                       │
+│ Číslo faktury: FV-2026-0142                                     │
+│ Datum: 27.1.2026                                                │
+│                                                                 │
+│ ─────────────────────────────────────────────────────────────── │
+│                                                                 │
+│ [☑] Vybrat vše                                                  │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ [☑] Protein bar                                    [Nový]   │ │
+│ │     Počet: [10] ks                                          │ │
+│ │     Nákupní cena: [25] Kč    Prodejní cena: [45] Kč         │ │
+│ │     Kategorie: [▼ Svačina]                                  │ │
+│ ├─────────────────────────────────────────────────────────────┤ │
+│ │ [☑] BCAA 500g                           [Existující ✓]      │ │
+│ │     Počet: [5] ks   (+5 ks na sklad)                        │ │
+│ │     Nákupní cena: [180] Kč                                  │ │
+│ ├─────────────────────────────────────────────────────────────┤ │
+│ │ [☐] Neznámá položka XYZ                            [Nový]   │ │
+│ │     ⚠ Nepodařilo se určit kategorii                         │ │
+│ │     Počet: [2] ks                                           │ │
+│ │     Nákupní cena: [?] Kč    Prodejní cena: [?] Kč           │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ ─────────────────────────────────────────────────────────────── │
+│ Celkem k naskladnění: 15 ks (2 nové produkty, 1 existující)     │
+│ Celková nákupní cena: 1 430 Kč                                  │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ [x] Přidat jako náklad do kategorie "Nákup zboží"           │ │
+│ │     Náklad 1 430 Kč bude automaticky zaznamenán             │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│                              [Zrušit] [Naskladnit 3 položky]    │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Historie pokusů klienta
+## Technická implementace
 
-Zobrazení všech pokusů konkrétního klienta na daném workoutu s grafem progrese.
+### 1. Edge funkce `parse-invoice`
 
-### UI komponenty
-
-```text
-┌─────────────────────────────────────────────────────┐
-│ 📊 Historie: Cindy - Jan Novák                      │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│  Čas ▲                                              │
-│  22 │                                               │
-│  21 │ ●                                             │
-│  20 │   ●                                           │
-│  19 │       ●                                       │
-│  18 │           ●   ●  ← PR!                        │
-│     └────────────────────────► Datum                │
-│       Jan   Feb   Mar   Apr                         │
-│                                                     │
-├─────────────────────────────────────────────────────┤
-│ Všechny pokusy:                                     │
-│ 15.4.2026  18:23  🏆 PR                             │
-│ 01.4.2026  18:45                                    │
-│ 15.3.2026  19:12                                    │
-│ 01.3.2026  20:34                                    │
-│ 15.2.2026  21:05                                    │
-└─────────────────────────────────────────────────────┘
-```
-
----
-
-## 4. PR notifikace a označení
-
-Automatická detekce osobních rekordů při zápisu výsledku.
-
-### Vizuální feedback
+Nová edge funkce využívající Lovable AI (Gemini) pro parsování faktur:
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│  🎉 NOVÉ OSOBNÍ MAXIMUM!                            │
-│                                                     │
-│  Jan Novák právě překonal své PR na Cindy!         │
-│                                                     │
-│  Nový čas: 18:23                                    │
-│  Předchozí: 18:45 (o 22 sekund lepší!)             │
-│                                                     │
-│                                        [Super!]     │
-└─────────────────────────────────────────────────────┘
+supabase/functions/parse-invoice/index.ts
+
+Vstup:
+- fileBase64: string (base64 encoded PDF/image)
+- mimeType: string (application/pdf, image/jpeg, image/png)
+- existingProducts: string[] (seznam názvů existujících produktů pro matching)
+
+Výstup:
+{
+  success: true,
+  invoice: {
+    supplier: "FitShop s.r.o.",
+    invoiceNumber: "FV-2026-0142",
+    date: "2026-01-27",
+    totalAmount: 1430
+  },
+  items: [
+    {
+      name: "Protein bar",
+      quantity: 10,
+      purchasePrice: 25,
+      suggestedSellPrice: 45,
+      suggestedCategory: "snack",
+      matchedProductId: null,          // null = nový produkt
+      matchedProductName: null,
+      confidence: 0.95
+    },
+    {
+      name: "BCAA 500g",
+      quantity: 5,
+      purchasePrice: 180,
+      suggestedSellPrice: null,
+      matchedProductId: "abc-123",     // existující produkt
+      matchedProductName: "BCAA Powder 500g",
+      confidence: 0.87
+    }
+  ]
+}
 ```
 
-### V leaderboardu
+### 2. AI Prompt pro parsování
 
 ```text
-🥇 Jan Novák       18:23  🔥 PR
-🥈 Petra Svobodová 19:45
+Analyzuj tuto fakturu a extrahuj všechny položky produktů/zboží.
+
+Pro každou položku urči:
+1. Název produktu
+2. Počet kusů
+3. Nákupní cenu za kus (bez DPH pokud je uvedeno)
+4. Navrhni prodejní cenu (typicky 1.5-2x nákupní)
+5. Navrhni kategorii: supplement, drink, snack, equipment, other
+
+Pokud je položka podobná některému z existujících produktů, uveď shodu.
+Existující produkty: [seznam]
+
+Vrať JSON ve formátu: { invoice: {...}, items: [...] }
 ```
 
----
+### 3. Frontend komponenty
 
-## 5. Detail workoutu (Sheet)
+| Soubor | Popis |
+|--------|-------|
+| `src/components/sales/InvoiceImportDialog.tsx` | Hlavní dialog s upload a náhledem |
+| `src/components/sales/InvoiceItemRow.tsx` | Řádek položky s checkbox a editací |
+| `src/hooks/useInvoiceImport.ts` | Hook pro volání edge funkce a správu stavu |
 
-Kompletní přehled workoutu s cviky, pravidly a všemi výsledky.
+### 4. Logika importu
 
-### UI komponenty
+```typescript
+// Pro vybrané položky:
+for (item of selectedItems) {
+  if (item.matchedProductId) {
+    // Existující produkt - pouze aktualizovat stock_quantity
+    await updateProduct({
+      id: item.matchedProductId,
+      stock_quantity: existingStock + item.quantity
+    });
+  } else {
+    // Nový produkt - vytvořit
+    await createProduct({
+      name: item.name,
+      price: item.suggestedSellPrice,
+      purchase_price: item.purchasePrice,
+      category: item.suggestedCategory,
+      kind: 'inventory',
+      stock_quantity: item.quantity
+    });
+  }
+}
 
-```text
-┌─────────────────────────────────────────────────────┐
-│ Engine + Strength Circuit                    [✏️][🗑]│
-├─────────────────────────────────────────────────────┤
-│ [For Time] [3 kola] [20 min cap]                    │
-│                                                     │
-│ Popis:                                              │
-│ Hybridní workout kombinující kardio a sílu.         │
-│                                                     │
-│ ─────────────────────────────────────────────────── │
-│ CVIKY:                                              │
-│                                                     │
-│ 🏃 500m Treadmill                                   │
-│    • Sklon: 15%                                     │
-│    • Rychlost: individuální                         │
-│                                                     │
-│ 💪 20x Dumbbell Thruster                            │
-│    • Váha: 2x8 kg (muži) / 2x5 kg (ženy)           │
-│                                                     │
-│ 🚣 400m Row Erg                                     │
-│    • Damper: 7                                      │
-│                                                     │
-│ ─────────────────────────────────────────────────── │
-│ VÝSLEDKY: (25 celkem)                               │
-│                                                     │
-│ [Všichni ▼] [Muži] [Ženy]        [📥 Export CSV]   │
-│                                                     │
-│ 🥇 Jan Novák (M)       18:23  27.1.2026  🔥 PR      │
-│ 🥈 Petra Svobodová (Ž) 19:45  25.1.2026            │
-│ ...                                                 │
-│                                                     │
-│ [+ Zapsat výsledek]                                 │
-└─────────────────────────────────────────────────────┘
-```
-
----
-
-## Databázové změny
-
-### Nové sloupce v `rx_workout_results`
-
-```sql
-ALTER TABLE rx_workout_results
-ADD COLUMN is_capped BOOLEAN DEFAULT FALSE,
-ADD COLUMN capped_rounds INTEGER,
-ADD COLUMN capped_reps INTEGER,
-ADD COLUMN is_personal_record BOOLEAN DEFAULT FALSE;
+// Pokud je zaškrtnuto "Přidat jako náklad"
+if (createExpense) {
+  await createExpense({
+    name: `Import faktury: ${invoice.invoiceNumber || 'Bez čísla'}`,
+    description: selectedItems.map(i => `${i.name} (${i.quantity}x)`).join(', '),
+    amount: totalPurchasePrice,
+    date: invoice.date || today,
+    category: 'inventory'
+  });
+}
 ```
 
 ---
@@ -195,44 +223,52 @@ ADD COLUMN is_personal_record BOOLEAN DEFAULT FALSE;
 
 | Soubor | Popis |
 |--------|-------|
-| `src/components/rx/RxWorkoutDetailSheet.tsx` | Detail workoutu s cviky a výsledky |
-| `src/components/rx/RxWorkoutEditDialog.tsx` | Dialog pro editaci workoutu |
-| `src/components/rx/RxClientHistoryDialog.tsx` | Historie pokusů klienta |
-| `src/components/rx/RxPRCelebration.tsx` | Animovaná oslava PR |
-| `src/hooks/useRxClientHistory.ts` | Hook pro historii klienta na workoutu |
-| `src/lib/rxPRDetection.ts` | Logika pro detekci PR |
+| `supabase/functions/parse-invoice/index.ts` | Edge funkce pro AI parsování |
+| `src/components/sales/InvoiceImportDialog.tsx` | Hlavní dialog |
+| `src/components/sales/InvoiceItemRow.tsx` | Řádek položky |
+| `src/hooks/useInvoiceImport.ts` | Hook pro import |
 
 ## Soubory k úpravě
 
 | Soubor | Změna |
 |--------|-------|
-| `src/components/rx/RxResultEntryDialog.tsx` | Přidat CAP možnost, PR detekci |
-| `src/components/rx/RxWorkoutLeaderboard.tsx` | Zobrazit PR badge, CAP formátování |
-| `src/components/rx/RxWorkoutCard.tsx` | Přidat tlačítko editace, odkaz na detail |
-| `src/hooks/useRxWorkoutResults.ts` | Přidat CAP a PR pole |
-| `src/hooks/useRxWorkouts.ts` | Přidat update mutaci |
+| `src/components/sales/StockManagement.tsx` | Přidat tlačítko "Import faktury" |
+| `supabase/config.toml` | Přidat novou funkci parse-invoice |
 
 ---
 
-## Implementační pořadí
+## Doplňující funkce (na které jsi zapomněl)
 
-1. **Databázová migrace** - přidat nové sloupce
-2. **CAP výsledky** - rozšířit dialog a formátování
-3. **PR detekce** - logika + notifikace
-4. **Detail sheet** - kompletní přehled
-5. **Editace workoutu** - úprava parametrů
-6. **Historie klienta** - graf progrese
+1. **Automatické mapování produktů** - AI porovná názvy z faktury s existujícími produkty a navrhne shody (fuzzy matching)
+
+2. **Uložení dodavatele** - Možnost uložit informace o dodavateli pro budoucí reference
+
+3. **Historie importů** - Možnost zobrazit předchozí importy (v nákladech jako popis)
+
+4. **Validace duplicit** - Upozornění pokud faktura s podobným číslem už byla importována
+
+5. **Návrh marže** - AI automaticky navrhne prodejní cenu na základě typické marže v kategorii (např. nápoje 80%, suplementy 60%)
+
+6. **Batch úprava prodejní ceny** - Možnost hromadně nastavit marži pro všechny položky (např. +50%)
+
+7. **Seskupení podle kategorie** - Položky ve výsledku seskupit podle navržené kategorie
+
+8. **Varování při nízké marži** - Zvýraznění položek kde je marže pod 20%
 
 ---
 
-## Bonus: Export CSV
+## Bezpečnost
 
-```text
-Workout: Cindy
-Exportováno: 27.1.2026
+- Edge funkce vyžaduje autentizaci (Authorization header)
+- Soubory se neukládají na server, zpracují se pouze v paměti
+- Rate limiting pro prevenci zneužití AI
 
-Pořadí,Jméno,Pohlaví,Výsledek,Datum,PR
-1,Jan Novák,M,18:23,27.1.2026,Ano
-2,Petra Svobodová,Ž,19:45,25.1.2026,Ne
-3,Martin Černý,M,CAP+18+12,24.1.2026,Ne
-```
+---
+
+## Výhody řešení
+
+- **Úspora času**: Místo ručního zadávání 10+ položek stačí nahrát fakturu
+- **Přesnost**: AI extrahuje přesné částky a množství
+- **Integrace s náklady**: Automatický zápis do evidence nákladů
+- **Chytré mapování**: Rozpozná existující produkty a pouze dorovná sklad
+- **Flexibilita**: Možnost upravit jakoukoliv hodnotu před importem
