@@ -5817,6 +5817,7 @@ export type Database = {
           id: string
           mental_state: number | null
           muscle_mass: number | null
+          next_measurement_date: string | null
           notes: string | null
           source_file_url: string | null
           thigh_left: number | null
@@ -5843,6 +5844,7 @@ export type Database = {
           id?: string
           mental_state?: number | null
           muscle_mass?: number | null
+          next_measurement_date?: string | null
           notes?: string | null
           source_file_url?: string | null
           thigh_left?: number | null
@@ -5869,6 +5871,7 @@ export type Database = {
           id?: string
           mental_state?: number | null
           muscle_mass?: number | null
+          next_measurement_date?: string | null
           notes?: string | null
           source_file_url?: string | null
           thigh_left?: number | null
@@ -9707,7 +9710,9 @@ export type Database = {
           followup_type: string | null
           id: string
           is_resolved: boolean | null
+          measurement_id: string | null
           priority: string | null
+          remind_after_date: string | null
           resolved_at: string | null
           resolved_in_training_id: string | null
           training_session_id: string | null
@@ -9721,7 +9726,9 @@ export type Database = {
           followup_type?: string | null
           id?: string
           is_resolved?: boolean | null
+          measurement_id?: string | null
           priority?: string | null
+          remind_after_date?: string | null
           resolved_at?: string | null
           resolved_in_training_id?: string | null
           training_session_id?: string | null
@@ -9735,7 +9742,9 @@ export type Database = {
           followup_type?: string | null
           id?: string
           is_resolved?: boolean | null
+          measurement_id?: string | null
           priority?: string | null
+          remind_after_date?: string | null
           resolved_at?: string | null
           resolved_in_training_id?: string | null
           training_session_id?: string | null
@@ -9768,6 +9777,13 @@ export type Database = {
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_followups_measurement_id_fkey"
+            columns: ["measurement_id"]
+            isOneToOne: false
+            referencedRelation: "measurements"
             referencedColumns: ["id"]
           },
           {

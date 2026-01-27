@@ -50,6 +50,8 @@ export interface CreateMeasurementInput {
   mental_state?: number;
   notes?: string;
   source_file_url?: string | null;
+  next_measurement_date?: string;
+  create_reminder?: boolean;
 }
 
 export interface UpdateMeasurementInput extends CreateMeasurementInput {
@@ -109,12 +111,30 @@ export function useCreateMeasurement() {
           notes: input.notes || "",
           user_id: user.id,
           source_file_url: input.source_file_url || null,
+          next_measurement_date: input.next_measurement_date || null,
         } as any)
         .select()
         .single();
 
       if (error) throw error;
+
+      // Create measurement reminder follow-up if requested
+      if (input.create_reminder && input.next_measurement_date) {
+        await supabase
+          .from('training_followups')
+          .insert({
+            client_id: input.client_id,
+            user_id: user.id,
+            content: 'Zvážit klienta - pravidelné měření',
+            followup_type: 'measurement',
+            priority: 'medium',
+            remind_after_date: input.next_measurement_date,
+            measurement_id: data.id,
+          });
+      }
+
       return data;
+
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["measurements"] });

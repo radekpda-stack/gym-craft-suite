@@ -470,6 +470,7 @@ export function TrainingDetailView({
         <PreviousFollowupAlert 
           clientId={training.client_id} 
           currentTrainingId={training.id}
+          trainingDate={training.date.split('T')[0]}
         />
       )}
 

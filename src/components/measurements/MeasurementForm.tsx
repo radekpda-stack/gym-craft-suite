@@ -5,7 +5,7 @@ import { useEffect, useImperativeHandle, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2 } from "lucide-react";
+import { Loader2, Bell } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -13,12 +13,28 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { RatingInput } from "@/components/ui/rating-input";
 import { DatePicker } from "@/components/ui/date-time-picker";
 import { ClientSearchSelect } from "@/components/ui/client-search-select";
 import { Client } from "@/hooks/useClients";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
+export const REMINDER_INTERVALS = [
+  { value: '14', label: '2 týdny' },
+  { value: '30', label: '1 měsíc' },
+  { value: '42', label: '6 týdnů' },
+  { value: '60', label: '2 měsíce' },
+  { value: '90', label: '3 měsíce' },
+] as const;
 const measurementFormSchema = z.object({
   client_id: z.string().min(1, "Vyberte klienta"),
   date: z.string().min(1, "Zadejte datum"),
@@ -34,6 +50,9 @@ const measurementFormSchema = z.object({
   hips: z.number().min(0.1, "Hodnota musí být kladná").optional(),
   mental_state: z.number().min(1).max(10).optional().nullable(),
   notes: z.string().max(500, "Max 500 znaků").optional(),
+  // Reminder fields
+  create_reminder: z.boolean().optional(),
+  reminder_interval_days: z.string().optional(),
 });
 
 const RequiredLabel = ({ children }: { children: React.ReactNode }) => (
@@ -75,8 +94,12 @@ export const MeasurementForm = forwardRef<MeasurementFormRef, MeasurementFormPro
       hips: undefined,
       mental_state: null,
       notes: "",
+      create_reminder: true,
+      reminder_interval_days: "30",
     },
   });
+
+  const watchCreateReminder = form.watch("create_reminder");
 
   // Expose prefillValues method via ref
   useImperativeHandle(ref, () => ({
@@ -379,6 +402,62 @@ export const MeasurementForm = forwardRef<MeasurementFormRef, MeasurementFormPro
             </FormItem>
           )}
         />
+
+        {/* Reminder section */}
+        <div className="space-y-4 p-4 rounded-lg border border-border bg-muted/30">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Bell className="w-4 h-4 text-primary" />
+            <span>Připomenout další měření</span>
+          </div>
+          
+          <FormField
+            control={form.control}
+            name="create_reminder"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Připomenout zvážení klienta</FormLabel>
+                  <FormDescription>
+                    Při dalším tréninku po zadaném intervalu se zobrazí připomínka
+                  </FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          {watchCreateReminder && (
+            <FormField
+              control={form.control}
+              name="reminder_interval_days"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Připomenout za</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="bg-secondary border-border">
+                        <SelectValue placeholder="Vyberte interval" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {REMINDER_INTERVALS.map((interval) => (
+                        <SelectItem key={interval.value} value={interval.value}>
+                          {interval.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+        </div>
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (

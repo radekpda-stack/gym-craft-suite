@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export type FollowupPriority = 'high' | 'medium' | 'low';
-export type FollowupType = 'pain' | 'technique' | 'goal' | 'general';
+export type FollowupType = 'pain' | 'technique' | 'goal' | 'general' | 'measurement';
 
 export interface TrainingFollowup {
   id: string;
@@ -16,6 +16,8 @@ export interface TrainingFollowup {
   resolved_at: string | null;
   resolved_in_training_id: string | null;
   exercise_id: string | null;
+  remind_after_date: string | null;
+  measurement_id: string | null;
   created_at: string;
   training_session?: {
     date: string;
@@ -37,6 +39,7 @@ export const FOLLOWUP_TEMPLATES = [
   { label: 'Zkontrolovat techniku', content: 'Zkontrolovat techniku cviku', type: 'technique' as FollowupType },
   { label: 'Probrat cíle', content: 'Probrat aktuální cíle a pokrok', type: 'goal' as FollowupType },
   { label: 'Dořešit téma', content: 'Dořešit téma z minula', type: 'general' as FollowupType },
+  { label: 'Zvážit klienta', content: 'Zvážit klienta - pravidelné měření', type: 'measurement' as FollowupType },
 ];
 
 export function useTrainingFollowups(clientId: string | undefined) {
@@ -156,6 +159,8 @@ interface CreateFollowupParams {
   followup_type?: FollowupType;
   priority?: FollowupPriority;
   exercise_id?: string;
+  remind_after_date?: string;
+  measurement_id?: string;
 }
 
 export function useCreateFollowup() {
@@ -176,6 +181,8 @@ export function useCreateFollowup() {
           followup_type: params.followup_type || 'general',
           priority: params.priority || 'medium',
           exercise_id: params.exercise_id || null,
+          remind_after_date: params.remind_after_date || null,
+          measurement_id: params.measurement_id || null,
         })
         .select()
         .single();

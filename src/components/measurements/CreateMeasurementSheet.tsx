@@ -129,8 +129,20 @@ export function CreateMeasurementSheet({
   };
 
   const handleSubmit = async (data: MeasurementFormValues) => {
-    // First create the measurement
-    await onSubmit(data);
+    // Calculate next_measurement_date if reminder is enabled
+    let next_measurement_date: string | undefined;
+    if (data.create_reminder && data.reminder_interval_days) {
+      const measurementDate = new Date(data.date);
+      measurementDate.setDate(measurementDate.getDate() + parseInt(data.reminder_interval_days));
+      next_measurement_date = measurementDate.toISOString().split('T')[0];
+    }
+
+    // First create the measurement with reminder data
+    await onSubmit({
+      ...data,
+      next_measurement_date,
+      create_reminder: data.create_reminder,
+    } as any);
     
     // If we have pending media, upload them linked to the client
     if (pendingMedia.length > 0) {
