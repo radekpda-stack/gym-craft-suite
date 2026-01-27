@@ -13,18 +13,19 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { useClients } from '@/hooks/useClients';
 import {
   useCreateRxWorkoutResult,
@@ -37,7 +38,7 @@ import { checkForPR, markAsPR } from '@/lib/rxPRDetection';
 import { RxPRCelebration } from './RxPRCelebration';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Loader2, Timer, Repeat, Weight, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, Loader2, Timer, Repeat, Weight, AlertTriangle, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface RxResultEntryDialogProps {
@@ -55,6 +56,8 @@ export function RxResultEntryDialog({
   const createResult = useCreateRxWorkoutResult();
 
   const [clientId, setClientId] = useState<string>('');
+  const [clientSearchOpen, setClientSearchOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
   const [date, setDate] = useState<Date>(new Date());
   const [notes, setNotes] = useState('');
 
@@ -63,12 +66,12 @@ export function RxResultEntryDialog({
   const [cappedRounds, setCappedRounds] = useState(0);
   const [cappedReps, setCappedReps] = useState(0);
 
-  // Score inputs based on scoring mode
-  const [minutes, setMinutes] = useState(0);
-  const [seconds, setSeconds] = useState(0);
-  const [rounds, setRounds] = useState(0);
-  const [reps, setReps] = useState(0);
-  const [weight, setWeight] = useState(0);
+  // Score inputs based on scoring mode - use empty string for display
+  const [minutes, setMinutes] = useState<number | ''>('');
+  const [seconds, setSeconds] = useState<number | ''>('');
+  const [rounds, setRounds] = useState<number | ''>('');
+  const [reps, setReps] = useState<number | ''>('');
+  const [weight, setWeight] = useState<number | ''>('');
 
   // PR celebration
   const [showPRCelebration, setShowPRCelebration] = useState(false);
@@ -94,16 +97,16 @@ export function RxResultEntryDialog({
     } else {
       switch (scoringMode) {
         case 'for_time':
-          scorePrimary = timeInputToSeconds(minutes, seconds);
+          scorePrimary = timeInputToSeconds(Number(minutes) || 0, Number(seconds) || 0);
           break;
         case 'amrap':
         case 'rounds_reps':
-          const amrap = amrapInputToScore(rounds, reps);
+          const amrap = amrapInputToScore(Number(rounds) || 0, Number(reps) || 0);
           scorePrimary = amrap.primary;
           scoreSecondary = amrap.secondary;
           break;
         case 'max_load':
-          scorePrimary = weight;
+          scorePrimary = Number(weight) || 0;
           break;
       }
     }
@@ -146,11 +149,11 @@ export function RxResultEntryDialog({
 
     // Reset form
     setClientId('');
-    setMinutes(0);
-    setSeconds(0);
-    setRounds(0);
-    setReps(0);
-    setWeight(0);
+    setMinutes('');
+    setSeconds('');
+    setRounds('');
+    setReps('');
+    setWeight('');
     setNotes('');
     setIsCapped(false);
     setCappedRounds(0);
@@ -206,9 +209,9 @@ export function RxResultEntryDialog({
                 min={0}
                 max={99}
                 value={minutes}
-                onChange={(e) => setMinutes(parseInt(e.target.value) || 0)}
+                onChange={(e) => setMinutes(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
                 className="w-20"
-                placeholder="0"
+                placeholder="min"
               />
               <span className="text-muted-foreground">min</span>
               <Input
@@ -216,9 +219,9 @@ export function RxResultEntryDialog({
                 min={0}
                 max={59}
                 value={seconds}
-                onChange={(e) => setSeconds(parseInt(e.target.value) || 0)}
+                onChange={(e) => setSeconds(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
                 className="w-20"
-                placeholder="0"
+                placeholder="sec"
               />
               <span className="text-muted-foreground">sec</span>
             </div>
@@ -238,9 +241,9 @@ export function RxResultEntryDialog({
                 type="number"
                 min={0}
                 value={rounds}
-                onChange={(e) => setRounds(parseInt(e.target.value) || 0)}
+                onChange={(e) => setRounds(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
                 className="w-20"
-                placeholder="0"
+                placeholder="kol"
               />
               <span className="text-muted-foreground">kol</span>
               <span className="text-xl">+</span>
@@ -248,9 +251,9 @@ export function RxResultEntryDialog({
                 type="number"
                 min={0}
                 value={reps}
-                onChange={(e) => setReps(parseInt(e.target.value) || 0)}
+                onChange={(e) => setReps(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
                 className="w-20"
-                placeholder="0"
+                placeholder="reps"
               />
               <span className="text-muted-foreground">reps</span>
             </div>
@@ -270,9 +273,9 @@ export function RxResultEntryDialog({
                 min={0}
                 step={0.5}
                 value={weight}
-                onChange={(e) => setWeight(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setWeight(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
                 className="w-28"
-                placeholder="0"
+                placeholder="kg"
               />
               <span className="text-muted-foreground">kg</span>
             </div>
@@ -280,6 +283,16 @@ export function RxResultEntryDialog({
         );
     }
   };
+
+  // Filter clients for searchable combobox
+  const filteredClients = clientSearch.trim()
+    ? clients.filter((client) => {
+        const searchLower = clientSearch.toLowerCase();
+        return client.name.toLowerCase().includes(searchLower);
+      })
+    : clients;
+
+  const selectedClient = clients.find((c) => c.id === clientId);
 
   const scoringModeLabels: Record<RxScoringMode, string> = {
     for_time: 'For Time',
@@ -307,26 +320,62 @@ export function RxResultEntryDialog({
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Client selection */}
+            {/* Client selection with search */}
             <div className="space-y-2">
               <Label>Klient</Label>
-              <Select value={clientId} onValueChange={setClientId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Vybrat klienta..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                      {client.gender && (
-                        <span className="text-muted-foreground ml-1">
-                          ({client.gender === 'male' ? 'M' : 'Ž'})
-                        </span>
-                      )}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={clientSearchOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedClient
+                      ? `${selectedClient.name}${selectedClient.gender ? ` (${selectedClient.gender === 'male' ? 'M' : 'Ž'})` : ''}`
+                      : 'Vybrat klienta...'}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0" align="start">
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Hledat klienta..."
+                      value={clientSearch}
+                      onValueChange={setClientSearch}
+                    />
+                    <CommandList>
+                      <CommandEmpty>Žádný klient nenalezen</CommandEmpty>
+                      <CommandGroup>
+                        {filteredClients.slice(0, 50).map((client) => (
+                          <CommandItem
+                            key={client.id}
+                            value={client.id}
+                            onSelect={() => {
+                              setClientId(client.id);
+                              setClientSearchOpen(false);
+                              setClientSearch('');
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                clientId === client.id ? 'opacity-100' : 'opacity-0'
+                              )}
+                            />
+                            <span>{client.name}</span>
+                            {client.gender && (
+                              <span className="text-muted-foreground ml-1">
+                                ({client.gender === 'male' ? 'M' : 'Ž'})
+                              </span>
+                            )}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* CAP toggle for time-based workouts */}

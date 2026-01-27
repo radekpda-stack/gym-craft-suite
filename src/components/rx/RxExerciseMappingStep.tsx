@@ -214,7 +214,7 @@ export function RxExerciseMappingStep({
   );
 }
 
-// Combobox for exercise selection
+// Combobox for exercise selection with proper filtering
 function ExerciseCombobox({
   exercises,
   value,
@@ -225,7 +225,26 @@ function ExerciseCombobox({
   onValueChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const selectedExercise = exercises.find((ex) => ex.id === value);
+
+  // Filter exercises based on search - show all matching results
+  const filteredExercises = search.trim()
+    ? exercises.filter((ex) => {
+        const searchLower = search.toLowerCase();
+        const nameCsLower = (ex.name_cs || '').toLowerCase();
+        const nameLower = ex.name.toLowerCase();
+        const categoryLower = ex.category.toLowerCase();
+        return (
+          nameCsLower.includes(searchLower) ||
+          nameLower.includes(searchLower) ||
+          categoryLower.includes(searchLower)
+        );
+      })
+    : exercises;
+
+  // Limit display but show more when searching
+  const displayedExercises = filteredExercises.slice(0, search.trim() ? 100 : 50);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -243,18 +262,23 @@ function ExerciseCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Hledat cvik..." />
+        <Command shouldFilter={false}>
+          <CommandInput 
+            placeholder="Hledat cvik..." 
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandList>
             <CommandEmpty>Žádný cvik nenalezen</CommandEmpty>
             <CommandGroup>
-              {exercises.slice(0, 50).map((ex) => (
+              {displayedExercises.map((ex) => (
                 <CommandItem
                   key={ex.id}
-                  value={`${ex.name_cs || ex.name} ${ex.name}`}
+                  value={ex.id}
                   onSelect={() => {
                     onValueChange(ex.id);
                     setOpen(false);
+                    setSearch('');
                   }}
                 >
                   <Check
@@ -271,6 +295,11 @@ function ExerciseCombobox({
                   </div>
                 </CommandItem>
               ))}
+              {filteredExercises.length > displayedExercises.length && (
+                <div className="p-2 text-xs text-center text-muted-foreground">
+                  Zobrazeno {displayedExercises.length} z {filteredExercises.length} výsledků. Upřesněte hledání.
+                </div>
+              )}
             </CommandGroup>
           </CommandList>
         </Command>
