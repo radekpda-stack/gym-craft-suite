@@ -21,10 +21,12 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
 
   const {
     state,
+    products,
     parseInvoice,
     toggleItemSelection,
     toggleAllItems,
     updateItem,
+    changeMatchedProduct,
     importItems,
     reset,
     setSaveSkuCodes,
@@ -80,6 +82,9 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
 
   // Check if any items have SKU codes
   const hasSkuCodes = state.items.some(i => i.skuCode);
+  
+  // Count items with uncertain matches
+  const uncertainMatchCount = state.items.filter(i => i.matchedProductId && i.confidence < 0.8).length;
 
   return (
     <Dialog open={open} onOpenChange={(o) => o ? setOpen(true) : handleClose()}>
@@ -148,7 +153,7 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
               <p className="text-sm font-medium">
-                {state.status === 'uploading' ? 'Nahrávám soubor...' : 'AI analyzuje fakturu...'}
+                {state.status === 'uploading' ? 'Nahrávám soubor...' : 'AI analyzuje fakturu a páruje produkty...'}
               </p>
               {state.fileName && (
                 <p className="text-xs text-muted-foreground mt-1">{state.fileName}</p>
@@ -167,6 +172,11 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
                     <span className="font-medium">
                       Rozpoznáno {state.items.length} produktů
                     </span>
+                    {uncertainMatchCount > 0 && (
+                      <span className="text-yellow-600 text-xs">
+                        ({uncertainMatchCount} k ověření)
+                      </span>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 text-xs text-muted-foreground">
                     {state.invoice.supplier && (
@@ -217,8 +227,10 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
                     <InvoiceItemRow
                       key={item.id}
                       item={item}
+                      products={products}
                       onToggleSelection={() => toggleItemSelection(item.id)}
                       onUpdate={(updates) => updateItem(item.id, updates)}
+                      onChangeMatch={(productId) => changeMatchedProduct(item.id, productId)}
                     />
                   ))}
                 </div>

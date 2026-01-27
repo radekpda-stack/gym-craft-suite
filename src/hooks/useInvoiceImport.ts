@@ -5,6 +5,20 @@ import { useCreateExpense } from '@/hooks/useBusinessExpenses';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
+export interface MatchSuggestion {
+  productId: string;
+  productName: string;
+  confidence: number;
+  matchReason: string;
+}
+
+export interface ExtractedDetails {
+  brand?: string;
+  weight?: string;
+  flavor?: string;
+  size?: string;
+}
+
 export interface ParsedInvoiceItem {
   id: string; // local ID for UI
   name: string;
@@ -18,6 +32,10 @@ export interface ParsedInvoiceItem {
   confidence: number;
   selected: boolean;
   skuCode: string | null;
+  // Match suggestions for manual correction
+  matchSuggestions: MatchSuggestion[];
+  // Extracted details for enrichment
+  extractedDetails: ExtractedDetails;
   // User-editable fields
   editedQuantity: number;
   editedPurchasePrice: number;
@@ -117,6 +135,14 @@ export function useInvoiceImport() {
 
         const purchasePrice = item.purchasePrice || 0;
 
+        // Enhance match suggestions with full product data
+        const matchSuggestions: MatchSuggestion[] = (item.matchSuggestions || []).map((s: any) => ({
+          productId: s.productId,
+          productName: s.productName,
+          confidence: s.confidence || 0,
+          matchReason: s.matchReason || '',
+        }));
+
         return {
           id: `item-${index}-${Date.now()}`,
           name: item.name,
@@ -129,6 +155,8 @@ export function useInvoiceImport() {
           matchedProduct,
           confidence: item.confidence,
           skuCode: item.skuCode || null,
+          matchSuggestions,
+          extractedDetails: item.extractedDetails || {},
           selected: true,
           // Editable fields
           editedQuantity: item.quantity,
@@ -189,6 +217,28 @@ export function useInvoiceImport() {
     }));
   };
 
+  // Change matched product for an item (manual correction)
+  const changeMatchedProduct = (itemId: string, productId: string | null) => {
+    setState(prev => ({
+      ...prev,
+      items: prev.items.map(item => {
+        if (item.id !== itemId) return item;
+        
+        const matchedProduct = productId 
+          ? products.find(p => p.id === productId)
+          : null;
+
+        return {
+          ...item,
+          matchedProductId: productId,
+          matchedProductName: matchedProduct?.name || null,
+          matchedProduct,
+          confidence: productId ? 1.0 : 0, // Manual selection = 100% confidence
+        };
+      }),
+    }));
+  };
+
   const importItems = async (createExpenseRecord: boolean) => {
     const selectedItems = state.items.filter(item => item.selected);
     if (selectedItems.length === 0) {
@@ -227,7 +277,7 @@ export function useInvoiceImport() {
           await updateProduct.mutateAsync(updateData);
           updatedProductsCount++;
         } else {
-          // Create new product
+          // Create new product with extracted details
           const createData: any = {
             name: item.name,
             price: item.editedSellPrice,
@@ -295,10 +345,12 @@ export function useInvoiceImport() {
 
   return {
     state,
+    products, // Expose products for manual selection
     parseInvoice,
     toggleItemSelection,
     toggleAllItems,
     updateItem,
+    changeMatchedProduct,
     importItems,
     reset,
     setSaveSkuCodes,
