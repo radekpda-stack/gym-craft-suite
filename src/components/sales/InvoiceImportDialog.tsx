@@ -97,15 +97,15 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
             Import faktury
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {/* Upload area - shown when idle or error */}
           {(state.status === 'idle' || state.status === 'error') && (
             <div 
@@ -220,24 +220,26 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
                 </Label>
               </div>
 
-              {/* Items list */}
-              <ScrollArea className="flex-1 -mx-6 px-6">
-                <div className="space-y-2 pb-4">
-                  {state.items.map((item) => (
-                    <InvoiceItemRow
-                      key={item.id}
-                      item={item}
-                      products={products}
-                      onToggleSelection={() => toggleItemSelection(item.id)}
-                      onUpdate={(updates) => updateItem(item.id, updates)}
-                      onChangeMatch={(productId) => changeMatchedProduct(item.id, productId)}
-                    />
-                  ))}
-                </div>
-              </ScrollArea>
+              {/* Items list - scrollable container */}
+              <div className="flex-1 min-h-0 -mx-6 overflow-hidden">
+                <ScrollArea className="h-full px-6">
+                  <div className="space-y-2 pb-4">
+                    {state.items.map((item) => (
+                      <InvoiceItemRow
+                        key={item.id}
+                        item={item}
+                        products={products}
+                        onToggleSelection={() => toggleItemSelection(item.id)}
+                        onUpdate={(updates) => updateItem(item.id, updates)}
+                        onChangeMatch={(productId) => changeMatchedProduct(item.id, productId)}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
 
               {/* Summary */}
-              <div className="border-t border-border pt-4 mt-4 space-y-3">
+              <div className="border-t border-border pt-4 mt-4 space-y-3 flex-shrink-0">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
                     K naskladnění: <span className="font-medium text-foreground">{totalSelectedQuantity} ks</span>
