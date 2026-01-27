@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,8 +19,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { RxWorkout, useDeleteRxWorkout } from '@/hooks/useRxWorkouts';
+import { RxWorkout, useDeleteRxWorkout, RxScoringMode } from '@/hooks/useRxWorkouts';
 import { CreateChallengeDialog } from './CreateChallengeDialog';
+import { RxResultEntryDialog } from './RxResultEntryDialog';
+import { RxWorkoutLeaderboard } from './RxWorkoutLeaderboard';
 import { 
   Timer, 
   Repeat, 
@@ -28,6 +31,9 @@ import {
   Trash2, 
   Trophy,
   Dumbbell,
+  Plus,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface RxWorkoutCardProps {
@@ -44,10 +50,13 @@ const scoringModeConfig: Record<string, { label: string; icon: typeof Timer; col
 export function RxWorkoutCard({ workout }: RxWorkoutCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showChallengeDialog, setShowChallengeDialog] = useState(false);
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [showFullLeaderboard, setShowFullLeaderboard] = useState(false);
   const deleteRxWorkout = useDeleteRxWorkout();
 
   const config = scoringModeConfig[workout.scoring_mode || 'for_time'] || scoringModeConfig['for_time'];
   const Icon = config.icon;
+  const scoringMode = (workout.scoring_mode || 'for_time') as RxScoringMode;
 
   const handleDelete = async () => {
     try {
@@ -56,6 +65,33 @@ export function RxWorkoutCard({ workout }: RxWorkoutCardProps) {
     } catch (error) {
       // Error handled in mutation
     }
+  };
+
+  // Format exercise display with extended fields
+  const formatExercise = (ex: any) => {
+    const parts: string[] = [];
+    
+    if (ex.reps_min) parts.push(`${ex.reps_min}x`);
+    if (ex.rx_distance_m) parts.push(`${ex.rx_distance_m}m`);
+    if (ex.time_seconds) {
+      const mins = Math.floor(ex.time_seconds / 60);
+      const secs = ex.time_seconds % 60;
+      parts.push(`${mins}:${secs.toString().padStart(2, '0')}`);
+    }
+    
+    parts.push(ex.exercise_name);
+    
+    const modifiers: string[] = [];
+    if (ex.rx_weight_kg) modifiers.push(`${ex.load_format || ex.rx_weight_kg}kg`);
+    if (ex.incline_percent) modifiers.push(`${ex.incline_percent}% incline`);
+    if (ex.damper_resistance) modifiers.push(`damper ${ex.damper_resistance}`);
+    if (ex.speed_setting) modifiers.push(ex.speed_setting);
+    
+    if (modifiers.length > 0) {
+      parts.push(`(${modifiers.join(', ')})`);
+    }
+    
+    return parts.join(' ');
   };
 
   return (
@@ -124,16 +160,8 @@ export function RxWorkoutCard({ workout }: RxWorkoutCardProps) {
                   .sort((a, b) => a.sort_order - b.sort_order)
                   .slice(0, 4)
                   .map((ex) => (
-                    <div key={ex.id} className="text-sm flex items-center gap-2">
-                      <span className="text-muted-foreground">
-                        {ex.reps_min && `${ex.reps_min}x`}
-                        {ex.rx_distance_m && `${ex.rx_distance_m}m`}
-                        {ex.time_seconds && `${Math.floor(ex.time_seconds / 60)}:${(ex.time_seconds % 60).toString().padStart(2, '0')}`}
-                      </span>
-                      <span>{ex.exercise_name}</span>
-                      {ex.rx_weight_kg && (
-                        <span className="text-muted-foreground">({ex.rx_weight_kg}kg)</span>
-                      )}
+                    <div key={ex.id} className="text-sm text-muted-foreground">
+                      {formatExercise(ex)}
                     </div>
                   ))}
                 {workout.exercises.length > 4 && (
@@ -145,16 +173,55 @@ export function RxWorkoutCard({ workout }: RxWorkoutCardProps) {
             </div>
           )}
 
-          {/* Create challenge button */}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full mt-2"
-            onClick={() => setShowChallengeDialog(true)}
-          >
-            <Trophy className="h-4 w-4 mr-2" />
-            Vytvořit výzvu
-          </Button>
+          <Separator />
+
+          {/* Leaderboard section */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium flex items-center gap-1">
+                <Trophy className="h-4 w-4 text-yellow-500" />
+                Top výsledky
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFullLeaderboard(!showFullLeaderboard)}
+              >
+                {showFullLeaderboard ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            
+            <RxWorkoutLeaderboard
+              workoutId={workout.id}
+              scoringMode={scoringMode}
+              compact={!showFullLeaderboard}
+              maxItems={showFullLeaderboard ? 10 : 3}
+            />
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 pt-2">
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="flex-1"
+              onClick={() => setShowResultDialog(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Zapsat výsledek
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowChallengeDialog(true)}
+            >
+              <Trophy className="h-4 w-4" />
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -183,6 +250,13 @@ export function RxWorkoutCard({ workout }: RxWorkoutCardProps) {
       <CreateChallengeDialog
         open={showChallengeDialog}
         onOpenChange={setShowChallengeDialog}
+        workout={workout}
+      />
+
+      {/* Result entry dialog */}
+      <RxResultEntryDialog
+        open={showResultDialog}
+        onOpenChange={setShowResultDialog}
         workout={workout}
       />
     </>
