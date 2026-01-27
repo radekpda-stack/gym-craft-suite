@@ -8280,9 +8280,13 @@ export type Database = {
       }
       rx_workout_results: {
         Row: {
+          capped_reps: number | null
+          capped_rounds: number | null
           client_id: string
           created_at: string | null
           id: string
+          is_capped: boolean | null
+          is_personal_record: boolean | null
           notes: string | null
           performed_at: string
           recorded_by_user_id: string | null
@@ -8292,9 +8296,13 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          capped_reps?: number | null
+          capped_rounds?: number | null
           client_id: string
           created_at?: string | null
           id?: string
+          is_capped?: boolean | null
+          is_personal_record?: boolean | null
           notes?: string | null
           performed_at?: string
           recorded_by_user_id?: string | null
@@ -8304,9 +8312,13 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          capped_reps?: number | null
+          capped_rounds?: number | null
           client_id?: string
           created_at?: string | null
           id?: string
+          is_capped?: boolean | null
+          is_personal_record?: boolean | null
           notes?: string | null
           performed_at?: string
           recorded_by_user_id?: string | null

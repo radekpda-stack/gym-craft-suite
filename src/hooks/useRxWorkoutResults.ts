@@ -14,6 +14,12 @@ export interface RxWorkoutResult {
   recorded_by_user_id: string | null;
   created_at: string;
   updated_at: string;
+  // CAP result fields
+  is_capped: boolean;
+  capped_rounds: number | null;
+  capped_reps: number | null;
+  // PR tracking
+  is_personal_record: boolean;
   // Joined data
   client?: {
     id: string;
@@ -29,6 +35,9 @@ export interface RxWorkoutResultInput {
   score_secondary?: number;
   performed_at?: string;
   notes?: string;
+  is_capped?: boolean;
+  capped_rounds?: number;
+  capped_reps?: number;
 }
 
 // Fetch results for a specific RX workout
@@ -112,6 +121,9 @@ export function useCreateRxWorkoutResult() {
           performed_at: input.performed_at || new Date().toISOString().split('T')[0],
           notes: input.notes || null,
           recorded_by_user_id: user.id,
+          is_capped: input.is_capped || false,
+          capped_rounds: input.capped_rounds || null,
+          capped_reps: input.capped_reps || null,
         })
         .select(`
           *,

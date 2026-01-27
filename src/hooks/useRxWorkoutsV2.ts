@@ -165,3 +165,98 @@ export function useCreateRxWorkoutV2() {
     },
   });
 }
+
+// Update RX workout
+export function useUpdateRxWorkout() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      workoutId,
+      template, 
+      exercises 
+    }: { 
+      workoutId: string;
+      template: {
+        name: string;
+        description: string | null;
+        scoring_mode: string;
+        rounds: number | null;
+        time_cap_seconds: number | null;
+      };
+      exercises: Array<{
+        id: string;
+        exercise_name: string;
+        reps_min: number | null;
+        rx_distance_m: number | null;
+        rx_weight_kg: number | null;
+        incline_percent: number | null;
+        damper_resistance: number | null;
+        speed_setting: string | null;
+        load_format: string | null;
+        time_seconds: number | null;
+        notes: string | null;
+        sort_order: number;
+      }>;
+    }) => {
+      // Update template
+      const { error: templateError } = await supabase
+        .from('training_templates')
+        .update({
+          name: template.name,
+          description: template.description,
+          scoring_mode: template.scoring_mode,
+          rounds: template.rounds,
+          time_cap_seconds: template.time_cap_seconds,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', workoutId);
+      
+      if (templateError) throw templateError;
+      
+      // Delete existing exercises and re-create
+      const { error: deleteError } = await supabase
+        .from('training_template_exercises')
+        .delete()
+        .eq('template_id', workoutId);
+      
+      if (deleteError) throw deleteError;
+      
+      // Insert updated exercises
+      if (exercises.length > 0) {
+        const exerciseRows = exercises.map((ex, idx) => ({
+          template_id: workoutId,
+          exercise_name: ex.exercise_name,
+          block_type: 'primary',
+          reps_min: ex.reps_min,
+          rx_distance_m: ex.rx_distance_m,
+          rx_weight_kg: ex.rx_weight_kg,
+          incline_percent: ex.incline_percent,
+          damper_resistance: ex.damper_resistance,
+          speed_setting: ex.speed_setting,
+          load_format: ex.load_format,
+          time_seconds: ex.time_seconds,
+          notes: ex.notes,
+          sort_order: idx,
+        }));
+        
+        const { error: insertError } = await supabase
+          .from('training_template_exercises')
+          .insert(exerciseRows);
+        
+        if (insertError) throw insertError;
+      }
+      
+      return workoutId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rx-workouts'] });
+      queryClient.invalidateQueries({ queryKey: ['training-templates'] });
+      toast.success('RX Workout aktualizován');
+    },
+    onError: (error) => {
+      console.error('Update RX workout error:', error);
+      toast.error('Nepodařilo se aktualizovat workout');
+    },
+  });
+}
