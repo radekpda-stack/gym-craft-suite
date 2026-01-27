@@ -75,9 +75,12 @@ export function useCompleteTrainingAtomic() {
         return acc;
       }, {} as Record<IndividualPaymentMethod, ParticipantWithPayment[]>);
 
-      // Determine primary payment method (the one used by most participants or credit if present)
+      // Determine primary payment method for session-level payment_status
+      // IMPORTANT: If ANY participant pays cash, session should be 'pending' to require confirmation
+      // This ensures the orange "confirm payment" button appears
       const methods = Object.keys(groupedByMethod) as IndividualPaymentMethod[];
-      const primaryMethod = methods.includes('credit') ? 'credit' : methods[0] || 'cash';
+      const hasCashPayment = methods.includes('cash');
+      const primaryMethod = hasCashPayment ? 'cash' : (methods.includes('credit') ? 'credit' : methods[0] || 'cash');
 
       // Prepare participants for RPC - format as JSON-serializable array
       const rpcParticipants = params.participants.map(p => ({
