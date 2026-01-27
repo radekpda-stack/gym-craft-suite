@@ -23,22 +23,14 @@ interface ParsedInvoiceItem {
   matchedProductId: string | null;
   matchedProductName: string | null;
   confidence: number;
-  // New fields for Vilgain invoice support
   skuCode: string | null;
-  unitPriceNet: number | null;
-  unitPriceGross: number | null;
-  vatRate: number | null;
-  isShipping: boolean;
 }
 
 interface ParsedInvoice {
   supplier: string | null;
-  supplierIco: string | null;
   invoiceNumber: string | null;
-  variableSymbol: string | null;
   date: string | null;
   totalAmount: number | null;
-  totalAmountNet: number | null;
 }
 
 interface ParseInvoiceResponse {
@@ -83,23 +75,18 @@ serve(async (req) => {
       return `- ${p.name} (kategorie: ${p.category}, ID: ${p.id}${skuPart})`;
     }).join('\n');
 
-    const systemPrompt = `Jsi asistent pro analýzu faktur od českých dodavatelů (zejména Vilgain, ale i jiných). Tvým úkolem je extrahovat položky z faktur a porovnat je s existujícími produkty.
+    const systemPrompt = `Jsi asistent pro analýzu faktur od českých dodavatelů. Tvým úkolem je extrahovat položky produktů z faktur a porovnat je s existujícími produkty.
 
 DŮLEŽITÉ INSTRUKCE:
 1. Zpracuj VŠECHNY STRANY dokumentu - faktury mohou mít více stran
 2. Extrahuj SKU kódy z názvů produktů - obvykle ve formátu [PVXXXXX] nebo podobném
-3. Rozlišuj mezi položkami produktů a položkami typu DOPRAVA/POŠTOVNÉ/BALNÉ
-4. Pro ceny rozlišuj NETTO (bez DPH) a BRUTTO (s DPH)
+3. Ignoruj položky typu doprava, poštovné, balné - extrahuj pouze produkty
 
-Pro každou položku urči:
+Pro každou položku produktu urči:
 - name: Název produktu (BEZ SKU kódu v závorce - ten extrahuj zvlášť)
 - skuCode: SKU/katalogové číslo (např. "PV44916" z "[PV44916]")
 - quantity: Počet kusů (pozor na české formátování "1,000 ks" = 1 kus)
-- unitPriceNet: Cena za kus BEZ DPH (Netto/MJ)
-- unitPriceGross: Cena za kus S DPH (Brutto)
-- purchasePrice: Primárně použij unitPriceGross jako nákupní cenu
-- vatRate: Sazba DPH (12, 15, nebo 21)
-- isShipping: true pro položky typu Poštovné, Doprava, Balné, Zásilkovna, PPL atd.
+- purchasePrice: Cena za kus (použij cenu s DPH/Brutto pokud je k dispozici)
 - suggestedCategory: supplement (doplňky), drink (nápoje), snack (svačiny), equipment (vybavení), other
 - suggestedSellPrice: Navržená prodejní cena s marží podle kategorie
 
@@ -122,23 +109,16 @@ Vrať POUZE validní JSON bez jakéhokoliv dalšího textu v tomto formátu:
 {
   "invoice": {
     "supplier": "Název dodavatele nebo null",
-    "supplierIco": "IČO dodavatele nebo null",
     "invoiceNumber": "Číslo faktury nebo null",
-    "variableSymbol": "Variabilní symbol nebo null",
     "date": "YYYY-MM-DD nebo null",
-    "totalAmount": celková částka s DPH nebo null,
-    "totalAmountNet": celková částka bez DPH nebo null
+    "totalAmount": celková částka nebo null
   },
   "items": [
     {
       "name": "Název položky BEZ SKU",
       "skuCode": "PV44916 nebo null",
       "quantity": číslo,
-      "unitPriceNet": číslo nebo null,
-      "unitPriceGross": číslo nebo null,
-      "purchasePrice": číslo (preferuj brutto) nebo null,
-      "vatRate": 12 nebo 21 nebo null,
-      "isShipping": true/false,
+      "purchasePrice": číslo nebo null,
       "suggestedSellPrice": číslo nebo null,
       "suggestedCategory": "supplement|drink|snack|equipment|other",
       "matchedProductId": "UUID existujícího produktu nebo null",
@@ -154,7 +134,7 @@ Vrať POUZE validní JSON bez jakéhokoliv dalšího textu v tomto formátu:
     const content = [
       {
         type: "text",
-        text: "Analyzuj tuto fakturu a extrahuj VŠECHNY položky produktů/zboží ze VŠECH STRAN podle instrukcí. Pozorně rozpoznej SKU kódy, DPH sazby a odděl položky dopravy."
+        text: "Analyzuj tuto fakturu a extrahuj VŠECHNY položky produktů/zboží ze VŠECH STRAN podle instrukcí. Pozorně rozpoznej SKU kódy. Ignoruj poštovné a balné."
       },
       {
         type: "image_url",
@@ -247,22 +227,17 @@ Vrať POUZE validní JSON bez jakéhokoliv dalšího textu v tomto formátu:
       );
     }
 
-    // Ensure all items have required fields with new fields
+    // Ensure all items have required fields
     const validatedItems: ParsedInvoiceItem[] = parsedResult.items.map(item => ({
       name: item.name || 'Neznámá položka',
       quantity: Math.max(1, Math.round(item.quantity || 1)),
-      purchasePrice: item.purchasePrice || item.unitPriceGross || null,
+      purchasePrice: item.purchasePrice || null,
       suggestedSellPrice: item.suggestedSellPrice || null,
       suggestedCategory: item.suggestedCategory || 'other',
       matchedProductId: item.matchedProductId || null,
       matchedProductName: item.matchedProductName || null,
       confidence: Math.min(1, Math.max(0, item.confidence || 0.5)),
-      // New fields
       skuCode: item.skuCode || null,
-      unitPriceNet: item.unitPriceNet || null,
-      unitPriceGross: item.unitPriceGross || null,
-      vatRate: item.vatRate || null,
-      isShipping: item.isShipping || false,
     }));
 
     console.log(`Successfully parsed ${validatedItems.length} items from invoice`);
@@ -271,12 +246,9 @@ Vrať POUZE validní JSON bez jakéhokoliv dalšího textu v tomto formátu:
       success: true,
       invoice: {
         supplier: parsedResult.invoice?.supplier || null,
-        supplierIco: parsedResult.invoice?.supplierIco || null,
         invoiceNumber: parsedResult.invoice?.invoiceNumber || null,
-        variableSymbol: parsedResult.invoice?.variableSymbol || null,
         date: parsedResult.invoice?.date || null,
         totalAmount: parsedResult.invoice?.totalAmount || null,
-        totalAmountNet: parsedResult.invoice?.totalAmountNet || null,
       },
       items: validatedItems,
     };
