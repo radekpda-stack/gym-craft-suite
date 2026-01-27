@@ -97,7 +97,12 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      {/*
+        DialogContent má ve výchozím stylu `grid` + `overflow-y-auto`.
+        To koliduje s interním ScrollArea (na mobilu pak seznam nedostane výšku a nesroluje).
+        Proto tady vynucujeme flex layout a vypínáme overflow na rootu.
+      */}
+      <DialogContent className="max-w-2xl h-[85vh] !flex !flex-col !overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
