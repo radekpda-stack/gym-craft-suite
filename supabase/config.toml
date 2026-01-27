@@ -128,3 +128,6 @@ verify_jwt = false
 
 [functions.check-birthdays-anniversaries]
 verify_jwt = false
+
+[functions.parse-invoice]
+verify_jwt = true

@@ -9,7 +9,8 @@ import {
   Wrench,
   Loader2,
   CreditCard,
-  Sparkles
+  Sparkles,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ import { useProducts, useCreateProduct, useUpdateProduct, Product } from '@/hook
 import { StockReceiveDialog } from '@/components/settings/StockReceiveDialog';
 import { StockSearchAndFilters, StockFilter, StockSortOption, StockTypeFilter } from './StockSearchAndFilters';
 import { LowStockBanner } from './LowStockBanner';
+import { InvoiceImportDialog } from './InvoiceImportDialog';
 import { useDebounce } from '@/hooks/useDebounce';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
@@ -298,6 +300,14 @@ export function StockManagement() {
           </Button>
           <div className="flex items-center gap-2">
             <StockReceiveDialog />
+            <InvoiceImportDialog 
+              trigger={
+                <Button variant="outline" size="sm" className="gap-2">
+                  <FileText className="w-4 h-4" />
+                  <span className="hidden sm:inline">Import faktury</span>
+                </Button>
+              }
+            />
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" className="gap-2">
