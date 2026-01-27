@@ -11,6 +11,7 @@ interface ExistingProduct {
   category: string;
   purchase_price: number;
   price: number;
+  sku_code?: string | null;
 }
 
 interface ParsedInvoiceItem {
@@ -22,13 +23,22 @@ interface ParsedInvoiceItem {
   matchedProductId: string | null;
   matchedProductName: string | null;
   confidence: number;
+  // New fields for Vilgain invoice support
+  skuCode: string | null;
+  unitPriceNet: number | null;
+  unitPriceGross: number | null;
+  vatRate: number | null;
+  isShipping: boolean;
 }
 
 interface ParsedInvoice {
   supplier: string | null;
+  supplierIco: string | null;
   invoiceNumber: string | null;
+  variableSymbol: string | null;
   date: string | null;
   totalAmount: number | null;
+  totalAmountNet: number | null;
 }
 
 interface ParseInvoiceResponse {
@@ -67,31 +77,31 @@ serve(async (req) => {
       );
     }
 
-    // Prepare product list for matching
-    const productList = existingProducts.map(p => `- ${p.name} (kategorie: ${p.category}, ID: ${p.id})`).join('\n');
+    // Prepare product list for matching - include SKU codes
+    const productList = existingProducts.map(p => {
+      const skuPart = p.sku_code ? `, SKU: ${p.sku_code}` : '';
+      return `- ${p.name} (kategorie: ${p.category}, ID: ${p.id}${skuPart})`;
+    }).join('\n');
 
-    // Category margins for AI suggestion
-    const categoryMargins: Record<string, number> = {
-      'supplement': 0.6,  // 60% marže
-      'drink': 0.8,       // 80% marže
-      'snack': 0.5,       // 50% marže
-      'equipment': 0.4,   // 40% marže
-      'other': 0.5,       // 50% marže
-    };
+    const systemPrompt = `Jsi asistent pro analýzu faktur od českých dodavatelů (zejména Vilgain, ale i jiných). Tvým úkolem je extrahovat položky z faktur a porovnat je s existujícími produkty.
 
-    const systemPrompt = `Jsi asistent pro analýzu faktur. Tvým úkolem je extrahovat položky z faktur a porovnat je s existujícími produkty.
-
-Analyzuj fakturu a extrahuj následující informace:
-1. Základní údaje faktury (dodavatel, číslo faktury, datum, celková částka)
-2. Jednotlivé položky/produkty s množstvím a cenami
+DŮLEŽITÉ INSTRUKCE:
+1. Zpracuj VŠECHNY STRANY dokumentu - faktury mohou mít více stran
+2. Extrahuj SKU kódy z názvů produktů - obvykle ve formátu [PVXXXXX] nebo podobném
+3. Rozlišuj mezi položkami produktů a položkami typu DOPRAVA/POŠTOVNÉ/BALNÉ
+4. Pro ceny rozlišuj NETTO (bez DPH) a BRUTTO (s DPH)
 
 Pro každou položku urči:
-- Název produktu (jak je na faktuře)
-- Počet kusů
-- Nákupní cena za kus (bez DPH pokud je uvedeno, jinak celková/počet)
-- Navrhni prodejní cenu s typickou marží podle kategorie
-- Navrhni kategorii: supplement (doplňky), drink (nápoje), snack (svačiny), equipment (vybavení), other (ostatní)
-- Pokud je položka podobná některému existujícímu produktu, uveď jeho ID
+- name: Název produktu (BEZ SKU kódu v závorce - ten extrahuj zvlášť)
+- skuCode: SKU/katalogové číslo (např. "PV44916" z "[PV44916]")
+- quantity: Počet kusů (pozor na české formátování "1,000 ks" = 1 kus)
+- unitPriceNet: Cena za kus BEZ DPH (Netto/MJ)
+- unitPriceGross: Cena za kus S DPH (Brutto)
+- purchasePrice: Primárně použij unitPriceGross jako nákupní cenu
+- vatRate: Sazba DPH (12, 15, nebo 21)
+- isShipping: true pro položky typu Poštovné, Doprava, Balné, Zásilkovna, PPL atd.
+- suggestedCategory: supplement (doplňky), drink (nápoje), snack (svačiny), equipment (vybavení), other
+- suggestedSellPrice: Navržená prodejní cena s marží podle kategorie
 
 Marže podle kategorií:
 - supplement: 60% (prodejní = nákupní * 2.5)
@@ -100,6 +110,11 @@ Marže podle kategorií:
 - equipment: 40% (prodejní = nákupní * 1.67)
 - other: 50% (prodejní = nákupní * 2)
 
+MAPOVÁNÍ NA EXISTUJÍCÍ PRODUKTY:
+1. Nejprve porovnej podle SKU kódu (pokud existuje)
+2. Pak porovnej podle podobnosti názvu (fuzzy matching)
+3. Confidence 0.9+ pokud je shoda SKU, 0.7-0.9 pro podobné názvy
+
 Existující produkty v systému:
 ${productList || '(žádné existující produkty)'}
 
@@ -107,57 +122,47 @@ Vrať POUZE validní JSON bez jakéhokoliv dalšího textu v tomto formátu:
 {
   "invoice": {
     "supplier": "Název dodavatele nebo null",
+    "supplierIco": "IČO dodavatele nebo null",
     "invoiceNumber": "Číslo faktury nebo null",
+    "variableSymbol": "Variabilní symbol nebo null",
     "date": "YYYY-MM-DD nebo null",
-    "totalAmount": číslo nebo null
+    "totalAmount": celková částka s DPH nebo null,
+    "totalAmountNet": celková částka bez DPH nebo null
   },
   "items": [
     {
-      "name": "Název položky",
+      "name": "Název položky BEZ SKU",
+      "skuCode": "PV44916 nebo null",
       "quantity": číslo,
-      "purchasePrice": číslo nebo null,
+      "unitPriceNet": číslo nebo null,
+      "unitPriceGross": číslo nebo null,
+      "purchasePrice": číslo (preferuj brutto) nebo null,
+      "vatRate": 12 nebo 21 nebo null,
+      "isShipping": true/false,
       "suggestedSellPrice": číslo nebo null,
       "suggestedCategory": "supplement|drink|snack|equipment|other",
       "matchedProductId": "UUID existujícího produktu nebo null",
       "matchedProductName": "Název existujícího produktu nebo null",
-      "confidence": číslo 0-1 (jistota rozpoznání)
+      "confidence": číslo 0-1 (jistota rozpoznání/mapování)
     }
   ]
 }`;
 
     console.log('Calling Lovable AI to parse invoice...');
     
-    // Prepare content based on mime type
-    let content: any[];
-    if (mimeType === 'application/pdf') {
-      // For PDF, we'll send as document
-      content = [
-        {
-          type: "text",
-          text: "Analyzuj tuto fakturu a extrahuj všechny položky produktů/zboží podle instrukcí."
-        },
-        {
-          type: "image_url",
-          image_url: {
-            url: `data:${mimeType};base64,${fileBase64}`
-          }
+    // Prepare content - same for PDF and images with Gemini
+    const content = [
+      {
+        type: "text",
+        text: "Analyzuj tuto fakturu a extrahuj VŠECHNY položky produktů/zboží ze VŠECH STRAN podle instrukcí. Pozorně rozpoznej SKU kódy, DPH sazby a odděl položky dopravy."
+      },
+      {
+        type: "image_url",
+        image_url: {
+          url: `data:${mimeType};base64,${fileBase64}`
         }
-      ];
-    } else {
-      // For images
-      content = [
-        {
-          type: "text",
-          text: "Analyzuj tuto fakturu a extrahuj všechny položky produktů/zboží podle instrukcí."
-        },
-        {
-          type: "image_url",
-          image_url: {
-            url: `data:${mimeType};base64,${fileBase64}`
-          }
-        }
-      ];
-    }
+      }
+    ];
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -171,7 +176,7 @@ Vrať POUZE validní JSON bez jakéhokoliv dalšího textu v tomto formátu:
           { role: "system", content: systemPrompt },
           { role: "user", content }
         ],
-        max_tokens: 4096,
+        max_tokens: 8192, // Increased for multi-page invoices
         temperature: 0.1,
       }),
     });
@@ -242,16 +247,22 @@ Vrať POUZE validní JSON bez jakéhokoliv dalšího textu v tomto formátu:
       );
     }
 
-    // Ensure all items have required fields
+    // Ensure all items have required fields with new fields
     const validatedItems: ParsedInvoiceItem[] = parsedResult.items.map(item => ({
       name: item.name || 'Neznámá položka',
       quantity: Math.max(1, Math.round(item.quantity || 1)),
-      purchasePrice: item.purchasePrice || null,
+      purchasePrice: item.purchasePrice || item.unitPriceGross || null,
       suggestedSellPrice: item.suggestedSellPrice || null,
       suggestedCategory: item.suggestedCategory || 'other',
       matchedProductId: item.matchedProductId || null,
       matchedProductName: item.matchedProductName || null,
       confidence: Math.min(1, Math.max(0, item.confidence || 0.5)),
+      // New fields
+      skuCode: item.skuCode || null,
+      unitPriceNet: item.unitPriceNet || null,
+      unitPriceGross: item.unitPriceGross || null,
+      vatRate: item.vatRate || null,
+      isShipping: item.isShipping || false,
     }));
 
     console.log(`Successfully parsed ${validatedItems.length} items from invoice`);
@@ -260,9 +271,12 @@ Vrať POUZE validní JSON bez jakéhokoliv dalšího textu v tomto formátu:
       success: true,
       invoice: {
         supplier: parsedResult.invoice?.supplier || null,
+        supplierIco: parsedResult.invoice?.supplierIco || null,
         invoiceNumber: parsedResult.invoice?.invoiceNumber || null,
+        variableSymbol: parsedResult.invoice?.variableSymbol || null,
         date: parsedResult.invoice?.date || null,
         totalAmount: parsedResult.invoice?.totalAmount || null,
+        totalAmountNet: parsedResult.invoice?.totalAmountNet || null,
       },
       items: validatedItems,
     };
