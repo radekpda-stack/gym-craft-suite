@@ -1,4 +1,4 @@
-import { Check, AlertTriangle, Package, Sparkles } from 'lucide-react';
+import { Check, AlertTriangle, Package, Sparkles, Truck, Hash } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,6 +30,45 @@ export function InvoiceItemRow({ item, onToggleSelection, onUpdate }: InvoiceIte
   const marginPercent = item.editedPurchasePrice > 0 && item.editedSellPrice > 0
     ? Math.round((1 - item.editedPurchasePrice / item.editedSellPrice) * 100)
     : 0;
+
+  // For shipping items, show a simplified row
+  if (item.isShipping) {
+    return (
+      <div className={cn(
+        "p-3 sm:p-4 rounded-lg border transition-all",
+        "bg-muted/30 border-border/30 opacity-60"
+      )}>
+        <div className="flex items-center gap-3">
+          <Checkbox
+            checked={item.selected}
+            onCheckedChange={onToggleSelection}
+            className="mt-0"
+          />
+          
+          <div className="flex-1 min-w-0 flex items-center gap-2">
+            <Truck className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-muted-foreground truncate">
+              {item.name}
+            </span>
+            <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30 shrink-0">
+              Doprava
+            </Badge>
+          </div>
+          
+          <span className="text-sm text-muted-foreground shrink-0">
+            {formatCurrency(item.editedPurchasePrice)}
+          </span>
+        </div>
+        
+        {item.selected && (
+          <p className="mt-2 text-xs text-orange-500 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            Doprava se obvykle nenaskladňuje jako produkt
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={cn(
@@ -76,6 +115,28 @@ export function InvoiceItemRow({ item, onToggleSelection, onUpdate }: InvoiceIte
                 <AlertTriangle className="w-3 h-3 mr-1" />
                 Nízká marže ({marginPercent}%)
               </Badge>
+            )}
+          </div>
+          
+          {/* SKU code and VAT rate */}
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            {item.skuCode && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Hash className="w-3 h-3" />
+                {item.skuCode}
+              </span>
+            )}
+            
+            {item.vatRate && (
+              <span className="text-xs text-muted-foreground">
+                DPH: {item.vatRate}%
+              </span>
+            )}
+            
+            {item.unitPriceNet && item.unitPriceGross && (
+              <span className="text-xs text-muted-foreground">
+                (Netto: {formatCurrency(item.unitPriceNet)} / Brutto: {formatCurrency(item.unitPriceGross)})
+              </span>
             )}
           </div>
           

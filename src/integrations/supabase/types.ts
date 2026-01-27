@@ -7800,6 +7800,7 @@ export type Database = {
           name: string
           price: number
           purchase_price: number | null
+          sku_code: string | null
           stock_quantity: number | null
           updated_at: string
           user_id: string | null
@@ -7818,6 +7819,7 @@ export type Database = {
           name: string
           price?: number
           purchase_price?: number | null
+          sku_code?: string | null
           stock_quantity?: number | null
           updated_at?: string
           user_id?: string | null
@@ -7836,6 +7838,7 @@ export type Database = {
           name?: string
           price?: number
           purchase_price?: number | null
+          sku_code?: string | null
           stock_quantity?: number | null
           updated_at?: string
           user_id?: string | null
