@@ -186,46 +186,47 @@ export function InvoiceItemRow({
             </div>
           </div>
           
+          {/* Prodejní cena - pro nové produkty vždy, pro existující jako volitelná aktualizace */}
+          <div>
+            <Label className="text-xs text-muted-foreground">
+              Prodejní cena {!isNew && <span className="text-muted-foreground/60">(aktualizovat)</span>}
+            </Label>
+            <div className="relative mt-1">
+              <Input
+                type="number"
+                min={0}
+                step={0.01}
+                value={item.editedSellPrice || ''}
+                onChange={(e) => onUpdate({ editedSellPrice: parseFloat(e.target.value) || 0 })}
+                className={cn(
+                  "h-8 text-sm pr-8",
+                  hasLowMargin && "border-orange-500/50"
+                )}
+                placeholder={isNew ? "0" : item.matchedProduct?.price?.toString() || "0"}
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Kč</span>
+            </div>
+          </div>
+          
           {isNew && (
-            <>
-              <div>
-                <Label className="text-xs text-muted-foreground">Prodejní cena</Label>
-                <div className="relative mt-1">
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={item.editedSellPrice || ''}
-                    onChange={(e) => onUpdate({ editedSellPrice: parseFloat(e.target.value) || 0 })}
-                    className={cn(
-                      "h-8 text-sm pr-8",
-                      hasLowMargin && "border-orange-500/50"
-                    )}
-                    placeholder="0"
-                  />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Kč</span>
-                </div>
-              </div>
-              
-              <div>
-                <Label className="text-xs text-muted-foreground">Kategorie</Label>
-                <Select 
-                  value={item.editedCategory} 
-                  onValueChange={(v) => onUpdate({ editedCategory: v })}
-                >
-                  <SelectTrigger className="mt-1 h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
+            <div>
+              <Label className="text-xs text-muted-foreground">Kategorie</Label>
+              <Select 
+                value={item.editedCategory} 
+                onValueChange={(v) => onUpdate({ editedCategory: v })}
+              >
+                <SelectTrigger className="mt-1 h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
         </div>
       )}

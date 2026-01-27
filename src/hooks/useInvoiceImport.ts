@@ -143,6 +143,10 @@ export function useInvoiceImport() {
           matchReason: s.matchReason || '',
         }));
 
+        // Pro existující produkty použij jejich aktuální prodejní cenu, jinak navrhni dvojnásobek nákupní
+        const existingSellPrice = matchedProduct?.price || 0;
+        const suggestedSellPrice = item.suggestedSellPrice || (purchasePrice ? Math.round(purchasePrice * 2) : 0);
+
         return {
           id: `item-${index}-${Date.now()}`,
           name: item.name,
@@ -158,10 +162,10 @@ export function useInvoiceImport() {
           matchSuggestions,
           extractedDetails: item.extractedDetails || {},
           selected: true,
-          // Editable fields
+          // Editable fields - pro existující produkty použij jejich cenu
           editedQuantity: item.quantity,
           editedPurchasePrice: purchasePrice,
-          editedSellPrice: item.suggestedSellPrice || (purchasePrice ? Math.round(purchasePrice * 2) : 0),
+          editedSellPrice: matchedProduct ? existingSellPrice : suggestedSellPrice,
           editedCategory: item.suggestedCategory || 'other',
         };
       });
@@ -263,11 +267,16 @@ export function useInvoiceImport() {
 
         if (item.matchedProductId && item.matchedProduct) {
           // Update existing product stock
-          const updateData: any = {
+          const updateData: Partial<Product> & { id: string; sku_code?: string } = {
             id: item.matchedProductId,
             stock_quantity: (item.matchedProduct.stock_quantity || 0) + item.editedQuantity,
             purchase_price: item.editedPurchasePrice,
           };
+
+          // Aktualizuj prodejní cenu pokud se změnila
+          if (item.editedSellPrice && item.editedSellPrice !== item.matchedProduct.price) {
+            updateData.price = item.editedSellPrice;
+          }
 
           // Optionally update SKU code if it's new and we have one
           if (state.saveSkuCodes && item.skuCode && !(item.matchedProduct as any).sku_code) {
