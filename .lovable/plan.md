@@ -1,274 +1,168 @@
 
-# AI Import Faktur do Skladu
 
-## Přehled
+# Vylepšení AI Import Faktur pro Vilgain faktury
 
-Přidání nové funkce **Import faktury** do sekce Prodej → Sklad, která pomocí AI automaticky extrahuje položky z nahrané faktury (PDF/obrázek) a umožní je hromadně naskladnit s možností zápisu do nákladů.
+## Analýza vaší faktury
 
----
+Z faktury `881/2025/9035` od **Vilgain s.r.o.** jsem identifikoval následující strukturu:
 
-## Workflow uživatele
+**Metadata faktury:**
+- Dodavatel: Vilgain s. r. o.
+- IČO dodavatele: 29269555
+- Číslo faktury: 881/2025/9035
+- Datum vystavení: 26.06.2025
+- Variabilní symbol: 5341828
+- Způsob platby: Online platba
 
-```text
-1. Klikne na "Import faktury"
-         ↓
-2. Nahraje fakturu (PDF, JPG, PNG)
-         ↓
-3. AI zpracuje a extrahuje položky
-         ↓
-4. Zobrazí se tabulka s položkami:
-   ☑ Protein bar     10 ks   25 Kč   45 Kč
-   ☐ BCAA 500g       5 ks    180 Kč  349 Kč
-   ☑ Shaker          3 ks    35 Kč   89 Kč
-         ↓
-5. Uživatel vybere položky checkboxem
-         ↓
-6. Zvolí: [x] Přidat do nákladů
-         ↓
-7. Klikne "Naskladnit vybrané (3 položky)"
-         ↓
-8. Položky se přidají/aktualizují v produktech
-   + vytvoří se záznam v nákladech
-```
+**Struktura položek (tabulka):**
+| Zboží | Množství | Netto/MJ | Daň % | Netto | DPH | Brutto |
+|-------|----------|----------|-------|-------|-----|--------|
+| Vilgain Clear Whey Isolate Peach fuzz 25 g [PV44916] | 1,000 ks | 33,04 | 12 | 33,04 | 3,96 | 37,00 Kč |
+
+**Klíčové poznatky:**
+- Produkty mají **SKU kódy** v hranatých závorkách: `[PV44916]`
+- Ceny jsou rozděleny na: **Netto/MJ** (nákupní za kus bez DPH), **Brutto** (s DPH)
+- Množství ve formátu `1,000 ks` (čárka jako desetinný oddělovač)
+- Faktura má více stran (2 strany)
+- Obsahuje řádek **Poštovné** (doprava) - neměl by se naskladňovat
 
 ---
 
-## UI komponenty
+## Co chybí v aktuální implementaci
 
-### Tlačítko v StockManagement
+### 1. Extrakce SKU kódů
+Aktuálně se neextrahuje SKU kód produktu (např. `[PV44916]`), který je klíčový pro:
+- Přesné mapování na existující produkty
+- Budoucí automatické rozpoznání produktů
 
-```text
-[Zobrazit marži]       [Příjem zboží] [📄 Import faktury] [+ Přidat položku]
-```
+### 2. Filtrování nevhodných položek
+Položky jako **Poštovné**, **Doprava**, **Balné** by měly být automaticky označeny jako "nevybráno" nebo filtrovány.
 
-### Dialog pro import faktury
+### 3. Podpora více stran PDF
+Faktura má 2 strany s položkami - AI musí analyzovat celý dokument.
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 📄 Import faktury                                          [X] │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │                                                             │ │
-│ │     📤 Přetáhněte fakturu sem nebo klikněte pro výběr       │ │
-│ │                                                             │ │
-│ │     Podporované formáty: PDF, JPG, PNG                      │ │
-│ │                                                             │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ [Zpracovat AI]                                                  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+### 4. Rozpoznání brutto vs netto ceny
+Vilgain faktury mají obě ceny - měla by být jasná volba, kterou cenu použít jako nákupní.
 
-### Po zpracování AI
+### 5. Uložení SKU pro existující produkty
+Možnost přiřadit SKU kód k produktu pro budoucí automatické mapování.
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 📄 Import faktury                                          [X] │
-├─────────────────────────────────────────────────────────────────┤
-│ ✅ Rozpoznáno 5 položek z faktury                               │
-│                                                                 │
-│ Dodavatel: FitShop s.r.o.                                       │
-│ Číslo faktury: FV-2026-0142                                     │
-│ Datum: 27.1.2026                                                │
-│                                                                 │
-│ ─────────────────────────────────────────────────────────────── │
-│                                                                 │
-│ [☑] Vybrat vše                                                  │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ [☑] Protein bar                                    [Nový]   │ │
-│ │     Počet: [10] ks                                          │ │
-│ │     Nákupní cena: [25] Kč    Prodejní cena: [45] Kč         │ │
-│ │     Kategorie: [▼ Svačina]                                  │ │
-│ ├─────────────────────────────────────────────────────────────┤ │
-│ │ [☑] BCAA 500g                           [Existující ✓]      │ │
-│ │     Počet: [5] ks   (+5 ks na sklad)                        │ │
-│ │     Nákupní cena: [180] Kč                                  │ │
-│ ├─────────────────────────────────────────────────────────────┤ │
-│ │ [☐] Neznámá položka XYZ                            [Nový]   │ │
-│ │     ⚠ Nepodařilo se určit kategorii                         │ │
-│ │     Počet: [2] ks                                           │ │
-│ │     Nákupní cena: [?] Kč    Prodejní cena: [?] Kč           │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ ─────────────────────────────────────────────────────────────── │
-│ Celkem k naskladnění: 15 ks (2 nové produkty, 1 existující)     │
-│ Celková nákupní cena: 1 430 Kč                                  │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ [x] Přidat jako náklad do kategorie "Nákup zboží"           │ │
-│ │     Náklad 1 430 Kč bude automaticky zaznamenán             │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│                              [Zrušit] [Naskladnit 3 položky]    │
-└─────────────────────────────────────────────────────────────────┘
-```
+### 6. Zobrazení DPH sazby
+Některé produkty mají 12%, jiné 21% - důležité pro účetnictví.
 
 ---
 
-## Technická implementace
+## Technické změny
 
-### 1. Edge funkce `parse-invoice`
+### 1. Rozšíření rozhraní `ParsedInvoiceItem`
 
-Nová edge funkce využívající Lovable AI (Gemini) pro parsování faktur:
+Přidám nová pole:
+- `skuCode` - SKU/katalogové číslo produktu (např. "PV44916")
+- `unitPriceNet` - cena bez DPH za kus
+- `unitPriceGross` - cena s DPH za kus
+- `vatRate` - sazba DPH (12, 21)
+- `isShipping` - příznak pro položky typu doprava/poštovné
 
-```text
-supabase/functions/parse-invoice/index.ts
+### 2. Vylepšení AI promptu
 
-Vstup:
-- fileBase64: string (base64 encoded PDF/image)
-- mimeType: string (application/pdf, image/jpeg, image/png)
-- existingProducts: string[] (seznam názvů existujících produktů pro matching)
+Aktualizuji prompt v edge funkci aby:
+- Extrahoval SKU kódy z názvů položek `[PVXXXXX]`
+- Rozpoznal položky typu doprava/poštovné
+- Vrátil jak netto tak brutto ceny
+- Zpracoval všechny strany dokumentu
 
-Výstup:
-{
-  success: true,
-  invoice: {
-    supplier: "FitShop s.r.o.",
-    invoiceNumber: "FV-2026-0142",
-    date: "2026-01-27",
-    totalAmount: 1430
-  },
-  items: [
-    {
-      name: "Protein bar",
-      quantity: 10,
-      purchasePrice: 25,
-      suggestedSellPrice: 45,
-      suggestedCategory: "snack",
-      matchedProductId: null,          // null = nový produkt
-      matchedProductName: null,
-      confidence: 0.95
-    },
-    {
-      name: "BCAA 500g",
-      quantity: 5,
-      purchasePrice: 180,
-      suggestedSellPrice: null,
-      matchedProductId: "abc-123",     // existující produkt
-      matchedProductName: "BCAA Powder 500g",
-      confidence: 0.87
-    }
-  ]
-}
-```
+### 3. Vylepšení UI
 
-### 2. AI Prompt pro parsování
+**Nové funkce v dialogu:**
+- Zobrazení SKU kódu u položek
+- Automatické odznačení poštovného
+- Přepínač "Použít ceny s DPH / bez DPH"
+- Možnost uložit SKU kód k produktu při vytvoření
 
-```text
-Analyzuj tuto fakturu a extrahuj všechny položky produktů/zboží.
-
-Pro každou položku urči:
-1. Název produktu
-2. Počet kusů
-3. Nákupní cenu za kus (bez DPH pokud je uvedeno)
-4. Navrhni prodejní cenu (typicky 1.5-2x nákupní)
-5. Navrhni kategorii: supplement, drink, snack, equipment, other
-
-Pokud je položka podobná některému z existujících produktů, uveď shodu.
-Existující produkty: [seznam]
-
-Vrať JSON ve formátu: { invoice: {...}, items: [...] }
-```
-
-### 3. Frontend komponenty
-
-| Soubor | Popis |
-|--------|-------|
-| `src/components/sales/InvoiceImportDialog.tsx` | Hlavní dialog s upload a náhledem |
-| `src/components/sales/InvoiceItemRow.tsx` | Řádek položky s checkbox a editací |
-| `src/hooks/useInvoiceImport.ts` | Hook pro volání edge funkce a správu stavu |
-
-### 4. Logika importu
-
-```typescript
-// Pro vybrané položky:
-for (item of selectedItems) {
-  if (item.matchedProductId) {
-    // Existující produkt - pouze aktualizovat stock_quantity
-    await updateProduct({
-      id: item.matchedProductId,
-      stock_quantity: existingStock + item.quantity
-    });
-  } else {
-    // Nový produkt - vytvořit
-    await createProduct({
-      name: item.name,
-      price: item.suggestedSellPrice,
-      purchase_price: item.purchasePrice,
-      category: item.suggestedCategory,
-      kind: 'inventory',
-      stock_quantity: item.quantity
-    });
-  }
-}
-
-// Pokud je zaškrtnuto "Přidat jako náklad"
-if (createExpense) {
-  await createExpense({
-    name: `Import faktury: ${invoice.invoiceNumber || 'Bez čísla'}`,
-    description: selectedItems.map(i => `${i.name} (${i.quantity}x)`).join(', '),
-    amount: totalPurchasePrice,
-    date: invoice.date || today,
-    category: 'inventory'
-  });
-}
-```
+**Vizuální indikátory:**
+- Badge pro položky s SKU
+- Varování pro položky typu "doprava"
+- Zobrazení DPH sazby
 
 ---
-
-## Soubory k vytvoření
-
-| Soubor | Popis |
-|--------|-------|
-| `supabase/functions/parse-invoice/index.ts` | Edge funkce pro AI parsování |
-| `src/components/sales/InvoiceImportDialog.tsx` | Hlavní dialog |
-| `src/components/sales/InvoiceItemRow.tsx` | Řádek položky |
-| `src/hooks/useInvoiceImport.ts` | Hook pro import |
 
 ## Soubory k úpravě
 
 | Soubor | Změna |
 |--------|-------|
-| `src/components/sales/StockManagement.tsx` | Přidat tlačítko "Import faktury" |
-| `supabase/config.toml` | Přidat novou funkci parse-invoice |
+| `supabase/functions/parse-invoice/index.ts` | Rozšířený prompt, extrakce SKU, filtr dopravy |
+| `src/hooks/useInvoiceImport.ts` | Nová pole, logika pro uložení SKU |
+| `src/components/sales/InvoiceItemRow.tsx` | Zobrazení SKU, DPH, badge pro dopravu |
+| `src/components/sales/InvoiceImportDialog.tsx` | Přepínač netto/brutto, souhrn DPH |
 
 ---
 
-## Doplňující funkce (na které jsi zapomněl)
+## Databázové změny
 
-1. **Automatické mapování produktů** - AI porovná názvy z faktury s existujícími produkty a navrhne shody (fuzzy matching)
+Přidám sloupec pro SKU kód do tabulky produktů:
 
-2. **Uložení dodavatele** - Možnost uložit informace o dodavateli pro budoucí reference
+```sql
+ALTER TABLE products ADD COLUMN sku_code TEXT;
+CREATE INDEX idx_products_sku ON products(sku_code) WHERE sku_code IS NOT NULL;
+```
 
-3. **Historie importů** - Možnost zobrazit předchozí importy (v nákladech jako popis)
-
-4. **Validace duplicit** - Upozornění pokud faktura s podobným číslem už byla importována
-
-5. **Návrh marže** - AI automaticky navrhne prodejní cenu na základě typické marže v kategorii (např. nápoje 80%, suplementy 60%)
-
-6. **Batch úprava prodejní ceny** - Možnost hromadně nastavit marži pro všechny položky (např. +50%)
-
-7. **Seskupení podle kategorie** - Položky ve výsledku seskupit podle navržené kategorie
-
-8. **Varování při nízké marži** - Zvýraznění položek kde je marže pod 20%
+Toto umožní automatické mapování produktů podle SKU v budoucích importech.
 
 ---
 
-## Bezpečnost
+## Ukázka vylepšeného UI
 
-- Edge funkce vyžaduje autentizaci (Authorization header)
-- Soubory se neukládají na server, zpracují se pouze v paměti
-- Rate limiting pro prevenci zneužití AI
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ 📄 Import faktury                                          [X] │
+├─────────────────────────────────────────────────────────────────┤
+│ ✅ Rozpoznáno 15 položek z faktury                              │
+│                                                                 │
+│ Dodavatel: Vilgain s.r.o.        IČO: 29269555                  │
+│ Č. faktury: 881/2025/9035        Datum: 26.06.2025              │
+│ VS: 5341828                      Celkem: 3 932 Kč               │
+│                                                                 │
+│ Cenová základna: (○) Netto (bez DPH)  (●) Brutto (s DPH)       │
+│                                                                 │
+│ ─────────────────────────────────────────────────────────────── │
+│ [☑] Vybrat vše (14 produktů, 1 doprava)                         │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ [☑] Vilgain Clear Whey Isolate Peach fuzz 25g      [Nový]   │ │
+│ │     [PV44916]  DPH: 12%                                     │ │
+│ │     Počet: [1] ks                                           │ │
+│ │     Nákupní: [37.00] Kč    Prodejní: [75] Kč                │ │
+│ │     Kategorie: [▼ Doplněk]                                  │ │
+│ ├─────────────────────────────────────────────────────────────┤ │
+│ │ [☑] Vilgain Protein Iced Coffee karamelové latté   [Nový]   │ │
+│ │     [PV45967]  DPH: 12%                                     │ │
+│ │     Počet: [17] ks                                          │ │
+│ │     Nákupní: [49.00] Kč    Prodejní: [89] Kč                │ │
+│ ├─────────────────────────────────────────────────────────────┤ │
+│ │ [☐] Poštovné                              [🚚 Doprava]      │ │
+│ │     ⚠️ Položka typu doprava - automaticky odznačena         │ │
+│ │     89.00 Kč                                                │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ ─────────────────────────────────────────────────────────────── │
+│ K naskladnění: 52 ks (14 nových produktů)                       │
+│ Nákupní cena: 3 843 Kč                                          │
+│ DPH 12%: 411,75 Kč  |  DPH 21%: 15,45 Kč                        │
+│                                                                 │
+│ [x] Přidat jako náklad (3 843 Kč do "Nákup zboží")              │
+│ [x] Uložit SKU kódy k novým produktům                           │
+│                                                                 │
+│                              [Zrušit] [Naskladnit 14 položek]   │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Výhody řešení
+## Implementační pořadí
 
-- **Úspora času**: Místo ručního zadávání 10+ položek stačí nahrát fakturu
-- **Přesnost**: AI extrahuje přesné částky a množství
-- **Integrace s náklady**: Automatický zápis do evidence nákladů
-- **Chytré mapování**: Rozpozná existující produkty a pouze dorovná sklad
-- **Flexibilita**: Možnost upravit jakoukoliv hodnotu před importem
+1. **Databázová migrace** - přidat sloupec `sku_code`
+2. **Edge funkce** - vylepšený prompt pro Vilgain faktury
+3. **Hook** - rozšířené rozhraní a logika pro SKU
+4. **UI komponenty** - nové zobrazení položek
+5. **Testování** - ověření s vaší fakturou
+
