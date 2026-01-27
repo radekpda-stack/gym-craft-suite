@@ -2,8 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { ParsedRxWorkout, RxScoringMode } from './useRxWorkoutParser';
+import { ParsedRxWorkout } from './useRxWorkoutParser';
 
+export type RxScoringMode = 'for_time' | 'amrap' | 'max_load' | 'rounds_reps';
 export interface RxWorkout {
   id: string;
   user_id: string;

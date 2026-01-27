@@ -8278,6 +8278,74 @@ export type Database = {
           },
         ]
       }
+      rx_workout_results: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          performed_at: string
+          recorded_by_user_id: string | null
+          rx_workout_id: string
+          score_primary: number
+          score_secondary: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          recorded_by_user_id?: string | null
+          rx_workout_id: string
+          score_primary: number
+          score_secondary?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          recorded_by_user_id?: string | null
+          rx_workout_id?: string
+          score_primary?: number
+          score_secondary?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rx_workout_results_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rx_workout_results_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "rx_workout_results_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_product_sales_report"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "rx_workout_results_rx_workout_id_fkey"
+            columns: ["rx_workout_id"]
+            isOneToOne: false
+            referencedRelation: "training_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_order_items: {
         Row: {
           created_at: string
@@ -10350,19 +10418,24 @@ export type Database = {
         Row: {
           block_type: string | null
           created_at: string
+          damper_resistance: number | null
           exercise_id: string | null
           exercise_name: string
           id: string
+          incline_percent: number | null
+          load_format: string | null
           notes: string | null
           reps_max: number | null
           reps_min: number | null
           rest_seconds: number | null
           rir: number | null
+          round_marker: string | null
           rpe: number | null
           rx_distance_m: number | null
           rx_weight_kg: number | null
           sets: number | null
           sort_order: number | null
+          speed_setting: string | null
           template_id: string
           tempo: string | null
           time_ms: number | null
@@ -10372,19 +10445,24 @@ export type Database = {
         Insert: {
           block_type?: string | null
           created_at?: string
+          damper_resistance?: number | null
           exercise_id?: string | null
           exercise_name: string
           id?: string
+          incline_percent?: number | null
+          load_format?: string | null
           notes?: string | null
           reps_max?: number | null
           reps_min?: number | null
           rest_seconds?: number | null
           rir?: number | null
+          round_marker?: string | null
           rpe?: number | null
           rx_distance_m?: number | null
           rx_weight_kg?: number | null
           sets?: number | null
           sort_order?: number | null
+          speed_setting?: string | null
           template_id: string
           tempo?: string | null
           time_ms?: number | null
@@ -10394,19 +10472,24 @@ export type Database = {
         Update: {
           block_type?: string | null
           created_at?: string
+          damper_resistance?: number | null
           exercise_id?: string | null
           exercise_name?: string
           id?: string
+          incline_percent?: number | null
+          load_format?: string | null
           notes?: string | null
           reps_max?: number | null
           reps_min?: number | null
           rest_seconds?: number | null
           rir?: number | null
+          round_marker?: string | null
           rpe?: number | null
           rx_distance_m?: number | null
           rx_weight_kg?: number | null
           sets?: number | null
           sort_order?: number | null
+          speed_setting?: string | null
           template_id?: string
           tempo?: string | null
           time_ms?: number | null

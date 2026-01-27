@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useRxWorkouts } from '@/hooks/useRxWorkouts';
-import { RxScoringMode } from '@/hooks/useRxWorkoutParser';
+import { useRxWorkouts, RxScoringMode } from '@/hooks/useRxWorkouts';
 import { RxWorkoutCard } from '@/components/rx/RxWorkoutCard';
 import { RxImportDialog } from '@/components/rx/RxImportDialog';
 import { 
