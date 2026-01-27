@@ -4,6 +4,7 @@ import { toast } from '@/hooks/use-toast';
 
 export type ExpenseCategory = 
   | 'rent' 
+  | 'inventory'
   | 'equipment' 
   | 'education' 
   | 'marketing' 
@@ -54,6 +55,7 @@ export interface ExpenseFilters {
 
 export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string; icon: string }[] = [
   { value: 'rent', label: 'Nájem / Provize', icon: '🏢' },
+  { value: 'inventory', label: 'Nákup zboží', icon: '📦' },
   { value: 'equipment', label: 'Vybavení', icon: '🏋️' },
   { value: 'education', label: 'Vzdělávání', icon: '📚' },
   { value: 'marketing', label: 'Marketing', icon: '📣' },

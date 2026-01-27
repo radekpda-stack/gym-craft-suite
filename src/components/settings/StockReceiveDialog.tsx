@@ -1,26 +1,32 @@
 import { useState } from 'react';
-import { PackagePlus, Plus, Minus, X, Loader2 } from 'lucide-react';
+import { PackagePlus, Plus, Minus, X, Loader2, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { useProducts, useUpdateProduct, Product } from '@/hooks/useProducts';
+import { useCreateExpense } from '@/hooks/useBusinessExpenses';
 import { toast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 interface StockItem {
   product: Product;
   quantity: number;
+  unitCost: number; // Nákupní cena za kus
 }
 
 export function StockReceiveDialog() {
   const { data: products = [], isLoading } = useProducts();
   const updateProduct = useUpdateProduct();
+  const createExpense = useCreateExpense();
 
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState<StockItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [createExpenseRecord, setCreateExpenseRecord] = useState(true);
 
   // Filter out services and already added products
   const availableProducts = products.filter(
@@ -31,7 +37,9 @@ export function StockReceiveDialog() {
     const product = products.find(p => p.id === selectedProductId);
     if (!product) return;
 
-    setItems(prev => [...prev, { product, quantity: 1 }]);
+    // Use product's purchase_price as default unit cost
+    const defaultUnitCost = product.purchase_price || 0;
+    setItems(prev => [...prev, { product, quantity: 1, unitCost: defaultUnitCost }]);
     setSelectedProductId('');
   };
 
@@ -40,6 +48,16 @@ export function StockReceiveDialog() {
       prev.map(item =>
         item.product.id === productId
           ? { ...item, quantity: Math.max(1, value) }
+          : item
+      )
+    );
+  };
+
+  const updateUnitCost = (productId: string, value: number) => {
+    setItems(prev =>
+      prev.map(item =>
+        item.product.id === productId
+          ? { ...item, unitCost: Math.max(0, value) }
           : item
       )
     );
@@ -54,6 +72,7 @@ export function StockReceiveDialog() {
 
     setIsProcessing(true);
     try {
+      // Update stock quantities
       for (const item of items) {
         const newStock = (item.product.stock_quantity || 0) + item.quantity;
         await updateProduct.mutateAsync({
@@ -62,9 +81,23 @@ export function StockReceiveDialog() {
         });
       }
 
+      // Create expense record if enabled and total cost > 0
+      if (createExpenseRecord && totalCost > 0) {
+        const productNames = items.map(i => `${i.product.name} (${i.quantity}x)`).join(', ');
+        await createExpense.mutateAsync({
+          name: `Nákup zboží: ${items.length === 1 ? items[0].product.name : `${items.length} produktů`}`,
+          description: productNames,
+          amount: totalCost,
+          date: format(new Date(), 'yyyy-MM-dd'),
+          category: 'inventory',
+        });
+      }
+
       toast({
         title: 'Příjem zboží dokončen',
-        description: `Přijato ${items.length} produktů na sklad.`,
+        description: createExpenseRecord && totalCost > 0 
+          ? `Přijato ${items.length} produktů na sklad. Náklad ${formatCurrency(totalCost)} zaznamenán.`
+          : `Přijato ${items.length} produktů na sklad.`,
       });
 
       setItems([]);
@@ -81,6 +114,11 @@ export function StockReceiveDialog() {
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalCost = items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', maximumFractionDigits: 0 }).format(amount);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -154,41 +192,18 @@ export function StockReceiveDialog() {
                 {items.map((item) => (
                   <div
                     key={item.product.id}
-                    className="flex items-center justify-between p-3 bg-secondary/30"
+                    className="p-3 bg-secondary/30 space-y-2"
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{item.product.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Aktuálně: {item.product.stock_quantity || 0} ks → Nově:{' '}
-                        <span className="font-medium text-success">
-                          {(item.product.stock_quantity || 0) + item.quantity} ks
-                        </span>
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 ml-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                      >
-                        <Minus className="w-3 h-3" />
-                      </Button>
-                      <Input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateQuantity(item.product.id, parseInt(e.target.value) || 1)}
-                        className="w-14 h-7 text-center text-sm"
-                        min={1}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                      >
-                        <Plus className="w-3 h-3" />
-                      </Button>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{item.product.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Aktuálně: {item.product.stock_quantity || 0} ks → Nově:{' '}
+                          <span className="font-medium text-success">
+                            {(item.product.stock_quantity || 0) + item.quantity} ks
+                          </span>
+                        </p>
+                      </div>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -198,6 +213,49 @@ export function StockReceiveDialog() {
                         <X className="w-3 h-3" />
                       </Button>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                        >
+                          <Minus className="w-3 h-3" />
+                        </Button>
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateQuantity(item.product.id, parseInt(e.target.value) || 1)}
+                          className="w-14 h-7 text-center text-sm"
+                          min={1}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                        <span className="text-xs text-muted-foreground">ks</span>
+                      </div>
+                      <div className="text-muted-foreground">×</div>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={item.unitCost}
+                          onChange={(e) => updateUnitCost(item.product.id, parseFloat(e.target.value) || 0)}
+                          className="w-20 h-7 text-center text-sm"
+                          min={0}
+                          step={1}
+                        />
+                        <span className="text-xs text-muted-foreground">Kč/ks</span>
+                      </div>
+                      <div className="text-sm font-medium ml-auto">
+                        = {formatCurrency(item.quantity * item.unitCost)}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -206,14 +264,38 @@ export function StockReceiveDialog() {
 
           {/* Summary */}
           {items.length > 0 && (
-            <div className="p-4 rounded-xl bg-success/10 border border-success/20">
-              <p className="text-sm text-muted-foreground">Celkem k příjmu:</p>
-              <p className="text-2xl font-bold text-foreground">
-                {totalItems} ks
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {items.length} {items.length === 1 ? 'produkt' : items.length < 5 ? 'produkty' : 'produktů'}
-              </p>
+            <div className="p-4 rounded-xl bg-success/10 border border-success/20 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Celkem k příjmu:</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {totalItems} ks
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Celková nákupní cena:</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {formatCurrency(totalCost)}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Create expense toggle */}
+              <div className="flex items-center justify-between pt-2 border-t border-success/20">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">Zaznamenat jako náklad</span>
+                </div>
+                <Switch 
+                  checked={createExpenseRecord} 
+                  onCheckedChange={setCreateExpenseRecord}
+                />
+              </div>
+              {createExpenseRecord && totalCost > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Náklad {formatCurrency(totalCost)} bude automaticky přidán do kategorie "Nákup zboží"
+                </p>
+              )}
             </div>
           )}
 
