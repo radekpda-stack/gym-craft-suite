@@ -318,6 +318,15 @@ export default function SchedulePage() {
           <h1 className="text-xl font-bold text-foreground">Rozvrh</h1>
           <div className="flex items-center gap-2">
             <Button
+              variant="default"
+              size="sm"
+              onClick={() => handleOpenCreate()}
+              className="h-8 gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Přidat</span>
+            </Button>
+            <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate('/training-mode')}

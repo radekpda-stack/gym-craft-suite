@@ -4,7 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { PageTransition } from './PageTransition';
-import { QuickActionButton } from './QuickActionButton';
+
 import { CommandPalette, useCommandPalette } from '@/components/search/CommandPalette';
 import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
 // ReminderNotifier removed
@@ -98,8 +98,6 @@ export function Layout({ children }: LayoutProps) {
         </AnimatePresence>
       </main>
 
-      {/* Quick Action Button (FAB) */}
-      <QuickActionButton />
 
       {/* Mobile Navigation - hidden on desktop */}
       <MobileNav />
