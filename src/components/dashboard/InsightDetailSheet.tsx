@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/lib/i18n';
 import { TrendingUp, TrendingDown, Minus, ArrowRight, Lightbulb } from 'lucide-react';
 import { motion } from 'framer-motion';
-import type { InsightWithDetail } from './DashboardInsights';
+import type { InsightWithDetail } from './insights/insightTypes';
 
 interface InsightDetailSheetProps {
   insight: InsightWithDetail | null;
