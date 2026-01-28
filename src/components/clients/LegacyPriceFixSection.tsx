@@ -38,21 +38,24 @@ export function LegacyPriceFixSection({ clientId }: LegacyPriceFixSectionProps) 
     },
   });
 
-  // Fetch consumed amount since grandfathered_at
+  // Fetch consumed amount since grandfathered_at from credit_transactions (main ledger)
   const { data: consumedData } = useQuery({
     queryKey: ['grandfathered-consumed', clientId, client?.grandfathered_at],
     queryFn: async () => {
       if (!client?.grandfathered_at) return { consumed: 0 };
       
+      // Query credit_transactions for negative amounts (deductions) since fixation date
       const { data, error } = await supabase
-        .from('credit_consumptions')
-        .select('amount_czk')
+        .from('credit_transactions')
+        .select('amount')
         .eq('client_id', clientId)
+        .lt('amount', 0) // Only deductions (negative amounts)
         .gte('created_at', client.grandfathered_at);
       
       if (error) throw error;
       
-      const consumed = data?.reduce((sum, item) => sum + (item.amount_czk || 0), 0) || 0;
+      // Sum absolute values of deductions
+      const consumed = data?.reduce((sum, item) => sum + Math.abs(item.amount || 0), 0) || 0;
       return { consumed };
     },
     enabled: !!client?.grandfathered_at && !!client?.use_legacy_pricing,
