@@ -1,71 +1,34 @@
 /**
- * TrainingDetailView Component - Compact Version
+ * TrainingDetailView Component - Redesigned "Training Cockpit"
  * 
- * Simplified layout focused on:
- * 1. Compact meta section (date/time, duration)
- * 2. Tags immediately visible
- * 3. Exercises as main content
- * 4. Previous training as collapsible
- * 5. Single optional note with toggle
+ * 3-zone layout:
+ * 1. Hero Header (compact meta + tags)
+ * 2. Prep Section (alerts, followups, previous training) - scheduled only
+ * 3. Exercises (main stage)
+ * 4. Close Section (payment, notes, followups, feedback) - completed only
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { format } from 'date-fns';
-import { cs } from 'date-fns/locale';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 import {
-  Edit2,
-  Save,
   X,
-  Calendar,
-  Clock,
-  Users,
-  Dumbbell,
+  Save,
   Loader2,
-  Repeat,
-  FileText,
-  CreditCard,
   Trash2,
-  MoreHorizontal,
-  StickyNote,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { ClientAvatar } from '@/components/ui/client-avatar';
-import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
-import { TrainingTypeSelector } from '@/components/trainings/TrainingTypeSelector';
-import { CompactTagGridSelector } from '@/components/trainings/CompactTagGridSelector';
-import { RPEInputField } from '@/components/trainings/RPEInputField';
-import { WorkoutExerciseManager } from '@/components/trainings/WorkoutExerciseManager';
-import { TrainingParticipantsManager } from '@/components/trainings/TrainingParticipantsManager';
-import { ParticipantsPRsSection } from '@/components/trainings/ParticipantsPRsSection';
-import { InlineTextarea } from '@/components/trainings/InlineTextarea';
-import { PreviousTrainingPreview } from '@/components/trainings/PreviousTrainingPreview';
 import { useTags } from '@/hooks/useTags';
 import { TrainingSession, useChangePaymentMethod } from '@/hooks/useTrainingSessions';
 import { Client, useClients } from '@/hooks/useClients';
-import { ChangePaymentMethodDialog, PaymentMethod } from '@/components/trainings/ChangePaymentMethodDialog';
-import { TrainingStatusBadge } from '@/components/ui/training-status-badge';
-import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
-import { MultiParticipantFeedbackSection } from '@/components/feedback/MultiParticipantFeedbackSection';
+import { PaymentMethod } from '@/components/trainings/ChangePaymentMethodDialog';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useFeedbackRequests } from '@/hooks/useFeedbackRequests';
-import { ClientProfilePanel } from '@/components/trainings/ClientProfilePanel';
 import { useTrainingParticipants } from '@/hooks/useTrainingParticipants';
-import { PreviousFollowupAlert } from '@/components/trainings/PreviousFollowupAlert';
-import { FollowupInput } from '@/components/trainings/FollowupInput';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
 import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/formatters';
 import {
   Form,
   FormControl,
@@ -91,6 +54,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+// New redesigned components
+import { TrainingHeroHeader } from './TrainingHeroHeader';
+import { TrainingPrepSection } from './TrainingPrepSection';
+import { TrainingCloseSection } from './TrainingCloseSection';
+import { CompactTagGridSelector } from './CompactTagGridSelector';
+import { WorkoutExerciseManager } from './WorkoutExerciseManager';
+import { TrainingParticipantsManager } from './TrainingParticipantsManager';
+import { ParticipantsPRsSection } from './ParticipantsPRsSection';
 
 const trainingDetailSchema = z.object({
   date: z.date(),
@@ -119,18 +91,6 @@ interface TrainingDetailViewProps {
   onTagsChange?: (tagIds: string[]) => Promise<void>;
   onFieldUpdate?: (field: string, value: string | boolean) => Promise<void>;
 }
-
-const statusColors = {
-  scheduled: 'bg-primary/10 text-primary border-primary/20',
-  completed: 'bg-success/10 text-success border-success/20',
-  canceled: 'bg-destructive/10 text-destructive border-destructive/20',
-};
-
-const statusLabels = {
-  scheduled: 'Naplánováno',
-  completed: 'Dokončeno',
-  canceled: 'Zrušeno',
-};
 
 export function TrainingDetailView({ 
   training, 
@@ -161,7 +121,7 @@ export function TrainingDetailView({
       if (onTagsChange) {
         onTagsChange(newTagIds);
       }
-    }, 800); // Save after 800ms of no changes
+    }, 800);
   }, [onTagsChange]);
   
   // Cleanup timeout on unmount
@@ -175,7 +135,7 @@ export function TrainingDetailView({
   
   const { data: tags = [] } = useTags();
   
-  // Rozdělit tagy podle typu pro stepper
+  // Split tags by type for stepper
   const focusTagIds = selectedTagIds.filter(id => {
     const tag = tags.find(t => t.id === id);
     return tag?.tag_type === 'focus';
@@ -194,10 +154,10 @@ export function TrainingDetailView({
   const { data: feedbackRequests = [] } = useFeedbackRequests();
   const { data: allClients = [] } = useClients();
   
-  // Get training participants (for group trainings)
+  // Get training participants
   const { data: trainingParticipants = [] } = useTrainingParticipants(training.id);
   
-  // Build participants list: if we have training_participants, use them; otherwise use primary client
+  // Build participants list
   const participants = useMemo(() => {
     if (trainingParticipants.length > 0) {
       return trainingParticipants.map(tp => {
@@ -205,12 +165,18 @@ export function TrainingDetailView({
         return {
           client_id: tp.client_id,
           name: clientData?.name || 'Neznámý klient',
+          email: clientData?.email,
+          feedback_enabled: clientData?.feedback_enabled !== false,
         };
       });
     }
-    // Default to primary client if no participants
     if (client) {
-      return [{ client_id: client.id, name: client.name }];
+      return [{ 
+        client_id: client.id, 
+        name: client.name,
+        email: client.email,
+        feedback_enabled: client.feedback_enabled !== false,
+      }];
     }
     return [{ client_id: training.client_id, name: 'Primární klient' }];
   }, [trainingParticipants, allClients, client, training.client_id]);
@@ -222,7 +188,7 @@ export function TrainingDetailView({
     fr => fr.training_session_id === training.id && fr.status !== 'cancelled'
   );
   
-  // Calculate price for this training
+  // Calculate price
   const participantCount = training.participant_count || 1;
   const trainingPrice = training.final_price || (
     participantCount >= 3 ? trainingPrices["3"] :
@@ -251,7 +217,7 @@ export function TrainingDetailView({
     },
   });
 
-  // Reset form when training data changes or when exiting edit mode
+  // Reset form when training data changes
   useEffect(() => {
     form.reset({
       date: new Date(training.date),
@@ -264,20 +230,17 @@ export function TrainingDetailView({
     setShowNote(!!training.notes);
   }, [training, form, initialTagIds]);
 
-  /** Handle form submission */
   const handleSubmit = async (data: TrainingDetailFormValues) => {
     await onSave(data, selectedTagIds);
     setIsEditMode(false);
   };
 
-  /** Cancel editing and reset form */
   const handleCancel = () => {
     form.reset();
     setSelectedTagIds(initialTagIds);
     setIsEditMode(false);
   };
 
-  /** Handle delete confirmation */
   const handleDeleteConfirm = async () => {
     if (onDelete) {
       await onDelete();
@@ -285,97 +248,26 @@ export function TrainingDetailView({
     setShowDeleteDialog(false);
   };
 
-  const trainingDate = new Date(training.date);
+  const isScheduled = training.status === 'scheduled';
+  const isInProgress = training.status === 'in_progress';
+  const isCompleted = training.status === 'completed';
+  const isCanceled = training.status === 'canceled';
 
   return (
-    <div className="space-y-4">
-      {/* COMPACT HEADER with meta info and dropdown menu */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0 flex-1">
-          {client ? (
-            <ClientAvatar name={client.name} size="lg" className="shrink-0" />
-          ) : (
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Dumbbell className="w-6 h-6 text-primary" />
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight truncate">
-              {client?.name || 'Trénink'}
-            </h1>
-            
-            {/* Compact meta row - DATE/TIME is key info */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5 font-medium text-foreground">
-                <Calendar className="w-4 h-4 text-primary" />
-                {format(trainingDate, "EEEE d.M.", { locale: cs })}
-                <span className="text-primary font-semibold">
-                  v {format(trainingDate, "HH:mm")}
-                </span>
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
-                {training.duration} min
-              </span>
-              {participantCount > 1 && (
-                <span className="flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5" />
-                  {participantCount} {participantCount < 5 ? 'osoby' : 'osob'}
-                </span>
-              )}
-              {(training.recurrence_type || training.parent_session_id) && (
-                <span className="flex items-center gap-1 text-primary">
-                  <Repeat className="w-3.5 h-3.5" />
-                </span>
-              )}
-            </div>
+    <div className="space-y-4 pb-6">
+      {/* HERO HEADER */}
+      <TrainingHeroHeader
+        training={training}
+        client={client}
+        participantCount={participantCount}
+        onEditClick={() => setIsEditMode(true)}
+        onDeleteClick={onDelete ? () => setShowDeleteDialog(true) : undefined}
+      />
 
-            {/* Status badge */}
-            <div className="mt-2">
-              <span
-                className={cn(
-                  'px-2.5 py-0.5 rounded-full text-xs font-medium border inline-block',
-                  statusColors[training.status as keyof typeof statusColors]
-                )}
-              >
-                {statusLabels[training.status as keyof typeof statusLabels]}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Dropdown menu with Edit and Delete */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="shrink-0">
-              <MoreHorizontal className="w-5 h-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setIsEditMode(true)}>
-              <Edit2 className="w-4 h-4 mr-2" />
-              Upravit detaily
-            </DropdownMenuItem>
-            {onDelete && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => setShowDeleteDialog(true)}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Smazat trénink
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Edit mode form (collapsible) */}
+      {/* EDIT MODE FORM */}
       {isEditMode && (
         <Form {...form}>
-          <div className="glass rounded-xl p-4 space-y-4 border-2 border-primary/30">
+          <div className="training-section p-4 space-y-4 border-2 border-primary/30">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-foreground">Upravit trénink</h3>
               <div className="flex gap-2">
@@ -391,7 +283,6 @@ export function TrainingDetailView({
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {/* Date/Time */}
               <FormField
                 control={form.control}
                 name="date"
@@ -410,7 +301,6 @@ export function TrainingDetailView({
                 )}
               />
               
-              {/* Duration */}
               <FormField
                 control={form.control}
                 name="duration"
@@ -434,7 +324,6 @@ export function TrainingDetailView({
                 )}
               />
               
-              {/* Participants */}
               <FormField
                 control={form.control}
                 name="participant_count"
@@ -462,20 +351,18 @@ export function TrainingDetailView({
         </Form>
       )}
 
-      {/* Client Profile Panel - show restrictions/alerts */}
-      {client && <ClientProfilePanel client={client} />}
-
-      {/* FOLLOWUP ALERT - show unresolved followups from previous trainings */}
-      {training.status === 'scheduled' && (
-        <PreviousFollowupAlert 
-          clientId={training.client_id} 
+      {/* PREP SECTION - only for scheduled/in_progress */}
+      {(isScheduled || isInProgress) && (
+        <TrainingPrepSection
+          client={client}
+          clientId={training.client_id}
           currentTrainingId={training.id}
           trainingDate={training.date.split('T')[0]}
         />
       )}
 
-      {/* PARTICIPANTS - show for scheduled/in_progress trainings */}
-      {(training.status === 'scheduled' || training.status === 'in_progress') && (
+      {/* PARTICIPANTS - for scheduled/in_progress */}
+      {(isScheduled || isInProgress) && (
         <TrainingParticipantsManager
           trainingId={training.id}
           primaryClientId={training.client_id}
@@ -485,18 +372,13 @@ export function TrainingDetailView({
         />
       )}
 
-      {/* PREVIOUS TRAINING - collapsible, between participants and PRs */}
-      {training.status === 'scheduled' && (
-        <PreviousTrainingPreview clientId={training.client_id} />
-      )}
-
-      {/* PARTICIPANTS PRs - show for scheduled/in_progress trainings with participants */}
-      {(training.status === 'scheduled' || training.status === 'in_progress') && participants.length > 0 && (
+      {/* PARTICIPANTS PRs - for scheduled/in_progress */}
+      {(isScheduled || isInProgress) && participants.length > 0 && (
         <ParticipantsPRsSection participants={participants} />
       )}
 
-      {/* TRAINING TYPE & TAGS - Compact Grid Selector */}
-      <div className="glass rounded-xl p-4">
+      {/* TAGS - Compact Grid Selector */}
+      <div className="training-section p-4">
         <CompactTagGridSelector
           trainingType={training.training_type}
           onTrainingTypeChange={async (type) => {
@@ -506,7 +388,6 @@ export function TrainingDetailView({
           }}
           focusTagIds={focusTagIds}
           onFocusTagsChange={(ids) => {
-            // Filter to only keep valid tags that exist in our tags list
             const validIds = ids.filter(id => tags.some(t => t.id === id));
             const otherTags = selectedTagIds.filter(id => {
               const tag = tags.find(t => t.id === id);
@@ -522,7 +403,6 @@ export function TrainingDetailView({
               const tag = tags.find(t => t.id === tagId);
               return tag && tag.tag_type !== 'intensity';
             });
-            // Only add the id if it's a valid tag
             const validId = id && tags.some(t => t.id === id) ? id : null;
             const newTagIds = validId ? [...otherTags, validId] : otherTags;
             setSelectedTagIds(newTagIds);
@@ -530,7 +410,6 @@ export function TrainingDetailView({
           }}
           bodyPartTagIds={bodyPartTagIds}
           onBodyPartTagsChange={(ids) => {
-            // Filter to only keep valid tags that exist in our tags list
             const validIds = ids.filter(id => tags.some(t => t.id === id));
             const otherTags = selectedTagIds.filter(id => {
               const tag = tags.find(t => t.id === id);
@@ -552,7 +431,7 @@ export function TrainingDetailView({
       </div>
 
       {/* EXERCISES - main content */}
-      <div className="glass rounded-xl p-4">
+      <div className="training-section p-4">
         <WorkoutExerciseManager
           trainingSessionId={training.id}
           clientId={training.client_id}
@@ -562,117 +441,28 @@ export function TrainingDetailView({
         />
       </div>
 
-
-      {/* PAYMENT INFO - only for completed */}
-      {training.status === 'completed' && (
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <CreditCard className="w-4 h-4" />
-                <span className="text-sm font-medium">Platba</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <TrainingStatusBadge 
-                  status={training.status} 
-                  paymentStatus={training.payment_status} 
-                />
-                {training.final_price && (
-                  <span className="text-sm text-muted-foreground">
-                    {formatCurrency(training.final_price)}
-                  </span>
-                )}
-              </div>
-            </div>
-            <ChangePaymentMethodDialog
-              currentPaymentStatus={training.payment_status}
-              onChangePaymentMethod={handleChangePaymentMethod}
-              isLoading={changePaymentMethod.isPending}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* SINGLE OPTIONAL NOTE with toggle */}
-      <div className="glass rounded-xl p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <StickyNote className="w-4 h-4" />
-            <Label className="text-sm font-medium cursor-pointer" htmlFor="show-note-toggle">
-              Poznámka k tréninku
-            </Label>
-          </div>
-          <Switch 
-            id="show-note-toggle"
-            checked={showNote} 
-            onCheckedChange={(checked) => {
-              setShowNote(checked);
-              // If turning off and there's a note, clear it
-              if (!checked && training.notes && onFieldUpdate) {
-                onFieldUpdate('notes', '');
-              }
-            }}
-          />
-        </div>
-        
-        {showNote && onFieldUpdate && (
-          <div className="mt-3">
-            <InlineTextarea
-              initialValue={training.notes || ''}
-              onSave={(value) => onFieldUpdate('notes', value)}
-              placeholder="Libovolná poznámka k tréninku..."
-              minHeight="80px"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* FOLLOWUP INPUT - add reminders for next training */}
-      <div className="glass rounded-xl p-4">
-        <FollowupInput 
-          trainingSessionId={training.id} 
-          clientId={training.client_id} 
+      {/* CLOSE SECTION - only for completed */}
+      {isCompleted && (
+        <TrainingCloseSection
+          training={training}
+          client={client}
+          trainingPrice={trainingPrice}
+          participants={participants}
+          feedbackRequest={feedbackRequest ? {
+            id: feedbackRequest.id,
+            token: feedbackRequest.token,
+            status: feedbackRequest.status,
+            expires_at: feedbackRequest.expires_at,
+            sent_at: feedbackRequest.sent_at,
+            opened_at: feedbackRequest.opened_at || null,
+            reminder_count: feedbackRequest.reminder_count || 0,
+          } : undefined}
+          onChangePaymentMethod={handleChangePaymentMethod}
+          isChangingPayment={changePaymentMethod.isPending}
+          onFieldUpdate={onFieldUpdate ? (field, value) => onFieldUpdate(field, value) : undefined}
+          showNote={showNote}
+          onShowNoteChange={setShowNote}
         />
-      </div>
-
-      {/* Feedback Section - Only for completed trainings */}
-      {training.status === 'completed' && participants.length > 0 && (
-        participants.length > 1 ? (
-          <MultiParticipantFeedbackSection
-            trainingId={training.id}
-            trainingDate={training.date}
-            trainingStatus={training.status}
-            participants={participants.map(p => {
-              const clientData = allClients.find(c => c.id === p.client_id);
-              return {
-                client_id: p.client_id,
-                name: p.name,
-                email: clientData?.email,
-                feedback_enabled: clientData?.feedback_enabled !== false,
-              };
-            })}
-            feedbackEnabled={true}
-          />
-        ) : client && (
-          <TrainingFeedbackSection
-            trainingId={training.id}
-            trainingDate={training.date}
-            trainingStatus={training.status}
-            clientId={client.id}
-            clientName={client.name}
-            feedbackEnabled={client.feedback_enabled !== false}
-            existingFeedback={feedbackRequest?.status === 'completed'}
-            feedbackRequest={feedbackRequest ? {
-              id: feedbackRequest.id,
-              token: feedbackRequest.token,
-              status: feedbackRequest.status,
-              expires_at: feedbackRequest.expires_at,
-              sent_at: feedbackRequest.sent_at,
-              opened_at: feedbackRequest.opened_at || null,
-              reminder_count: feedbackRequest.reminder_count || 0,
-            } : undefined}
-          />
-        )
       )}
 
       {/* Delete Confirmation Dialog */}
