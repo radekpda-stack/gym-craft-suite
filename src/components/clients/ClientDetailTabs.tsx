@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { AsymmetryCard } from '@/components/client-portal/progress/AsymmetryCard';
 
 // Tab content components
-import { ClientTrainingFinanceCard } from './ClientTrainingFinanceCard';
+import { ClientFinanceLedger } from './ClientFinanceLedger';
 import { ClientPeriodizationCard } from './ClientPeriodizationCard';
 import { ClientFeedbackAnalysisSection } from './ClientFeedbackAnalysisSection';
 import { ClientTrainingLoadCard } from './ClientTrainingLoadCard';
@@ -59,6 +59,7 @@ interface ClientDetailTabsProps {
   isSharedBudget: boolean;
   budgetGroupId?: string;
   budgetGroupName?: string | null;
+  creditBalance?: number;
   onAddNote: (note: string) => Promise<void>;
   onArchive: () => Promise<void>;
   onUpdateClient?: (data: Partial<ClientFormValues>) => Promise<void>;
@@ -71,6 +72,7 @@ export function ClientDetailTabs({
   isSharedBudget,
   budgetGroupId,
   budgetGroupName,
+  creditBalance,
   onAddNote,
   onArchive,
   onUpdateClient,
@@ -199,11 +201,13 @@ export function ClientDetailTabs({
         {/* Periodization */}
         <ClientPeriodizationCard clientId={client.id} defaultOpen={false} />
         
-        {/* Training & Finance History */}
-        <ClientTrainingFinanceCard
+        {/* Unified Finance Ledger */}
+        <ClientFinanceLedger
           clientId={client.id}
+          clientName={client.name}
           sessions={sessions}
           transactions={transactions}
+          currentBalance={creditBalance ?? client.credit_balance ?? 0}
           isSharedBudget={isSharedBudget}
           budgetGroupName={budgetGroupName}
         />

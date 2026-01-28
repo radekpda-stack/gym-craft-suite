@@ -191,6 +191,7 @@ export default function ClientDetail() {
         isSharedBudget={isSharedBudget}
         budgetGroupId={sharedBudgetInfo?.groupId}
         budgetGroupName={sharedBudgetInfo?.groupName}
+        creditBalance={creditBalance}
         onAddNote={handleAddNote}
         onArchive={handleArchive}
         onUpdateClient={async (data) => {
