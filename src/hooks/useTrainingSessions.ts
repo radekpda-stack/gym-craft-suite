@@ -713,6 +713,7 @@ export function useCancelTrainingSession() {
       let newBalance: number | null = null;
 
       // Only create credit transaction if deductCredit is true
+      // The DB trigger 'sync_balance_after_transaction' automatically updates the balance
       if (deductCredit && price > 0) {
         const groupId = await getClientGroupId(client_id);
 
@@ -730,8 +731,22 @@ export function useCancelTrainingSession() {
 
         if (transactionError) throw transactionError;
 
-        const { balance } = await applyCreditDelta(client_id, -price);
-        newBalance = balance;
+        // Fetch the updated balance (trigger already applied the delta)
+        if (groupId) {
+          const { data: group } = await supabase
+            .from('client_budget_groups')
+            .select('shared_balance')
+            .eq('id', groupId)
+            .single();
+          newBalance = group?.shared_balance ?? null;
+        } else {
+          const { data: client } = await supabase
+            .from('clients')
+            .select('credit_balance')
+            .eq('id', client_id)
+            .single();
+          newBalance = client?.credit_balance ?? null;
+        }
       }
 
       return { data, price, newBalance, deductCredit };
