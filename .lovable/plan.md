@@ -1,395 +1,248 @@
 
-# Redesign klientského portálu - Deník tréninků a Strava
+# Redesign sekce tagů na kartě tréninku
 
 ## 1. Analýza současného stavu
 
-### Struktura deníku (Workout Diary)
+### Aktuální struktura (z obrázku)
 ```text
-ClientPortalWorkoutDiary.tsx
-├── Header (ikona + text)
-├── Tabs: Tréninky | Strava
-│
-├── Tab: Tréninky
-│   ├── TrainingCalendar (kompaktní)
-│   ├── Button "Přidat svůj trénink" (full-width)
-│   ├── Plánované tréninky od trenéra (list)
-│   └── Moje záznamy (SimpleWorkoutCard list)
-│
-└── Tab: Strava (lazy load → ClientPortalNutrition)
-    ├── WeekStrip (7 dní)
-    ├── WaterGoalWidget + CaffeineWindowWidget
-    ├── DayNoteInput
-    ├── Quick Stats (3 boxy: jídla/voda/kávy)
-    ├── Quick Actions (4×2 grid)
-    │   ├── Snídaně/Oběd/Večeře/Svačina
-    │   ├── Rychlé vody (3 tlačítka)
-    │   ├── Káva/Čaj
-    │   └── Nedávná jídla (chips)
-    └── TodayEntries (timeline)
+┌─────────────────────────────────────────────────────────────┐
+│  [badge: 💪 Silový]                                         │
+├─────────────────────────────────────────────────────────────┤
+│  TYP TRÉNINKU                                               │
+│  [✓ 💪 Silový] [🔥 HIIT] [❤️ Kardio] [⚡ Funkční]           │
+│  [🧘 Mobilita] [🌿 Regenerace] [📊 Diagnostický]            │
+├─────────────────────────────────────────────────────────────┤
+│  ZAMĚŘENÍ                                                   │
+│  [Core] [Flexibilita] [Hypertrofie] [Max síla]             │
+│  [Plyometrie] [Síla] [Stabilita] [Technika]                │
+├─────────────────────────────────────────────────────────────┤
+│  INTENZITA                                                  │
+│  [Lehký] [Střední] [Těžký]                                 │
+├─────────────────────────────────────────────────────────────┤
+│  PARTIE TĚLA                                                │
+│  [Celé tělo] [Horní část ▾] [Dolní část ▾] [Břicho ▾]      │
+├─────────────────────────────────────────────────────────────┤
+│  RPE TRENÉRA                                                │
+│  [1][2][3][4][5][6][7][8][9][10]                            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Identifikované problémy
 
-| Problém | Oblast | Dopad |
-|---------|--------|-------|
-| **Přetížené UI** | Strava | Příliš mnoho tlačítek a sekcí na jedné obrazovce |
-| **Nekonzistentní design** | Celkově | Různé styly karet, badgů a tlačítek |
-| **Malé touch targety** | Mobile | Některá tlačítka jsou těžko kliknutelná |
-| **Chybí vizuální hierarchie** | Oba taby | Není jasné, co je primární akce |
-| **Monotónní barvy** | Strava | Všechny meal typy vypadají podobně |
-| **Komplikovaný flow přidání** | Tréninky | 3 kroky v dialogu jsou příliš |
-| **Chybí gamifikace** | Celkově | Žádné vizuální odměny za aktivitu |
-| **WeekStrip příliš malý** | Strava | Těžko čitelný na mobilu |
-| **Timeline nepřehledná** | Strava | Dlouhý seznam bez vizuálního členění |
+| Problém | Dopad | Priorita |
+|---------|-------|----------|
+| **Příliš mnoho kliknutí** | Každý tag vyžaduje samostatný klik (7 typů + 8 zaměření + 3 intenzity + 4 partie) | Vysoká |
+| **Špatná vizuální hierarchie** | Všechny sekce vypadají stejně důležitě | Vysoká |
+| **Dlouhé scrollování** | Tag sekce zabírá ~40% obrazovky | Střední |
+| **Intenzita se používá méně** | Ale zabírá stejně místa jako důležitější sekce | Nízká |
+| **Chybí rychlé kombinace** | TrainingPresetSelector existuje, ale není integrován na detailu | Střední |
 
 ---
 
-## 2. Nový design - principy
+## 2. Navrhovaný redesign
 
-### Design philosophy
+### 2.1 Nová vizuální hierarchie - "Smart Tag Grid"
 
-1. **"Swipe & Tap" first** - Primární akce jedním tapem
-2. **Visual delight** - Barvy, animace, micro-rewards
-3. **Progressive disclosure** - Nejdříve jednoduché, detail na vyžádání
-4. **Gamifikace** - Streak, progress rings, celebrace
-
-### Barevný systém pro typy jídel
+Místo 5 oddělených sekcí pod sebou → **kompaktní 2-řádková mřížka** s nejčastějšími kombinacemi:
 
 ```text
-🌅 Snídaně  → Warm gradient (amber-50 to orange-100)
-☀️ Oběd    → Bright gradient (yellow-50 to amber-100)  
-🌙 Večeře  → Cool gradient (indigo-50 to purple-100)
-🍎 Svačina → Fresh gradient (green-50 to emerald-100)
-💧 Voda    → Blue gradient (sky-50 to blue-100)
-☕ Káva    → Brown gradient (stone-50 to amber-100)
+┌─────────────────────────────────────────────────────────────┐
+│  KLASIFIKACE TRÉNINKU                        [⚙️ Více]     │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────────┐
+│  │ [💪 Silový ▾] [Hypertrofie ▾] [Střední ▾] [Horní ▾]    │
+│  │      TYP         ZAMĚŘENÍ       INTENZITA   PARTIE      │
+│  └─────────────────────────────────────────────────────────┘
+│                                                             │
+│  RPE: [1][2][3][4][5][6][7][8][9][10]    ← jen čísla       │
+└─────────────────────────────────────────────────────────────┘
 ```
+
+### 2.2 Hlavní změny
+
+#### A) Inline Dropdown Selectors místo chip gridu
+
+Každá kategorie jako kompaktní dropdown:
+
+```text
+┌──────────────────┐
+│ 💪 Silový      ▾ │  ← 1 tap otevře dropdown se všemi typy
+└──────────────────┘
+```
+
+**Výhody:**
+- Snížení vizuálního přetížení (7 chipů → 1 dropdown)
+- Jasná hierarchie (vybraná hodnota je vidět ihned)
+- Rychlejší výběr (1 tap + 1 tap místo skenování)
+
+#### B) Horizontální layout pro 4 hlavní kategorie
+
+```text
+┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+│ 💪 Síla ▾│ │Hypertro▾ │ │ Střední▾ │ │ Horní ▾  │
+│   TYP    │ │ ZAMĚŘENÍ │ │INTENZITA │ │  PARTIE  │
+└──────────┘ └──────────┘ └──────────┘ └──────────┘
+```
+
+#### C) Inteligentní výchozí hodnoty
+
+Na základě typu tréninku automaticky předvyplnit:
+- **Silový** → Intenzita: Střední (nejčastější)
+- **HIIT/Kardio** → Partie: Celé tělo (už funguje)
+- **Mobilita** → Skrýt Zaměření i Intenzitu (už funguje)
+
+#### D) Kompaktnější RPE
+
+Místo 10 velkých tlačítek → menší inline verze:
+
+```text
+RPE  [1][2][3][4][5][6][7][8][9][10]  Střední
+      ↑ kompaktnější, bez legendy pod nimi
+```
+
+### 2.3 Rozšířený režim (modal)
+
+Tlačítko "⚙️ Více" otevře modal s plným editorem:
+- Vícenásobný výběr zaměření (multi-select grid)
+- Detailní partie těla (hierarchie svalů)
+- Uložení jako preset
 
 ---
 
-## 3. Nové komponenty
+## 3. Wireframe nového designu
 
-### A) Diary Hero Header
-
-Kompaktní hero s denním přehledem:
-
+### Výchozí stav (kompaktní)
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│  📔 Dnešní den              Středa 29. ledna                │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │ Progress ring: 3/5 aktivit ████████░░ 60%            │   │
-│  │ "Zbývají 2 aktivity"                                 │   │
-│  └──────────────────────────────────────────────────────┘   │
+│  KLASIFIKACE                                    [⚙️ Více]  │
 │                                                             │
-│  🔥 5 dní v řadě                     💪 12 tréninků celkem  │
+│  ┌────────────┐ ┌────────────┐ ┌──────────┐ ┌────────────┐ │
+│  │ 💪 Silový │ │ Hypertrofie│ │ Střední  │ │ Horní část │ │
+│  │     ▾      │ │     ▾      │ │    ▾     │ │     ▾      │ │
+│  └────────────┘ └────────────┘ └──────────┘ └────────────┘ │
+│                                                             │
+│  RPE  ●●●●○○○○○○  [5]                   Středně náročné    │
+│       1 2 3 4 5 6 7 8 9 10                                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### B) Quick Action Floating Buttons
-
-Plovoucí tlačítka pro rychlé přidání:
-
+### Dropdown otevřený (Typ tréninku)
 ```text
-                                    ┌─────────────────┐
-                                    │ 🍽️ + Jídlo     │
-                                    │ 💧 + Voda      │
-                                    │ 💪 + Trénink   │
-                                    └─────────────────┘
-                                         ┌───┐
-                                         │ + │ ← FAB
-                                         └───┘
+┌────────────────────┐
+│ 💪 Silový       ✓ │
+│ 🔥 HIIT           │
+│ ❤️ Kardio         │
+│ ⚡ Funkční        │
+│ 🧘 Mobilita       │
+│ 🌿 Regenerace     │
+│ 📊 Diagnostický   │
+└────────────────────┘
 ```
 
-### C) Modernized WeekStrip
-
-Větší, čitelnější s vizuálním feedbackem:
-
+### Rozšířený režim (modal)
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐   │
-│  │ Po  │ │ Út  │ │ St  │ │ Čt  │ │ Pá  │ │ So  │ │ Ne  │   │
-│  │ 27  │ │ 28  │ │ 29  │ │ 30  │ │ 31  │ │  1  │ │  2  │   │
-│  │ ●●● │ │ ●●  │ │ ◌   │ │     │ │     │ │     │ │     │   │
-│  └─────┘ └─────┘ └─────┘ └─────┘ └─────┘ └─────┘ └─────┘   │
-│                  ▲ DNES                                     │
-└─────────────────────────────────────────────────────────────┘
-
-● = dokončené jídlo/aktivita, počet teček = počet záznamů
-```
-
-### D) Meal Quick Cards
-
-Velké, tapnutelné karty s gradientem:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  PŘIDAT ZÁZNAM                                              │
-│  ┌────────────────────────┐ ┌────────────────────────┐      │
-│  │ 🌅                     │ │ ☀️                     │      │
-│  │ Snídaně                │ │ Oběd                   │      │
-│  │ (gradient amber)       │ │ (gradient yellow)      │      │
-│  │ 7:00 - 10:00          │ │ 11:00 - 14:00         │      │
-│  └────────────────────────┘ └────────────────────────┘      │
-│  ┌────────────────────────┐ ┌────────────────────────┐      │
-│  │ 🌙                     │ │ 🍎                     │      │
-│  │ Večeře                 │ │ Svačina                │      │
-│  │ (gradient indigo)      │ │ (gradient green)       │      │
-│  │ 17:00 - 21:00         │ │ kdykoli                │      │
-│  └────────────────────────┘ └────────────────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### E) Hydration Ring Widget
-
-Kruhový progress místo progress baru:
-
-```text
-┌───────────────────────────────────┐
-│          💧                       │
-│       ╭──────╮                    │
-│      /   72%  \                   │
-│     |  1.5L   |    Quick add:     │
-│      \       /     [+200] [+300]  │
-│       ╰──────╯     [+500]         │
-│                                   │
-│   Cíl: 2.0L  |  Zbývá: 0.5L      │
-└───────────────────────────────────┘
-```
-
-### F) Timeline Cards (Food Log)
-
-Modernizované karty s gradientem:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  DNEŠNÍ ZÁZNAMY                                             │
-│                                                             │
-│  07:32  ┌──────────────────────────────────────────────┐   │
-│         │ 🌅 Snídaně                  [střední porce]  │   │
-│         │ Ovesná kaše s banánem                        │   │
-│         │ ┌─────────────────────────────────────┐      │   │
-│         │ │ 💬 Trenér: "Skvělá volba!" ⭐⭐⭐⭐⭐ │      │   │
-│         │ └─────────────────────────────────────┘      │   │
-│         └──────────────────────────────────────────────┘   │
-│                                                             │
-│  10:15  ┌──────────────────────────────────────────────┐   │
-│         │ 💧 Voda                            300ml     │   │
-│         └──────────────────────────────────────────────┘   │
-│                                                             │
-│  12:45  ┌──────────────────────────────────────────────┐   │
-│         │ ☀️ Oběd                     [velká porce]    │   │
-│         │ Kuřecí prsa s rýží                           │   │
-│         └──────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### G) Workout Quick Add (zjednodušený)
-
-Místo 3-krokového dialogu - 1 obrazovka:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  💪 Přidat trénink                                    [✕]  │
+│  Detailní nastavení tréninku                          [✕]  │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  Typ aktivity:                                              │
-│  ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐                   │
-│  │🏋️    │ │🏃    │ │🚴    │ │🏊    │                   │
-│  │Síla  │ │Běh   │ │Kolo  │ │Plavba│                   │
-│  └───────┘ └───────┘ └───────┘ └───────┘                   │
+│  TYP TRÉNINKU                                               │
+│  [✓ 💪 Silový] [🔥 HIIT] [❤️ Kardio] [⚡ Funkční]          │
+│  [🧘 Mobilita] [🌿 Regenerace] [📊 Diagnostický]           │
 │                                                             │
-│  Délka:  [15] [30] [45] [60] [90] min                      │
+│  ZAMĚŘENÍ (vyberte více)                                    │
+│  [✓ Hypertrofie] [✓ Síla] [Core] [Flexibilita]             │
+│  [Max síla] [Plyometrie] [Stabilita] [Technika]            │
 │                                                             │
-│  Jak to šlo?  😩 😕 😐 😊 🔥                               │
+│  INTENZITA                                                  │
+│  [Lehký] [✓ Střední] [Těžký]                               │
 │                                                             │
-│  Poznámka (volitelné):                                     │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │                                                      │   │
-│  └─────────────────────────────────────────────────────┘   │
+│  PARTIE TĚLA                                                │
+│  [Celé tělo] [✓ Horní část ▾] [Dolní část ▾] [Břicho ▾]   │
+│     └── [✓ Hrudník] [Ramena] [Záda] [Triceps] [Biceps]     │
 │                                                             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │              ✓ Uložit trénink                        │   │
-│  └─────────────────────────────────────────────────────┘   │
+│  ─────────────────────────────────────────────────────────  │
+│  [💾 Uložit jako preset]              [Zavřít]  [Použít]   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 4. Implementační plán
+## 4. Technická implementace
 
-### Fáze 1: Základní komponenty (nové soubory)
+### Nové komponenty
 
-| Soubor | Účel |
-|--------|------|
-| `src/components/client-portal/common/DiaryHeroHeader.tsx` | Denní hero s progress ring |
-| `src/components/client-portal/common/FloatingQuickAdd.tsx` | FAB menu pro rychlé přidání |
-| `src/components/client-portal/nutrition/ModernWeekStrip.tsx` | Větší, čitelnější týdenní strip |
-| `src/components/client-portal/nutrition/MealQuickCards.tsx` | Gradient karty pro typy jídel |
-| `src/components/client-portal/nutrition/HydrationRingWidget.tsx` | Kruhový progress pro vodu |
-| `src/components/client-portal/nutrition/ModernFoodCard.tsx` | Modernizovaná karta jídla |
-| `src/components/client-portal/workout-diary/QuickWorkoutSheet.tsx` | Zjednodušený formulář |
+| Komponenta | Účel |
+|------------|------|
+| `CompactTagSelector.tsx` | Hlavní kompaktní 4-dropdown layout |
+| `TagDropdownSelect.tsx` | Jednotlivý dropdown pro kategorii tagů |
+| `ExpandedTagModal.tsx` | Modal pro detailní multi-select nastavení |
+| `InlineRPESelector.tsx` | Kompaktnější verze RPE vstupu |
 
-### Fáze 2: Refaktor hlavních stránek
+### Změny v existujících souborech
 
 | Soubor | Změna |
 |--------|-------|
-| `ClientPortalWorkoutDiary.tsx` | Integrace nových komponent, zjednodušení layoutu |
-| `ClientPortalNutrition.tsx` | Modernizace UI, FloatingQuickAdd |
-| `TodayEntries.tsx` | Použití ModernFoodCard místo starých karet |
-| `SimpleFoodForm.tsx` | Modernizace s gradientem a lepším UX |
+| `TrainingDetailView.tsx` | Nahradit `TrainingTagStepper` za `CompactTagSelector` |
+| `TrainingTagStepper.tsx` | Refaktorovat jako "expanded" verze v modalu |
+| `RPEInputField.tsx` | Přidat variantu `compact` s menšími tlačítky |
 
-### Fáze 3: Animace a micro-interactions
-
-- Framer Motion animace při přidání záznamu
-- Confetti při dosažení denního cíle vody
-- Streak celebration při konzistentní aktivitě
-- Haptic feedback (vibrace) na mobilech
-
----
-
-## 5. Wireframe nového layoutu
-
-### Deník - Tab Tréninky
+### Datový tok
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ 📔 Středa 29. ledna              🔥 5 dní streak     │  │
-│  │ ████████░░ 3/5 aktivit                               │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ Tento týden                                           │  │
-│  │ [Po●●] [Út●] [St◌] [Čt] [Pá] [So] [Ne]               │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│  OD TRENÉRA                                     Zobrazit → │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ 🏋️ Silový trénink              Dnes 16:00           │  │
-│  │ Bench, Squat, Deadlift            [Splnit ✓]         │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│  MOJE ZÁZNAMY                                               │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ 🏃 Běh           dnes 07:15           45 min  🔥     │  │
-│  │ 5.2 km @ 5:30/km                                     │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│                                        ┌────────────────┐   │
-│                                        │  + Trénink    │   │
-│                                        └────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Deník - Tab Strava
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ 🍽️ Středa 29. ledna              ✓ 3/4 jídla        │  │
-│  │ Zbývá večeře                                         │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐  │
-│  │ Po  │ │ Út  │ │ St  │ │ Čt  │ │ Pá  │ │ So  │ │ Ne  │  │
-│  │ ●●● │ │ ●●  │ │ ●   │ │     │ │     │ │     │ │     │  │
-│  └─────┘ └─────┘ └─────┘ └─────┘ └─────┘ └─────┘ └─────┘  │
-│                                                             │
-│  ┌──────────────────┐ ┌─────────────────────────────────┐  │
-│  │    ╭────╮        │ │  PŘIDAT JÍDLO                   │  │
-│  │   /      \       │ │  ┌───────┐ ┌───────┐            │  │
-│  │  │  72%   │      │ │  │🌅     │ │☀️     │            │  │
-│  │  │ 1.5L   │      │ │  │Snídaně│ │Oběd   │            │  │
-│  │   \      /       │ │  └───────┘ └───────┘            │  │
-│  │    ╰────╯        │ │  ┌───────┐ ┌───────┐            │  │
-│  │   [+💧]          │ │  │🌙     │ │🍎     │            │  │
-│  └──────────────────┘ │  │Večeře │ │Svačina│            │  │
-│                       │  └───────┘ └───────┘            │  │
-│                       └─────────────────────────────────┘  │
-│                                                             │
-│  DNEŠNÍ ZÁZNAMY                                             │
-│  ────────────────────────────────────────────────────────── │
-│  07:32  🌅 Ovesná kaše s banánem          střední porce    │
-│         💬 "Skvělá volba!" ⭐⭐⭐⭐⭐                       │
-│  ────────────────────────────────────────────────────────── │
-│  10:15  💧 Voda                                    300ml   │
-│  ────────────────────────────────────────────────────────── │
-│  12:45  ☀️ Kuřecí prsa s rýží              velká porce    │
-└─────────────────────────────────────────────────────────────┘
+CompactTagSelector
+├── TagDropdownSelect (typ)      → onTrainingTypeChange
+├── TagDropdownSelect (zaměření) → onFocusTagsChange (primary selection)
+├── TagDropdownSelect (intenzita) → onIntensityTagChange  
+├── TagDropdownSelect (partie)   → onBodyPartTagsChange (primary selection)
+├── InlineRPESelector            → onCoachRPEChange
+└── [Více] → ExpandedTagModal    → full multi-select pro všechny kategorie
 ```
 
 ---
 
-## 6. Technické detaily
-
-### Nové CSS utility třídy
-
-```css
-/* Gradient backgrounds for meal types */
-.meal-gradient-breakfast { @apply bg-gradient-to-br from-amber-50 to-orange-100; }
-.meal-gradient-lunch { @apply bg-gradient-to-br from-yellow-50 to-amber-100; }
-.meal-gradient-dinner { @apply bg-gradient-to-br from-indigo-50 to-purple-100; }
-.meal-gradient-snack { @apply bg-gradient-to-br from-green-50 to-emerald-100; }
-
-/* Touch-friendly targets */
-.touch-target-lg { @apply min-h-[56px] min-w-[56px]; }
-
-/* Progress ring */
-.progress-ring { ... } /* SVG-based circular progress */
-```
-
-### Framer Motion animace
-
-```typescript
-// Vstupní animace pro karty
-const cardVariants = {
-  hidden: { opacity: 0, y: 20, scale: 0.95 },
-  visible: { opacity: 1, y: 0, scale: 1 },
-};
-
-// Celebrace při dokončení
-const celebrationVariants = {
-  initial: { scale: 0 },
-  animate: { scale: [0, 1.2, 1], transition: { type: 'spring' } },
-};
-```
-
----
-
-## 7. Očekávané výsledky
-
-### Před vs Po
+## 5. Srovnání: Před vs Po
 
 | Metrika | Před | Po |
 |---------|------|-----|
-| Tap-y pro přidání jídla | 4-5 | 2 |
-| Vizuální hierarchie | Slabá | Jasná |
-| Touch target size | 40px | 56px+ |
-| Barevná diferenciace | Minimální | Výrazná |
-| Gamifikace | Žádná | Streak + progress |
-| Animace | Základní | Micro-interactions |
-
-### UX vylepšení
-
-1. **Rychlejší logging** - Floating Action Button pro okamžité přidání
-2. **Vizuální odměny** - Streak badge, progress ring, celebrace
-3. **Lepší čitelnost** - Větší fonty, kontrastní barvy
-4. **Konzistentní design** - Unified card system s gradienty
-5. **Mobile-first** - Větší touch targety, gesture support
+| Počet kliknutí pro základní klasifikaci | 4-5 (scan + click × 4) | 4 (tap dropdown × 4) |
+| Vertikální prostor | ~350px | ~120px |
+| Vizuální komplexita | 20+ viditelných chipů | 4 dropdowny + RPE slider |
+| Čas na orientaci | 5-8 sekund | 2-3 sekundy |
+| Multi-select zaměření/partie | Vždy viditelný | Skryt v "Více" modalu |
+| RPE vstup | Velká sekce | Kompaktní inline |
 
 ---
 
-## 8. Časový odhad
+## 6. Alternativní návrh (jednodušší verze)
 
-| Fáze | Čas |
-|------|-----|
-| DiaryHeroHeader + ModernWeekStrip | 40 min |
-| MealQuickCards + HydrationRingWidget | 45 min |
-| ModernFoodCard (timeline) | 30 min |
-| FloatingQuickAdd (FAB) | 25 min |
-| QuickWorkoutSheet (zjednodušený) | 35 min |
-| Integrace do hlavních stránek | 45 min |
-| Animace a micro-interactions | 30 min |
-| Testování a ladění | 30 min |
+Pokud kompletní redesign je příliš velká změna, lze začít postupně:
 
-**Celkem: ~4.5 hodiny**
+### Fáze 1: Zmenšit a zjednodušit
+- Menší chip tlačítka (výška 32px místo 40px)
+- Skrýt Intenzitu pod rozbalovací sekci
+- Kompaktnější RPE bez legendy
+
+### Fáze 2: Collapsible sekce
+- Typ tréninku vždy viditelný
+- Zaměření/Intenzita/Partie v collapsible accordion
+- Indikátor počtu vybraných tagů v hlavičce
+
+### Fáze 3: Smart defaults
+- Předvyplnit intenzitu "Střední" automaticky
+- Zapamatovat poslední výběr pro daného klienta
+
+---
+
+## 7. Doporučení
+
+**Doporučuji implementovat hlavní návrh (Compact Tag Grid s dropdowny)**, protože:
+
+1. Řeší oba hlavní problémy (mnoho kliknutí + přehlednost)
+2. Zachovává plnou funkcionalitu v modalu "Více"
+3. Snižuje kognitivní zátěž na první pohled
+4. Lépe využívá horizontální prostor na mobilu
+5. Sjednocuje UX s běžnými formuláři (dropdown pattern je známý)
+
+**Časový odhad implementace:**
+- Kompletní redesign: ~3-4 hodiny
+- Jednodušší verze (fáze 1+2): ~1.5 hodiny
