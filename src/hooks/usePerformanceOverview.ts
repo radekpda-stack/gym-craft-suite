@@ -177,12 +177,19 @@ export function usePerformanceOverview() {
       });
 
       // Build top clients array
+      // Helper: cap trend to reasonable range (-99% to +99%)
+      const safeTrend = (current: number, previous: number): number => {
+        if (previous === 0) {
+          return current > 0 ? 99 : 0; // New client with activity = +99% max
+        }
+        const rawTrend = Math.round(((current - previous) / previous) * 100);
+        return Math.max(-99, Math.min(99, rawTrend)); // Cap between -99% and +99%
+      };
+
       const topClients = Array.from(clientStats.entries())
         .map(([clientId, stats]) => {
           const prevEntries = prevClientStats.get(clientId) || 0;
-          const trend = prevEntries > 0
-            ? Math.round(((stats.entries - prevEntries) / prevEntries) * 100)
-            : (stats.entries > 0 ? 100 : 0);
+          const trend = safeTrend(stats.entries, prevEntries);
           
           return {
             id: clientId,
