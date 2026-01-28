@@ -438,19 +438,38 @@ export function useCreateTransaction() {
 
       if (transactionError) throw transactionError;
 
+      /**
+       * IMPORTANT:
+       * We rely on DB triggers to keep cached balances in sync with the ledger.
+       * Calling rpc_apply_credit_delta here would double-apply the same delta.
+       */
       let newBalance: number | null = null;
       let entityType: 'client' | 'group' = 'client';
-      
-      if (!input.skip_credit_update) {
-        const result = await applyCreditDelta(input.client_id, input.amount, input.description);
-        newBalance = result.new_balance;
-        entityType = result.entity_type;
+
+      // Fetch the updated balance for UI/toasts
+      if (groupId) {
+        entityType = 'group';
+        const { data: group, error: groupError } = await supabase
+          .from('client_budget_groups')
+          .select('shared_balance')
+          .eq('id', groupId)
+          .maybeSingle();
+        if (groupError) throw groupError;
+        newBalance = group?.shared_balance ?? null;
+      } else {
+        const { data: client, error: clientError } = await supabase
+          .from('clients')
+          .select('credit_balance')
+          .eq('id', input.client_id)
+          .maybeSingle();
+        if (clientError) throw clientError;
+        newBalance = client?.credit_balance ?? null;
       }
 
       return { 
         transaction, 
         newBalance, 
-        skippedCredit: input.skip_credit_update, 
+        skippedCredit: !!input.skip_credit_update,
         isSharedBudget, 
         clearedDebt,
         entityType,
