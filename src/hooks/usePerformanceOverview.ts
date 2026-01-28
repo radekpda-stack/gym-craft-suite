@@ -79,8 +79,9 @@ export function usePerformanceOverview() {
         supabase
           .from('exercises')
           .select('id, category, exercise_type_v2')
-          .eq('user_id', user.id)
-          .eq('is_archived', false),
+          .eq('is_archived', false)
+          // Include both trainer-owned and system/shared exercises
+          .or(`user_id.eq.${user.id},source.eq.system`),
         
         // Entries this month
         supabase
