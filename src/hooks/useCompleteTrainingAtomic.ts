@@ -89,6 +89,11 @@ export function useCompleteTrainingAtomic() {
         payment_method: p.payment_method,
       }));
 
+      // Serialize trainer summary to JSON string for the RPC
+      const trainerSummaryJson = params.trainerSummary 
+        ? JSON.stringify(params.trainerSummary) 
+        : null;
+
       // Call RPC with the participants (RPC will handle individual payment methods)
       const { data, error } = await supabase.rpc('rpc_complete_training_session', {
         p_session_id: params.sessionId,
@@ -97,7 +102,7 @@ export function useCompleteTrainingAtomic() {
         p_payment_method: primaryMethod,
         p_total_price: params.totalPrice,
         p_participants: rpcParticipants,
-        p_trainer_summary: params.trainerSummary || null,
+        p_trainer_summary: trainerSummaryJson,
         p_subjective_rating: params.subjectiveRating || null,
         p_notes: params.notes || null,
       });
