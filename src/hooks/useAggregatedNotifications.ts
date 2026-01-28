@@ -172,9 +172,9 @@ export function useAggregatedNotifications(): CategorizedNotificationsResult {
   const { data: notifications = [], isLoading } = useNotifications();
 
   const result = useMemo(() => {
-    // Convert DB notifications only, filter out incomplete_training notifications
+    // Convert DB notifications only, filter out incomplete_training and nutrition_inactive notifications
     const dbNotifications = notifications
-      .filter(n => n.type !== 'incomplete_training')
+      .filter(n => n.type !== 'incomplete_training' && n.type !== 'nutrition_inactive')
       .map(convertNotification);
 
     // Aggregate similar notifications

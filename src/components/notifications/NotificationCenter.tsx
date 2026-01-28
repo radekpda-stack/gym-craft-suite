@@ -121,7 +121,8 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const [sheetOpen, setSheetOpen] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["messages", "training", "nutrition", "forms"]));
+  // Training section collapsed by default (low priority - PRs, milestones)
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["messages", "nutrition", "forms"]));
 
   const handleSheetOpenChange = (open: boolean) => {
     setSheetOpen(open);
@@ -181,12 +182,43 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     }
   }, [unreadCount, markAllRead, unreadConversations.length, markAllMessagesRead]);
 
-  // Handle notification click with feedback dialog support
+  // Handle notification click with feedback dialog support and improved navigation
   const handleNotificationClick = async (notification: UnifiedNotification) => {
     const isFeedbackNotification = ['feedback_received', 'feedback_red_flag', 'feedback_trend_alert'].includes(notification.type);
+    const isNutritionNotification = notification.type === 'nutrition_entry_added' || notification.type === 'client_nutrition_started';
+    const isProfileUpdateNotification = notification.type === 'client_profile_updated';
+    const isPrNotification = ['pr_achieved', 'pr_created', 'pr_updated'].includes(notification.type);
+    
     const trainingId = notification.entity_type === 'training' ? notification.entity_id : null;
     const clientId = notification.client_id || (notification.entity_type === 'client' ? notification.entity_id : null);
 
+    // Mark as read first
+    if (!notification.is_read && !notification.id.startsWith('aggregated-')) {
+      markRead.mutate(notification.id);
+    }
+
+    // Nutrition notifications → Navigate to nutrition diary
+    if (isNutritionNotification && clientId) {
+      setSheetOpen(false);
+      navigate(`/nutrition/client/${clientId}`);
+      return;
+    }
+
+    // Profile update notifications → Navigate to client profile tab
+    if (isProfileUpdateNotification && clientId) {
+      setSheetOpen(false);
+      navigate(`/clients/${clientId}?tab=profile`);
+      return;
+    }
+
+    // PR notifications → Navigate to client trainings tab
+    if (isPrNotification && clientId) {
+      setSheetOpen(false);
+      navigate(`/clients/${clientId}?tab=trainings`);
+      return;
+    }
+
+    // Feedback notifications → Open feedback dialog
     if (isFeedbackNotification && trainingId) {
       setLoadingFeedback(true);
       try {
@@ -230,16 +262,20 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
       } finally {
         setLoadingFeedback(false);
       }
-    } else if (trainingId) {
+      return;
+    }
+    
+    // Training entity → Navigate to training detail
+    if (trainingId) {
       setSheetOpen(false);
       navigate(`/trainings/${trainingId}`);
-    } else if (clientId) {
+      return;
+    }
+    
+    // Fallback: Navigate to client profile
+    if (clientId) {
       setSheetOpen(false);
       navigate(`/clients/${clientId}`);
-    }
-
-    if (!notification.is_read && !notification.id.startsWith('aggregated-')) {
-      markRead.mutate(notification.id);
     }
   };
 
@@ -444,10 +480,10 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
                     </Collapsible>
                   )}
 
-                  {/* Category Sections */}
-                  {renderCategorySection('training', filteredNotifications.training)}
+                  {/* Category Sections - Ordered by priority: Nutrition → Forms → Training → Admin */}
                   {renderCategorySection('nutrition', filteredNotifications.nutrition)}
                   {renderCategorySection('forms', filteredNotifications.forms)}
+                  {renderCategorySection('training', filteredNotifications.training)}
                   {renderCategorySection('admin', filteredNotifications.admin)}
 
                   {/* No results for search */}

@@ -109,6 +109,8 @@ export function useUpdateClientPortalProfile() {
           type: "client_profile_updated",
           title: "Klient aktualizoval profil",
           message: `${clientProfile?.name || "Klient"} upravil(a): ${changedFields.join(", ")}`,
+          entity_type: "client",
+          entity_id: clientAccount.client_id,
         });
       }
 
