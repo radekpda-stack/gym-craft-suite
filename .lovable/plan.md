@@ -1,252 +1,288 @@
 
-# Dashboard Audit a Redesign
+
+# Plán: Redesign karty Výkonnost (Performance Hub)
 
 ## 1. Shrnutí současného stavu
 
-Dashboard je implementován v `src/pages/Index.tsx` a je rozdělen do tří zón:
-- **Hero Zone** - Hlavička s pozdravem a rychlými metrikami
-- **Alert Zone** - Kritické položky vyžadující pozornost
-- **Insight Zone** - Analytika a business health
-
----
-
-## 2. Audit - Identifikované problémy
-
-### A) Problémy s daty a grafy
-
-| Problém | Komponenta | Popis |
-|---------|-----------|-------|
-| **Duplicitní query** | `useDashboardTrends` | Načítá data, která jsou již v `useDashboardCore`, zbytečné API volání |
-| **Chybějící validace dat** | `DashboardInsights` | Nezobrazuje prázdný stav, když `trends` obsahuje `null/undefined` hodnoty |
-| **Nesprávný výpočet retence** | `useDashboardTrends` | Retence porovnává minulý měsíc vs posledních 30 dní - nekonzistentní časové rámce |
-| **Chybějící trend data** | `UnifiedFinancialChart` | Není používán na dashboardu, ale existuje funkční komponenta |
-| **Capacity % nesprávně** | `useDashboardCapacity` | `percentUsed` počítá completed/total, ale total zahrnuje i scheduled - semanticky nesprávné |
-
-### B) Problémy s UX/designem
-
-| Problém | Komponenta | Popis |
-|---------|-----------|-------|
-| **Přetížený header** | `DashboardHeader` | Příliš mnoho informací v jednom řádku |
-| **Chybí "Today Timeline"** | Index.tsx | Neexistuje vizuální přehled dnešních tréninků |
-| **Business Yield komplex** | `BusinessYieldScoreCard` | 4 pilíře jsou příliš abstraktní pro rychlé pochopení |
-| **DashboardInsights** | `DashboardInsights` | 842 řádků kódu - příliš komplexní, těžko udržovatelné |
-| **Chybí vizuální hierarchie** | Index.tsx | Všechny karty vypadají stejně důležitě |
-| **Nekonzistentní empty states** | Různé komponenty | Některé skrývají obsah, některé zobrazují zprávu |
-
-### C) Problémy s výkonem
-
-| Problém | Komponenta | Popis |
-|---------|-----------|-------|
-| **Samostatné queries** | `PendingPaymentsCard`, `ClientsInDebtCard` | Každá karta má vlastní query místo využití `useDashboardCore` |
-| **Zbytečné re-rendery** | `DashboardInsights` | `useMemo` na 800 řádků logiky při každém render |
-| **Animace vždy aktivní** | `BusinessYieldScoreCard` | Framer Motion animace i při návratu na stránku |
-
----
-
-## 3. Plán redesignu
-
-### Fáze 1: Oprava datových problémů
-
-**1.1 Konsolidace hooks**
-
-Rozšíříme `useDashboardCore` o chybějící data:
+### Struktura
 
 ```text
-useDashboardCore
-├── clients
-├── todayTrainings
-├── weekTrainings
-├── thisMonthTrainings
-├── lastMonthTrainings
-├── feedbackRequests
-├── recentFeedback
-├── unpaidTrainings
-└── NEW: pendingPaymentSessions (přesunout z PendingPaymentsCard)
-└── NEW: clientsInDebt (přesunout z ClientsInDebtCard)
+Výkonnost (PerformanceHub)
+├── Tab: Cviky (ExercisesContent)
+│   ├── Sub-tab: Seznam (ExerciseListView)
+│   ├── Sub-tab: Klient (ClientExercisesView)
+│   └── Sub-tab: Analytika (ExerciseAnalyticsView)
+│       ├── Síla (StrengthAnalyticsView)
+│       ├── Kardio (CardioAnalyticsView)
+│       └── Skill (SkillAnalyticsView)
+├── Tab: Testy (TestsContent)
+└── Tab: Výzvy (ChallengesContent)
 ```
 
-**1.2 Oprava výpočtu kapacity**
+### Identifikované problémy
 
-```typescript
-// Současný (nesprávný):
-percentUsed: total > 0 ? Math.round((completed / total) * 100) : 0
+| Problém | Oblast | Dopad |
+|---------|--------|-------|
+| **Příliš mnoho vnořených tabů** | UX | Ztížená orientace (3 úrovně: Cviky → Seznam/Klient/Analytika → Síla/Kardio/Skill) |
+| **Chybí rychlý přehled** | UX | Po vstupu na stránku není jasné, co je důležité |
+| **Pomalé hledání cviků** | UX | Musí se procházet přes akordeon kategorií |
+| **Žádná rychlá cesta k zápisu** | Workflow | FAB odstraněn, tlačítko přidat záznam není prominentní |
+| **Srovnání klientů skryté** | UX | Leaderboard je až na detailu cviku, ne na hlavní stránce |
+| **Kategorie nejsou vizuálně odlišené** | Design | Síla/Kardio/Plyometrie vypadají stejně |
+| **Progres klientů těžko dostupný** | Data | ClientExercisesView vyžaduje nejdřív vybrat klienta |
 
-// Nový (správný - progress k dokončení všech):
-progress: total > 0 ? Math.round((completed / total) * 100) : 0,
-label: `${completed}/${total}` // explicitnější
+---
+
+## 2. Navrhované změny
+
+### 2.1 Nová struktura - zjednodušení na 2 hlavní pohledy
+
+```text
+Výkonnost (PerformanceHub)
+├── [Hlavní pohled - default]
+│   ├── KPI Bar (rychlý přehled)
+│   ├── Rychlé hledání cviku (cmd+K style)
+│   ├── Kategorie cviku (filtrovatelné karty)
+│   │   ├── 💪 Síla
+│   │   ├── ❤️ Kardio
+│   │   └── ⚡ Plyometrie
+│   └── Top 5 nejlepších klientů (mini-leaderboard)
+│
+├── [Detail cviku - /exercises/:id]
+│   └── (beze změny - už funguje dobře)
+│
+└── [Testy & Výzvy - volitelné moduly]
 ```
 
-**1.3 Oprava retence**
+### 2.2 Nové UI komponenty
 
-Sjednotíme časové rámce:
-- Aktivní klienti: posledních 30 dní
-- Baseline: předchozích 30 dní (ne minulý měsíc)
+#### A) Performance Dashboard Header
 
-### Fáze 2: Zjednodušení struktury
-
-**2.1 Nová struktura Index.tsx**
+Kompaktní KPI bar v hlavičce:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│  HERO ZONE - Kompaktní hlavička                             │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ Dnes středa, 28. ledna        [🏋️ Trénink] [📊 Stats] │  │
-│  │ ● 3/5 tréninků  👥 4 klienti  💰 3 600 Kč              │  │
-│  └───────────────────────────────────────────────────────┘  │
+│  🏋️ Výkonnost                          [🔍 Hledat] [+ Log]  │
 ├─────────────────────────────────────────────────────────────┤
-│  TODAY TIMELINE - Nová sekce!                               │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ 09:00 ● Jan Novák     [Dokončeno] [💬]                │  │
-│  │ 10:30 ● Marie K.      [Probíhá...]                    │  │
-│  │ 14:00 ○ Petr S.       [Naplánováno]                   │  │
-│  │ 16:00 ○ Eva M.        [Naplánováno]                   │  │
-│  └───────────────────────────────────────────────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│  ALERT ZONE - Pouze pokud jsou problémy                     │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ ⚠️ 2 tréninky čekají na přiřazení                     │  │
-│  │ ⚠️ 3 neuhrazené tréninky (5 400 Kč)                   │  │
-│  │ 🔴 1 klient s dluhem (-2 100 Kč)                      │  │
-│  └───────────────────────────────────────────────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│  INSIGHT ZONE - Klíčové metriky                             │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐         │
-│  │ Tento týden  │ │ Tento měsíc  │ │ Aktivní      │         │
-│  │ 12 500 Kč    │ │ 48 000 Kč    │ │ 18 klientů   │         │
-│  │ ↑ +15%       │ │ ↓ -5%        │ │ 85% retence  │         │
-│  └──────────────┘ └──────────────┘ └──────────────┘         │
-│                                                             │
-│  [Kariérní statistiky - volitelně]                          │
-│  [Cashflow - volitelně]                                     │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐            │
+│  │ 217 cviků   │ │ 1,842 zázn. │ │ 47 PR       │            │
+│  │ v knihovně  │ │ tento měsíc │ │ tento měsíc │            │
+│  └─────────────┘ └─────────────┘ └─────────────┘            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**2.2 Odstranění/zjednodušení komponent**
+#### B) Quick Search - Command Palette Style
 
-| Komponenta | Akce | Důvod |
-|------------|------|-------|
-| `DashboardInsights` | Přepsat | 842 řádků -> max 200 řádků, extrahovat utility |
-| `BusinessYieldScoreCard` | Zjednodušit | Zobrazit pouze hlavní skóre, detail v modalu |
-| `ClientProgressCard` | Přesunout | Do sekce Statistiky, není denně relevantní |
-
-**2.3 Nová komponenta: TodayTimelineCompact**
-
-Kompaktní timeline dnešních tréninků s quick actions:
-
-```typescript
-interface TodayTimelineProps {
-  trainings: ScheduleItem[];
-  onComplete: (id: string) => void;
-  onOpenFeedback: (id: string) => void;
-}
-```
-
-### Fáze 3: Vizuální vylepšení
-
-**3.1 Sjednocení designového jazyka**
-
-Všechny karty budou používat:
-- `glass` třídu pro konzistentní vzhled
-- Jednotnou padding strukturu (`p-4`)
-- Konzistentní velikosti ikon (`w-5 h-5` pro titulky, `w-4 h-4` pro inline)
-- Jednotné badge styling
-
-**3.2 Barevný systém pro stavy**
+Nová komponenta pro rychlé vyhledávání cviku:
 
 ```text
-OK/Success:     hsl(var(--success))    - zelená
-Warning:        hsl(var(--warning))    - oranžová  
-Error/Critical: hsl(var(--destructive)) - červená
-Info/Neutral:   hsl(var(--muted))      - šedá
+┌─────────────────────────────────────────────────────────────┐
+│  🔍 Hledej cvik nebo klienta...                         ⌘K  │
+├─────────────────────────────────────────────────────────────┤
+│  NEDÁVNÉ                                                    │
+│  ├── Bench Press           [💪 Síla]    [⏱️ 2 dny]          │
+│  ├── Rowing 500m           [❤️ Kardio]  [⏱️ včera]          │
+│  └── Box Jump              [⚡ Plyo]    [⏱️ 5 dní]          │
+├─────────────────────────────────────────────────────────────┤
+│  OBLÍBENÉ ⭐                                                │
+│  ├── Squat                                                  │
+│  └── Deadlift                                               │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**3.3 Responzivita**
+#### C) Category Cards - Vizuálně odlišené kategorie
 
-- Mobile: Stack všech karet vertikálně
-- Tablet: 2-column grid pro metriky
-- Desktop: Zachovat max-w-3xl layout
-
-### Fáze 4: Oprava specifických grafů
-
-**4.1 FinanceSummaryCard**
-
-Aktuální stav je funkční, pouze:
-- Přidat loading skeleton pro trend indikátory
-- Vylepšit kontrast textu pro warning stavy
-
-**4.2 BusinessYieldScoreCard**
-
-Zjednodušit na:
 ```text
-┌────────────────────────────────────┐
-│  Business Health    [i] [→]        │
-│                                    │
-│      ████████░░  78/100            │
-│      Stabilní                      │
-│                                    │
-│  ⚠️ Vysoká míra zrušení            │
-└────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  KATEGORIE CVIKŮ                                            │
+│  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────┐ │
+│  │ 💪               │ │ ❤️               │ │ ⚡           │ │
+│  │ SÍLA             │ │ KARDIO           │ │ PLYOMETRIE   │ │
+│  │ 156 cviků        │ │ 38 cviků         │ │ 23 cviků     │ │
+│  │ ──────────       │ │ ──────────       │ │ ──────────   │ │
+│  │ 1,204 záznamů    │ │ 428 záznamů      │ │ 210 záznamů  │ │
+│  │ bg: primary/10   │ │ bg: success/10   │ │ bg: amber/10 │ │
+│  └──────────────────┘ └──────────────────┘ └──────────────┘ │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**4.3 CashflowForecastCard**
+#### D) Client Progress Leaderboard
 
-Zachovat, ale:
-- Přidat mikro-sparkline pro trend
-- Zlepšit čitelnost na mobilu
+Na hlavní stránce zobrazit "Top 5 aktivních klientů":
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  🏆 TOP AKTIVNÍ KLIENTI (30 dní)               [Více →]     │
+├─────────────────────────────────────────────────────────────┤
+│  1. Jan Novák         48 záznamů   5 PR  ████████░░  +15%   │
+│  2. Marie Králová     42 záznamů   3 PR  ███████░░░  +8%    │
+│  3. Petr Svoboda      36 záznamů   2 PR  ██████░░░░  +12%   │
+│  4. Eva Malinová      28 záznamů   1 PR  █████░░░░░  -5%    │
+│  5. Jan Nový          22 záznamů   4 PR  ████░░░░░░  +22%   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### E) Quick Log FAB (plovoucí tlačítko)
+
+Vrátit plovoucí tlačítko na stránku Výkonnost (lokální FAB):
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│                                                             │
+│                                              ┌────────────┐ │
+│                                              │  + Zapsat  │ │
+│                                              │   výkon    │ │
+│                                              └────────────┘ │
+└────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 4. Technická implementace
-
-### Soubory k úpravě
-
-| Soubor | Akce |
-|--------|------|
-| `src/pages/Index.tsx` | Přepsat layout, přidat TodayTimeline |
-| `src/hooks/dashboard/useDashboardCore.ts` | Rozšířit o pending/debt data |
-| `src/components/dashboard/DashboardHeader.tsx` | Zjednodušit, odstranit duplicitní metriky |
-| `src/components/dashboard/DashboardInsights.tsx` | Refaktor na menší utility funkce |
-| `src/components/dashboard/TodayTimelineCompact.tsx` | **Nový** - kompaktní timeline |
-| `src/components/dashboard/BusinessYieldScoreCard.tsx` | Zjednodušit vizuál |
-| `src/components/dashboard/PendingPaymentsCard.tsx` | Použít data z useDashboardCore |
-| `src/components/dashboard/ClientsInDebtCard.tsx` | Použít data z useDashboardCore |
+## 3. Technická implementace
 
 ### Nové soubory
 
-```text
-src/components/dashboard/
-├── TodayTimelineCompact.tsx     # Nová komponenta
-├── AlertsSummaryCard.tsx        # Sloučené alerty do jedné karty
-└── insights/                    # Extrahované utility
-    ├── insightGenerators.ts     # Logika generování insights
-    └── insightTypes.ts          # Typy pro insights
+| Soubor | Účel |
+|--------|------|
+| `src/components/performance/PerformanceKPIBar.tsx` | KPI metriky v hlavičce |
+| `src/components/performance/ExerciseSearchCommand.tsx` | Cmd+K style hledání |
+| `src/components/performance/CategoryCards.tsx` | Vizuální kategorie cviků |
+| `src/components/performance/ClientProgressLeaderboard.tsx` | Top klienti + progres |
+| `src/hooks/usePerformanceOverview.ts` | Agregovaná data pro dashboard |
+
+### Úpravy existujících souborů
+
+| Soubor | Změna |
+|--------|-------|
+| `src/pages/PerformanceHub.tsx` | Nový layout s dashboard komponentami |
+| `src/components/performance/ExercisesContent.tsx` | Zjednodušit na 2 pohledy (Knihovna / Analytika) |
+| `src/components/exercises/ExerciseListView.tsx` | Optimalizovat pro rychlé procházení |
+| `src/components/exercises/ClientExercisesView.tsx` | Přidat multi-client comparison mode |
+
+---
+
+## 4. Data flow
+
+### Nový hook `usePerformanceOverview`
+
+```typescript
+interface PerformanceOverview {
+  // KPI
+  totalExercises: number;
+  totalEntriesThisMonth: number;
+  totalPRsThisMonth: number;
+  
+  // Category breakdown
+  categories: {
+    strength: { count: number; entries: number };
+    cardio: { count: number; entries: number };
+    plyometric: { count: number; entries: number };
+  };
+  
+  // Top clients
+  topClients: {
+    id: string;
+    name: string;
+    entriesCount: number;
+    prCount: number;
+    trend: number; // % change vs previous period
+  }[];
+  
+  // Recent exercises
+  recentExercises: {
+    id: string;
+    name: string;
+    category: 'strength' | 'cardio' | 'plyometric';
+    lastUsed: string;
+  }[];
+}
 ```
 
 ---
 
-## 5. Shrnutí změn
+## 5. Srovnání před/po
 
-### Hlavní vylepšení
+### Před
 
-1. **Přehlednější struktura** - 4 jasně oddělené zóny
-2. **Today Timeline** - Okamžitý přehled dnešních tréninků
-3. **Konsolidované alerty** - Všechny problémy na jednom místě
-4. **Optimalizované queries** - Méně API volání, rychlejší načítání
-5. **Čistší kód** - Menší komponenty, snadnější údržba
+- 3 úrovně navigace (taby v tabech v tabech)
+- Hledání cviku vyžaduje projít filtry a akordeon
+- Srovnání klientů pouze na detailu cviku
+- Všechny kategorie vypadají stejně
+- Žádný přehled "co se děje"
 
-### Očekávaný výsledek
+### Po
 
-- **-40% API volání** díky konsolidaci hooks
-- **-50% kódu** v DashboardInsights díky refaktoru
-- **Rychlejší orientace** díky Today Timeline
-- **Konzistentní UX** díky sjednocenému designu
+- 2 jasné pohledy: Dashboard + Detail
+- Cmd+K style rychlé hledání odkudkoli
+- Top klienti viditelní na hlavní stránce
+- Vizuálně odlišené kategorie (Síla/Kardio/Plyo)
+- KPI bar dává okamžitý přehled
+- Plovoucí tlačítko pro rychlý zápis
 
-### Časový odhad
+---
 
-- Fáze 1 (Data fixes): 45 minut
-- Fáze 2 (Struktura): 60 minut
-- Fáze 3 (Design): 30 minut
-- Fáze 4 (Grafy): 20 minut
-- Testování: 15 minut
+## 6. Wireframe nového layoutu
 
-**Celkem: ~2.5 hodiny**
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  [💪 Výkonnost]                                             │
+│  Cviky, testy a výzvy na jednom místě                       │
+├─────────────────────────────────────────────────────────────┤
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ 🔍 Rychle hledat cvik nebo klienta...              ⌘K │ │
+│  └────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐                     │
+│  │ 217      │ │ 1,842    │ │ 47       │                     │
+│  │ cviků    │ │ záznamů  │ │ PR       │                     │
+│  └──────────┘ └──────────┘ └──────────┘                     │
+├─────────────────────────────────────────────────────────────┤
+│  [Knihovna cviků] [Analytika] [Testy] [Výzvy]               │
+├─────────────────────────────────────────────────────────────┤
+│  KATEGORIE                                                  │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐            │
+│  │ 💪 SÍLA    │ │ ❤️ KARDIO  │ │ ⚡ PLYO     │            │
+│  │ 156 cviků  │ │ 38 cviků   │ │ 23 cviků   │            │
+│  └─────────────┘ └─────────────┘ └─────────────┘            │
+├─────────────────────────────────────────────────────────────┤
+│  🏆 TOP KLIENTI (30 dní)                          [Více →]  │
+│  ────────────────────────────────────────────────────────── │
+│  1. Jan Novák       48 zázn.  5 PR  ████████░░  ↑15%        │
+│  2. Marie K.        42 zázn.  3 PR  ███████░░░  ↑8%         │
+│  3. Petr S.         36 zázn.  2 PR  ██████░░░░  ↑12%        │
+├─────────────────────────────────────────────────────────────┤
+│  📋 NEDÁVNO POUŽITÉ CVIKY                                   │
+│  ────────────────────────────────────────────────────────── │
+│  Bench Press  •  Rowing 500m  •  Box Jump  •  Squat         │
+│                                                             │
+│                                              ┌────────────┐ │
+│                                              │  + Zapsat  │ │
+│                                              └────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 7. Časový odhad
+
+| Fáze | Čas |
+|------|-----|
+| PerformanceKPIBar + usePerformanceOverview | 30 min |
+| ExerciseSearchCommand (Cmd+K) | 45 min |
+| CategoryCards | 20 min |
+| ClientProgressLeaderboard | 30 min |
+| Refaktor PerformanceHub layout | 25 min |
+| Plovoucí tlačítko + integrace | 10 min |
+| Testování a ladění | 20 min |
+
+**Celkem: ~3 hodiny**
+
+---
+
+## 8. Bonusová vylepšení (volitelná)
+
+1. **Multi-client comparison mode** - vybrat 2-3 klienty a porovnat jejich progres na stejném cviku
+2. **Keyboard shortcuts** - Ctrl+N pro nový záznam, Ctrl+K pro hledání
+3. **Export leaderboardu** - PDF/XLSX s porovnáním klientů
+4. **Trend sparklines** - mini grafy v leaderboardu ukazující 30denní trend
+
