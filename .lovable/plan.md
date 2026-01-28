@@ -1,168 +1,93 @@
 
+Cíl: opravit chybu při dokončení tréninku tak, aby se neopakovala, a současně udělat systém odolnější (rychlejší diagnostika, menší riziko dalších „skrytých“ chyb v DB funkcích).
 
-# Vylepšení AI Import Faktur pro Vilgain faktury
+## Co je teď skutečný problém (dle screenshotu + kontroly DB)
+Chyba hlásí:
+- `column "budget_group_id" of relation "credit_transactions" does not exist`
 
-## Analýza vaší faktury
+V databázi ale tabulka `credit_transactions` nemá `budget_group_id`. Má:
+- `group_id` (ověřeno dotazem na `information_schema.columns`)
 
-Z faktury `881/2025/9035` od **Vilgain s.r.o.** jsem identifikoval následující strukturu:
+A současná verze DB funkce `public.rpc_complete_training_session` (ta, kterou volá aplikace při „Dokončit trénink“) vkládá do `credit_transactions` sloupec `budget_group_id`, který neexistuje.
 
-**Metadata faktury:**
-- Dodavatel: Vilgain s. r. o.
-- IČO dodavatele: 29269555
-- Číslo faktury: 881/2025/9035
-- Datum vystavení: 26.06.2025
-- Variabilní symbol: 5341828
-- Způsob platby: Online platba
+Navíc jsem našel druhý „minový“ problém v té samé funkci:
+- funkce čte z `clients` sloupec `stored_balance`, ale v tabulce `clients` existuje jen `credit_balance` (tj. po opravě `budget_group_id` by velmi pravděpodobně spadla na další chybě).
 
-**Struktura položek (tabulka):**
-| Zboží | Množství | Netto/MJ | Daň % | Netto | DPH | Brutto |
-|-------|----------|----------|-------|-------|-----|--------|
-| Vilgain Clear Whey Isolate Peach fuzz 25 g [PV44916] | 1,000 ks | 33,04 | 12 | 33,04 | 3,96 | 37,00 Kč |
+To vysvětluje, proč se to i po předchozích opravách pořád rozbíjí: v DB funkci jsou názvy sloupců/struktur ve dvou místech mimo realitu DB schématu.
 
-**Klíčové poznatky:**
-- Produkty mají **SKU kódy** v hranatých závorkách: `[PV44916]`
-- Ceny jsou rozděleny na: **Netto/MJ** (nákupní za kus bez DPH), **Brutto** (s DPH)
-- Množství ve formátu `1,000 ks` (čárka jako desetinný oddělovač)
-- Faktura má více stran (2 strany)
-- Obsahuje řádek **Poštovné** (doprava) - neměl by se naskladňovat
+## Navržená oprava (backend / databáze)
+1) Opravit `rpc_complete_training_session` tak, aby:
+   - místo `budget_group_id` používala `group_id`
+   - místo `clients.stored_balance` používala `clients.credit_balance`
+   - sjednotila výstupní strukturu výsledku s tím, co frontend očekává (volitelně, ale doporučeno):
+     - dnes RPC vrací `results`, zatímco frontend typově počítá s `deductions` (i když to aktuálně přímo nezabije proces, je to zdroj budoucích bugů)
 
----
+2) Doplnit „pojistku“ proti podobným regresím:
+   - do DB migrace přidat jednoduchý „self-check“ (např. `PERFORM` dotazy do `information_schema.columns` a vyvolat srozumitelnou výjimku při deployi, pokud by schéma neodpovídalo očekávání), aby se do budoucna nestalo, že funkce odkazuje na neexistující sloupce a projeví se to až v mobilu.
+   - alternativně (jednodušší): držet konvence názvů a opravit všechny výskyty `budget_group_id` v DB funkcích/migracích na `group_id` a do budoucna už jen `group_id`.
 
-## Co chybí v aktuální implementaci
+3) Ověřit, zda nejsou další DB funkce, které stále používají `budget_group_id` nebo `stored_balance`:
+   - rychlý audit všech `rpc_*` funkcí a triggerů, které pracují s `credit_transactions` a `clients` zůstatkem.
 
-### 1. Extrakce SKU kódů
-Aktuálně se neextrahuje SKU kód produktu (např. `[PV44916]`), který je klíčový pro:
-- Přesné mapování na existující produkty
-- Budoucí automatické rozpoznání produktů
+## Navržené úpravy na frontendu (aby se to „nedělo“ i z pohledu UX)
+1) Zlepšit hlášení chyby u „Dokončit trénink“:
+   - dnes se ukáže jen `error.message`. Doplníme:
+     - krátké uživatelské sdělení („Něco v backendu se rozbilo…“)
+     - technický detail skrytě (collapsible / “Detaily”) s konkrétním textem chyby a interním kódem operace
+   - cílem je, aby příště šlo během 10 sekund poznat, jestli je to:
+     - DB funkce (sloupce, RLS)
+     - síť
+     - validace vstupů
 
-### 2. Filtrování nevhodných položek
-Položky jako **Poštovné**, **Doprava**, **Balné** by měly být automaticky označeny jako "nevybráno" nebo filtrovány.
+2) Bezpečnější postup po úspěšném RPC:
+   - v `useCompleteTrainingAtomic` se po RPC dělají update dotazy do `training_participants` bez kontroly errorů.
+   - upravit tak, aby:
+     - chyby z tohoto „after-step“ neblokovaly dokončení tréninku (RPC už je hotové), ale současně se zaznamenaly a ukázalo se varování (např. „Trénink dokončen, ale nepodařilo se uložit platební metodu u účastníka“).
 
-### 3. Podpora více stran PDF
-Faktura má 2 strany s položkami - AI musí analyzovat celý dokument.
+## Testovací postup (důsledné otestování ukládání i dokončování)
+Po implementaci provedu kontrolu ve 3 úrovních:
 
-### 4. Rozpoznání brutto vs netto ceny
-Vilgain faktury mají obě ceny - měla by být jasná volba, kterou cenu použít jako nákupní.
+### A) Databázová verifikace (automatická / rychlá)
+- ověřit, že `rpc_complete_training_session` definice už nikde neobsahuje:
+  - `budget_group_id`
+  - `stored_balance`
+- ověřit, že tabulky mají očekávané sloupce:
+  - `credit_transactions.group_id`
+  - `clients.credit_balance`
 
-### 5. Uložení SKU pro existující produkty
-Možnost přiřadit SKU kód k produktu pro budoucí automatické mapování.
+### B) Funkční test v aplikaci (to, co děláš ty)
+1) Dokončit trénink pro 1 účastníka (např. Jiří Kokeš) s platbou kredit
+2) Dokončit trénink pro 1 účastníka s hotovostí (mělo by skončit jako `pending_payment`, pokud to tak logika chce)
+3) Dokončit trénink pro více účastníků (mix platebních metod, pokud používáte)
+4) Ověřit, že po dokončení:
+   - se změnil stav tréninku (`completed` / `pending_payment`)
+   - vznikla transakce v přehledu transakcí
+   - změnil se kredit klienta / skupiny dle očekávání
 
-### 6. Zobrazení DPH sazby
-Některé produkty mají 12%, jiné 21% - důležité pro účetnictví.
+### C) Diagnostika při případném selhání
+- pokud by to znovu spadlo:
+  - okamžitě vytáhnu databázové logy poslední chyby (konkrétní SQL error), abychom nehádali
+  - doplním cílenou opravu (RLS / chybějící sloupec / špatný join)
 
----
+## Postup implementace (co přesně udělám po schválení)
+1) Najdu a opravím DB funkci `public.rpc_complete_training_session` v nové migraci:
+   - nahradím `budget_group_id` → `group_id`
+   - nahradím `stored_balance` → `credit_balance`
+   - případně sjednotím návratovou strukturu na `deductions` (a zároveň zachovám `results` kvůli zpětné kompatibilitě, pokud se někde používá)
+2) Prohledám DB funkce/migrace na další výskyty `budget_group_id` a `stored_balance` a opravím je (aby se to neopakovalo jinde).
+3) Zpřesním frontend error handling v `useCompleteTrainingAtomic`:
+   - lepší toast zpráva + „detaily“
+   - ošetření post-RPC update kroků (training_participants) tak, aby z toho nebyl „tvrdý fail“
+4) Otestuju dokončení tréninku end-to-end v preview a zkontroluju, že:
+   - žádný request nepadá
+   - v databázi vznikají správné řádky
+   - kredit se chová konzistentně
 
-## Technické změny
+## Rizika a jak je eliminujeme
+- Riziko: po opravě narazíme na další nesoulad schématu (typicky jiné názvy sloupců v dalších funkcích).
+  - Mitigace: audit všech relevantních funkcí + přidání pojistek / sjednocení názvosloví.
+- Riziko: RLS blokuje INSERT do `credit_transactions` z `SECURITY DEFINER` funkce (méně pravděpodobné, ale možné).
+  - Mitigace: pokud by logy ukázaly RLS, upravíme policies nebo přístup v definované funkci.
 
-### 1. Rozšíření rozhraní `ParsedInvoiceItem`
-
-Přidám nová pole:
-- `skuCode` - SKU/katalogové číslo produktu (např. "PV44916")
-- `unitPriceNet` - cena bez DPH za kus
-- `unitPriceGross` - cena s DPH za kus
-- `vatRate` - sazba DPH (12, 21)
-- `isShipping` - příznak pro položky typu doprava/poštovné
-
-### 2. Vylepšení AI promptu
-
-Aktualizuji prompt v edge funkci aby:
-- Extrahoval SKU kódy z názvů položek `[PVXXXXX]`
-- Rozpoznal položky typu doprava/poštovné
-- Vrátil jak netto tak brutto ceny
-- Zpracoval všechny strany dokumentu
-
-### 3. Vylepšení UI
-
-**Nové funkce v dialogu:**
-- Zobrazení SKU kódu u položek
-- Automatické odznačení poštovného
-- Přepínač "Použít ceny s DPH / bez DPH"
-- Možnost uložit SKU kód k produktu při vytvoření
-
-**Vizuální indikátory:**
-- Badge pro položky s SKU
-- Varování pro položky typu "doprava"
-- Zobrazení DPH sazby
-
----
-
-## Soubory k úpravě
-
-| Soubor | Změna |
-|--------|-------|
-| `supabase/functions/parse-invoice/index.ts` | Rozšířený prompt, extrakce SKU, filtr dopravy |
-| `src/hooks/useInvoiceImport.ts` | Nová pole, logika pro uložení SKU |
-| `src/components/sales/InvoiceItemRow.tsx` | Zobrazení SKU, DPH, badge pro dopravu |
-| `src/components/sales/InvoiceImportDialog.tsx` | Přepínač netto/brutto, souhrn DPH |
-
----
-
-## Databázové změny
-
-Přidám sloupec pro SKU kód do tabulky produktů:
-
-```sql
-ALTER TABLE products ADD COLUMN sku_code TEXT;
-CREATE INDEX idx_products_sku ON products(sku_code) WHERE sku_code IS NOT NULL;
-```
-
-Toto umožní automatické mapování produktů podle SKU v budoucích importech.
-
----
-
-## Ukázka vylepšeného UI
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 📄 Import faktury                                          [X] │
-├─────────────────────────────────────────────────────────────────┤
-│ ✅ Rozpoznáno 15 položek z faktury                              │
-│                                                                 │
-│ Dodavatel: Vilgain s.r.o.        IČO: 29269555                  │
-│ Č. faktury: 881/2025/9035        Datum: 26.06.2025              │
-│ VS: 5341828                      Celkem: 3 932 Kč               │
-│                                                                 │
-│ Cenová základna: (○) Netto (bez DPH)  (●) Brutto (s DPH)       │
-│                                                                 │
-│ ─────────────────────────────────────────────────────────────── │
-│ [☑] Vybrat vše (14 produktů, 1 doprava)                         │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ [☑] Vilgain Clear Whey Isolate Peach fuzz 25g      [Nový]   │ │
-│ │     [PV44916]  DPH: 12%                                     │ │
-│ │     Počet: [1] ks                                           │ │
-│ │     Nákupní: [37.00] Kč    Prodejní: [75] Kč                │ │
-│ │     Kategorie: [▼ Doplněk]                                  │ │
-│ ├─────────────────────────────────────────────────────────────┤ │
-│ │ [☑] Vilgain Protein Iced Coffee karamelové latté   [Nový]   │ │
-│ │     [PV45967]  DPH: 12%                                     │ │
-│ │     Počet: [17] ks                                          │ │
-│ │     Nákupní: [49.00] Kč    Prodejní: [89] Kč                │ │
-│ ├─────────────────────────────────────────────────────────────┤ │
-│ │ [☐] Poštovné                              [🚚 Doprava]      │ │
-│ │     ⚠️ Položka typu doprava - automaticky odznačena         │ │
-│ │     89.00 Kč                                                │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ ─────────────────────────────────────────────────────────────── │
-│ K naskladnění: 52 ks (14 nových produktů)                       │
-│ Nákupní cena: 3 843 Kč                                          │
-│ DPH 12%: 411,75 Kč  |  DPH 21%: 15,45 Kč                        │
-│                                                                 │
-│ [x] Přidat jako náklad (3 843 Kč do "Nákup zboží")              │
-│ [x] Uložit SKU kódy k novým produktům                           │
-│                                                                 │
-│                              [Zrušit] [Naskladnit 14 položek]   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Implementační pořadí
-
-1. **Databázová migrace** - přidat sloupec `sku_code`
-2. **Edge funkce** - vylepšený prompt pro Vilgain faktury
-3. **Hook** - rozšířené rozhraní a logika pro SKU
-4. **UI komponenty** - nové zobrazení položek
-5. **Testování** - ověření s vaší fakturou
-
+## Co od tebe potřebuji teď
+Nic technického: po implementaci tě požádám jen o opětovný pokus „Dokončit“ pro ty dnešní tréninky (Jiří Kokeš, Roman Lazinka, Iva Vanerová) a ověřit, že to prošlo bez chyby.
