@@ -27,15 +27,15 @@ export interface PerformanceOverview {
   }[];
 }
 
-// Mapping exercise categories to our three main types
-function mapToMainCategory(category: string | null, exerciseType: string | null): 'strength' | 'cardio' | 'plyometric' {
-  const cat = (category || '').toLowerCase();
+// Mapping exercise types to our three main categories
+// Primary source: exercise_type_v2 field (strength, cardio, plyometric)
+function mapToMainCategory(exerciseType: string | null): 'strength' | 'cardio' | 'plyometric' {
   const type = (exerciseType || '').toLowerCase();
   
-  if (type === 'plyometric' || cat.includes('plyometric') || cat.includes('skok') || cat.includes('jump')) {
+  if (type === 'plyometric') {
     return 'plyometric';
   }
-  if (type === 'cardio' || cat === 'cardio' || cat === 'conditioning' || cat.includes('kardio')) {
+  if (type === 'cardio') {
     return 'cardio';
   }
   return 'strength';
@@ -139,7 +139,7 @@ export function usePerformanceOverview() {
       const exerciseCategoryMap = new Map<string, 'strength' | 'cardio' | 'plyometric'>();
       
       exercises.forEach((ex) => {
-        const mainCat = mapToMainCategory(ex.category, ex.exercise_type_v2);
+        const mainCat = mapToMainCategory(ex.exercise_type_v2);
         categories[mainCat].count++;
         exerciseCategoryMap.set(ex.id, mainCat);
       });
@@ -205,7 +205,7 @@ export function usePerformanceOverview() {
           recentExercises.push({
             id: entry.exercise_id,
             name: entry.exercise_name,
-            category: mapToMainCategory(exerciseData?.category, exerciseData?.exercise_type_v2),
+            category: mapToMainCategory(exerciseData?.exercise_type_v2),
             lastUsed: entry.date,
           });
         }
