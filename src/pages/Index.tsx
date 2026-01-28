@@ -5,16 +5,14 @@ import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardActions } from '@/components/dashboard/DashboardActions';
+import { TodayTimelineCompact } from '@/components/dashboard/TodayTimelineCompact';
+import { AlertsSummaryCard } from '@/components/dashboard/AlertsSummaryCard';
 import { PendingPerformancesCard } from '@/components/performance/PendingPerformancesCard';
 import { CareerMilestoneCard } from '@/components/dashboard/CareerMilestoneCard';
 import { FinanceSummaryCard } from '@/components/dashboard/FinanceSummaryCard';
 import { BusinessYieldScoreCard } from '@/components/dashboard/BusinessYieldScoreCard';
 import { CashflowForecastCard } from '@/components/dashboard/CashflowForecastCard';
-import { ClientProgressCard } from '@/components/dashboard/ClientProgressCard';
-import { ClientsInDebtCard } from '@/components/dashboard/ClientsInDebtCard';
-import { PendingPaymentsCard } from '@/components/dashboard/PendingPaymentsCard';
-import { DashboardInsights } from '@/components/dashboard/DashboardInsights';
-
+import { DashboardInsightsRefactored } from '@/components/dashboard/DashboardInsightsRefactored';
 import { UnassignedSessionsCard } from '@/components/dashboard/UnassignedSessionsCard';
 import { FollowupsDashboardWidget } from '@/components/dashboard/FollowupsDashboardWidget';
 
@@ -25,48 +23,63 @@ export default function Index() {
   const layout = useDashboardLayout();
 
   // Calculate if there are alerts to show
-  const hasUnpaidClients = (data?.finance?.unpaidTotal?.count ?? 0) > 0;
-  const hasClientsInDebt = (data?.finance?.creditAtRisk?.count ?? 0) > 0;
+  const unpaidCount = data?.finance?.unpaidTotal?.count ?? 0;
+  const unpaidAmount = data?.finance?.unpaidTotal?.amount ?? 0;
+  const debtCount = data?.finance?.creditAtRisk?.count ?? 0;
+  const debtAmount = data?.finance?.creditAtRisk?.amount ?? 0;
+  const hasAlerts = unpaidCount > 0 || debtCount > 0;
 
   return (
     <div className="min-h-screen animate-fade-in">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-6">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4">
         
         {/* ═══════════════════════════════════════════════════════════════════
             HERO ZONE - Today's overview + Quick Actions
             Always visible, contains greeting, key metrics, action buttons
         ═══════════════════════════════════════════════════════════════════ */}
-        <section className="space-y-3">
+        <section>
           <SectionErrorBoundary section="Hlavička" compact>
             <DashboardHeader data={data} isLoading={isLoading} />
           </SectionErrorBoundary>
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════════
+            TODAY TIMELINE - Visual overview of today's trainings
+            Shows schedule with quick actions for completing and feedback
+        ═══════════════════════════════════════════════════════════════════ */}
+        <section>
+          <SectionErrorBoundary section="Dnešní tréninky" compact>
+            <TodayTimelineCompact 
+              trainings={data?.todaySchedule ?? []}
+              isLoading={isLoading}
+            />
+          </SectionErrorBoundary>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════════
             ALERT ZONE - Critical items requiring attention
-            Only shown when there are issues (conditionally rendered)
+            Consolidated alerts card + individual action items
         ═══════════════════════════════════════════════════════════════════ */}
         <section className="space-y-3">
-          {/* Unassigned Calendar Sessions - always check */}
+          {/* Consolidated Alerts */}
+          {hasAlerts && (
+            <SectionErrorBoundary section="Upozornění" compact>
+              <AlertsSummaryCard
+                unpaidCount={unpaidCount}
+                unpaidAmount={unpaidAmount}
+                debtCount={debtCount}
+                debtAmount={debtAmount}
+                isLoading={isLoading}
+              />
+            </SectionErrorBoundary>
+          )}
+
+          {/* Unassigned Calendar Sessions */}
           <SectionErrorBoundary section="Nepřiřazené tréninky" compact>
             <UnassignedSessionsCard />
           </SectionErrorBoundary>
 
-          {/* Pending Payments - show only if there are unpaid items */}
-          {hasUnpaidClients && (
-            <SectionErrorBoundary section="Čeká na platbu" compact>
-              <PendingPaymentsCard />
-            </SectionErrorBoundary>
-          )}
-
-          {/* Clients in Debt - show only if there are clients at risk */}
-          {hasClientsInDebt && (
-            <SectionErrorBoundary section="Klienti s dluhem" compact>
-              <ClientsInDebtCard />
-            </SectionErrorBoundary>
-          )}
-
-          {/* Follow-ups - always show as they're action items */}
+          {/* Follow-ups */}
           <SectionErrorBoundary section="Připomenutí" compact>
             <FollowupsDashboardWidget />
           </SectionErrorBoundary>
@@ -92,7 +105,7 @@ export default function Index() {
           {/* Dashboard Insights */}
           {data && (
             <SectionErrorBoundary section="Postřehy" compact>
-              <DashboardInsights
+              <DashboardInsightsRefactored
                 trends={data.trends}
                 finance={data.finance}
                 weeklySummary={data.weeklySummary}
@@ -101,13 +114,6 @@ export default function Index() {
                 todayEstimatedIncome={data.todayEstimatedIncome}
                 isLoading={isLoading}
               />
-            </SectionErrorBoundary>
-          )}
-
-          {/* Career Milestone Card */}
-          {layout.showCareerMilestone && (
-            <SectionErrorBoundary section="Kariérní statistiky" compact>
-              <CareerMilestoneCard />
             </SectionErrorBoundary>
           )}
 
@@ -122,14 +128,16 @@ export default function Index() {
             </SectionErrorBoundary>
           )}
 
+          {/* Career Milestone Card */}
+          {layout.showCareerMilestone && (
+            <SectionErrorBoundary section="Kariérní statistiky" compact>
+              <CareerMilestoneCard />
+            </SectionErrorBoundary>
+          )}
+
           {/* Cashflow Forecast */}
           <SectionErrorBoundary section="Cashflow" compact>
             <CashflowForecastCard />
-          </SectionErrorBoundary>
-
-          {/* Client Progress */}
-          <SectionErrorBoundary section="Pokrok klientů" compact>
-            <ClientProgressCard />
           </SectionErrorBoundary>
         </section>
         

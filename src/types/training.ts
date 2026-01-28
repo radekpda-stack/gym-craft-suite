@@ -37,4 +37,5 @@ export interface ScheduleItem {
   hasFeedback: boolean;
   hasIssue: boolean;
   feedbackToken?: string;
+  participantCount?: number;
 }
