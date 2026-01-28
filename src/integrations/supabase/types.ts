@@ -9885,6 +9885,30 @@ export type Database = {
           },
         ]
       }
+      training_idempotency_keys: {
+        Row: {
+          created_at: string
+          id: string
+          idempotency_key: string
+          session_id: string
+          trainer_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          session_id: string
+          trainer_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          session_id?: string
+          trainer_id?: string
+        }
+        Relationships: []
+      }
       training_packages: {
         Row: {
           created_at: string | null
