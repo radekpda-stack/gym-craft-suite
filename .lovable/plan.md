@@ -1,288 +1,395 @@
 
+# Redesign klientského portálu - Deník tréninků a Strava
 
-# Plán: Redesign karty Výkonnost (Performance Hub)
+## 1. Analýza současného stavu
 
-## 1. Shrnutí současného stavu
-
-### Struktura
-
+### Struktura deníku (Workout Diary)
 ```text
-Výkonnost (PerformanceHub)
-├── Tab: Cviky (ExercisesContent)
-│   ├── Sub-tab: Seznam (ExerciseListView)
-│   ├── Sub-tab: Klient (ClientExercisesView)
-│   └── Sub-tab: Analytika (ExerciseAnalyticsView)
-│       ├── Síla (StrengthAnalyticsView)
-│       ├── Kardio (CardioAnalyticsView)
-│       └── Skill (SkillAnalyticsView)
-├── Tab: Testy (TestsContent)
-└── Tab: Výzvy (ChallengesContent)
+ClientPortalWorkoutDiary.tsx
+├── Header (ikona + text)
+├── Tabs: Tréninky | Strava
+│
+├── Tab: Tréninky
+│   ├── TrainingCalendar (kompaktní)
+│   ├── Button "Přidat svůj trénink" (full-width)
+│   ├── Plánované tréninky od trenéra (list)
+│   └── Moje záznamy (SimpleWorkoutCard list)
+│
+└── Tab: Strava (lazy load → ClientPortalNutrition)
+    ├── WeekStrip (7 dní)
+    ├── WaterGoalWidget + CaffeineWindowWidget
+    ├── DayNoteInput
+    ├── Quick Stats (3 boxy: jídla/voda/kávy)
+    ├── Quick Actions (4×2 grid)
+    │   ├── Snídaně/Oběd/Večeře/Svačina
+    │   ├── Rychlé vody (3 tlačítka)
+    │   ├── Káva/Čaj
+    │   └── Nedávná jídla (chips)
+    └── TodayEntries (timeline)
 ```
 
 ### Identifikované problémy
 
 | Problém | Oblast | Dopad |
 |---------|--------|-------|
-| **Příliš mnoho vnořených tabů** | UX | Ztížená orientace (3 úrovně: Cviky → Seznam/Klient/Analytika → Síla/Kardio/Skill) |
-| **Chybí rychlý přehled** | UX | Po vstupu na stránku není jasné, co je důležité |
-| **Pomalé hledání cviků** | UX | Musí se procházet přes akordeon kategorií |
-| **Žádná rychlá cesta k zápisu** | Workflow | FAB odstraněn, tlačítko přidat záznam není prominentní |
-| **Srovnání klientů skryté** | UX | Leaderboard je až na detailu cviku, ne na hlavní stránce |
-| **Kategorie nejsou vizuálně odlišené** | Design | Síla/Kardio/Plyometrie vypadají stejně |
-| **Progres klientů těžko dostupný** | Data | ClientExercisesView vyžaduje nejdřív vybrat klienta |
+| **Přetížené UI** | Strava | Příliš mnoho tlačítek a sekcí na jedné obrazovce |
+| **Nekonzistentní design** | Celkově | Různé styly karet, badgů a tlačítek |
+| **Malé touch targety** | Mobile | Některá tlačítka jsou těžko kliknutelná |
+| **Chybí vizuální hierarchie** | Oba taby | Není jasné, co je primární akce |
+| **Monotónní barvy** | Strava | Všechny meal typy vypadají podobně |
+| **Komplikovaný flow přidání** | Tréninky | 3 kroky v dialogu jsou příliš |
+| **Chybí gamifikace** | Celkově | Žádné vizuální odměny za aktivitu |
+| **WeekStrip příliš malý** | Strava | Těžko čitelný na mobilu |
+| **Timeline nepřehledná** | Strava | Dlouhý seznam bez vizuálního členění |
 
 ---
 
-## 2. Navrhované změny
+## 2. Nový design - principy
 
-### 2.1 Nová struktura - zjednodušení na 2 hlavní pohledy
+### Design philosophy
+
+1. **"Swipe & Tap" first** - Primární akce jedním tapem
+2. **Visual delight** - Barvy, animace, micro-rewards
+3. **Progressive disclosure** - Nejdříve jednoduché, detail na vyžádání
+4. **Gamifikace** - Streak, progress rings, celebrace
+
+### Barevný systém pro typy jídel
 
 ```text
-Výkonnost (PerformanceHub)
-├── [Hlavní pohled - default]
-│   ├── KPI Bar (rychlý přehled)
-│   ├── Rychlé hledání cviku (cmd+K style)
-│   ├── Kategorie cviku (filtrovatelné karty)
-│   │   ├── 💪 Síla
-│   │   ├── ❤️ Kardio
-│   │   └── ⚡ Plyometrie
-│   └── Top 5 nejlepších klientů (mini-leaderboard)
-│
-├── [Detail cviku - /exercises/:id]
-│   └── (beze změny - už funguje dobře)
-│
-└── [Testy & Výzvy - volitelné moduly]
+🌅 Snídaně  → Warm gradient (amber-50 to orange-100)
+☀️ Oběd    → Bright gradient (yellow-50 to amber-100)  
+🌙 Večeře  → Cool gradient (indigo-50 to purple-100)
+🍎 Svačina → Fresh gradient (green-50 to emerald-100)
+💧 Voda    → Blue gradient (sky-50 to blue-100)
+☕ Káva    → Brown gradient (stone-50 to amber-100)
 ```
 
-### 2.2 Nové UI komponenty
+---
 
-#### A) Performance Dashboard Header
+## 3. Nové komponenty
 
-Kompaktní KPI bar v hlavičce:
+### A) Diary Hero Header
+
+Kompaktní hero s denním přehledem:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│  🏋️ Výkonnost                          [🔍 Hledat] [+ Log]  │
+│  📔 Dnešní den              Středa 29. ledna                │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐            │
-│  │ 217 cviků   │ │ 1,842 zázn. │ │ 47 PR       │            │
-│  │ v knihovně  │ │ tento měsíc │ │ tento měsíc │            │
-│  └─────────────┘ └─────────────┘ └─────────────┘            │
-└─────────────────────────────────────────────────────────────┘
-```
-
-#### B) Quick Search - Command Palette Style
-
-Nová komponenta pro rychlé vyhledávání cviku:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  🔍 Hledej cvik nebo klienta...                         ⌘K  │
-├─────────────────────────────────────────────────────────────┤
-│  NEDÁVNÉ                                                    │
-│  ├── Bench Press           [💪 Síla]    [⏱️ 2 dny]          │
-│  ├── Rowing 500m           [❤️ Kardio]  [⏱️ včera]          │
-│  └── Box Jump              [⚡ Plyo]    [⏱️ 5 dní]          │
-├─────────────────────────────────────────────────────────────┤
-│  OBLÍBENÉ ⭐                                                │
-│  ├── Squat                                                  │
-│  └── Deadlift                                               │
-└─────────────────────────────────────────────────────────────┘
-```
-
-#### C) Category Cards - Vizuálně odlišené kategorie
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  KATEGORIE CVIKŮ                                            │
-│  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────┐ │
-│  │ 💪               │ │ ❤️               │ │ ⚡           │ │
-│  │ SÍLA             │ │ KARDIO           │ │ PLYOMETRIE   │ │
-│  │ 156 cviků        │ │ 38 cviků         │ │ 23 cviků     │ │
-│  │ ──────────       │ │ ──────────       │ │ ──────────   │ │
-│  │ 1,204 záznamů    │ │ 428 záznamů      │ │ 210 záznamů  │ │
-│  │ bg: primary/10   │ │ bg: success/10   │ │ bg: amber/10 │ │
-│  └──────────────────┘ └──────────────────┘ └──────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-```
-
-#### D) Client Progress Leaderboard
-
-Na hlavní stránce zobrazit "Top 5 aktivních klientů":
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  🏆 TOP AKTIVNÍ KLIENTI (30 dní)               [Více →]     │
-├─────────────────────────────────────────────────────────────┤
-│  1. Jan Novák         48 záznamů   5 PR  ████████░░  +15%   │
-│  2. Marie Králová     42 záznamů   3 PR  ███████░░░  +8%    │
-│  3. Petr Svoboda      36 záznamů   2 PR  ██████░░░░  +12%   │
-│  4. Eva Malinová      28 záznamů   1 PR  █████░░░░░  -5%    │
-│  5. Jan Nový          22 záznamů   4 PR  ████░░░░░░  +22%   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-#### E) Quick Log FAB (plovoucí tlačítko)
-
-Vrátit plovoucí tlačítko na stránku Výkonnost (lokální FAB):
-
-```text
-┌────────────────────────────────────────────────────────────┐
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ Progress ring: 3/5 aktivit ████████░░ 60%            │   │
+│  │ "Zbývají 2 aktivity"                                 │   │
+│  └──────────────────────────────────────────────────────┘   │
 │                                                             │
-│                                              ┌────────────┐ │
-│                                              │  + Zapsat  │ │
-│                                              │   výkon    │ │
-│                                              └────────────┘ │
-└────────────────────────────────────────────────────────────┘
+│  🔥 5 dní v řadě                     💪 12 tréninků celkem  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### B) Quick Action Floating Buttons
+
+Plovoucí tlačítka pro rychlé přidání:
+
+```text
+                                    ┌─────────────────┐
+                                    │ 🍽️ + Jídlo     │
+                                    │ 💧 + Voda      │
+                                    │ 💪 + Trénink   │
+                                    └─────────────────┘
+                                         ┌───┐
+                                         │ + │ ← FAB
+                                         └───┘
+```
+
+### C) Modernized WeekStrip
+
+Větší, čitelnější s vizuálním feedbackem:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐   │
+│  │ Po  │ │ Út  │ │ St  │ │ Čt  │ │ Pá  │ │ So  │ │ Ne  │   │
+│  │ 27  │ │ 28  │ │ 29  │ │ 30  │ │ 31  │ │  1  │ │  2  │   │
+│  │ ●●● │ │ ●●  │ │ ◌   │ │     │ │     │ │     │ │     │   │
+│  └─────┘ └─────┘ └─────┘ └─────┘ └─────┘ └─────┘ └─────┘   │
+│                  ▲ DNES                                     │
+└─────────────────────────────────────────────────────────────┘
+
+● = dokončené jídlo/aktivita, počet teček = počet záznamů
+```
+
+### D) Meal Quick Cards
+
+Velké, tapnutelné karty s gradientem:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  PŘIDAT ZÁZNAM                                              │
+│  ┌────────────────────────┐ ┌────────────────────────┐      │
+│  │ 🌅                     │ │ ☀️                     │      │
+│  │ Snídaně                │ │ Oběd                   │      │
+│  │ (gradient amber)       │ │ (gradient yellow)      │      │
+│  │ 7:00 - 10:00          │ │ 11:00 - 14:00         │      │
+│  └────────────────────────┘ └────────────────────────┘      │
+│  ┌────────────────────────┐ ┌────────────────────────┐      │
+│  │ 🌙                     │ │ 🍎                     │      │
+│  │ Večeře                 │ │ Svačina                │      │
+│  │ (gradient indigo)      │ │ (gradient green)       │      │
+│  │ 17:00 - 21:00         │ │ kdykoli                │      │
+│  └────────────────────────┘ └────────────────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### E) Hydration Ring Widget
+
+Kruhový progress místo progress baru:
+
+```text
+┌───────────────────────────────────┐
+│          💧                       │
+│       ╭──────╮                    │
+│      /   72%  \                   │
+│     |  1.5L   |    Quick add:     │
+│      \       /     [+200] [+300]  │
+│       ╰──────╯     [+500]         │
+│                                   │
+│   Cíl: 2.0L  |  Zbývá: 0.5L      │
+└───────────────────────────────────┘
+```
+
+### F) Timeline Cards (Food Log)
+
+Modernizované karty s gradientem:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  DNEŠNÍ ZÁZNAMY                                             │
+│                                                             │
+│  07:32  ┌──────────────────────────────────────────────┐   │
+│         │ 🌅 Snídaně                  [střední porce]  │   │
+│         │ Ovesná kaše s banánem                        │   │
+│         │ ┌─────────────────────────────────────┐      │   │
+│         │ │ 💬 Trenér: "Skvělá volba!" ⭐⭐⭐⭐⭐ │      │   │
+│         │ └─────────────────────────────────────┘      │   │
+│         └──────────────────────────────────────────────┘   │
+│                                                             │
+│  10:15  ┌──────────────────────────────────────────────┐   │
+│         │ 💧 Voda                            300ml     │   │
+│         └──────────────────────────────────────────────┘   │
+│                                                             │
+│  12:45  ┌──────────────────────────────────────────────┐   │
+│         │ ☀️ Oběd                     [velká porce]    │   │
+│         │ Kuřecí prsa s rýží                           │   │
+│         └──────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### G) Workout Quick Add (zjednodušený)
+
+Místo 3-krokového dialogu - 1 obrazovka:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  💪 Přidat trénink                                    [✕]  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Typ aktivity:                                              │
+│  ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐                   │
+│  │🏋️    │ │🏃    │ │🚴    │ │🏊    │                   │
+│  │Síla  │ │Běh   │ │Kolo  │ │Plavba│                   │
+│  └───────┘ └───────┘ └───────┘ └───────┘                   │
+│                                                             │
+│  Délka:  [15] [30] [45] [60] [90] min                      │
+│                                                             │
+│  Jak to šlo?  😩 😕 😐 😊 🔥                               │
+│                                                             │
+│  Poznámka (volitelné):                                     │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                                                      │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              ✓ Uložit trénink                        │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Technická implementace
+## 4. Implementační plán
 
-### Nové soubory
+### Fáze 1: Základní komponenty (nové soubory)
 
 | Soubor | Účel |
 |--------|------|
-| `src/components/performance/PerformanceKPIBar.tsx` | KPI metriky v hlavičce |
-| `src/components/performance/ExerciseSearchCommand.tsx` | Cmd+K style hledání |
-| `src/components/performance/CategoryCards.tsx` | Vizuální kategorie cviků |
-| `src/components/performance/ClientProgressLeaderboard.tsx` | Top klienti + progres |
-| `src/hooks/usePerformanceOverview.ts` | Agregovaná data pro dashboard |
+| `src/components/client-portal/common/DiaryHeroHeader.tsx` | Denní hero s progress ring |
+| `src/components/client-portal/common/FloatingQuickAdd.tsx` | FAB menu pro rychlé přidání |
+| `src/components/client-portal/nutrition/ModernWeekStrip.tsx` | Větší, čitelnější týdenní strip |
+| `src/components/client-portal/nutrition/MealQuickCards.tsx` | Gradient karty pro typy jídel |
+| `src/components/client-portal/nutrition/HydrationRingWidget.tsx` | Kruhový progress pro vodu |
+| `src/components/client-portal/nutrition/ModernFoodCard.tsx` | Modernizovaná karta jídla |
+| `src/components/client-portal/workout-diary/QuickWorkoutSheet.tsx` | Zjednodušený formulář |
 
-### Úpravy existujících souborů
+### Fáze 2: Refaktor hlavních stránek
 
 | Soubor | Změna |
 |--------|-------|
-| `src/pages/PerformanceHub.tsx` | Nový layout s dashboard komponentami |
-| `src/components/performance/ExercisesContent.tsx` | Zjednodušit na 2 pohledy (Knihovna / Analytika) |
-| `src/components/exercises/ExerciseListView.tsx` | Optimalizovat pro rychlé procházení |
-| `src/components/exercises/ClientExercisesView.tsx` | Přidat multi-client comparison mode |
+| `ClientPortalWorkoutDiary.tsx` | Integrace nových komponent, zjednodušení layoutu |
+| `ClientPortalNutrition.tsx` | Modernizace UI, FloatingQuickAdd |
+| `TodayEntries.tsx` | Použití ModernFoodCard místo starých karet |
+| `SimpleFoodForm.tsx` | Modernizace s gradientem a lepším UX |
+
+### Fáze 3: Animace a micro-interactions
+
+- Framer Motion animace při přidání záznamu
+- Confetti při dosažení denního cíle vody
+- Streak celebration při konzistentní aktivitě
+- Haptic feedback (vibrace) na mobilech
 
 ---
 
-## 4. Data flow
+## 5. Wireframe nového layoutu
 
-### Nový hook `usePerformanceOverview`
-
-```typescript
-interface PerformanceOverview {
-  // KPI
-  totalExercises: number;
-  totalEntriesThisMonth: number;
-  totalPRsThisMonth: number;
-  
-  // Category breakdown
-  categories: {
-    strength: { count: number; entries: number };
-    cardio: { count: number; entries: number };
-    plyometric: { count: number; entries: number };
-  };
-  
-  // Top clients
-  topClients: {
-    id: string;
-    name: string;
-    entriesCount: number;
-    prCount: number;
-    trend: number; // % change vs previous period
-  }[];
-  
-  // Recent exercises
-  recentExercises: {
-    id: string;
-    name: string;
-    category: 'strength' | 'cardio' | 'plyometric';
-    lastUsed: string;
-  }[];
-}
-```
-
----
-
-## 5. Srovnání před/po
-
-### Před
-
-- 3 úrovně navigace (taby v tabech v tabech)
-- Hledání cviku vyžaduje projít filtry a akordeon
-- Srovnání klientů pouze na detailu cviku
-- Všechny kategorie vypadají stejně
-- Žádný přehled "co se děje"
-
-### Po
-
-- 2 jasné pohledy: Dashboard + Detail
-- Cmd+K style rychlé hledání odkudkoli
-- Top klienti viditelní na hlavní stránce
-- Vizuálně odlišené kategorie (Síla/Kardio/Plyo)
-- KPI bar dává okamžitý přehled
-- Plovoucí tlačítko pro rychlý zápis
-
----
-
-## 6. Wireframe nového layoutu
+### Deník - Tab Tréninky
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│  [💪 Výkonnost]                                             │
-│  Cviky, testy a výzvy na jednom místě                       │
-├─────────────────────────────────────────────────────────────┤
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │ 🔍 Rychle hledat cvik nebo klienta...              ⌘K │ │
-│  └────────────────────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐                     │
-│  │ 217      │ │ 1,842    │ │ 47       │                     │
-│  │ cviků    │ │ záznamů  │ │ PR       │                     │
-│  └──────────┘ └──────────┘ └──────────┘                     │
-├─────────────────────────────────────────────────────────────┤
-│  [Knihovna cviků] [Analytika] [Testy] [Výzvy]               │
-├─────────────────────────────────────────────────────────────┤
-│  KATEGORIE                                                  │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐            │
-│  │ 💪 SÍLA    │ │ ❤️ KARDIO  │ │ ⚡ PLYO     │            │
-│  │ 156 cviků  │ │ 38 cviků   │ │ 23 cviků   │            │
-│  └─────────────┘ └─────────────┘ └─────────────┘            │
-├─────────────────────────────────────────────────────────────┤
-│  🏆 TOP KLIENTI (30 dní)                          [Více →]  │
-│  ────────────────────────────────────────────────────────── │
-│  1. Jan Novák       48 zázn.  5 PR  ████████░░  ↑15%        │
-│  2. Marie K.        42 zázn.  3 PR  ███████░░░  ↑8%         │
-│  3. Petr S.         36 zázn.  2 PR  ██████░░░░  ↑12%        │
-├─────────────────────────────────────────────────────────────┤
-│  📋 NEDÁVNO POUŽITÉ CVIKY                                   │
-│  ────────────────────────────────────────────────────────── │
-│  Bench Press  •  Rowing 500m  •  Box Jump  •  Squat         │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ 📔 Středa 29. ledna              🔥 5 dní streak     │  │
+│  │ ████████░░ 3/5 aktivit                               │  │
+│  └───────────────────────────────────────────────────────┘  │
 │                                                             │
-│                                              ┌────────────┐ │
-│                                              │  + Zapsat  │ │
-│                                              └────────────┘ │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ Tento týden                                           │  │
+│  │ [Po●●] [Út●] [St◌] [Čt] [Pá] [So] [Ne]               │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  OD TRENÉRA                                     Zobrazit → │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ 🏋️ Silový trénink              Dnes 16:00           │  │
+│  │ Bench, Squat, Deadlift            [Splnit ✓]         │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  MOJE ZÁZNAMY                                               │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ 🏃 Běh           dnes 07:15           45 min  🔥     │  │
+│  │ 5.2 km @ 5:30/km                                     │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│                                        ┌────────────────┐   │
+│                                        │  + Trénink    │   │
+│                                        └────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Deník - Tab Strava
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ 🍽️ Středa 29. ledna              ✓ 3/4 jídla        │  │
+│  │ Zbývá večeře                                         │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐  │
+│  │ Po  │ │ Út  │ │ St  │ │ Čt  │ │ Pá  │ │ So  │ │ Ne  │  │
+│  │ ●●● │ │ ●●  │ │ ●   │ │     │ │     │ │     │ │     │  │
+│  └─────┘ └─────┘ └─────┘ └─────┘ └─────┘ └─────┘ └─────┘  │
+│                                                             │
+│  ┌──────────────────┐ ┌─────────────────────────────────┐  │
+│  │    ╭────╮        │ │  PŘIDAT JÍDLO                   │  │
+│  │   /      \       │ │  ┌───────┐ ┌───────┐            │  │
+│  │  │  72%   │      │ │  │🌅     │ │☀️     │            │  │
+│  │  │ 1.5L   │      │ │  │Snídaně│ │Oběd   │            │  │
+│  │   \      /       │ │  └───────┘ └───────┘            │  │
+│  │    ╰────╯        │ │  ┌───────┐ ┌───────┐            │  │
+│  │   [+💧]          │ │  │🌙     │ │🍎     │            │  │
+│  └──────────────────┘ │  │Večeře │ │Svačina│            │  │
+│                       │  └───────┘ └───────┘            │  │
+│                       └─────────────────────────────────┘  │
+│                                                             │
+│  DNEŠNÍ ZÁZNAMY                                             │
+│  ────────────────────────────────────────────────────────── │
+│  07:32  🌅 Ovesná kaše s banánem          střední porce    │
+│         💬 "Skvělá volba!" ⭐⭐⭐⭐⭐                       │
+│  ────────────────────────────────────────────────────────── │
+│  10:15  💧 Voda                                    300ml   │
+│  ────────────────────────────────────────────────────────── │
+│  12:45  ☀️ Kuřecí prsa s rýží              velká porce    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 7. Časový odhad
+## 6. Technické detaily
 
-| Fáze | Čas |
-|------|-----|
-| PerformanceKPIBar + usePerformanceOverview | 30 min |
-| ExerciseSearchCommand (Cmd+K) | 45 min |
-| CategoryCards | 20 min |
-| ClientProgressLeaderboard | 30 min |
-| Refaktor PerformanceHub layout | 25 min |
-| Plovoucí tlačítko + integrace | 10 min |
-| Testování a ladění | 20 min |
+### Nové CSS utility třídy
 
-**Celkem: ~3 hodiny**
+```css
+/* Gradient backgrounds for meal types */
+.meal-gradient-breakfast { @apply bg-gradient-to-br from-amber-50 to-orange-100; }
+.meal-gradient-lunch { @apply bg-gradient-to-br from-yellow-50 to-amber-100; }
+.meal-gradient-dinner { @apply bg-gradient-to-br from-indigo-50 to-purple-100; }
+.meal-gradient-snack { @apply bg-gradient-to-br from-green-50 to-emerald-100; }
+
+/* Touch-friendly targets */
+.touch-target-lg { @apply min-h-[56px] min-w-[56px]; }
+
+/* Progress ring */
+.progress-ring { ... } /* SVG-based circular progress */
+```
+
+### Framer Motion animace
+
+```typescript
+// Vstupní animace pro karty
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: { opacity: 1, y: 0, scale: 1 },
+};
+
+// Celebrace při dokončení
+const celebrationVariants = {
+  initial: { scale: 0 },
+  animate: { scale: [0, 1.2, 1], transition: { type: 'spring' } },
+};
+```
 
 ---
 
-## 8. Bonusová vylepšení (volitelná)
+## 7. Očekávané výsledky
 
-1. **Multi-client comparison mode** - vybrat 2-3 klienty a porovnat jejich progres na stejném cviku
-2. **Keyboard shortcuts** - Ctrl+N pro nový záznam, Ctrl+K pro hledání
-3. **Export leaderboardu** - PDF/XLSX s porovnáním klientů
-4. **Trend sparklines** - mini grafy v leaderboardu ukazující 30denní trend
+### Před vs Po
 
+| Metrika | Před | Po |
+|---------|------|-----|
+| Tap-y pro přidání jídla | 4-5 | 2 |
+| Vizuální hierarchie | Slabá | Jasná |
+| Touch target size | 40px | 56px+ |
+| Barevná diferenciace | Minimální | Výrazná |
+| Gamifikace | Žádná | Streak + progress |
+| Animace | Základní | Micro-interactions |
+
+### UX vylepšení
+
+1. **Rychlejší logging** - Floating Action Button pro okamžité přidání
+2. **Vizuální odměny** - Streak badge, progress ring, celebrace
+3. **Lepší čitelnost** - Větší fonty, kontrastní barvy
+4. **Konzistentní design** - Unified card system s gradienty
+5. **Mobile-first** - Větší touch targety, gesture support
+
+---
+
+## 8. Časový odhad
+
+| Fáze | Čas |
+|------|-----|
+| DiaryHeroHeader + ModernWeekStrip | 40 min |
+| MealQuickCards + HydrationRingWidget | 45 min |
+| ModernFoodCard (timeline) | 30 min |
+| FloatingQuickAdd (FAB) | 25 min |
+| QuickWorkoutSheet (zjednodušený) | 35 min |
+| Integrace do hlavních stránek | 45 min |
+| Animace a micro-interactions | 30 min |
+| Testování a ladění | 30 min |
+
+**Celkem: ~4.5 hodiny**
