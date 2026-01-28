@@ -390,6 +390,7 @@ export function FeedbackAttentionInbox({
     }
   };
 
+  if (isLoading) {
     return (
       <Card className="glass">
         {showHeader && (
