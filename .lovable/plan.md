@@ -1,93 +1,113 @@
 
-Cíl: opravit chybu při dokončení tréninku tak, aby se neopakovala, a současně udělat systém odolnější (rychlejší diagnostika, menší riziko dalších „skrytých“ chyb v DB funkcích).
+# Plán: Přepracování notifikačního centra pro trenéra
 
-## Co je teď skutečný problém (dle screenshotu + kontroly DB)
-Chyba hlásí:
-- `column "budget_group_id" of relation "credit_transactions" does not exist`
+## Shrnutí požadavků
+Aktuální stav notifikačního centra má několik problémů:
+- **Tréninky a cvičení** (PRka, milestony) jsou nahoře a trenéra nezajímají
+- **Výživa** zobrazuje nežádoucí notifikace o neaktivitě klienta (24h bez zápisu)
+- **Zpětná vazba** neprovádí konzistentně akce při kliknutí
+- **Aktualizace profilu** neodkazuje na konkrétní změny
 
-V databázi ale tabulka `credit_transactions` nemá `budget_group_id`. Má:
-- `group_id` (ověřeno dotazem na `information_schema.columns`)
+## Navrhované změny
 
-A současná verze DB funkce `public.rpc_complete_training_session` (ta, kterou volá aplikace při „Dokončit trénink“) vkládá do `credit_transactions` sloupec `budget_group_id`, který neexistuje.
+### 1. Změna pořadí kategorií
+Aktuálně: Training → Nutrition → Forms → Admin
 
-Navíc jsem našel druhý „minový“ problém v té samé funkci:
-- funkce čte z `clients` sloupec `stored_balance`, ale v tabulce `clients` existuje jen `credit_balance` (tj. po opravě `budget_group_id` by velmi pravděpodobně spadla na další chybě).
+Nové pořadí:
+1. **Zprávy** (zůstává nahoře - nepřečtené konverzace)
+2. **Výživa a zdraví** - vysoká priorita (klient zapisuje stravu)
+3. **Formuláře a zpětná vazba** - střední priorita (feedback, diagnostika, profil)
+4. **Administrativa** - skryto ve výchozím stavu
+5. **Tréninky a cvičení** - přesunuto úplně dolů, ve výchozím stavu sbaleno
 
-To vysvětluje, proč se to i po předchozích opravách pořád rozbíjí: v DB funkci jsou názvy sloupců/struktur ve dvou místech mimo realitu DB schématu.
+### 2. Odstranění notifikací o neaktivitě ve stravě
+- Odfiltrovat typ `nutrition_inactive` z notifikačního centra
+- Zůstane pouze na dashboardu jako Smart Alert (pokud trenér chce)
+- Edge function `check-nutrition-inactivity` zůstane funkční pro ty, kdo to chtějí
 
-## Navržená oprava (backend / databáze)
-1) Opravit `rpc_complete_training_session` tak, aby:
-   - místo `budget_group_id` používala `group_id`
-   - místo `clients.stored_balance` používala `clients.credit_balance`
-   - sjednotila výstupní strukturu výsledku s tím, co frontend očekává (volitelně, ale doporučeno):
-     - dnes RPC vrací `results`, zatímco frontend typově počítá s `deductions` (i když to aktuálně přímo nezabije proces, je to zdroj budoucích bugů)
+### 3. Akční navigace při kliknutí
 
-2) Doplnit „pojistku“ proti podobným regresím:
-   - do DB migrace přidat jednoduchý „self-check“ (např. `PERFORM` dotazy do `information_schema.columns` a vyvolat srozumitelnou výjimku při deployi, pokud by schéma neodpovídalo očekávání), aby se do budoucna nestalo, že funkce odkazuje na neexistující sloupce a projeví se to až v mobilu.
-   - alternativně (jednodušší): držet konvence názvů a opravit všechny výskyty `budget_group_id` v DB funkcích/migracích na `group_id` a do budoucna už jen `group_id`.
+| Typ notifikace | Aktuální chování | Nové chování |
+|----------------|------------------|--------------|
+| `nutrition_entry_added` | Profil klienta | **Nutriční deník** (`/nutrition/client/{clientId}`) |
+| `feedback_received` | Dialog feedbacku (funguje) | Zůstává (už funguje správně) |
+| `feedback_red_flag` | Dialog feedbacku | Zůstává |
+| `client_profile_updated` | Profil klienta | **Profil s tab=profile** (`/clients/{id}?tab=profile`) |
+| `pr_achieved` / `pr_created` | Kliknutí nefunguje | Profil klienta s tab trainings |
 
-3) Ověřit, zda nejsou další DB funkce, které stále používají `budget_group_id` nebo `stored_balance`:
-   - rychlý audit všech `rpc_*` funkcí a triggerů, které pracují s `credit_transactions` a `clients` zůstatkem.
+### 4. Vylepšení zpráv notifikací
+- **Feedback**: Jednotná zpráva "{Jméno} vyplnil(a) zpětnou vazbu" s tlačítkem na otevření
+- **Profil**: Zpráva "{Jméno} upravil(a): {seznam polí}" s odkazem na profil
+- **Strava**: "{Jméno} dnes zapisuje stravu" s odkazem na deník
 
-## Navržené úpravy na frontendu (aby se to „nedělo“ i z pohledu UX)
-1) Zlepšit hlášení chyby u „Dokončit trénink“:
-   - dnes se ukáže jen `error.message`. Doplníme:
-     - krátké uživatelské sdělení („Něco v backendu se rozbilo…“)
-     - technický detail skrytě (collapsible / “Detaily”) s konkrétním textem chyby a interním kódem operace
-   - cílem je, aby příště šlo během 10 sekund poznat, jestli je to:
-     - DB funkce (sloupce, RLS)
-     - síť
-     - validace vstupů
+### 5. Vylepšení notifikací při vytváření (backend)
+Přidat `entity_type` a `entity_id` do notifikací pro správnou navigaci:
+- Feedback: `entity_type: 'training'`, `entity_id: training_session_id`
+- Profil: `entity_type: 'client'`, `entity_id: client_id`
+- Strava: již správně nastaveno
 
-2) Bezpečnější postup po úspěšném RPC:
-   - v `useCompleteTrainingAtomic` se po RPC dělají update dotazy do `training_participants` bez kontroly errorů.
-   - upravit tak, aby:
-     - chyby z tohoto „after-step“ neblokovaly dokončení tréninku (RPC už je hotové), ale současně se zaznamenaly a ukázalo se varování (např. „Trénink dokončen, ale nepodařilo se uložit platební metodu u účastníka“).
+---
 
-## Testovací postup (důsledné otestování ukládání i dokončování)
-Po implementaci provedu kontrolu ve 3 úrovních:
+## Technické úpravy
 
-### A) Databázová verifikace (automatická / rychlá)
-- ověřit, že `rpc_complete_training_session` definice už nikde neobsahuje:
-  - `budget_group_id`
-  - `stored_balance`
-- ověřit, že tabulky mají očekávané sloupce:
-  - `credit_transactions.group_id`
-  - `clients.credit_balance`
+### Soubor 1: `src/components/notifications/NotificationCenter.tsx`
 
-### B) Funkční test v aplikaci (to, co děláš ty)
-1) Dokončit trénink pro 1 účastníka (např. Jiří Kokeš) s platbou kredit
-2) Dokončit trénink pro 1 účastníka s hotovostí (mělo by skončit jako `pending_payment`, pokud to tak logika chce)
-3) Dokončit trénink pro více účastníků (mix platebních metod, pokud používáte)
-4) Ověřit, že po dokončení:
-   - se změnil stav tréninku (`completed` / `pending_payment`)
-   - vznikla transakce v přehledu transakcí
-   - změnil se kredit klienta / skupiny dle očekávání
+**Změny:**
+1. Upravit pořadí renderování kategorií: Nutrition → Forms → Training (místo Training → Nutrition → Forms)
+2. Ve výchozím stavu sbalit sekci "Tréninky"
+3. Rozšířit `handleNotificationClick` o navigaci pro:
+   - `nutrition_entry_added` → `/nutrition/client/{clientId}`
+   - `client_profile_updated` → `/clients/{clientId}?tab=profile`
 
-### C) Diagnostika při případném selhání
-- pokud by to znovu spadlo:
-  - okamžitě vytáhnu databázové logy poslední chyby (konkrétní SQL error), abychom nehádali
-  - doplním cílenou opravu (RLS / chybějící sloupec / špatný join)
+### Soubor 2: `src/hooks/useAggregatedNotifications.ts`
 
-## Postup implementace (co přesně udělám po schválení)
-1) Najdu a opravím DB funkci `public.rpc_complete_training_session` v nové migraci:
-   - nahradím `budget_group_id` → `group_id`
-   - nahradím `stored_balance` → `credit_balance`
-   - případně sjednotím návratovou strukturu na `deductions` (a zároveň zachovám `results` kvůli zpětné kompatibilitě, pokud se někde používá)
-2) Prohledám DB funkce/migrace na další výskyty `budget_group_id` a `stored_balance` a opravím je (aby se to neopakovalo jinde).
-3) Zpřesním frontend error handling v `useCompleteTrainingAtomic`:
-   - lepší toast zpráva + „detaily“
-   - ošetření post-RPC update kroků (training_participants) tak, aby z toho nebyl „tvrdý fail“
-4) Otestuju dokončení tréninku end-to-end v preview a zkontroluju, že:
-   - žádný request nepadá
-   - v databázi vznikají správné řádky
-   - kredit se chová konzistentně
+**Změny:**
+1. Přidat `nutrition_inactive` do seznamu filtrovaných typů (vedle `incomplete_training`)
+2. Případně upravit kategorizaci `pr_*` typů do samostatné "low-priority" skupiny
 
-## Rizika a jak je eliminujeme
-- Riziko: po opravě narazíme na další nesoulad schématu (typicky jiné názvy sloupců v dalších funkcích).
-  - Mitigace: audit všech relevantních funkcí + přidání pojistek / sjednocení názvosloví.
-- Riziko: RLS blokuje INSERT do `credit_transactions` z `SECURITY DEFINER` funkce (méně pravděpodobné, ale možné).
-  - Mitigace: pokud by logy ukázaly RLS, upravíme policies nebo přístup v definované funkci.
+### Soubor 3: `supabase/functions/submit-feedback/index.ts`
 
-## Co od tebe potřebuji teď
-Nic technického: po implementaci tě požádám jen o opětovný pokus „Dokončit“ pro ty dnešní tréninky (Jiří Kokeš, Roman Lazinka, Iva Vanerová) a ověřit, že to prošlo bez chyby.
+**Změny:**
+1. Přidat `entity_type: 'training'` a `entity_id: request.training_session_id` do insertu notifikace
+2. Tím se zajistí správná navigace při kliknutí na notifikaci
+
+### Soubor 4: `src/hooks/useClientPortalProfile.ts`
+
+**Změny:**
+1. Přidat `entity_type: 'client'` a `entity_id: clientAccount.client_id` do insertu notifikace
+2. Zajistí navigaci na profil klienta
+
+### Soubor 5: `src/components/notifications/InlineNotificationSettings.tsx`
+
+**Změny:**
+1. Přidat toggle pro skrytí "Tréninky a cvičení" (PRka, milestony)
+2. Uložit preference do `notification_preferences.trainingNotifications`
+
+---
+
+## Výsledné chování
+
+### Po implementaci:
+1. **Otevření notifikačního centra** → Uvidíš nejdřív Výživu, pak Formuláře, pak až dole Tréninky
+2. **Kliknutí na "Klient zapisuje stravu"** → Otevře se nutriční deník toho klienta
+3. **Kliknutí na "Klient vyplnil zpětnou vazbu"** → Otevře se dialog s feedbackem
+4. **Kliknutí na "Klient aktualizoval profil"** → Otevře se profil klienta s detaily změn
+5. **Žádné notifikace o neaktivitě** → Ty zůstanou jen na dashboardu jako Smart Alerts
+
+### Možnost vypnutí v nastavení:
+- Toggle "Zobrazovat PR a milestony" (výchozí: vypnuto)
+- Toggle "Upozornění na neaktivitu ve stravě" (výchozí: vypnuto v notifikacích)
+
+---
+
+## Rizika a mitigace
+
+| Riziko | Mitigace |
+|--------|----------|
+| Starší notifikace bez `entity_id` nebudou správně navigovat | Fallback na `/clients/{client_id}` |
+| Agregované notifikace (3+) nemají jasnou akci | Při rozkliknutí agregace uvidíš jednotlivé položky s akcemi |
+
+## Časový odhad
+- Backend změny (edge function): 10 minut
+- Frontend změny (NotificationCenter + hooks): 30 minut
+- Testování: 15 minut
