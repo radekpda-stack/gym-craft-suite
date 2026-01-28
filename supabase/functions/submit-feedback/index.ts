@@ -158,7 +158,7 @@ serve(async (req) => {
       console.error("Error updating request status:", updateError);
     }
 
-    // Create notification for trainer
+    // Create notification for trainer with entity_type and entity_id for navigation
     const { error: notifError } = await supabase
       .from("notifications")
       .insert({
@@ -166,7 +166,9 @@ serve(async (req) => {
         client_id: request.client_id,
         type: "feedback_received",
         title: "Nová zpětná vazba",
-        message: `${request.clients?.name || "Klient"} vyplnil zpětnou vazbu po tréninku.`,
+        message: `${request.clients?.name || "Klient"} vyplnil(a) zpětnou vazbu.`,
+        entity_type: "training",
+        entity_id: request.training_session_id,
       });
 
     if (notifError) {
