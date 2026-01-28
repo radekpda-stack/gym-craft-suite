@@ -108,8 +108,23 @@ export function useCompleteTrainingAtomic() {
       });
 
       if (error) {
-        console.error('RPC error:', error);
-        throw new Error(error.message || 'Chyba při dokončování tréninku');
+        // Surface actionable diagnostics (message + code + details) for faster debugging.
+        const details = [
+          error.message,
+          (error as any).code ? `code=${(error as any).code}` : null,
+          (error as any).details ? `details=${(error as any).details}` : null,
+          (error as any).hint ? `hint=${(error as any).hint}` : null,
+        ].filter(Boolean).join(' | ');
+
+        console.error('rpc_complete_training_session failed:', {
+          sessionId: params.sessionId,
+          primaryMethod,
+          totalPrice: params.totalPrice,
+          participantCount: params.participants.length,
+          error,
+        });
+
+        throw new Error(details || 'Chyba při dokončování tréninku');
       }
 
       const result = data as unknown as RpcResult;
@@ -118,14 +133,31 @@ export function useCompleteTrainingAtomic() {
         throw new Error(result.error || 'Nepodařilo se dokončit trénink');
       }
 
-      // Update individual participant payment methods in training_participants table
-      // This is done after RPC to store individual payment methods
+      // Update individual participant payment methods in training_participants table.
+      // IMPORTANT: This is a best-effort post-step; it must NOT fail the whole completion.
+      const postUpdateErrors: Array<{ client_id: string; message: string }> = [];
       for (const participant of params.participants) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('training_participants')
           .update({ payment_method: participant.payment_method })
           .eq('training_session_id', params.sessionId)
           .eq('client_id', participant.client_id);
+
+        if (updateError) {
+          console.warn('Post-RPC participant update failed:', {
+            sessionId: params.sessionId,
+            clientId: participant.client_id,
+            updateError,
+          });
+          postUpdateErrors.push({
+            client_id: participant.client_id,
+            message: updateError.message || 'Unknown error',
+          });
+        }
+      }
+
+      if (postUpdateErrors.length > 0) {
+        (result as any).postUpdateErrors = postUpdateErrors;
       }
 
       // NEW: Use FIFO credit lot deduction for credit payments (only if client has credit lots)
@@ -281,6 +313,16 @@ export function useCompleteTrainingAtomic() {
           variant: "destructive",
         });
       }
+
+      // Warn about post-RPC participant update issues (non-blocking)
+      const postUpdateErrors = (result as any).postUpdateErrors as Array<{ client_id: string; message: string }> | undefined;
+      if (postUpdateErrors && postUpdateErrors.length > 0) {
+        toast({
+          title: 'Trénink dokončen (s varováním)',
+          description: `Nepodařilo se uložit platbu u ${postUpdateErrors.length} účastníků.`,
+          variant: 'destructive',
+        });
+      }
       
       if (result.idempotent) {
         toast({ 
@@ -310,7 +352,7 @@ export function useCompleteTrainingAtomic() {
       console.error('Complete training atomic error:', error);
       toast({
         title: "Chyba při dokončování",
-        description: error.message,
+        description: error.message || 'Neznámá chyba',
         variant: "destructive",
       });
     },
