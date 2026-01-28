@@ -36,7 +36,7 @@ import { Label } from '@/components/ui/label';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { TrainingTagsSelector } from '@/components/trainings/TrainingTagsSelector';
 import { TrainingTypeSelector } from '@/components/trainings/TrainingTypeSelector';
-import { TrainingTagStepper } from '@/components/trainings/TrainingTagStepper';
+import { CompactTagGridSelector } from '@/components/trainings/CompactTagGridSelector';
 import { RPEInputField } from '@/components/trainings/RPEInputField';
 import { WorkoutExerciseManager } from '@/components/trainings/WorkoutExerciseManager';
 import { TrainingParticipantsManager } from '@/components/trainings/TrainingParticipantsManager';
@@ -495,9 +495,9 @@ export function TrainingDetailView({
         <ParticipantsPRsSection participants={participants} />
       )}
 
-      {/* TRAINING TYPE & TAGS - Stepper workflow */}
+      {/* TRAINING TYPE & TAGS - Compact Grid Selector */}
       <div className="glass rounded-xl p-4">
-        <TrainingTagStepper
+        <CompactTagGridSelector
           trainingType={training.training_type}
           onTrainingTypeChange={async (type) => {
             if (onFieldUpdate) {
