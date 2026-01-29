@@ -1,194 +1,212 @@
 
-# Redesign modulu "Feedbacky" - Perspektiva trenéra
+# Vylepšení sekce "Žebříček" v klientském portálu
 
 ## Analýza současného stavu
 
 ### Co funguje dobře:
-- Přehledné status karty (K odeslání, Čekající, Vyplněno, Expirováno, Red Flags)
-- Attention Inbox s prioritou položek
-- Korelační grafy a trendy
-- Detail feedbacku s vizuálními progress bary
+- Pozitivní rámování (positive framing) - nikdy nehodnotíme negativně
+- Hierarchické filtry podle pohlaví a věku
+- Přehledná vizualizace percentilů s animovaným gauže
+- Gamifikační sekce s XP a levely
+- Anonymita klientů ve výchozím nastavení
 
-### Co chybí z pohledu trenéra:
+### Co chybí z pohledu klienta:
 
-| Problém | Dopad na workflow |
-|---------|-------------------|
-| **Historie nemá rychlý pohled na metriky** | Musím klikat na každý feedback zvlášť |
-| **Chybí filtr podle severity** | Nemohu rychle najít problémové feedbacky |
-| **Nelze porovnat klienty mezi sebou** | Nevím, kdo potřebuje více pozornosti |
-| **Žádné rychlé akce u vyplněných** | Nemohu okamžitě reagovat (poznámka, úprava programu) |
-| **Statistiky jsou příliš obecné** | Chci vidět konkrétní čísla pro konkrétní klienty |
+| Oblast | Problém | Dopad |
+|--------|---------|-------|
+| **Přehlednost** | Mnoho cviků najednou → přehlcení | Klient se ztratí |
+| **Motivace k pokroku** | Nevidím historii svého zlepšení | Chybí pocit růstu |
+| **Cíle** | Nemám co "honit" | Chybí směr |
+| **Celebrace** | Jen statické zobrazení | Málo emocí |
+| **Porovnání** | Vím kde jsem, ale ne kde bych měl být | Nejasný cíl |
 
 ---
 
-## Návrh nového layoutu
+## Návrh vylepšení
+
+### 1. Nový "Hero" dashboard s rychlým přehledem
+
+Nahradit stávající `OverallPositionHero` rozšířenou verzí:
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 📊 Přehled zpětné vazby                                                │
-├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐                                │
-│ │ 3   │ │ 5   │ │ 12  │ │ 2   │ │ 1   │  ← Status karty (bez změny)   │
-│ │Send │ │Wait │ │Done │ │Exp. │ │Red  │                                │
-│ └─────┘ └─────┘ └─────┘ └─────┘ └─────┘                                │
+│  ┌─────────────┐   CELKOVÁ POZICE                                      │
+│  │             │                                                        │
+│  │   72%ile    │   🏆 Mezi nejlepšími!                                  │
+│  │  ┌─────┐    │                                                        │
+│  │  │ ⭐ │     │   Tvá síla: Dřep 💪                                    │
+│  │  └─────┘    │   Příležitost: Bench Press 🌱                         │
+│  │             │                                                        │
+│  └─────────────┘   ┌───────┐ ┌───────┐ ┌───────┐                       │
+│                    │ +12%  │ │  4    │ │  8    │                        │
+│                    │za měsíc│ │ PRs   │ │tréninků│                      │
+│                    └───────┘ └───────┘ └───────┘                        │
 │                                                                         │
-│ ┌───────────────────────────────┐ ┌───────────────────────────────────┐│
-│ │ 🔔 POTŘEBUJE POZORNOST        │ │  [K odeslání][Vyplněné][Statistiky]│
-│ │ (Attention Inbox - beze změny)│ │                                   ││
-│ │                               │ │                                   ││
-│ │                               │ │  ← NOVÝ TAB: "Vyplněné"           ││
-│ │                               │ │     s rozšířenými kartami         ││
-│ │                               │ │                                   ││
-│ └───────────────────────────────┘ └───────────────────────────────────┘│
+│  ─────────────────────────────────────────────────────────────────────  │
+│  🎯 DALŠÍ CÍL: Dostaň se do TOP 25% v Bench Press                      │
+│     Aktuálně 42% → Potřebuješ +8 kg na max                             │
+│     [████████░░░░░░] 72% k cíli                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Klíčové prvky:**
+- Trend změny percentilu (měsíc k měsíci)
+- Počet PR za období
+- Konkrétní cíl s progress barem
+- Kalkulace kolik kg/sekund chybí do dalšího milestone
+
+---
+
+### 2. Kategorizace cviků s lepší navigací
+
+Přidat "Quick Stats" karty pro každou kategorii před mřížkou:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 🏋️ SÍLA (12 cviků)                                                     │
 │                                                                         │
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                        │
+│ │ Ø Percentil │ │ TOP cvik    │ │ Největší    │                        │
+│ │             │ │             │ │   pokrok    │                        │
+│ │   68%       │ │ Dřep        │ │ Mrtvý tah   │                        │
+│ │  ▲+5%       │ │ 92%ile      │ │ +15% měsíc  │                        │
+│ └─────────────┘ └─────────────┘ └─────────────┘                        │
+│                                                                         │
+│ [Zobrazit všechny cviky ▼]                                             │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Přínosy:**
+- Na první pohled vidím stav celé kategorie
+- Nemusím procházet všechny cviky jednotlivě
+- Motivace vidět "největší pokrok"
+
+---
+
+### 3. Vylepšené karty cviků s historií
+
+Přidat do rozbalené karty cviku mini-graf historie:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 🏋️ DŘEP                                    ⭐ Mezi nejlepšími (78%)    │
+│                                                                         │
+│ Tvůj max: 120 kg                                                        │
+│                                                                         │
+│ ┌─ Tvůj vývoj za poslední 3 měsíce ─────────────────────────────────┐  │
+│ │                                                         ●  120kg   │  │
+│ │                                               ●                    │  │
+│ │                                    ●                               │  │
+│ │                          ●                                         │  │
+│ │              ●                                                     │  │
+│ │    ●                                                               │  │
+│ │ říjen      listopad      prosinec      leden                       │  │
+│ └────────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+│ 🎯 K dalšímu levelu potřebuješ: +7 kg (na 127 kg = TOP 10%)            │
+│                                                                         │
+│ ─── Žebříček ─────────────────────────────────────────────────────────  │
+│ 1. 🥇 Silný Lev     145 kg                                             │
+│ 2. 🥈 Rychlý Orel   138 kg                                             │
+│ 3. 🥉 Fit Vlk       130 kg                                             │
+│ ...                                                                     │
+│ 5. ⭐ Ty            120 kg  ← jsi tady                                 │
+│ ...                                                                     │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Nové prvky:**
+- Mini sparkline graf vývoje za 3 měsíce
+- "K dalšímu levelu" s konkrétní hodnotou
+- Zvýraznění pozice klienta v žebříčku
+
+---
+
+### 4. "Milestones" sekce - Cíle k dosažení
+
+Nová motivační sekce ukazující blízké milníky:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 🎯 BLÍZKÉ CÍLE                                                          │
+│                                                                         │
+│ ┌──────────────────────────────────────────────────┐                   │
+│ │ 🏋️ Dřep → TOP 10%                               │                   │
+│ │ Aktuálně 78% | Potřebuješ +7 kg                  │                   │
+│ │ [████████████████░░] 87% k cíli                  │                   │
+│ └──────────────────────────────────────────────────┘                   │
+│                                                                         │
+│ ┌──────────────────────────────────────────────────┐                   │
+│ │ 🏃 Běh 5km → Nad průměrem                        │                   │
+│ │ Aktuálně 42% | Zlepši čas o 45s                  │                   │
+│ │ [████████░░░░░░░░░░] 45% k cíli                  │                   │
+│ └──────────────────────────────────────────────────┘                   │
+│                                                                         │
+│ ┌──────────────────────────────────────────────────┐                   │
+│ │ ⚡ Celkově → TOP 25%                             │                   │
+│ │ Aktuálně 68% | Zlepši 2 cviky                    │                   │
+│ │ [██████████████░░░░] 72% k cíli                  │                   │
+│ └──────────────────────────────────────────────────┘                   │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Klíčové změny
+### 5. "Hype" celebrace při posunu v žebříčku
 
-### 1. Nový tab "Vyplněné" s rozšířenými kartami feedbacků
-
-Nahrazení starého "Historie" tabu novým "Vyplněné" tabem zaměřeným na práci s vyplněnými feedbacky.
-
-**Nový design karty feedbacku:**
+Přidat detekci a oslavu zlepšení:
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 🟢 Jana Nováková                  27.1.2025 • Silový           │
-│                                                                 │
-│ ┌────────────────────────────────────────────────────────────┐ │
-│ │ Pocit 8/10 │ Energie 7/10 │ Svalovka 6/10 │ Bolest 2/10   │ │
-│ │ ████████░░ │ ███████░░░  │ ██████░░░░   │ ██░░░░░░░░    │ │
-│ └────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ 💬 "Cítím se super, jen lehká svalovka na nohou..."           │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐│
-│ │ [📝 Poznámka] [📅 Naplánovat] [💬 Chat] [▼ Detail]        ││
-│ └─────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                         │
+│                        🎉 GRATULUJEME! 🎉                              │
+│                                                                         │
+│              Posunul ses v DŘEPU o 3 místa nahoru!                     │
+│                                                                         │
+│                    15. místo → 12. místo                               │
+│                                                                         │
+│               Jsi teď v TOP 24% (byl jsi 31%)                          │
+│                                                                         │
+│                      [🏆 Super! Pokračuji]                             │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Klíčové prvky:**
-- **Inline metriky** - bez nutnosti rozklikávání vidím všechny hodnoty
-- **Mini progress bary** - vizuální indikace hodnot
-- **Zkrácený komentář** - první věta s možností rozbalit
-- **Rychlé akce** - poznámka, naplánování kontroly, otevření chatu
-- **Barevné kódování** - zelená/žlutá/červená podle celkového stavu
+**Trigger události:**
+- Posun o 2+ místa v žebříčku
+- Překročení percentilové hranice (25%, 50%, 75%, 90%)
+- Nové PR
 
 ---
 
-### 2. Rozšířené filtry a třídění
+### 6. Přehlednější gamifikační sekce
 
-Přidání pokročilých filtrů pro rychlejší práci:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ Filtry:                                                         │
-│                                                                 │
-│ [Období: 7d ▼] [Klient: Všichni ▼] [Severita: Vše ▼]          │
-│                                                                 │
-│ Řazení: [Datum ▼] [Pocit těla ▲] [Bolest ▼] [Red flags první] │
-│                                                                 │
-│ Rychlé filtry:                                                  │
-│ [🔴 Bolest ≥6] [⚠️ Nízká energie] [💪 Vysoká svalovka] [📝 S komentářem]
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Nové možnosti filtrování:**
-- **Severita**: Kritické (bolest ≥7), Varování (bolest 4-6), OK (bolest ≤3)
-- **Metrika**: Nejvyšší bolest, Nejnižší energie, Nejvyšší svalovka
-- **Typ**: S komentářem, Bez komentáře, Red flags
-
----
-
-### 3. "Client Leaderboard" - Přehled klientů
-
-Nová sekce zobrazující agregované metriky za období:
+Vytvořit vizuálně atraktivnější sekci s XP a levely:
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 👥 Přehled klientů za posledních 30 dní                        │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ Klient          │ Feedbacků │ Ø Pocit │ Ø Bolest │ Red Flags  │
-│ ─────────────────────────────────────────────────────────────  │
-│ 🟢 Jana N.      │    8      │   8.2   │   1.5    │    0       │
-│ 🟡 Petr S.      │    6      │   6.5   │   4.2    │    1       │
-│ 🔴 Martin K.    │    4      │   4.8   │   6.5    │    3       │
-│ ⚪ Eva M.       │    2      │   7.0   │   2.0    │    0       │
-│                                                                 │
-│ [Řadit: Ø Pocit ▲] [Řadit: Ø Bolest ▼] [Řadit: Red Flags ▼]  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Přínosy:**
-- Na první pohled vidím, který klient potřebuje pozornost
-- Barevné kódování podle celkového stavu
-- Kliknutím na klienta se vyfiltrují jeho feedbacky
-
----
-
-### 4. Rychlé akce u feedbacku
-
-**Tlačítko "Poznámka"** - inline editor pro trenérskou reakci:
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 📝 Poznámka k feedbacku                                         │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐│
-│ │ Zeptat se na bolest v koleni, zvážit redukci dřepů...      ││
-│ └─────────────────────────────────────────────────────────────┘│
-│                                                                 │
-│ [Uložit poznámku]                      Privátní - klient nevidí│
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Tlačítko "Naplánovat"** - rychlé vytvoření followupu:
-- Otevře dialog pro vytvoření úkolu/připomínky
-- Předvyplní kontext (klient, datum feedbacku, metrika)
-
-**Tlačítko "Chat"** - otevře konverzaci s klientem:
-- Rychlá reakce na feedback přímo z přehledu
-
----
-
-### 5. Vylepšený detail feedbacku
-
-Rozšíření dialogu o trenérské nástroje:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 💬 Zpětná vazba                                        [✕]     │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ [Přehled] [Historie klienta] [Korelace s tréninkem]           │
-│                                                                 │
-│ ─── Tab: Přehled (stávající obsah) ───────────────────────────│
-│ Metriky, bolesti, komentář...                                  │
-│                                                                 │
-│ ─── Tab: Historie klienta ─────────────────────────────────────│
-│ Mini graf posledních 10 feedbacků tohoto klienta               │
-│ Porovnání aktuálního vs průměru                                │
-│                                                                 │
-│ ─── Tab: Korelace s tréninkem ─────────────────────────────────│
-│ Typ tréninku: Silový                                           │
-│ RPE: 7/10                                                      │
-│ Objem: 24 setů                                                 │
-│ Hlavní partie: Nohy, Záda                                      │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐│
-│ │ 📝 Trenérská poznámka:                                      ││
-│ │ ┌─────────────────────────────────────────────────────────┐ ││
-│ │ │ [Prázdné - přidat poznámku]                             │ ││
-│ │ └─────────────────────────────────────────────────────────┘ ││
-│ └─────────────────────────────────────────────────────────────┘│
-│                                                                 │
-│ [Přejít na trénink] [Otevřít profil klienta] [Naplánovat followup]
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│ ⚡ GAMIFIKACE                                                           │
+│                                                                         │
+│ ┌─── TVŮ PROFIL ──────────────────────────────────────────────────────┐│
+│ │                                                                      ││
+│ │  LEVEL 7: ŠAMPION                                                   ││
+│ │  [████████████████░░░░░░░░] 2,450 / 3,000 XP                        ││
+│ │  Do dalšího levelu: 550 XP                                          ││
+│ │                                                                      ││
+│ │  🔥 Streak: 6 týdnů   |   🏆 PRs: 14   |   ⭐ Odznaky: 8            ││
+│ └──────────────────────────────────────────────────────────────────────┘│
+│                                                                         │
+│ ┌─── TOP 5 XP ŽEBŘÍČEK ───────────────────────────────────────────────┐│
+│ │ 🥇 Silný Lev      Lvl 9   4,250 XP                                  ││
+│ │ 🥈 Rychlý Orel    Lvl 8   3,890 XP                                  ││
+│ │ 🥉 Fit Vlk        Lvl 8   3,720 XP                                  ││
+│ │ 4. Odhodlaný Tygr Lvl 7   2,890 XP                                  ││
+│ │ ⭐ 5. Ty          Lvl 7   2,450 XP ← jsi tady                       ││
+│ └──────────────────────────────────────────────────────────────────────┘│
+│                                                                         │
+│ [Zobrazit všechny žebříčky ▼]                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -199,49 +217,61 @@ Rozšíření dialogu o trenérské nástroje:
 
 | Komponenta | Účel |
 |------------|------|
-| `FeedbackExpandedCard.tsx` | Rozšířená karta s inline metrikami a rychlými akcemi |
-| `FeedbackQuickFilters.tsx` | Rychlé filtry podle severity a metrik |
-| `ClientFeedbackLeaderboard.tsx` | Tabulka agregovaných metrik klientů |
-| `FeedbackTrainerNote.tsx` | Inline editor pro trenérskou poznámku |
-| `FeedbackDetailTabs.tsx` | Tabované zobrazení v detail dialogu |
+| `LeaderboardHeroEnhanced.tsx` | Rozšířený hero s trendy a cílem |
+| `CategoryQuickStats.tsx` | Rychlý přehled kategorie |
+| `ExerciseProgressChart.tsx` | Mini sparkline graf vývoje |
+| `MilestonesSection.tsx` | Sekce s blízkými cíli |
+| `RankUpCelebration.tsx` | Celebrační overlay při posunu |
+| `GamificationProfileCard.tsx` | Vylepšená gamifikační karta |
 
-### Úpravy existujících souborů:
+### Úpravy existujících komponent:
 
 | Soubor | Změna |
 |--------|-------|
-| `FeedbackOverview.tsx` | Nahradit tab "Historie" za "Vyplněné", přidat leaderboard sekci |
-| `FeedbackDetailDialog.tsx` | Přidat taby pro historii a korelaci |
-| `useTrainingFeedback.ts` | Přidat hook pro agregované metriky klientů |
+| `ClientPortalLeaderboard.tsx` | Nový layout s milestones a quick stats |
+| `ExerciseComparisonGrid.tsx` | Přidat sekci "Category Quick Stats" před grid |
+| `ExerciseCard (v ExerciseComparisonGrid)` | Přidat sparkline a "k dalšímu levelu" |
+| `OverallPositionHero.tsx` | Přidat trend a konkrétní cíl |
+| `GamificationSection.tsx` | Vizuální redesign na "profile card" |
+
+### Nové hooky:
+
+| Hook | Účel |
+|------|------|
+| `useExerciseProgress` | Historie max hodnot cviku za období |
+| `useMilestones` | Výpočet nejbližších dosažitelných cílů |
+| `useRankChanges` | Detekce změn v pořadí pro celebrace |
 
 ### Databázové změny:
 
-**Nový sloupec v `training_feedback`:**
+**Nová tabulka pro historii percentilů:**
 ```sql
-ALTER TABLE training_feedback 
-ADD COLUMN trainer_note TEXT;
+CREATE TABLE client_percentile_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id),
+  exercise_name TEXT NOT NULL,
+  percentile INTEGER NOT NULL,
+  best_value NUMERIC NOT NULL,
+  recorded_at DATE NOT NULL DEFAULT CURRENT_DATE,
+  UNIQUE(client_id, exercise_name, recorded_at)
+);
 ```
 
 ---
 
-## Workflow trenéra po implementaci
+## Shrnutí vylepšení
 
-1. **Ráno**: Otevřu Feedbacky → vidím Attention Inbox s red flags
-2. **Rychlý přehled**: Kliknu na "Vyplněné" → vidím všechny feedbacky s inline metrikami
-3. **Identifikace problémů**: Použiju filtr "Bolest ≥6" → vidím klienty s bolestí
-4. **Reakce**: U feedbacku kliknu "Poznámka" → zapíšu si co udělat
-5. **Plánování**: Kliknu "Naplánovat" → vytvořím followup úkol
-6. **Komunikace**: Kliknu "Chat" → pošlu klientovi zprávu
-7. **Analýza**: V Client Leaderboard vidím, kdo má nejhorší průměr → zaměřím se na něj
+| Oblast | Před | Po |
+|--------|------|-----|
+| **Přehlednost** | Všechny cviky najednou | Quick stats + rozbalovací sekce |
+| **Motivace** | Statický percentil | Trend + historie + cíle |
+| **Cíle** | Jen "kde jsem" | "Kam směřuji" s konkrétními čísly |
+| **Celebrace** | Žádné | Animované overlay při posunu |
+| **Gamifikace** | Skrytá v collapsible | Prominentní profil karta |
 
----
-
-## Shrnutí přínosů
-
-1. **Méně klikání** - inline metriky bez nutnosti otevírat detail
-2. **Rychlejší identifikace problémů** - filtry podle severity
-3. **Lepší přehled o klientech** - agregovaná tabulka
-4. **Okamžitá reakce** - rychlé akce přímo z přehledu
-5. **Kontext v detailu** - historie klienta a korelace s tréninkem
-6. **Trenérské poznámky** - možnost zapisovat si reakce
-
-Tento návrh transformuje modul Feedbacky z pasivního přehledu na aktivní nástroj pro práci s klientskými daty.
+**Hlavní přínosy pro klienta:**
+1. Na první pohled vidím svůj pokrok (trend)
+2. Mám konkrétní cíle k dosažení (milestones)
+3. Vidím historii svého zlepšení (sparkline grafy)
+4. Dostávám emocionální feedback (celebrace)
+5. Gamifikace je přehlednější a motivačnější
