@@ -1,234 +1,174 @@
 
-# Vylepšení sekce "Příprava na trénink" - Profesionální trenérský pohled
+# Oprava UI bugů a vylepšení sekce Klasifikace
 
-## Cíl
-Rozšířit sekci přípravy na trénink o klíčové informace z předchozího tréninku, které profesionální trenér potřebuje pro plánování následující jednotky:
-- **Typ tréninku** (silový, plyometrický, kardio, atd.)
-- **Trénované partie těla** (z tagů body_part)
-- **Zpětná vazba od klienta** (svalovka, energie, bolest, jak mu seděl trénink)
+## Identifikované problémy
+
+| Problém | Příčina | Řešení |
+|---------|---------|--------|
+| **Dvojitá fajfka (před a za slovem)** | `TagDropdownSelect.tsx` přidává vlastní `<Check>` ikonu (řádek 82), ale Radix UI `SelectItem` již má vestavěnou fajfku přes `SelectPrimitive.ItemIndicator` | Odstranit duplicitní fajfku z `TagDropdownSelect.tsx` |
+| **Tečky/překrývající se text pod typem tréninku** | V dropdown trigger se zobrazuje špatně emoji + text | Opravit renderování v `SelectValue` |
+| **Chybí možnost specifikovat konkrétní partie** | Při výběru "Horní část", "Dolní část" nebo "Břicho" v compact view se automaticky neotevře podvýběr | Přidat hierarchický výběr přímo do compact dropdownu pomocí sub-menu |
 
 ---
 
-## Návrh nového UI
+## Technické řešení
+
+### 1. Odstranění dvojité fajfky
+
+**Soubor:** `src/components/trainings/TagDropdownSelect.tsx`
+
+**Změna:** Odstranit vlastní `<Check>` ikonu z `SelectItem`, protože Radix UI ji již zobrazuje automaticky.
+
+```typescript
+// PŘED (řádek 78-84):
+<SelectItem key={option.id} value={option.id}>
+  <span className="flex items-center gap-2">
+    {option.icon && <span>{option.icon}</span>}
+    <span>{option.label}</span>
+    {option.id === value && <Check className="h-3.5 w-3.5 text-primary ml-auto" />}
+  </span>
+</SelectItem>
+
+// PO:
+<SelectItem key={option.id} value={option.id}>
+  <span className="flex items-center gap-2">
+    {option.icon && <span>{option.icon}</span>}
+    <span>{option.label}</span>
+  </span>
+</SelectItem>
+```
+
+---
+
+### 2. Oprava překrývajícího se textu u typu tréninku
+
+**Soubor:** `src/components/trainings/TagDropdownSelect.tsx`
+
+**Problém:** `SelectValue` může mít problémy s renderováním při změně hodnoty. Ujistit se, že `SelectValue` má správný placeholder a children.
+
+```typescript
+// Oprava SelectValue - použít key pro vynucení re-renderu
+<SelectValue placeholder={placeholder}>
+  {selectedOption ? (
+    <span key={selectedOption.id} className="flex items-center gap-1.5">
+      {selectedOption.icon && <span className="shrink-0">{selectedOption.icon}</span>}
+      <span className="truncate">{selectedOption.label}</span>
+    </span>
+  ) : (
+    placeholder
+  )}
+</SelectValue>
+```
+
+---
+
+### 3. Hierarchický výběr partií těla v compact view
+
+**Nový přístup:** Nahradit jednoduchý dropdown pro "Partie" speciální komponentou s rozbalovacím sub-menu.
+
+**Nová komponenta:** `BodyPartDropdownSelect.tsx`
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 📋 Příprava na trénink                              [▼ sbalit] │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ ⚠️ UPOZORNĚNÍ                                                  │
-│ ┌─────────────────────────────────────────────────────────────┐│
-│ │ Bolest v koleni - netlačit hluboké dřepy                   ││
-│ └─────────────────────────────────────────────────────────────┘│
-│                                                                 │
-│ 🎯 Cíl: Nabrat svalovou hmotu                                  │
-│                                                                 │
-│ 🔔 Z MINULA (2)                                                │
-│ ┌─────────────────────────────────────────────────────────────┐│
-│ │ • Zkontrolovat koleno po přidání zátěže                     ││
-│ │ • Přeměřit obvody paží                                      ││
-│ └─────────────────────────────────────────────────────────────┘│
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐│
-│ │ 📊 PŘEDCHOZÍ TRÉNINK • 27.1. • Silový              [▼ více] ││
-│ ├─────────────────────────────────────────────────────────────┤│
-│ │                                                             ││
-│ │ 🏋️ Partie:  [Nohy] [Zadek] [Core]                          ││
-│ │                                                             ││
-│ │ 📈 Cviky (4):                                              ││
-│ │   • Dřepy 4× • Mrtvý tah 3× • Výpady 3× • Plank 3×         ││
-│ │                                                             ││
-│ │ ─────────────────────────────────────────────────────────  ││
-│ │                                                             ││
-│ │ 💬 FEEDBACK OD KLIENTA (D+1)                               ││
-│ │ ┌─────────────────────────────────────────────────────────┐││
-│ │ │ Svalovka:     ████████░░  8/10  Výrazná                │││
-│ │ │ Energie:      ██████████  10/10 Plný energie           │││
-│ │ │ Bolest:       ██░░░░░░░░  2/10  Minimální              │││
-│ │ │ Seděl mu:     ████████░░  8/10  Velmi dobře            │││
-│ │ └─────────────────────────────────────────────────────────┘││
-│ │                                                             ││
-│ │ 💡 TIP: Klient měl silnou svalovku na nohou.               ││
-│ │    Zvažte začít horní partií nebo snížit objem na nohy.    ││
-│ │                                                             ││
-│ └─────────────────────────────────────────────────────────────┘│
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ Partie                                  │
+│ ┌─────────────────────────────────────┐ │
+│ │ Horní část ▼                        │ │  ← Dropdown trigger
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│ Celé tělo                               │  ← Bez podkategorií
+├─────────────────────────────────────────┤
+│ Horní část                          ▶  │  ← Kliknutí rozbalí
+├─────────────────────────────────────────┤
+│   ☑ Ramena                              │
+│   ☐ Biceps                              │
+│   ☐ Triceps                             │
+│   ☐ Hrudník                             │
+│   ☐ Záda                                │
+│   ...                                   │
+├─────────────────────────────────────────┤
+│ Dolní část                          ▶  │
+├─────────────────────────────────────────┤
+│ Břicho                              ▶  │
+└─────────────────────────────────────────┘
 ```
 
----
+**Implementace:**
 
-## Technické změny
-
-### 1. Rozšíření hooku `useLastTraining.ts`
-
-**Nová data k načtení:**
-
-| Pole | Zdroj | Popis |
-|------|-------|-------|
-| `training_type` | `training_sessions.training_type` | Typ tréninku (silový, kardio, atd.) |
-| `rpe` | `training_sessions.rpe` | RPE hodnocení od trenéra |
-| `bodyPartTags` | `training_session_tags` + `tags` (kde `tag_type = 'body_part'`) | Trénované partie |
-| `feedback` | `training_feedback` | Zpětná vazba od klienta |
-
-**Nový interface:**
+Použijeme `Popover` s vnořeným `Collapsible` pro každou kategorii:
 
 ```typescript
-export interface LastTrainingData {
-  id: string;
-  date: string;
-  duration: number;
-  notes: string | null;
-  subjective_rating: number | null;
-  training_type: string | null;         // NOVÉ
-  rpe: number | null;                   // NOVÉ
-  tags: Tag[];                          // Všechny tagy
-  bodyPartTags: Tag[];                  // NOVÉ - filtrované body_part tagy
-  exercises: GroupedWorkoutEntry[];
-  feedback: LastTrainingFeedback | null; // NOVÉ
+interface BodyPartDropdownSelectProps {
+  bodyPartTagIds: string[];
+  onBodyPartTagsChange: (ids: string[]) => void;
+  availableTags: Tag[];
 }
 
-export interface LastTrainingFeedback {
-  soreness: number | null;        // Svalovka (1-10)
-  energy_rating: number | null;   // Energie (1-10)
-  body_feel: number | null;       // Pocit v těle (1-10)
-  pain: number | null;            // Bolest (1-10)
-  session_fit: number | null;     // Jak seděl trénink (1-10)
-  difficulty: number | null;      // Client RPE (1-10)
-  comment: string | null;         // Komentář klienta
-  muscle_soreness: string[];      // Které svaly bolí
+export function BodyPartDropdownSelect({ ... }) {
+  const [open, setOpen] = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  
+  // Kategorie s podkategoriemi
+  const CATEGORIES = [
+    { key: 'full', name: 'Celé tělo', hasChildren: false },
+    { key: 'upper', name: 'Horní část', hasChildren: true, children: [...] },
+    { key: 'lower', name: 'Dolní část', hasChildren: true, children: [...] },
+    { key: 'core', name: 'Břicho', hasChildren: true, children: [...] },
+  ];
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger>...</PopoverTrigger>
+      <PopoverContent className="w-64 p-0">
+        {CATEGORIES.map(category => (
+          <div key={category.key}>
+            {/* Hlavní kategorie */}
+            <div 
+              className="flex items-center justify-between p-2 hover:bg-muted cursor-pointer"
+              onClick={() => {
+                if (category.hasChildren) {
+                  setExpandedCategory(
+                    expandedCategory === category.key ? null : category.key
+                  );
+                } else {
+                  toggleTag(category.tagId);
+                }
+              }}
+            >
+              <span className="flex items-center gap-2">
+                {isSelected && <Check className="h-4 w-4" />}
+                {category.name}
+              </span>
+              {category.hasChildren && (
+                <ChevronRight className={cn(
+                  "h-4 w-4 transition-transform",
+                  expandedCategory === category.key && "rotate-90"
+                )} />
+              )}
+            </div>
+            
+            {/* Podkategorie */}
+            {category.hasChildren && expandedCategory === category.key && (
+              <div className="pl-4 border-l-2 border-primary/20 ml-3 space-y-1">
+                {category.children.map(child => (
+                  <div 
+                    key={child.id}
+                    className="flex items-center gap-2 p-1.5 hover:bg-muted rounded cursor-pointer"
+                    onClick={() => toggleTag(child.id)}
+                  >
+                    <Checkbox checked={bodyPartTagIds.includes(child.id)} />
+                    <span className="text-sm">{child.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
 }
-```
-
-**Rozšířený query:**
-
-```typescript
-// 1. Rozšířit select o training_type a rpe
-.select("id, date, duration, notes, subjective_rating, training_type, rpe")
-
-// 2. Načíst tagy s tag_type pro filtrování
-.select(`
-  tag_id,
-  tags:tag_id (id, name, color, tag_type)
-`)
-
-// 3. Nový query pro feedback
-const { data: feedbackData } = await supabase
-  .from('training_feedback')
-  .select('soreness, energy_rating, body_feel, pain, session_fit, difficulty, comment, muscle_soreness')
-  .eq('training_session_id', session.id)
-  .maybeSingle();
-```
-
----
-
-### 2. Nová komponenta `PreviousTrainingFeedbackCard.tsx`
-
-Zobrazuje zpětnou vazbu od klienta ve vizuálně přehledné podobě:
-
-```typescript
-interface PreviousTrainingFeedbackCardProps {
-  feedback: LastTrainingFeedback;
-}
-```
-
-**Klíčové prvky:**
-- Barevné progress bary pro každou metriku (1-10)
-- Invertované barvy pro negativní metriky (svalovka, bolest)
-- Stručné textové popisky (Minimální, Střední, Výrazná, Extrémní)
-- Zvýraznění problémových hodnot (bolest ≥7, svalovka ≥8)
-
----
-
-### 3. Nová komponenta `TrainingCoachingTip.tsx`
-
-Automatické návrhy na základě dat:
-
-```typescript
-function generateCoachingTips(lastTraining: LastTrainingData): string[] {
-  const tips: string[] = [];
-  
-  // Vysoká svalovka → zvážit jiné partie
-  if (lastTraining.feedback?.soreness >= 7) {
-    const bodyParts = lastTraining.bodyPartTags.map(t => t.name).join(', ');
-    tips.push(`Klient měl silnou svalovku na ${bodyParts}. Zvažte začít jinou partií.`);
-  }
-  
-  // Nízká energie → kratší trénink
-  if (lastTraining.feedback?.energy_rating <= 4) {
-    tips.push(`Klient hlásil nízkou energii. Zvažte kratší nebo méně intenzivní trénink.`);
-  }
-  
-  // Bolest → pozor na partie
-  if (lastTraining.feedback?.pain >= 5) {
-    tips.push(`Klient hlásil bolest (${lastTraining.feedback.pain}/10). Zeptejte se na aktuální stav.`);
-  }
-  
-  // Trénink mu neseděl
-  if (lastTraining.feedback?.session_fit <= 4) {
-    tips.push(`Minulý trénink klientovi příliš neseděl. Diskutujte o úpravě programu.`);
-  }
-  
-  return tips;
-}
-```
-
----
-
-### 4. Aktualizace `TrainingPrepSection.tsx`
-
-**Změny:**
-- Import rozšířeného `useLastTraining` hooku
-- Zobrazení typu tréninku vedle data
-- Badges pro trénované partie (body_part tagy)
-- Nová sekce s feedback kartou
-- Koučovací tipy na základě feedbacku
-
-**Struktura:**
-
-```tsx
-{/* Předchozí trénink - rozšířené */}
-<Collapsible>
-  <CollapsibleTrigger>
-    <div className="flex items-center gap-2">
-      <FileText />
-      <span>Předchozí trénink</span>
-      <span>• {format(date, 'd.M.')}</span>
-      {/* NOVÉ: Typ tréninku */}
-      {lastTraining.training_type && (
-        <Badge variant="secondary">{lastTraining.training_type}</Badge>
-      )}
-    </div>
-  </CollapsibleTrigger>
-  
-  <CollapsibleContent>
-    {/* NOVÉ: Body part tagy */}
-    {lastTraining.bodyPartTags.length > 0 && (
-      <div className="flex items-center gap-2">
-        <Dumbbell className="w-4 h-4" />
-        <span>Partie:</span>
-        <div className="flex flex-wrap gap-1">
-          {lastTraining.bodyPartTags.map(tag => (
-            <Badge key={tag.id} style={{ backgroundColor: tag.color }}>
-              {tag.name}
-            </Badge>
-          ))}
-        </div>
-      </div>
-    )}
-    
-    {/* Existující: Cviky */}
-    {/* ... */}
-    
-    {/* NOVÉ: Feedback sekce */}
-    {lastTraining.feedback && (
-      <PreviousTrainingFeedbackCard feedback={lastTraining.feedback} />
-    )}
-    
-    {/* NOVÉ: Koučovací tipy */}
-    <TrainingCoachingTip lastTraining={lastTraining} />
-  </CollapsibleContent>
-</Collapsible>
 ```
 
 ---
@@ -237,38 +177,24 @@ function generateCoachingTips(lastTraining: LastTrainingData): string[] {
 
 | Soubor | Typ | Změna |
 |--------|-----|-------|
-| `src/hooks/useLastTraining.ts` | Úprava | Rozšíření o training_type, rpe, bodyPartTags, feedback |
-| `src/components/trainings/TrainingPrepSection.tsx` | Úprava | Zobrazení nových dat, integrace nových komponent |
-| `src/components/trainings/PreviousTrainingFeedbackCard.tsx` | **Nový** | Vizualizace feedbacku |
-| `src/components/trainings/TrainingCoachingTip.tsx` | **Nový** | Automatické koučovací tipy |
+| `src/components/trainings/TagDropdownSelect.tsx` | Úprava | Odstranit duplicitní fajfku, opravit SelectValue |
+| `src/components/trainings/BodyPartDropdownSelect.tsx` | **Nový** | Hierarchický výběr partií s rozbalovacími podkategoriemi |
+| `src/components/trainings/CompactTagGridSelector.tsx` | Úprava | Nahradit dropdown pro partie novou komponentou |
 
 ---
 
-## Přínos pro trenéra
+## Shrnutí změn
 
-1. **Rychlý přehled** - na první pohled vidím, co jsme dělali minule (typ, partie, cviky)
+1. **Oprava dvojité fajfky** - Odstranění zbytečné `<Check>` ikony, ponechání pouze vestavěné od Radix UI
 
-2. **Kontextuální feedback** - vím, jak klient reagoval na minulý trénink
+2. **Oprava překrývajícího se textu** - Přidání `key` prop a `shrink-0` pro emoji
 
-3. **Automatické návrhy** - systém mi připomene, na co si dát pozor
+3. **Hierarchický výběr partií** - Nový dropdown s možností rozbalit podkategorie:
+   - "Celé tělo" - jednoduchý výběr bez podkategorií
+   - "Horní část" → rozbalí se: Ramena, Biceps, Triceps, Hrudník, Záda...
+   - "Dolní část" → rozbalí se: Přední stehna, Zadní stehna, Hýždě, Lýtka...
+   - "Břicho" → rozbalí se: Přímé břišní, Šikmé břišní, Hluboké břišní...
 
-4. **Lepší plánování** - mohu navázat nebo střídat partie podle reakce klienta
+4. **Multi-select s checkboxy** - Možnost vybrat více konkrétních svalů najednou
 
-5. **Prevence přetrénování** - vidím svalovku a bolest, mohu upravit intenzitu
-
----
-
-## Příklad workflow trenéra
-
-1. Otevřu kartu naplánovaného tréninku
-2. V sekci "Příprava" vidím:
-   - ⚠️ Upozornění na omezení klienta
-   - 🔔 Úkoly z minula
-   - 📊 **Minulý trénink: Silový, Nohy + Core**
-3. Rozbalím minulý trénink a vidím:
-   - Klient měl svalovku 8/10 na nohy
-   - Energie 6/10
-   - 💡 Tip: "Zvažte začít horní partií"
-4. Na základě těchto dat plánu dnešní trénink
-
-Tímto způsobem mám jako trenér všechny informace na jednom místě bez nutnosti přecházet mezi různými obrazovkami.
+5. **Badge s počtem** - Zobrazení počtu vybraných partií na trigger tlačítku
