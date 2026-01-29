@@ -1,6 +1,4 @@
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { 
   useFinanceAnalytics, 
   FinancePeriodType,
@@ -27,20 +25,29 @@ import {
   Pie,
   Cell
 } from 'recharts';
-
-const PERIOD_OPTIONS: { value: FinancePeriodType; label: string }[] = [
-  { value: 'month', label: 'Měsíc' },
-  { value: '90days', label: '3 měsíce' },
-  { value: 'year', label: 'Rok' },
-];
+import type { StatsPeriodRange } from './StatsPeriodSelector';
+import { differenceInDays } from 'date-fns';
+import { useMemo } from 'react';
 
 const CHART_COLORS = [
   'hsl(var(--primary))', 
   'hsl(var(--chart-2))', 
 ];
 
-export function FinanceChartsSection() {
-  const [periodType, setPeriodType] = useState<FinancePeriodType>('month');
+interface FinanceChartsSectionProps {
+  periodRange?: StatsPeriodRange;
+}
+
+export function FinanceChartsSection({ periodRange }: FinanceChartsSectionProps) {
+  // Convert periodRange to FinancePeriodType
+  const periodType = useMemo<FinancePeriodType>(() => {
+    if (!periodRange) return 'month';
+    
+    const days = differenceInDays(periodRange.end, periodRange.start);
+    if (days <= 31) return 'month';
+    if (days <= 100) return '90days';
+    return 'year';
+  }, [periodRange]);
 
   const { data, isLoading } = useFinanceAnalytics({
     periodType,
@@ -85,25 +92,14 @@ export function FinanceChartsSection() {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="space-y-4">
-        {/* Period Toggle */}
+        {/* Period label - no toggle, uses global periodRange */}
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-muted-foreground">Trend a rozložení</h3>
-          <ToggleGroup
-            type="single"
-            value={periodType}
-            onValueChange={(val) => val && setPeriodType(val as FinancePeriodType)}
-            className="bg-muted/50 p-0.5 rounded-md"
-          >
-            {PERIOD_OPTIONS.map((opt) => (
-              <ToggleGroupItem
-                key={opt.value}
-                value={opt.value}
-                className="text-xs px-3 py-1 data-[state=on]:bg-background data-[state=on]:text-foreground"
-              >
-                {opt.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+          <h3 className="text-sm font-medium text-muted-foreground">
+            Trend a rozložení
+            {periodRange && (
+              <span className="ml-2 text-xs">({periodRange.label})</span>
+            )}
+          </h3>
         </div>
 
         {/* Trend Chart */}

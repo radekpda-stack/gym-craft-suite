@@ -1,14 +1,15 @@
 /**
  * Career Stats Section - Executive dashboard with key business metrics
- * Replaces LifetimeStatsSection with enhanced KPIs and visualizations
+ * Uses periodRange for period-based stats + lifetime milestones
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLifetimeStats } from "@/hooks/useLifetimeStats";
-import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { StatInfoTooltip } from "./StatInfoTooltip";
+import { PeriodComparisonCard } from "./PeriodComparisonCard";
+import { CareerMilestonesTimeline } from "./CareerMilestonesTimeline";
 import { 
   Trophy, 
   Dumbbell, 
@@ -16,13 +17,8 @@ import {
   Users, 
   Calendar,
   Banknote,
-  TrendingUp,
-  Activity,
-  AlertTriangle,
-  CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMemo } from "react";
 import type { StatsPeriodRange } from "./StatsPeriodSelector";
 
 interface CareerStatsSectionProps {
@@ -35,7 +31,6 @@ function KPICard({
   label, 
   value, 
   subValue,
-  trend,
   iconColor = "text-primary",
   iconBg = "bg-primary/10"
 }: { 
@@ -43,7 +38,6 @@ function KPICard({
   label: string; 
   value: string | number; 
   subValue?: string;
-  trend?: { value: number; label: string };
   iconColor?: string;
   iconBg?: string;
 }) {
@@ -60,51 +54,8 @@ function KPICard({
             {subValue && (
               <p className="text-xs text-muted-foreground">{subValue}</p>
             )}
-            {trend && (
-              <div className={cn(
-                "flex items-center gap-1 text-xs mt-1",
-                trend.value > 0 ? "text-success" : trend.value < 0 ? "text-destructive" : "text-muted-foreground"
-              )}>
-                <TrendingUp className={cn("h-3 w-3", trend.value < 0 && "rotate-180")} />
-                <span>{trend.value > 0 ? '+' : ''}{trend.value}% {trend.label}</span>
-              </div>
-            )}
           </div>
         </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Insights block
-function InsightsBlock({ insights }: { insights: { type: 'success' | 'warning' | 'info'; message: string }[] }) {
-  if (insights.length === 0) return null;
-
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <Activity className="h-4 w-4 text-primary" />
-          Postřehy
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {insights.map((insight, idx) => (
-          <div 
-            key={idx}
-            className={cn(
-              "flex items-start gap-2 p-2 rounded-lg text-sm",
-              insight.type === 'success' && "bg-success/10 text-success",
-              insight.type === 'warning' && "bg-warning/10 text-warning",
-              insight.type === 'info' && "bg-accent/10 text-accent"
-            )}
-          >
-            {insight.type === 'success' && <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />}
-            {insight.type === 'warning' && <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />}
-            {insight.type === 'info' && <Activity className="h-4 w-4 shrink-0 mt-0.5" />}
-            <span>{insight.message}</span>
-          </div>
-        ))}
       </CardContent>
     </Card>
   );
@@ -113,8 +64,9 @@ function InsightsBlock({ insights }: { insights: { type: 'success' | 'warning' |
 function LoadingSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
+      <Skeleton className="h-24 rounded-xl" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
           <Skeleton key={i} className="h-24 rounded-xl" />
         ))}
       </div>
@@ -124,34 +76,7 @@ function LoadingSkeleton() {
 }
 
 export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
-  // Note: useLifetimeStats is lifetime stats, but we show the selected period info in the header
-  const { data: stats, isLoading: statsLoading } = useLifetimeStats();
-  const { data: analytics, isLoading: analyticsLoading } = useBusinessAnalytics();
-
-  const isLoading = statsLoading || analyticsLoading;
-
-  // Generate insights based on data - career focused only (no retention, that's in Clients tab)
-  const insights = useMemo(() => {
-    if (!stats || !analytics) return [];
-    
-    const result: { type: 'success' | 'warning' | 'info'; message: string }[] = [];
-
-    // Revenue trend
-    if (analytics.vsLastMonth.revenue > 10) {
-      result.push({ type: 'success', message: `Příjem vzrostl o ${analytics.vsLastMonth.revenue}% oproti minulému měsíci.` });
-    } else if (analytics.vsLastMonth.revenue < -10) {
-      result.push({ type: 'warning', message: `Příjem poklesl o ${Math.abs(analytics.vsLastMonth.revenue)}% - zkontrolujte nezaplacené lekce.` });
-    }
-
-    // Milestone achievements
-    if (stats.totalTrainings >= 1000 && stats.totalTrainings < 1010) {
-      result.push({ type: 'success', message: `🎉 Dosáhli jste 1000 tréninků!` });
-    } else if (stats.totalTrainings >= 500 && stats.totalTrainings < 510) {
-      result.push({ type: 'success', message: `🎉 Dosáhli jste 500 tréninků!` });
-    }
-
-    return result;
-  }, [stats, analytics]);
+  const { data: stats, isLoading } = useLifetimeStats();
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -173,11 +98,6 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
       ? formatDate(stats.firstClientDate, 'long')
       : 'Neznámé';
 
-  // Show period label if custom period is selected
-  const periodLabel = periodRange && periodRange.type !== '1y' 
-    ? periodRange.label 
-    : `Od ${startDate}`;
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -192,14 +112,17 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
               <h2 className="text-xl font-bold text-foreground">Kariérní přehled</h2>
               <p className="text-sm text-muted-foreground flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
-                {periodLabel}
+                Od {startDate}
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* KPI Grid - 4 cards (lifetime metrics only) */}
+      {/* Period Comparison - respects global periodRange */}
+      <PeriodComparisonCard periodRange={periodRange} />
+
+      {/* Lifetime KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KPICard
           icon={Dumbbell}
@@ -228,23 +151,23 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
           label="Hodinová sazba"
           value={formatCurrency(stats.avgHourlyRate)}
           subValue="průměrně"
-          iconColor="text-success"
-          iconBg="bg-success/10"
+          iconColor="text-emerald-500"
+          iconBg="bg-emerald-500/10"
         />
       </div>
 
-      {/* Insights - career focused only */}
-      {insights.length > 0 && <InsightsBlock insights={insights} />}
+      {/* Career Milestones Timeline */}
+      <CareerMilestonesTimeline />
 
       {/* Training types breakdown */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Dumbbell className="h-4 w-4 text-primary" />
-            Rozdělení podle typu
+            Rozdělení podle typu (celkem)
             <StatInfoTooltip
               title="Typy tréninků"
-              description="Distribuce tréninků podle jejich hlavního zaměření."
+              description="Distribuce všech tréninků podle jejich hlavního zaměření."
             />
           </CardTitle>
         </CardHeader>

@@ -2,25 +2,37 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, TrendingUp, TrendingDown, Timer } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfYear, format } from 'date-fns';
+import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { StatsPeriodRange } from './StatsPeriodSelector';
 
-export function TrainingDurationCard() {
+interface TrainingDurationCardProps {
+  periodRange?: StatsPeriodRange;
+}
+
+export function TrainingDurationCard({ periodRange }: TrainingDurationCardProps) {
   const { data, isLoading } = useQuery({
-    queryKey: ['training-duration-stats'],
+    queryKey: ['training-duration-stats', periodRange?.start?.toISOString(), periodRange?.end?.toISOString()],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const yearStart = format(startOfYear(new Date()), 'yyyy-MM-dd');
-
-      const { data: trainings, error } = await supabase
+      // Use periodRange if provided, otherwise default to all time
+      let query = supabase
         .from('training_sessions')
         .select('id, date, duration, status')
         .eq('user_id', user.id)
         .eq('status', 'completed')
-        .gte('date', yearStart)
         .not('duration', 'is', null);
+
+      if (periodRange?.start) {
+        query = query.gte('date', format(periodRange.start, 'yyyy-MM-dd'));
+      }
+      if (periodRange?.end) {
+        query = query.lte('date', format(periodRange.end, 'yyyy-MM-dd'));
+      }
+
+      const { data: trainings, error } = await query;
 
       if (error) throw error;
 
@@ -70,10 +82,15 @@ export function TrainingDurationCard() {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <Clock className="h-4 w-4 text-primary" />
-          Délka tréninků
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <Clock className="h-4 w-4 text-primary" />
+            Délka tréninků
+          </CardTitle>
+          {periodRange && (
+            <span className="text-xs text-muted-foreground">{periodRange.label}</span>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Main stat */}

@@ -8,7 +8,8 @@ import { CancellationStatsCard } from './CancellationStatsCard';
 import { FinanceHeroKPI } from './FinanceHeroKPI';
 import { MonthlyIncomeCard } from './MonthlyIncomeCard';
 import { FinanceChartsSection } from './FinanceChartsSection';
-// LifetimeFinanceStatsCard removed - duplicates Career tab
+import { RevenueByTrainingTypeCard } from './RevenueByTrainingTypeCard';
+import { PeriodComparisonCard } from './PeriodComparisonCard';
 import { formatCurrency } from '@/lib/formatters';
 import { MetricCard } from '@/components/charts';
 import { 
@@ -114,6 +115,9 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
           onCardClick={handleCardClick}
         />
 
+        {/* Revenue by Training Type - KEY NEW CHART */}
+        <RevenueByTrainingTypeCard periodRange={periodRange} />
+
         {/* Show products card if pending payments shown in KPI */}
         {hasPendingPayments && stats?.productIncome && stats.productIncome > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -130,8 +134,8 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
           </div>
         )}
 
-        {/* Trend and Distribution Charts (from advanced analytics) */}
-        <FinanceChartsSection />
+        {/* Trend and Distribution Charts - now uses global periodRange */}
+        <FinanceChartsSection periodRange={periodRange} />
 
         {/* Stats Grid - Payment Structure */}
         <RevenueBreakdownCard periodRange={periodRange} />
@@ -141,8 +145,6 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
           <MonthlyIncomeCard onClick={() => setActiveModal('monthly-history')} />
           <CancellationStatsCard periodRange={periodRange} onClick={() => setActiveModal('cancellation')} />
         </div>
-
-        {/* Removed LifetimeFinanceStatsCard - duplicates Career tab data */}
 
         {/* Modals */}
         <TotalIncomeModal 

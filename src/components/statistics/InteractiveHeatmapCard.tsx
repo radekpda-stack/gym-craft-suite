@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useTrainingHeatmap } from '@/hooks/useTrainingHeatmap';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CalendarDays } from 'lucide-react';
@@ -10,18 +9,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import type { StatsPeriodRange } from './StatsPeriodSelector';
 
 type HeatmapPeriod = 'month' | '3months' | 'year' | 'all';
 
 const DAYS = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 6); // 6:00 - 19:00
 
-const PERIOD_OPTIONS: { value: HeatmapPeriod; label: string }[] = [
-  { value: 'month', label: 'Měsíc' },
-  { value: '3months', label: '3 měsíce' },
-  { value: 'year', label: 'Rok' },
-  { value: 'all', label: 'Vše' },
-];
+interface InteractiveHeatmapCardProps {
+  periodRange?: StatsPeriodRange;
+}
 
 function getHeatColor(value: number, maxValue: number): string {
   if (maxValue === 0 || value === 0) return 'bg-muted/30';
@@ -35,8 +32,16 @@ function getHeatColor(value: number, maxValue: number): string {
   return 'bg-primary';
 }
 
-export function InteractiveHeatmapCard() {
-  const [period, setPeriod] = useState<HeatmapPeriod>('3months');
+export function InteractiveHeatmapCard({ periodRange }: InteractiveHeatmapCardProps) {
+  // Convert periodRange to heatmap period
+  const period = useMemo<HeatmapPeriod>(() => {
+    if (!periodRange) return '3months';
+    if (periodRange.type === 'all') return 'all';
+    if (periodRange.type === '1m') return 'month';
+    if (periodRange.type === '3m') return '3months';
+    return 'year';
+  }, [periodRange]);
+
   const { data, isLoading } = useTrainingHeatmap(period);
 
   if (isLoading || !data) {
@@ -53,22 +58,11 @@ export function InteractiveHeatmapCard() {
             <CalendarDays className="h-4 w-4 text-primary" />
             Heatmapa kapacity
           </CardTitle>
-          <ToggleGroup
-            type="single"
-            value={period}
-            onValueChange={(val) => val && setPeriod(val as HeatmapPeriod)}
-            className="bg-muted/50 p-0.5 rounded-md"
-          >
-            {PERIOD_OPTIONS.map((opt) => (
-              <ToggleGroupItem
-                key={opt.value}
-                value={opt.value}
-                className="text-xs px-2 py-1 data-[state=on]:bg-background"
-              >
-                {opt.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+          {periodRange && (
+            <span className="text-xs text-muted-foreground">
+              {periodRange.label}
+            </span>
+          )}
         </div>
         <p className="text-xs text-muted-foreground mt-1">
           {totalTrainings} tréninků za vybrané období
