@@ -80,6 +80,7 @@ interface UnifiedNotificationItemProps {
   onMarkRead: (id: string) => void;
   onDelete: (id: string) => void;
   onClick?: () => void;
+  onItemClick?: (item: UnifiedNotification) => void;
   enableSwipe?: boolean;
 }
 
@@ -88,6 +89,7 @@ export function UnifiedNotificationItem({
   onMarkRead,
   onDelete,
   onClick,
+  onItemClick,
   enableSwipe = true,
 }: UnifiedNotificationItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -249,17 +251,22 @@ export function UnifiedNotificationItem({
               key={item.id}
               onClick={(e) => {
                 e.stopPropagation();
-                onClick?.();
+                if (onItemClick) {
+                  onItemClick(item);
+                } else {
+                  onClick?.();
+                }
               }}
               className={cn(
-                'flex items-center gap-2 p-2 rounded-lg text-sm',
+                'flex items-center gap-2 p-2 rounded-lg text-sm cursor-pointer hover:bg-muted transition-colors',
                 item.is_read ? 'bg-background' : 'bg-muted/50'
               )}
             >
               <span className="flex-1 truncate">{item.title}</span>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-[10px] text-muted-foreground shrink-0">
                 {getDateLabel(item.created_at)}
               </span>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             </div>
           ))}
         </motion.div>
