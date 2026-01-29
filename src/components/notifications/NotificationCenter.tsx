@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { FeedbackDetailDialog } from "@/components/feedback/FeedbackDetailDialog";
 import { ProfileUpdateDetailDialog } from "./ProfileUpdateDetailDialog";
+import { NutritionEntryDetailDialog } from "./NutritionEntryDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { TrainingFeedback } from "@/hooks/useTrainingFeedback";
 import { NotificationEmptyState } from "./NotificationEmptyState";
@@ -121,6 +122,8 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [profileUpdateDialogOpen, setProfileUpdateDialogOpen] = useState(false);
   const [selectedProfileNotification, setSelectedProfileNotification] = useState<UnifiedNotification | null>(null);
+  const [nutritionDialogOpen, setNutritionDialogOpen] = useState(false);
+  const [selectedNutritionNotification, setSelectedNutritionNotification] = useState<UnifiedNotification | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -283,6 +286,17 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     }
   };
 
+  // Handle nutrition item click (for aggregated items)
+  const handleNutritionItemClick = useCallback((item: UnifiedNotification) => {
+    // Mark as read
+    if (!item.is_read && !item.id.startsWith('aggregated-')) {
+      markRead.mutate(item.id);
+    }
+    // Open nutrition detail dialog
+    setSelectedNutritionNotification(item);
+    setNutritionDialogOpen(true);
+  }, [markRead]);
+
   const hasAnyNotifications = all.length > 0 || unreadConversations.length > 0;
 
   const renderCategorySection = (
@@ -346,6 +360,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
                   onMarkRead={handleMarkRead}
                   onDelete={handleDelete}
                   onClick={() => handleNotificationClick(notification)}
+                  onItemClick={category === 'nutrition' ? handleNutritionItemClick : undefined}
                   enableSwipe={true}
                 />
               </motion.div>
@@ -537,6 +552,17 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
           }
         }}
         notification={selectedProfileNotification}
+      />
+
+      <NutritionEntryDetailDialog
+        open={nutritionDialogOpen}
+        onOpenChange={(open) => {
+          setNutritionDialogOpen(open);
+          if (!open) {
+            setSelectedNutritionNotification(null);
+          }
+        }}
+        notification={selectedNutritionNotification}
       />
     </>
   );
