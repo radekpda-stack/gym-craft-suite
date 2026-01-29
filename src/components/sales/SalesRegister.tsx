@@ -85,7 +85,7 @@ function ProductCard({ product, cart, isLowStock, getProductIcon, getProductKind
       </div>
 
       {/* Name & Price */}
-      <p className="font-medium text-sm sm:text-base truncate">{product.name}</p>
+      <p className="font-medium text-sm sm:text-base line-clamp-2 min-h-[2.5em]">{product.name}</p>
       <p className="text-lg sm:text-xl font-bold text-primary mt-1">
         {formatCurrency(product.price)}
       </p>
