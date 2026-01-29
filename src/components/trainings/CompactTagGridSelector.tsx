@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { Settings2 } from 'lucide-react';
 import { useTags } from '@/hooks/useTags';
 import { TagDropdownSelect, TagOption } from './TagDropdownSelect';
+import { BodyPartDropdownSelect } from './BodyPartDropdownSelect';
 import { InlineRPESelector } from './InlineRPESelector';
 import { ExpandedTagModal } from './ExpandedTagModal';
 import { Button } from '@/components/ui/button';
@@ -222,23 +223,10 @@ export function CompactTagGridSelector({
 
         {/* Partie těla - conditional */}
         {visibility.bodyPartsMode === 'full' ? (
-          <div className="relative">
-            <TagDropdownSelect
-              label="Partie"
-              options={tagOptions.bodyPart}
-              value={primaryBodyPartId}
-              onChange={handleBodyPartChange}
-              placeholder="Partie..."
-            />
-            {additionalBodyPartCount > 0 && (
-              <Badge 
-                variant="secondary" 
-                className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1.5 text-[10px] bg-primary text-primary-foreground"
-              >
-                +{additionalBodyPartCount}
-              </Badge>
-            )}
-          </div>
+          <BodyPartDropdownSelect
+            bodyPartTagIds={bodyPartTagIds}
+            onBodyPartTagsChange={onBodyPartTagsChange}
+          />
         ) : visibility.bodyPartsMode === 'only-full-body' ? (
           <div className="flex flex-col gap-1">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
