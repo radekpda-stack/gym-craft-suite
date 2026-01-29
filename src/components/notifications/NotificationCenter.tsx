@@ -26,6 +26,7 @@ import { useNavigate } from "react-router-dom";
 import { FeedbackDetailDialog } from "@/components/feedback/FeedbackDetailDialog";
 import { ProfileUpdateDetailDialog } from "./ProfileUpdateDetailDialog";
 import { NutritionEntryDetailDialog } from "./NutritionEntryDetailDialog";
+import { WorkoutLogDetailDialog } from "./WorkoutLogDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { TrainingFeedback } from "@/hooks/useTrainingFeedback";
 import { NotificationEmptyState } from "./NotificationEmptyState";
@@ -124,6 +125,8 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const [selectedProfileNotification, setSelectedProfileNotification] = useState<UnifiedNotification | null>(null);
   const [nutritionDialogOpen, setNutritionDialogOpen] = useState(false);
   const [selectedNutritionNotification, setSelectedNutritionNotification] = useState<UnifiedNotification | null>(null);
+  const [workoutDialogOpen, setWorkoutDialogOpen] = useState(false);
+  const [selectedWorkoutNotification, setSelectedWorkoutNotification] = useState<UnifiedNotification | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -194,6 +197,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     const isNutritionNotification = notification.type === 'nutrition_entry_added' || notification.type === 'client_nutrition_started';
     const isProfileUpdateNotification = notification.type === 'client_profile_updated';
     const isPrNotification = ['pr_achieved', 'pr_created', 'pr_updated'].includes(notification.type);
+    const isWorkoutLogNotification = notification.type === 'client_workout_logged';
     
     const trainingId = notification.entity_type === 'training' ? notification.entity_id : null;
     const clientId = notification.client_id || (notification.entity_type === 'client' ? notification.entity_id : null);
@@ -214,6 +218,14 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     if (isProfileUpdateNotification) {
       setSelectedProfileNotification(notification);
       setProfileUpdateDialogOpen(true);
+      setSheetOpen(false);
+      return;
+    }
+
+    // Workout log notifications → Open workout detail dialog
+    if (isWorkoutLogNotification && notification.entity_id) {
+      setSelectedWorkoutNotification(notification);
+      setWorkoutDialogOpen(true);
       setSheetOpen(false);
       return;
     }
@@ -297,6 +309,17 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     setNutritionDialogOpen(true);
   }, [markRead]);
 
+  // Handle workout item click (for aggregated items)
+  const handleWorkoutItemClick = useCallback((item: UnifiedNotification) => {
+    // Mark as read
+    if (!item.is_read && !item.id.startsWith('aggregated-')) {
+      markRead.mutate(item.id);
+    }
+    // Open workout detail dialog
+    setSelectedWorkoutNotification(item);
+    setWorkoutDialogOpen(true);
+  }, [markRead]);
+
   const hasAnyNotifications = all.length > 0 || unreadConversations.length > 0;
 
   const renderCategorySection = (
@@ -360,7 +383,11 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
                   onMarkRead={handleMarkRead}
                   onDelete={handleDelete}
                   onClick={() => handleNotificationClick(notification)}
-                  onItemClick={category === 'nutrition' ? handleNutritionItemClick : undefined}
+                  onItemClick={
+                    category === 'nutrition' ? handleNutritionItemClick :
+                    category === 'training' ? handleWorkoutItemClick :
+                    undefined
+                  }
                   enableSwipe={true}
                 />
               </motion.div>
@@ -563,6 +590,17 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
           }
         }}
         notification={selectedNutritionNotification}
+      />
+
+      <WorkoutLogDetailDialog
+        open={workoutDialogOpen}
+        onOpenChange={(open) => {
+          setWorkoutDialogOpen(open);
+          if (!open) {
+            setSelectedWorkoutNotification(null);
+          }
+        }}
+        notification={selectedWorkoutNotification}
       />
     </>
   );
