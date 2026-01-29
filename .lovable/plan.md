@@ -1,258 +1,261 @@
 
-# Detail tréninku klienta v notifikacích
+# Sjednocení UI: Feedbacky, Strava, Klientský portál
 
-## Přehled problému
+## Analýza současného stavu
 
-Při kliknutí na notifikaci "Klient cvičil" se nic neotevře - notifikace není klikatelná a trenér nevidí, co klient zapsal.
+Po důkladné analýze jsem identifikoval tyto klíčové **rozdíly a nekonzistence**:
+
+### 1. Rozdílné struktury layoutu
+
+| Sekce | Aktuální layout |
+|-------|-----------------|
+| **Feedbacky** | 3-sloupcový grid (Inbox vlevo, Tabs vpravo), 5 status karet nahoře |
+| **Strava** | Jednoduchý vertikální layout, 4 KPI karty + 2 rozšiřující karty |
+| **Klientský portál** | Taby (Přehled/Klienti/Deníky/Nastavení), 5 KPI karet |
+
+### 2. Rozdílný design seznamů klientů
+
+| Sekce | Komponenta | Design |
+|-------|------------|--------|
+| **Feedbacky** | `FeedbackAttentionInbox` | ScrollArea s border-left indikátorem |
+| **Strava** | `NutritionClientRow` | Kliknutelné karty s 2-řádkovým layoutem |
+| **Portál** | `ClientAccessList` | Tabulka (desktop) / karty (mobile) |
+| **Portál deníky** | `ClientWorkoutLogsOverview` | Rozbalitelné karty s akcemi |
+
+### 3. Chybějící jednotná "Activity Timeline"
+- Feedbacky: má `FeedbackActivityTimeline` + `FeedbackAttentionInbox`
+- Strava: **CHYBÍ** - žádná timeline nedávné aktivity
+- Portál: má `PortalRecentActivity`, ale jiný design
+
+---
+
+## Navrhované sjednocené UI
 
 ```text
-AKTUÁLNÍ STAV:
-┌─────────────────────────────────────────┐
-│ 🏋️ Tréninky & Cvičení                  │
-│ └─ Jana Nováková si zapsal/a vlastní   │
-│    silový trénink.            Včera    │ ← Neklikatelné
-└─────────────────────────────────────────┘
-
-NOVÝ STAV:
-┌─────────────────────────────────────────┐
-│ 🏋️ Tréninky & Cvičení                  │
-│ └─ Jana Nováková si zapsal/a vlastní   │
-│    silový trénink.            Včera [>]│ ← Kliknutí otevře dialog
-└─────────────────────────────────────────┘
-
-DIALOG PO KLIKNUTÍ:
-┌─────────────────────────────────────────────┐
-│ 🏋️ Trénink klienta                    [✕] │
-│ Jana Nováková • Úterý 28.1.2025            │
-├─────────────────────────────────────────────┤
-│                                             │
-│ PŘEHLED                                     │
-│ ┌─────────────────────────────────────────┐ │
-│ │ 💪 Silový trénink                       │ │
-│ │ ⏱️ 45 minut                             │ │
-│ │ ⚡ Energie: 6 → 8                        │ │
-│ └─────────────────────────────────────────┘ │
-│                                             │
-│ CVIKY (3)                                   │
-│ ┌─────────────────────────────────────────┐ │
-│ │ 1. Bench Press                          │ │
-│ │    3×10 @ 80 kg • RPE 8                 │ │
-│ └─────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────┐ │
-│ │ 2. Dřepy                                │ │
-│ │    4×8 @ 100 kg • RPE 9                 │ │
-│ └─────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────┐ │
-│ │ 3. Mrtvý tah                            │ │
-│ │    3×5 @ 120 kg • RPE 7                 │ │
-│ └─────────────────────────────────────────┘ │
-│                                             │
-│ POZNÁMKY                                    │
-│ ┌─────────────────────────────────────────┐ │
-│ │ Cítil jsem se skvěle, ale trochu       │ │
-│ │ bolelo rameno u bench pressu.           │ │
-│ └─────────────────────────────────────────┘ │
-│                                             │
-├─────────────────────────────────────────────┤
-│ [Zobrazit celý deník]           [Zavřít]   │
-└─────────────────────────────────────────────┘
+JEDNOTNÝ LAYOUT PRO VŠECHNY TŘI SEKCE:
+┌─────────────────────────────────────────────────────────────┐
+│ HEADER: Název sekce + popis + hlavní akce                   │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ KPI KARTY (4 jednotné) - kliknutelné pro filtraci          │
+│ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐                │
+│ │ Aktivní│ │ Dnes  │ │Týden   │ │Pozornost│               │
+│ │   12   │ │   5   │ │  28   │ │   3    │                │
+│ └────────┘ └────────┘ └────────┘ └────────┘                │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ DVA SLOUPCE (lg:2/3 + lg:1/3)                              │
+│ ┌──────────────────────────┐ ┌────────────────────────────┐│
+│ │ HLAVNÍ OBSAH             │ │ SIDEBAR                    ││
+│ │                          │ │                            ││
+│ │ [Hledat klienta...]      │ │ Nedávná aktivita           ││
+│ │                          │ │ ┌──────────────────────┐   ││
+│ │ FILTRY: Vše | Aktivní |  │ │ │ ○ Jana - zapsala     │   ││
+│ │         Pozornost        │ │ │   stravu (před 5min) │   ││
+│ │                          │ │ │ ○ Petr - vyplnil     │   ││
+│ │ ┌──────────────────────┐ │ │ │   feedback (1h)      │   ││
+│ │ │ [Avatar] Jana Nová   │ │ │ │ ○ Eva - přihlášena   │   ││
+│ │ │ Dnes • 3 záz. • OK   │ │ │ │   (2h)               │   ││
+│ │ └──────────────────────┘ │ │ └──────────────────────┘   ││
+│ │ ┌──────────────────────┐ │ │                            ││
+│ │ │ [Avatar] Petr Sv. ⚠️ │ │ │ Vyžaduje pozornost        ││
+│ │ │ Včera • 1 záznam     │ │ │ ┌──────────────────────┐   ││
+│ │ └──────────────────────┘ │ │ │ 3 klienti čekají     │   ││
+│ │                          │ │ │ [Zobrazit]           │   ││
+│ │ ...                      │ │ └──────────────────────┘   ││
+│ └──────────────────────────┘ └────────────────────────────┘│
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Technická implementace
+## Konkrétní změny
 
-### 1. Data dostupná v notifikaci
+### Krok 1: Vytvoření sdílených komponent
 
-Notifikace `client_workout_logged` obsahuje:
-- `client_id` - ID klienta
-- `entity_type: 'workout_log'`
-- `entity_id` - ID záznamu v `client_workout_logs`
-- `message` - "{clientName} si zapsal/a vlastní {workoutType}."
-
-### 2. Data v databázi
-
-**client_workout_logs:**
-- `id`, `client_id`, `trainer_id`
-- `date` - datum tréninku
-- `workout_type` - typ tréninku (silový, kardio, atd.)
-- `duration_minutes` - délka v minutách
-- `energy_before`, `energy_after` - energie před/po (1-10)
-- `notes` - poznámky klienta
-- `trainer_comment` - komentář trenéra
-
-**client_workout_exercises:**
-- `workout_log_id` - vazba na log
-- `exercise_name` - název cviku
-- `sets`, `reps` - série a opakování
-- `weight_kg` - váha
-- `rpe` - intenzita
-- `duration_seconds`, `distance_meters` - pro kardio
-- `notes` - poznámky ke cviku
-- `side` - strana (left/right/both/none)
-
-### 3. Nová komponenta - WorkoutLogDetailDialog
-
+#### 1.1 `UnifiedKPICards` - Jednotné KPI karty
 ```typescript
-interface WorkoutLogDetailDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  notification: UnifiedNotification | null;
+// Nová komponenta: src/components/shared/UnifiedKPICards.tsx
+// Použije stejný design jako PortalUsageStats
+
+interface KPICard {
+  id: string;
+  label: string;
+  value: number | string;
+  icon: LucideIcon;
+  color: 'success' | 'primary' | 'warning' | 'destructive' | 'muted';
+  subLabel?: string;
+  onClick?: () => void;
 }
 ```
 
-Dialog:
-1. Extrahuje `entity_id` z notifikace (= workout_log_id)
-2. Načte data z `client_workout_logs` a `client_workout_exercises`
-3. Zobrazí přehled tréninku a seznam cviků
-4. Tlačítko pro navigaci na celý deník klienta
+**Jednotný design karty:**
+- Grid: `grid-cols-2 lg:grid-cols-4` (4 karty)
+- Ikona v kruhu 40x40px vlevo
+- Hodnota 2xl font-bold
+- Popisek text-xs text-muted-foreground
+- Hover efekt pro kliknutelné karty
+
+#### 1.2 `UnifiedClientRow` - Jednotný řádek klienta
+```typescript
+// Nová komponenta: src/components/shared/UnifiedClientRow.tsx
+// Sloučí NutritionClientRow + položky z Attention Inbox
+
+interface UnifiedClientRowProps {
+  client: {
+    id: string;
+    name: string;
+    photo_url?: string;
+  };
+  status: 'active' | 'warning' | 'inactive';
+  primaryText: string;       // "Dnes • 3 záznamy"
+  secondaryText?: string;    // "Poslední feedback: včera"
+  badges?: Badge[];
+  onClick?: () => void;
+}
+```
+
+**Jednotný design:**
+- Avatar 36x36px
+- Jméno font-medium
+- Status badge (warning = destructive/10)
+- ChevronRight na hover
+- Border-left-4 pro warning stavy
+
+#### 1.3 `UnifiedActivityTimeline` - Jednotná timeline
+```typescript
+// Nová komponenta: src/components/shared/UnifiedActivityTimeline.tsx
+// Kombinuje FeedbackActivityTimeline + PortalRecentActivity
+
+interface ActivityItem {
+  id: string;
+  clientId: string;
+  clientName: string;
+  type: string;
+  label: string;
+  timestamp: string;
+  icon: LucideIcon;
+  color: 'success' | 'warning' | 'destructive' | 'primary' | 'muted';
+  detail?: string;
+}
+```
+
+### Krok 2: Refaktoring Feedbacky
+
+**Změny:**
+1. Zredukovat 5 KPI karet na 4 (sloučit "Expirováno" do "Čekající")
+2. Přesunout timeline doprava (sidebar)
+3. Hlavní obsah = seznam klientů s filtry
+4. Odstranit taby - vše na jedné stránce s filtry
+
+**Nová struktura:**
+```text
+┌─ KPI: K odeslání | Čekající | Vyplněno | Red Flags ──┐
+├─ 2 sloupce ───────────────────────────────────────────┤
+│ HLAVNÍ:                    │ SIDEBAR:                 │
+│ - Search + Filtry          │ - Nedávná aktivita       │
+│ - Seznam klientů           │ - Potřebuje pozornost    │
+│   (UnifiedClientRow)       │   (top 5 urgentních)     │
+│ - Klik = detail feedbacku  │                          │
+└────────────────────────────┴──────────────────────────┘
+```
+
+### Krok 3: Refaktoring Strava
+
+**Změny:**
+1. Přidat `UnifiedActivityTimeline` do sidebaru
+2. Použít `UnifiedClientRow` místo `NutritionClientRow`
+3. Sjednotit KPI karty s ostatními sekcemi
+4. Přidat sidebar s nedávnou aktivitou
+
+**Nová struktura:**
+```text
+┌─ KPI: Aktivně zapisuje | Dnes | Týden | Pozornost ───┐
+├─ 2 sloupce ───────────────────────────────────────────┤
+│ HLAVNÍ:                    │ SIDEBAR:                 │
+│ - Search + Filtry          │ - Nedávná aktivita       │
+│ - Seznam klientů           │   (jídlo, pití, kofein)  │
+│   (UnifiedClientRow)       │ - Klienti k pozornosti   │
+│ - Klik = detail nutrice    │                          │
+└────────────────────────────┴──────────────────────────┘
+```
+
+### Krok 4: Refaktoring Klientský portál
+
+**Změny:**
+1. Zjednodušit taby (odstranit Deníky - přesunout do hlavního přehledu)
+2. Sjednotit KPI karty design
+3. Použít `UnifiedClientRow` pro seznam klientů
+4. Přidat sekci "Nedávné tréninky klientů" přímo do přehledu
+
+**Nová struktura:**
+```text
+┌─ KPI: Klientů | Dnes aktivní | Týden | Pozornost ────┐
+├─ Taby: Přehled | Klienti | Nastavení ─────────────────┤
+│                                                       │
+│ PŘEHLED (2 sloupce):                                  │
+│ - Nedávné tréninky         │ - Nedávná aktivita       │
+│   (top 5 + Zobrazit vše)   │   (timeline)             │
+│ - Rychlé vyhledávání       │ - Potřebuje pozornost    │
+│                            │                          │
+└───────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Změny v souborech
+## Technické detaily implementace
 
-| Soubor | Změna |
+### Nové soubory
+| Soubor | Účel |
+|--------|------|
+| `src/components/shared/UnifiedKPICard.tsx` | Jedna KPI karta |
+| `src/components/shared/UnifiedKPICards.tsx` | Grid KPI karet |
+| `src/components/shared/UnifiedClientRow.tsx` | Řádek klienta |
+| `src/components/shared/UnifiedActivityTimeline.tsx` | Timeline aktivity |
+| `src/components/shared/AttentionInbox.tsx` | Sidebar "Pozornost" |
+
+### Upravené soubory
+| Soubor | Změny |
 |--------|-------|
-| `WorkoutLogDetailDialog.tsx` | **Nový** - Dialog pro zobrazení detailu tréninku |
-| `NotificationCenter.tsx` | Přidat handler pro `client_workout_logged` notifikace |
-| `UnifiedNotificationItem.tsx` | Přidat `onItemClick` i pro training kategorii |
+| `FeedbackOverview.tsx` | Nový layout bez tabů, 2-sloupcový grid |
+| `NutritionPage.tsx` | Přidán sidebar, použití sdílených komponent |
+| `ClientPortalAdmin.tsx` | Zjednodušené taby, integrované deníky |
 
----
-
-## Detail dialogu - sekce
-
-### Sekce PŘEHLED
-- Ikona typu tréninku (💪 silový, 🏃 kardio, 🧘 mobilita, atd.)
-- Typ tréninku (text)
-- Délka tréninku (minuty)
-- Energie před → po (vizuální indikátor)
-
-### Sekce CVIKY
-Pro každý cvik z `client_workout_exercises`:
-- Číslo pořadí + název cviku
-- Formát: `{sets}×{reps} @ {weight_kg} kg`
-- RPE badge
-- Pro kardio: `{duration_seconds}s` nebo `{distance_meters}m`
-- Poznámky ke cviku (pokud existují)
-- Strana (L/R badge pro jednostranné cviky)
-
-### Sekce POZNÁMKY
-- Poznámky klienta k celému tréninku
-- Pokud prázdné, sekce se nezobrazí
-
-### Prázdný stav
-Pokud workout_log neexistuje nebo nebyl nalezen:
-- "Záznam tréninku nebyl nalezen"
-- Nabídnout přechod na profil klienta
-
----
-
-## Integrace do NotificationCenter
-
-### Přidat stav
+### Design tokeny (konzistentní barvy)
 ```typescript
-const [workoutDialogOpen, setWorkoutDialogOpen] = useState(false);
-const [selectedWorkoutNotification, setSelectedWorkoutNotification] = 
-  useState<UnifiedNotification | null>(null);
-```
-
-### Přidat handler pro `client_workout_logged`
-```typescript
-const isWorkoutLogNotification = notification.type === 'client_workout_logged';
-
-if (isWorkoutLogNotification && notification.entity_id) {
-  setSelectedWorkoutNotification(notification);
-  setWorkoutDialogOpen(true);
-  setSheetOpen(false);
-  return;
-}
-```
-
-### Přidat handler pro agregované položky
-```typescript
-const handleWorkoutItemClick = useCallback((item: UnifiedNotification) => {
-  if (!item.is_read && !item.id.startsWith('aggregated-')) {
-    markRead.mutate(item.id);
-  }
-  setSelectedWorkoutNotification(item);
-  setWorkoutDialogOpen(true);
-}, [markRead]);
-```
-
-### Předat do UnifiedNotificationItem
-```typescript
-<UnifiedNotificationItem
-  // ...
-  onItemClick={
-    category === 'nutrition' ? handleNutritionItemClick :
-    category === 'training' ? handleWorkoutItemClick :
-    undefined
-  }
-/>
+const STATUS_COLORS = {
+  active: { bg: 'bg-success/10', text: 'text-success' },
+  warning: { bg: 'bg-warning/10', text: 'text-warning' },
+  danger: { bg: 'bg-destructive/10', text: 'text-destructive' },
+  neutral: { bg: 'bg-muted', text: 'text-muted-foreground' },
+  primary: { bg: 'bg-primary/10', text: 'text-primary' },
+};
 ```
 
 ---
 
-## Formátování cviků
+## Klíčové principy sjednocení
 
-```text
-Příklady zobrazení:
-
-SILOVÝ CVIK:
-┌─────────────────────────────────────────┐
-│ 1. Bench Press                          │
-│    3×10 @ 80 kg                    RPE 8│
-└─────────────────────────────────────────┘
-
-KARDIO CVIK:
-┌─────────────────────────────────────────┐
-│ 2. Běh na páse                          │
-│    20 min • 3.5 km                      │
-└─────────────────────────────────────────┘
-
-JEDNOSTRANNÝ CVIK:
-┌─────────────────────────────────────────┐
-│ 3. Výpady                          [L]  │
-│    3×12 @ 20 kg                    RPE 7│
-│    Poznámka: Levá noha slabší           │
-└─────────────────────────────────────────┘
-```
+1. **Konzistentní layout**: Header -> KPI karty -> 2 sloupce (hlavní + sidebar)
+2. **Jednotný design klientských řádků**: Avatar + jméno + status + detail + akce
+3. **Aktivita vpravo**: Sidebar vždy ukazuje "co se děje" v reálném čase
+4. **Pozornost nahoře**: Klienti vyžadující akci jsou vždy viditelní
+5. **Kliknutelné KPI**: Každá karta filtruje seznam pod sebou
+6. **Mobile-first**: Na mobilu sidebar skryt nebo pod hlavním obsahem
 
 ---
 
-## Ikony typů tréninku
+## Očekávaný výsledek
 
-| Typ | Ikona | Label |
-|-----|-------|-------|
-| strength / silový | 💪 | Silový trénink |
-| cardio / kardio | 🏃 | Kardio |
-| mobility / mobilita | 🧘 | Mobilita |
-| hiit | ⚡ | HIIT |
-| crossfit | 🏋️ | CrossFit |
-| other / ostatní | 🎯 | Trénink |
+Trenér uvidí ve všech třech sekcích:
+- **Rychlý přehled** (4 KPI karty) - kolik klientů je aktivních, kolik potřebuje pozornost
+- **Seznam klientů** - jednotný design, jasné indikátory stavu
+- **Nedávná aktivita** - timeline co klienti právě dělají
+- **Prioritní úkoly** - sidebar s urgentními položkami
 
----
-
-## Implementační kroky
-
-### Krok 1: WorkoutLogDetailDialog.tsx (nový soubor)
-- Fetch logika pro `client_workout_logs` a `client_workout_exercises`
-- UI pro přehled, cviky a poznámky
-- Navigace na deník klienta
-
-### Krok 2: NotificationCenter.tsx
-- Přidat stavy pro dialog
-- Přidat handler v `handleNotificationClick` pro `client_workout_logged`
-- Přidat `handleWorkoutItemClick` pro agregované položky
-- Předat `onItemClick` pro training kategorii
-- Přidat `WorkoutLogDetailDialog` do JSX
-
----
-
-## Časový odhad
-
-| Úkol | Čas |
-|------|-----|
-| WorkoutLogDetailDialog | 35 min |
-| NotificationCenter integrace | 15 min |
-| **Celkem** | **~50 minut** |
+Jednotné ovládání:
+- Stejné filtry (Vše | Aktivní | Pozornost)
+- Stejné vyhledávání
+- Stejné akce (klik na klienta = detail)
