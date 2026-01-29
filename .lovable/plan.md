@@ -1,221 +1,179 @@
 
-# Zobrazení detailu změn profilu klienta v novém okně
+# Kliknutelné notifikace o stravě s detailem záznamů
 
-## Přehled řešení
+## Přehled problému
 
-Při kliknutí na notifikaci "Klient aktualizoval profil" se otevře dialog s detailem změn - jaká pole klient změnil a jaké jsou nové hodnoty.
-
----
-
-## Aktuální stav
-
-```text
-Notifikace: "Jana Nováková upravil(a): email, zdravotní omezení"
-      ↓ Klik
-Navigace na: /clients/xxx?tab=profile (celá stránka profilu)
-```
-
-**Problém:** Trenér musí sám hledat, co přesně se změnilo.
-
----
+Při kliknutí na agregovanou notifikaci "18 záznamů stravy" se rozklikne seznam položek, ale:
+1. Jednotlivé položky nejsou klikatelné
+2. Zobrazují pouze "Klient zapisuje stravu" + datum
+3. Trenér nevidí, co klient zapsal
 
 ## Navrhované řešení
 
-```text
-Notifikace: "Jana Nováková upravil(a): email, zdravotní omezení"
-      ↓ Klik
-Dialog: 
-┌────────────────────────────────────────┐
-│  📝 Aktualizace profilu                │
-│  Jana Nováková • před 2 hodinami       │
-├────────────────────────────────────────┤
-│                                        │
-│  ZMĚNĚNÁ POLE                          │
-│                                        │
-│  📧 Email                              │
-│  → jana.novakova@email.cz              │
-│                                        │
-│  🏥 Zdravotní omezení                  │
-│  → "Bolest pravého kolena po..."       │
-│                                        │
-│  ────────────────────────────────────  │
-│                                        │
-│  [Zobrazit celý profil]  [Zavřít]      │
-└────────────────────────────────────────┘
-```
+Vytvořit nový dialog `NutritionEntryDetailDialog`, který:
+- Zobrazí záznamy stravy pro konkrétní den
+- Načte data z `nutrition_food_entries`, `nutrition_drink_entries`, `nutrition_coffee_entries`
+- Umožní přímou navigaci na celý deník klienta
 
----
+```text
+AKTUÁLNÍ STAV:
+┌─────────────────────────────────────────┐
+│ 18 záznamů stravy                       │
+│ └─ Klient zapisuje stravu    Včera      │ ← Neklikatelné
+│ └─ Klient zapisuje stravu    Před 2 dny │ ← Nic neukáže
+└─────────────────────────────────────────┘
+
+NOVÝ STAV:
+┌─────────────────────────────────────────┐
+│ 18 záznamů stravy                       │
+│ └─ Jana Nováková             Včera  [>] │ ← Kliknutí otevře dialog
+│ └─ Petr Svoboda         Před 2 dny  [>] │
+└─────────────────────────────────────────┘
+
+DIALOG PO KLIKNUTÍ:
+┌─────────────────────────────────────────────┐
+│ 🍎 Strava klienta                      [✕] │
+│ Jana Nováková • Úterý 28.1.2025            │
+├─────────────────────────────────────────────┤
+│                                             │
+│ JÍDLA                                       │
+│ ┌─────────────────────────────────────────┐ │
+│ │ 🍳 Snídaně (08:30)                      │ │
+│ │ Ovesná kaše s ovocem, med               │ │
+│ │ Porce: střední                          │ │
+│ └─────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────┐ │
+│ │ 🥗 Oběd (12:15)                         │ │
+│ │ Kuřecí salát s quinoou                  │ │
+│ │ Porce: velká                            │ │
+│ └─────────────────────────────────────────┘ │
+│                                             │
+│ NÁPOJE                                      │
+│ ┌─────────────────────────────────────────┐ │
+│ │ 💧 Voda (10:00) - 500ml                 │ │
+│ └─────────────────────────────────────────┘ │
+│                                             │
+│ KOFEIN                                      │
+│ ┌─────────────────────────────────────────┐ │
+│ │ ☕ Espresso (07:45)                      │ │
+│ └─────────────────────────────────────────┘ │
+│                                             │
+├─────────────────────────────────────────────┤
+│ [Zobrazit celý deník]           [Zavřít]   │
+└─────────────────────────────────────────────┘
+```
 
 ## Technická implementace
 
-### 1. Databázová změna
+### 1. Data dostupná v notifikaci
 
-Přidat sloupec `metadata` do tabulky `notifications`:
+Notifikace `nutrition_entry_added` obsahuje:
+- `client_id` - ID klienta
+- `entity_type: 'nutrition_session'`
+- `entity_id` - ID session
+- `created_at` - Datum vytvoření (= den zápisu)
 
-```sql
-ALTER TABLE public.notifications 
-ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT NULL;
-```
-
-### 2. Ukládání změn do notifikace
-
-Upravit `useClientPortalProfile.ts` - při ukládání změn uložit nové hodnoty do metadata:
+### 2. Nová komponenta - NutritionEntryDetailDialog
 
 ```typescript
-// Před
-await supabase.from("notifications").insert({
-  type: "client_profile_updated",
-  message: "Jana upravil(a): email, telefon",
-  // ... bez metadat
-});
-
-// Po
-await supabase.from("notifications").insert({
-  type: "client_profile_updated",
-  message: "Jana upravil(a): email, telefon",
-  metadata: {
-    changes: {
-      email: { value: "novy@email.cz" },
-      telefon: { value: "+420 777 888 999" }
-    }
-  }
-});
+interface NutritionEntryDetailDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  notification: UnifiedNotification | null;
+}
 ```
 
-### 3. Nová komponenta - ProfileUpdateDetailDialog
+Dialog:
+1. Extrahuje `client_id` a datum z `notification.created_at`
+2. Načte záznamy z DB pro daný den
+3. Zobrazí jídla, nápoje a kávu v přehledné formě
+4. Tlačítko pro navigaci na celý deník
 
-Dialog podobný FeedbackDetailDialog:
+### 3. Úprava UnifiedNotificationItem
 
-| Prvek | Popis |
-|-------|-------|
-| Header | Jméno klienta + čas změny |
-| Změny | Seznam polí s novými hodnotami (ikona + label + hodnota) |
-| Akce | Tlačítko "Zobrazit celý profil" → navigace na profil |
+Aktuálně agregované položky volají pouze `onClick?.()` bez předání konkrétní položky:
+
+```typescript
+// PŘED (řádek 250-253)
+onClick={(e) => {
+  e.stopPropagation();
+  onClick?.();  // ← Volá handler pro celou agregaci
+}}
+```
+
+Potřeba:
+- Přidat nový callback `onItemClick?: (item: UnifiedNotification) => void`
+- Volat s konkrétní položkou
 
 ### 4. Úprava NotificationCenter
 
-Při kliknutí na `client_profile_updated`:
-- Otevřít dialog s detailem změn
-- Předat notification data do dialogu
-- Při kliknutí na "Zobrazit celý profil" navigovat na profil
-
----
+- Přidat stav pro vybranou nutrition notifikaci
+- Přidat `NutritionEntryDetailDialog`
+- Předat `onItemClick` do `UnifiedNotificationItem`
 
 ## Změny v souborech
 
 | Soubor | Změna |
 |--------|-------|
-| `notifications` (DB) | Přidat `metadata` JSONB sloupec |
-| `useClientPortalProfile.ts` | Ukládat změněné hodnoty do metadata |
-| `ProfileUpdateDetailDialog.tsx` | **Nový** - dialog pro zobrazení změn |
-| `NotificationCenter.tsx` | Otevírat dialog místo navigace |
-| `useAggregatedNotifications.ts` | Přidat `metadata` do typu `UnifiedNotification` |
-| `useNotifications.ts` | Přidat `metadata` do selectu |
+| `NutritionEntryDetailDialog.tsx` | **Nový** - Dialog pro zobrazení denních záznamů |
+| `UnifiedNotificationItem.tsx` | Přidat `onItemClick` callback pro agregované položky |
+| `NotificationCenter.tsx` | Integrovat dialog a handler |
 
----
+## Detailní design dialogu
 
-## UI detailu změn
+### Sekce JÍDLA
+Pro každý záznam z `nutrition_food_entries`:
+- Ikona podle `meal_type` (snídaně 🍳, oběd 🥗, večeře 🍽️, svačina 🍎)
+- Čas (`entry_time`)
+- Popis (`description`)
+- Porce (`portion_size`)
+- Volitelně: kvalita, sytost
 
-```text
-┌────────────────────────────────────────────────────────────┐
-│                                                            │
-│  📝 Aktualizace profilu                              [✕]   │
-│                                                            │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ Jana Nováková             před 2 hodinami            │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                            │
-│  ZMĚNĚNÉ ÚDAJE                                             │
-│  ───────────────────────────────────────────────────────   │
-│                                                            │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ 📧 Email                                             │  │
-│  │ jana.novakova@email.cz                               │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                            │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ 📞 Telefon                                           │  │
-│  │ +420 777 888 999                                     │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                            │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ 🏥 Zdravotní omezení                                 │  │
-│  │ Bolest pravého kolena po operaci meniskusu,         │  │
-│  │ nutno se vyhnout hlubokým dřepům.                    │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                            │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ 🎯 Tréninkové cíle                                   │  │
-│  │ Síla, Zdraví                                         │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                            │
-│  ───────────────────────────────────────────────────────   │
-│                                                            │
-│            [👤 Zobrazit celý profil]        [Zavřít]       │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
-```
+### Sekce NÁPOJE
+Pro každý záznam z `nutrition_drink_entries`:
+- Ikona podle typu (voda 💧, slazený 🥤, alkohol 🍺)
+- Čas + objem
 
----
+### Sekce KOFEIN
+Pro každý záznam z `nutrition_coffee_entries`:
+- Ikona ☕
+- Typ (espresso, čaj, energy)
+- Čas
 
-## Mapování polí na ikony a labely
-
-| Klíč | Ikona | Label CZ |
-|------|-------|----------|
-| `email` | 📧 Mail | Email |
-| `telefon` | 📞 Phone | Telefon |
-| `datum narození` | 📅 Calendar | Datum narození |
-| `pohlaví` | 👤 User | Pohlaví |
-| `dominantní ruka` | ✋ Hand | Dominantní ruka |
-| `typ práce` | 💼 Briefcase | Typ práce |
-| `hodiny vsedě` | 🪑 Armchair | Hodiny vsedě denně |
-| `spánek` | 😴 Moon | Průměrný spánek |
-| `úroveň stresu` | 😰 Brain | Úroveň stresu |
-| `zdravotní omezení` | 🏥 Stethoscope | Zdravotní omezení |
-| `sportovní historie` | 🏆 Trophy | Sportovní historie |
-| `aktuální aktivity` | 🏃 Activity | Aktuální aktivity |
-| `tréninkové cíle` | 🎯 Target | Tréninkové cíle |
-| `doplňky stravy` | 💊 Pill | Doplňky stravy |
-| `stravovací omezení` | 🥗 Salad | Stravovací omezení |
-
----
+### Prázdný stav
+Pokud pro daný den nejsou žádné záznamy:
+- "Pro tento den nebyly nalezeny záznamy"
+- Nabídnout přechod na celý deník
 
 ## Implementační kroky
 
-### Krok 1: Databáze
-- Přidat `metadata` sloupec do `notifications` tabulky
+### Krok 1: NutritionEntryDetailDialog (nový soubor)
+- Vytvoření komponenty s fetch logikou
+- UI pro zobrazení jídel/nápojů/kávy
+- Navigace na celý deník
 
-### Krok 2: Backend logika
-- Upravit `useClientPortalProfile.ts` pro ukládání změn do metadata
+### Krok 2: UnifiedNotificationItem
+- Přidat prop `onItemClick?: (item: UnifiedNotification) => void`
+- Upravit onClick v rozbalených položkách
 
-### Krok 3: Typy
-- Rozšířit `useNotifications.ts` o metadata
-- Rozšířit `UnifiedNotification` typ
+### Krok 3: NotificationCenter
+- Přidat stav `selectedNutritionNotification`
+- Přidat stav `nutritionDialogOpen`
+- Přidat handler `handleNutritionItemClick`
+- Předat `onItemClick` do `UnifiedNotificationItem`
+- Přidat `NutritionEntryDetailDialog`
 
-### Krok 4: Nová komponenta
-- Vytvořit `ProfileUpdateDetailDialog.tsx`
+## Pořadí implementace
 
-### Krok 5: Integrace
-- Upravit `NotificationCenter.tsx` pro otevření dialogu
-
----
-
-## Výhody řešení
-
-1. Trenér okamžitě vidí, co se změnilo
-2. Nemusí scrollovat celým profilem
-3. Může rychle pokračovat na profil, pokud potřebuje více detailů
-4. Konzistentní UX s ostatními detailními dialogy (FeedbackDetailDialog)
-
----
+1. **NutritionEntryDetailDialog.tsx** - nová komponenta
+2. **UnifiedNotificationItem.tsx** - přidat onItemClick
+3. **NotificationCenter.tsx** - integrace
 
 ## Časový odhad
 
 | Úkol | Čas |
 |------|-----|
-| Databázová migrace | 5 min |
-| Úprava useClientPortalProfile | 15 min |
-| Úprava typů | 10 min |
-| ProfileUpdateDetailDialog | 30 min |
-| Integrace do NotificationCenter | 15 min |
-| **Celkem** | **~1.5 hodiny** |
+| NutritionEntryDetailDialog | 40 min |
+| UnifiedNotificationItem úprava | 10 min |
+| NotificationCenter integrace | 15 min |
+| **Celkem** | **~1 hodina** |
