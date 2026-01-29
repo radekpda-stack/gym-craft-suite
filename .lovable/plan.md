@@ -1,261 +1,247 @@
 
-# Sjednocení UI: Feedbacky, Strava, Klientský portál
+# Vylepšení klientského jídelního deníku + Notifikace pro trenérské akce
 
 ## Analýza současného stavu
 
-Po důkladné analýze jsem identifikoval tyto klíčové **rozdíly a nekonzistence**:
+### Co funguje dobře:
+- **Přehledný WeekStrip** pro navigaci mezi dny
+- **Rychlé tlačítka** pro snídani/oběd/večeři/svačinu
+- **Widgety** pro vodu a kofein s progress indikátory
+- **Timeline záznamů** chronologicky seřazená
+- **Možnost odpovědět trenérovi** na komentář
 
-### 1. Rozdílné struktury layoutu
+### Identifikované problémy:
 
-| Sekce | Aktuální layout |
-|-------|-----------------|
-| **Feedbacky** | 3-sloupcový grid (Inbox vlevo, Tabs vpravo), 5 status karet nahoře |
-| **Strava** | Jednoduchý vertikální layout, 4 KPI karty + 2 rozšiřující karty |
-| **Klientský portál** | Taby (Přehled/Klienti/Deníky/Nastavení), 5 KPI karet |
-
-### 2. Rozdílný design seznamů klientů
-
-| Sekce | Komponenta | Design |
-|-------|------------|--------|
-| **Feedbacky** | `FeedbackAttentionInbox` | ScrollArea s border-left indikátorem |
-| **Strava** | `NutritionClientRow` | Kliknutelné karty s 2-řádkovým layoutem |
-| **Portál** | `ClientAccessList` | Tabulka (desktop) / karty (mobile) |
-| **Portál deníky** | `ClientWorkoutLogsOverview` | Rozbalitelné karty s akcemi |
-
-### 3. Chybějící jednotná "Activity Timeline"
-- Feedbacky: má `FeedbackActivityTimeline` + `FeedbackAttentionInbox`
-- Strava: **CHYBÍ** - žádná timeline nedávné aktivity
-- Portál: má `PortalRecentActivity`, ale jiný design
+| Problém | Popis |
+|---------|-------|
+| **Chybějící notifikace při "Zkontrolováno"** | Když trenér klikne na tlačítko Zkontrolováno, klient se to nedozví |
+| **Chybějící notifikace při komentáři** | Když trenér komentuje jídlo nebo den, klient neobdrží notifikaci |
+| **Žádný vizuální indikátor kontroly** | Klient nevidí, že den byl zkontrolován trenérem |
+| **Poznámka dne není prominentní** | Poznámka od trenéra by měla být viditelnější |
+| **Dlouhé formuláře** | Příliš mnoho scrollování při přidávání jídla |
 
 ---
 
-## Navrhované sjednocené UI
+## Navrhované změny
+
+### 1. Notifikace pro klienta
+
+#### 1.1 Notifikace při "Zkontrolováno"
+Když trenér označí den jako zkontrolovaný:
 
 ```text
-JEDNOTNÝ LAYOUT PRO VŠECHNY TŘI SEKCE:
-┌─────────────────────────────────────────────────────────────┐
-│ HEADER: Název sekce + popis + hlavní akce                   │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│ KPI KARTY (4 jednotné) - kliknutelné pro filtraci          │
-│ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐                │
-│ │ Aktivní│ │ Dnes  │ │Týden   │ │Pozornost│               │
-│ │   12   │ │   5   │ │  28   │ │   3    │                │
-│ └────────┘ └────────┘ └────────┘ └────────┘                │
-│                                                             │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│ DVA SLOUPCE (lg:2/3 + lg:1/3)                              │
-│ ┌──────────────────────────┐ ┌────────────────────────────┐│
-│ │ HLAVNÍ OBSAH             │ │ SIDEBAR                    ││
-│ │                          │ │                            ││
-│ │ [Hledat klienta...]      │ │ Nedávná aktivita           ││
-│ │                          │ │ ┌──────────────────────┐   ││
-│ │ FILTRY: Vše | Aktivní |  │ │ │ ○ Jana - zapsala     │   ││
-│ │         Pozornost        │ │ │   stravu (před 5min) │   ││
-│ │                          │ │ │ ○ Petr - vyplnil     │   ││
-│ │ ┌──────────────────────┐ │ │ │   feedback (1h)      │   ││
-│ │ │ [Avatar] Jana Nová   │ │ │ │ ○ Eva - přihlášena   │   ││
-│ │ │ Dnes • 3 záz. • OK   │ │ │ │   (2h)               │   ││
-│ │ └──────────────────────┘ │ │ └──────────────────────┘   ││
-│ │ ┌──────────────────────┐ │ │                            ││
-│ │ │ [Avatar] Petr Sv. ⚠️ │ │ │ Vyžaduje pozornost        ││
-│ │ │ Včera • 1 záznam     │ │ │ ┌──────────────────────┐   ││
-│ │ └──────────────────────┘ │ │ │ 3 klienti čekají     │   ││
-│ │                          │ │ │ [Zobrazit]           │   ││
-│ │ ...                      │ │ └──────────────────────┘   ││
-│ └──────────────────────────┘ └────────────────────────────┘│
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ 🔔 Notifikace pro klienta               │
+├──────────────────────────────────────────┤
+│ ✅ Jídelníček zkontrolován              │
+│ Trenér zkontroloval váš jídelníček      │
+│ pro 28.01.2026                          │
+│                                          │
+│ [Zobrazit v deníku]                     │
+└──────────────────────────────────────────┘
+```
+
+#### 1.2 Notifikace při komentáři k jídlu
+Když trenér přidá komentář nebo hodnocení:
+
+```text
+┌──────────────────────────────────────────┐
+│ 💬 Nový komentář od trenéra             │
+├──────────────────────────────────────────┤
+│ Trenér okomentoval váš oběd:            │
+│ "Výborná volba bílkovin..."             │
+│                                          │
+│ [Zobrazit a odpovědět]                  │
+└──────────────────────────────────────────┘
+```
+
+#### 1.3 Notifikace při poznámce k celému dni
+```text
+┌──────────────────────────────────────────┐
+│ 📝 Trenér přidal poznámku ke dni        │
+├──────────────────────────────────────────┤
+│ "Dobrá práce, jen přidej víc zeleniny"  │
+│                                          │
+│ [Zobrazit v deníku]                     │
+└──────────────────────────────────────────┘
 ```
 
 ---
 
-## Konkrétní změny
+### 2. Vizuální vylepšení klientského deníku
 
-### Krok 1: Vytvoření sdílených komponent
+#### 2.1 Banner "Zkontrolováno trenérem"
+Na vrchu dne, který trenér zkontroloval:
 
-#### 1.1 `UnifiedKPICards` - Jednotné KPI karty
-```typescript
-// Nová komponenta: src/components/shared/UnifiedKPICards.tsx
-// Použije stejný design jako PortalUsageStats
-
-interface KPICard {
-  id: string;
-  label: string;
-  value: number | string;
-  icon: LucideIcon;
-  color: 'success' | 'primary' | 'warning' | 'destructive' | 'muted';
-  subLabel?: string;
-  onClick?: () => void;
-}
-```
-
-**Jednotný design karty:**
-- Grid: `grid-cols-2 lg:grid-cols-4` (4 karty)
-- Ikona v kruhu 40x40px vlevo
-- Hodnota 2xl font-bold
-- Popisek text-xs text-muted-foreground
-- Hover efekt pro kliknutelné karty
-
-#### 1.2 `UnifiedClientRow` - Jednotný řádek klienta
-```typescript
-// Nová komponenta: src/components/shared/UnifiedClientRow.tsx
-// Sloučí NutritionClientRow + položky z Attention Inbox
-
-interface UnifiedClientRowProps {
-  client: {
-    id: string;
-    name: string;
-    photo_url?: string;
-  };
-  status: 'active' | 'warning' | 'inactive';
-  primaryText: string;       // "Dnes • 3 záznamy"
-  secondaryText?: string;    // "Poslední feedback: včera"
-  badges?: Badge[];
-  onClick?: () => void;
-}
-```
-
-**Jednotný design:**
-- Avatar 36x36px
-- Jméno font-medium
-- Status badge (warning = destructive/10)
-- ChevronRight na hover
-- Border-left-4 pro warning stavy
-
-#### 1.3 `UnifiedActivityTimeline` - Jednotná timeline
-```typescript
-// Nová komponenta: src/components/shared/UnifiedActivityTimeline.tsx
-// Kombinuje FeedbackActivityTimeline + PortalRecentActivity
-
-interface ActivityItem {
-  id: string;
-  clientId: string;
-  clientName: string;
-  type: string;
-  label: string;
-  timestamp: string;
-  icon: LucideIcon;
-  color: 'success' | 'warning' | 'destructive' | 'primary' | 'muted';
-  detail?: string;
-}
-```
-
-### Krok 2: Refaktoring Feedbacky
-
-**Změny:**
-1. Zredukovat 5 KPI karet na 4 (sloučit "Expirováno" do "Čekající")
-2. Přesunout timeline doprava (sidebar)
-3. Hlavní obsah = seznam klientů s filtry
-4. Odstranit taby - vše na jedné stránce s filtry
-
-**Nová struktura:**
 ```text
-┌─ KPI: K odeslání | Čekající | Vyplněno | Red Flags ──┐
-├─ 2 sloupce ───────────────────────────────────────────┤
-│ HLAVNÍ:                    │ SIDEBAR:                 │
-│ - Search + Filtry          │ - Nedávná aktivita       │
-│ - Seznam klientů           │ - Potřebuje pozornost    │
-│   (UnifiedClientRow)       │   (top 5 urgentních)     │
-│ - Klik = detail feedbacku  │                          │
-└────────────────────────────┴──────────────────────────┘
-```
-
-### Krok 3: Refaktoring Strava
-
-**Změny:**
-1. Přidat `UnifiedActivityTimeline` do sidebaru
-2. Použít `UnifiedClientRow` místo `NutritionClientRow`
-3. Sjednotit KPI karty s ostatními sekcemi
-4. Přidat sidebar s nedávnou aktivitou
-
-**Nová struktura:**
-```text
-┌─ KPI: Aktivně zapisuje | Dnes | Týden | Pozornost ───┐
-├─ 2 sloupce ───────────────────────────────────────────┤
-│ HLAVNÍ:                    │ SIDEBAR:                 │
-│ - Search + Filtry          │ - Nedávná aktivita       │
-│ - Seznam klientů           │   (jídlo, pití, kofein)  │
-│   (UnifiedClientRow)       │ - Klienti k pozornosti   │
-│ - Klik = detail nutrice    │                          │
-└────────────────────────────┴──────────────────────────┘
-```
-
-### Krok 4: Refaktoring Klientský portál
-
-**Změny:**
-1. Zjednodušit taby (odstranit Deníky - přesunout do hlavního přehledu)
-2. Sjednotit KPI karty design
-3. Použít `UnifiedClientRow` pro seznam klientů
-4. Přidat sekci "Nedávné tréninky klientů" přímo do přehledu
-
-**Nová struktura:**
-```text
-┌─ KPI: Klientů | Dnes aktivní | Týden | Pozornost ────┐
-├─ Taby: Přehled | Klienti | Nastavení ─────────────────┤
-│                                                       │
-│ PŘEHLED (2 sloupce):                                  │
-│ - Nedávné tréninky         │ - Nedávná aktivita       │
-│   (top 5 + Zobrazit vše)   │   (timeline)             │
-│ - Rychlé vyhledávání       │ - Potřebuje pozornost    │
-│                            │                          │
+┌───────────────────────────────────────────────────────┐
+│ ✅ Zkontrolováno trenérem • 28.01. v 14:32           │
 └───────────────────────────────────────────────────────┘
 ```
 
----
+#### 2.2 Prominentní zobrazení poznámky trenéra
+```text
+┌───────────────────────────────────────────────────────┐
+│ 💬 TRENÉR                                             │
+│ ┌─────────────────────────────────────────────────┐  │
+│ │ Dobrá práce dnes! Příště zkus přidat víc       │  │
+│ │ bílkovin k obědu. 👍                           │  │
+│ └─────────────────────────────────────────────────┘  │
+│ [Odpovědět...]                                       │
+└───────────────────────────────────────────────────────┘
+```
 
-## Technické detaily implementace
-
-### Nové soubory
-| Soubor | Účel |
-|--------|------|
-| `src/components/shared/UnifiedKPICard.tsx` | Jedna KPI karta |
-| `src/components/shared/UnifiedKPICards.tsx` | Grid KPI karet |
-| `src/components/shared/UnifiedClientRow.tsx` | Řádek klienta |
-| `src/components/shared/UnifiedActivityTimeline.tsx` | Timeline aktivity |
-| `src/components/shared/AttentionInbox.tsx` | Sidebar "Pozornost" |
-
-### Upravené soubory
-| Soubor | Změny |
-|--------|-------|
-| `FeedbackOverview.tsx` | Nový layout bez tabů, 2-sloupcový grid |
-| `NutritionPage.tsx` | Přidán sidebar, použití sdílených komponent |
-| `ClientPortalAdmin.tsx` | Zjednodušené taby, integrované deníky |
-
-### Design tokeny (konzistentní barvy)
-```typescript
-const STATUS_COLORS = {
-  active: { bg: 'bg-success/10', text: 'text-success' },
-  warning: { bg: 'bg-warning/10', text: 'text-warning' },
-  danger: { bg: 'bg-destructive/10', text: 'text-destructive' },
-  neutral: { bg: 'bg-muted', text: 'text-muted-foreground' },
-  primary: { bg: 'bg-primary/10', text: 'text-primary' },
-};
+#### 2.3 Nová struktura stránky
+```text
+┌─────────────────────────────────────────────────────────┐
+│ Nutriční deník                                          │
+│ Jednoduché sledování stravy                             │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│ [ Po | Út | St | Čt | Pá | So | Ne ]  ← WeekStrip      │
+│                                                         │
+│ ┌─────────────────────────────────────────────────────┐│
+│ │ ✅ Den zkontrolován trenérem • 28.01. 14:32        ││ ← NOVÉ
+│ └─────────────────────────────────────────────────────┘│
+│                                                         │
+│ ┌─────────────────────────────────────────────────────┐│
+│ │ 💬 Poznámka od trenéra                             ││ ← VYLEPŠENÉ
+│ │ "Výborně, dnes perfektní!"                         ││
+│ │ [Odpovědět]                                        ││
+│ └─────────────────────────────────────────────────────┘│
+│                                                         │
+│ ┌─────────────────┐ ┌─────────────────┐                │
+│ │ 💧 Voda: 1.5L  │ │ ☕ Káva: 2× OK │  ← Widgety     │
+│ │ ████████░░ 75% │ │ ✓ Před 14:00   │                │
+│ └─────────────────┘ └─────────────────┘                │
+│                                                         │
+│ ┌─────────────────────────────────────────────────────┐│
+│ │  📊  Dnešní záznamy: 3 jídel, 1.5L, 2☕            ││ ← ZJEDNODUŠENÉ
+│ └─────────────────────────────────────────────────────┘│
+│                                                         │
+│ ┌──────────────────────────────────────────┐           │
+│ │ + Přidat jídlo nebo nápoj               │ ← Hlavní  │
+│ └──────────────────────────────────────────┘   tlačítko│
+│                                                         │
+│ ZÁZNAMY                                                 │
+│ ┌─────────────────────────────────────────────────────┐│
+│ │ 🌅 7:30 • Snídaně                                  ││
+│ │ Ovesná kaše s ovocem                               ││
+│ │ ┌────────────────────────────────┐                 ││
+│ │ │ ⭐ 8/10 • 💬 "Výborná volba!" │ ← Trenér        ││
+│ │ │ [Odpovědět]                    │                 ││
+│ │ └────────────────────────────────┘                 ││
+│ └─────────────────────────────────────────────────────┘│
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Klíčové principy sjednocení
+## Technické změny
 
-1. **Konzistentní layout**: Header -> KPI karty -> 2 sloupce (hlavní + sidebar)
-2. **Jednotný design klientských řádků**: Avatar + jméno + status + detail + akce
-3. **Aktivita vpravo**: Sidebar vždy ukazuje "co se děje" v reálném čase
-4. **Pozornost nahoře**: Klienti vyžadující akci jsou vždy viditelní
-5. **Kliknutelné KPI**: Každá karta filtruje seznam pod sebou
-6. **Mobile-first**: Na mobilu sidebar skryt nebo pod hlavním obsahem
+### Soubory k úpravě
+
+| Soubor | Změny |
+|--------|-------|
+| `src/hooks/useNutritionFeedback.ts` | Přidat vytváření notifikace pro klienta při komentáři |
+| `src/hooks/useNutritionDayNotes.ts` | Přidat notifikaci při isChecked=true a při trainerNote |
+| `src/pages/client-portal/ClientPortalNutrition.tsx` | Přidat banner "Zkontrolováno" a vylepšit zobrazení poznámky |
+| `src/components/client-portal/nutrition/TodayEntries.tsx` | Vylepšit zobrazení trenérských komentářů |
+| `src/components/client-portal/ClientNotificationCenter.tsx` | Přidat nové typy notifikací |
+
+### Nové typy notifikací pro klienta
+
+```typescript
+// Nové typy v client_portal_notifications:
+'nutrition_day_checked'     // Trenér zkontroloval den
+'nutrition_entry_comment'   // Trenér komentoval jídlo/nápoj
+'nutrition_day_note'        // Trenér přidal poznámku ke dni
+```
+
+### Implementace notifikací
+
+#### V `useUpsertDayNote`:
+```typescript
+// Při isChecked = true (nově zaškrtnuto):
+await supabase.from('client_portal_notifications').insert({
+  client_id: clientId,
+  type: 'nutrition_day_checked',
+  title: '✅ Jídelníček zkontrolován',
+  message: `Trenér zkontroloval váš jídelníček pro ${formattedDate}`,
+  action_url: '/client/nutrition',
+  metadata: { date: dateStr },
+});
+
+// Při trainerNote (nová poznámka):
+await supabase.from('client_portal_notifications').insert({
+  client_id: clientId,
+  type: 'nutrition_day_note',
+  title: '📝 Nová poznámka od trenéra',
+  message: trainerNote.substring(0, 100) + (trainerNote.length > 100 ? '...' : ''),
+  action_url: '/client/nutrition',
+  metadata: { date: dateStr },
+});
+```
+
+#### V `useTrainerFeedback`:
+```typescript
+// Při komentáři k jídlu/nápoji:
+if (comment) {
+  // Získat client_id z entry
+  const { data: entry } = await supabase
+    .from(table)
+    .select('client_id, description, entry_date')
+    .eq('id', entryId)
+    .single();
+    
+  await supabase.from('client_portal_notifications').insert({
+    client_id: entry.client_id,
+    type: 'nutrition_entry_comment',
+    title: '💬 Nový komentář od trenéra',
+    message: `Trenér okomentoval: ${entry.description?.substring(0, 50)}...`,
+    action_url: '/client/nutrition',
+    metadata: { entry_date: entry.entry_date },
+  });
+}
+```
 
 ---
 
-## Očekávaný výsledek
+## Vylepšení UI klientského deníku
 
-Trenér uvidí ve všech třech sekcích:
-- **Rychlý přehled** (4 KPI karty) - kolik klientů je aktivních, kolik potřebuje pozornost
-- **Seznam klientů** - jednotný design, jasné indikátory stavu
-- **Nedávná aktivita** - timeline co klienti právě dělají
-- **Prioritní úkoly** - sidebar s urgentními položkami
+### Nová komponenta: `TrainerReviewBanner`
 
-Jednotné ovládání:
-- Stejné filtry (Vše | Aktivní | Pozornost)
-- Stejné vyhledávání
-- Stejné akce (klik na klienta = detail)
+```typescript
+interface TrainerReviewBannerProps {
+  isChecked: boolean;
+  checkedAt: string | null;
+  trainerNote: string | null;
+  onReply?: () => void;
+}
+```
+
+Zobrazí:
+- Zelený banner pokud je den zkontrolován
+- Prominentní sekci s poznámkou trenéra
+- Tlačítko pro odpověď
+
+### Vylepšená `TodayEntries`
+
+- Jasnější vizuální odlišení trenérských komentářů
+- Animace při novém komentáři
+- Rychlá odpověď inline (ne v dialogu)
+
+---
+
+## Shrnutí klíčových změn
+
+1. **Notifikace fungují obousměrně** - trenér vidí aktivitu klienta, klient vidí reakce trenéra
+
+2. **Vizuální potvrzení kontroly** - klient jasně vidí, že trenér zkontroloval jeho jídelníček
+
+3. **Prominentní poznámky trenéra** - komentáře nejsou schované, ale jsou hlavním prvkem
+
+4. **Rychlá komunikace** - možnost odpovědět přímo z notifikace i z deníku
+
+5. **Akční URL** - kliknutí na notifikaci přenese klienta na správný den v deníku
