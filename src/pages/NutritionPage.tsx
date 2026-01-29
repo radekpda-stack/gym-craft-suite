@@ -5,27 +5,26 @@ import {
   Users,
   Search,
   Apple,
-  Clock,
-  ChevronRight,
   TrendingUp,
   Calendar,
-  Droplets,
-  Coffee,
   AlertTriangle,
+  Activity,
+  Coffee,
+  Droplets,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useClients } from '@/hooks/useClients';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, differenceInDays, isToday, isYesterday, subDays, parseISO } from 'date-fns';
+import { format, isToday, isYesterday, subDays, parseISO, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { NutritionClientRow } from '@/components/nutrition/NutritionClientRow';
+import { UnifiedKPICards, UnifiedClientRow, UnifiedActivityTimeline, AttentionInbox } from '@/components/shared';
+import type { KPICardConfig, ActivityItem, AttentionItem } from '@/components/shared';
 
 interface ClientNutritionStats {
   clientId: string;
@@ -37,7 +36,6 @@ interface ClientNutritionStats {
   recentDrinkCount: number;
   recentCoffeeCount: number;
   weekEntries: number;
-  // New fields for quality and warnings
   qualityDistribution: { good: number; normal: number; poor: number };
   emptyDays: number;
   lateCaffeineCount: number;
@@ -50,7 +48,6 @@ interface DashboardStats {
   avgEntriesPerClient: number;
   mostActiveClient: string | null;
   todayEntries: number;
-  // New aggregated quality stats
   qualityDistribution: { good: number; normal: number; poor: number };
   clientsWithWarnings: number;
 }
@@ -76,7 +73,6 @@ function useClientsNutritionStats() {
         } 
       };
 
-      // Get all sessions for this trainer's clients
       const { data: sessions } = await supabase
         .from('nutrition_log_sessions')
         .select('id, client_id, status, start_date, end_date')
@@ -116,7 +112,6 @@ function useClientsNutritionStats() {
       const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
       const weekAgo = format(subDays(new Date(), 7), 'yyyy-MM-dd');
 
-      // Get all entries with quality field
       const [foodResult, drinksResult, coffeeResult] = await Promise.all([
         supabase
           .from('nutrition_food_entries')
@@ -139,14 +134,12 @@ function useClientsNutritionStats() {
       const drinkEntries = drinksResult.data || [];
       const coffeeEntries = coffeeResult.data || [];
 
-      // Build stats per client
       const statsMap = new Map<string, ClientNutritionStats>();
       let totalWeekEntries = 0;
       let todayEntriesCount = 0;
       let totalQuality = { good: 0, normal: 0, poor: 0 };
       let clientsWithWarningsCount = 0;
 
-      // Get all dates in the week for empty days calculation
       const weekDates = Array.from({ length: 7 }, (_, i) => 
         format(subDays(new Date(), i), 'yyyy-MM-dd')
       );
@@ -177,7 +170,6 @@ function useClientsNutritionStats() {
         const todayCoffee = clientCoffee.filter(e => e.entry_date === today).length;
         todayEntriesCount += todayFood + todayDrinks + todayCoffee;
 
-        // Calculate quality distribution for this client
         const clientQuality = { good: 0, normal: 0, poor: 0 };
         clientFood.forEach(entry => {
           if (entry.quality === 'good') clientQuality.good++;
@@ -185,16 +177,13 @@ function useClientsNutritionStats() {
           else clientQuality.normal++;
         });
         
-        // Aggregate to total
         totalQuality.good += clientQuality.good;
         totalQuality.normal += clientQuality.normal;
         totalQuality.poor += clientQuality.poor;
 
-        // Calculate empty days (days in active period without entries)
         const activeDatesSet = new Set(allDates);
         const emptyDays = hasActive ? weekDates.filter(d => !activeDatesSet.has(d)).length : 0;
 
-        // Calculate late caffeine (coffee after 18:00)
         const lateCaffeineCount = clientCoffee.filter(entry => {
           if (!entry.occurred_at) return false;
           try {
@@ -205,7 +194,6 @@ function useClientsNutritionStats() {
           }
         }).length;
 
-        // Determine if client has warning
         const hasWarning = hasActive && (emptyDays >= 3 || lateCaffeineCount >= 2);
         if (hasWarning) clientsWithWarningsCount++;
 
@@ -252,7 +240,50 @@ function useClientsNutritionStats() {
   });
 }
 
-type FilterType = 'all' | 'active' | 'attention' | 'recent';
+// Hook to get recent nutrition activity
+function useNutritionActivity() {
+  return useQuery({
+    queryKey: ['nutrition-recent-activity'],
+    queryFn: async (): Promise<ActivityItem[]> => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const weekAgo = subDays(new Date(), 7);
+
+      // Get recent food entries with client info
+      const { data: foodEntries } = await supabase
+        .from('nutrition_food_entries')
+        .select(`
+          id,
+          client_id,
+          entry_date,
+          meal_type,
+          created_at,
+          clients!inner(id, name)
+        `)
+        .gte('created_at', weekAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(15);
+
+      const activities: ActivityItem[] = (foodEntries || []).map((entry: any) => ({
+        id: entry.id,
+        clientId: entry.client_id,
+        clientName: entry.clients?.name || 'Klient',
+        type: 'food',
+        label: 'zapsal/a jídlo',
+        timestamp: entry.created_at,
+        icon: Apple,
+        color: 'success' as const,
+        detail: entry.meal_type,
+      }));
+
+      return activities.slice(0, 10);
+    },
+    refetchInterval: 60000,
+  });
+}
+
+type FilterType = 'all' | 'active' | 'attention';
 
 export default function NutritionPage() {
   usePageTracking('nutrition');
@@ -261,6 +292,8 @@ export default function NutritionPage() {
   const [filter, setFilter] = useState<FilterType>('all');
   
   const { data, isLoading } = useClientsNutritionStats();
+  const { data: recentActivity = [], isLoading: activityLoading } = useNutritionActivity();
+  
   const stats = data?.stats || [];
   const dashboard = data?.dashboard || { 
     totalActiveClients: 0, 
@@ -272,13 +305,44 @@ export default function NutritionPage() {
     clientsWithWarnings: 0,
   };
 
-  // Calculate quality percentages
-  const totalQualityEntries = dashboard.qualityDistribution.good + dashboard.qualityDistribution.normal + dashboard.qualityDistribution.poor;
-  const qualityPercentages = totalQualityEntries > 0 ? {
-    good: Math.round((dashboard.qualityDistribution.good / totalQualityEntries) * 100),
-    normal: Math.round((dashboard.qualityDistribution.normal / totalQualityEntries) * 100),
-    poor: Math.round((dashboard.qualityDistribution.poor / totalQualityEntries) * 100),
-  } : { good: 0, normal: 0, poor: 0 };
+  // KPI Cards configuration
+  const kpiCards: KPICardConfig[] = [
+    {
+      id: 'active',
+      label: 'Aktivně zapisuje',
+      value: dashboard.totalActiveClients,
+      icon: Apple,
+      variant: 'success',
+    },
+    {
+      id: 'today',
+      label: 'Dnes zapsáno',
+      value: dashboard.todayEntries,
+      icon: Calendar,
+      variant: 'primary',
+    },
+    {
+      id: 'week',
+      label: 'Tento týden',
+      value: dashboard.totalEntriesThisWeek,
+      icon: TrendingUp,
+      variant: 'accent',
+    },
+    {
+      id: 'attention',
+      label: 'Vyžaduje pozornost',
+      value: dashboard.clientsWithWarnings,
+      icon: AlertTriangle,
+      variant: dashboard.clientsWithWarnings > 0 ? 'destructive' : 'muted',
+    },
+  ];
+
+  // Handle KPI card click
+  const handleKPIClick = (id: string) => {
+    if (id === 'active') setFilter('active');
+    else if (id === 'attention') setFilter('attention');
+    else setFilter('all');
+  };
 
   // Filter and search
   const filteredStats = stats.filter(s => {
@@ -287,19 +351,15 @@ export default function NutritionPage() {
     }
     if (filter === 'active' && !s.hasActiveSession) return false;
     if (filter === 'attention' && !s.hasWarning) return false;
-    if (filter === 'recent' && s.totalEntries === 0) return false;
     return true;
   });
 
   // Sort: clients with warnings first, then active, then by last entry
   const sortedStats = [...filteredStats].sort((a, b) => {
-    // Warnings first
     if (a.hasWarning && !b.hasWarning) return -1;
     if (!a.hasWarning && b.hasWarning) return 1;
-    // Then active
     if (a.hasActiveSession && !b.hasActiveSession) return -1;
     if (!a.hasActiveSession && b.hasActiveSession) return 1;
-    // Then by last entry
     if (a.lastEntryDate && b.lastEntryDate) {
       return b.lastEntryDate.localeCompare(a.lastEntryDate);
     }
@@ -308,27 +368,32 @@ export default function NutritionPage() {
     return a.clientName.localeCompare(b.clientName);
   });
 
+  // Format last entry for display
   const formatLastEntry = (dateStr: string | null) => {
     if (!dateStr) return 'Žádné záznamy';
     const date = new Date(dateStr);
     if (isToday(date)) return 'Dnes';
     if (isYesterday(date)) return 'Včera';
-    const days = differenceInDays(new Date(), date);
-    if (days < 7) return `Před ${days} dny`;
     return format(date, 'd. M.', { locale: cs });
   };
 
-  const getActivityColor = (lastEntryDate: string | null, hasWarning: boolean) => {
-    if (hasWarning) return 'bg-destructive/10 text-destructive';
-    if (!lastEntryDate) return 'bg-muted text-muted-foreground';
-    const date = new Date(lastEntryDate);
-    if (isToday(date)) return 'bg-success/10 text-success';
-    if (isYesterday(date)) return 'bg-warning/10 text-warning';
-    return 'bg-muted text-muted-foreground';
-  };
+  // Build attention items
+  const attentionItems: AttentionItem[] = stats
+    .filter(s => s.hasWarning)
+    .map(s => ({
+      id: s.clientId,
+      clientId: s.clientId,
+      clientName: s.clientName,
+      priority: 'medium' as const,
+      label: s.emptyDays >= 3 ? 'Prázdné dny' : 'Pozdní kofein',
+      reason: s.emptyDays >= 3 
+        ? `${s.emptyDays} dnů bez záznamu` 
+        : `${s.lateCaffeineCount}× kofein po 18:00`,
+      icon: s.emptyDays >= 3 ? Calendar : Coffee,
+    }));
 
   return (
-    <div className="container mx-auto py-4 sm:py-6 space-y-4 sm:space-y-6">
+    <div className="container mx-auto py-4 sm:py-6 space-y-5">
       {/* Header */}
       <div className="px-1">
         <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
@@ -340,246 +405,124 @@ export default function NutritionPage() {
         </p>
       </div>
 
-      {/* Dashboard Stats - Row 1: Basic metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center shrink-0">
-                <Apple className="w-5 h-5 text-success" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-2xl font-bold">{dashboard.totalActiveClients}</p>
-                <p className="text-xs text-muted-foreground truncate">Aktivně zapisuje</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-5 h-5 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-2xl font-bold">{dashboard.totalEntriesThisWeek}</p>
-                <p className="text-xs text-muted-foreground truncate">Záznamů tento týden</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-                <Calendar className="w-5 h-5 text-blue-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-2xl font-bold">{dashboard.todayEntries}</p>
-                <p className="text-xs text-muted-foreground truncate">Dnes zapsáno</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-                <Users className="w-5 h-5 text-amber-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-2xl font-bold">{dashboard.avgEntriesPerClient}</p>
-                <p className="text-xs text-muted-foreground truncate">Průměr/klient</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* KPI Cards - Unified */}
+      <UnifiedKPICards 
+        cards={kpiCards}
+        activeId={filter !== 'all' ? filter : undefined}
+        onCardClick={handleKPIClick}
+        isLoading={isLoading}
+      />
 
-      {/* Dashboard Stats - Row 2: Quality and warnings */}
-      {totalQualityEntries > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Quality distribution card */}
-          <Card>
-            <CardContent className="pt-4 pb-3">
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">Kvalita stravy tento týden</p>
-                <div className="flex items-center gap-2 h-2 rounded-full overflow-hidden bg-muted">
-                  {qualityPercentages.good > 0 && (
-                    <div 
-                      className="h-full bg-emerald-500/70" 
-                      style={{ width: `${qualityPercentages.good}%` }}
-                    />
-                  )}
-                  {qualityPercentages.normal > 0 && (
-                    <div 
-                      className="h-full bg-amber-500/70" 
-                      style={{ width: `${qualityPercentages.normal}%` }}
-                    />
-                  )}
-                  {qualityPercentages.poor > 0 && (
-                    <div 
-                      className="h-full bg-rose-500/70" 
-                      style={{ width: `${qualityPercentages.poor}%` }}
-                    />
-                  )}
-                </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500/70" />
-                    {qualityPercentages.good}% kvalitní
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-amber-500/70" />
-                    {qualityPercentages.normal}% běžná
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-rose-500/70" />
-                    {qualityPercentages.poor}% nezdravá
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Warnings card */}
-          <Card className={cn(
-            dashboard.clientsWithWarnings > 0 && "border-destructive/30"
-          )}>
-            <CardContent className="pt-4 pb-3">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                  dashboard.clientsWithWarnings > 0 ? "bg-destructive/10" : "bg-muted"
-                )}>
-                  <AlertTriangle className={cn(
-                    "w-5 h-5",
-                    dashboard.clientsWithWarnings > 0 ? "text-destructive" : "text-muted-foreground"
-                  )} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-2xl font-bold">{dashboard.clientsWithWarnings}</p>
-                  <p className="text-xs text-muted-foreground truncate">Vyžaduje pozornost</p>
-                </div>
-                {dashboard.clientsWithWarnings > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-xs"
-                    onClick={() => setFilter('attention')}
-                  >
-                    Zobrazit
-                  </Button>
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Main Content - 2/3 */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Search and Filter */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Hledat klienta..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex gap-1">
+              <Button 
+                variant={filter === 'all' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setFilter('all')}
+              >
+                Vše
+              </Button>
+              <Button 
+                variant={filter === 'active' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setFilter('active')}
+              >
+                Aktivní
+              </Button>
+              <Button 
+                variant={filter === 'attention' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setFilter('attention')}
+                className={cn(
+                  filter === 'attention' && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 )}
-              </div>
+              >
+                <AlertTriangle className="w-3.5 h-3.5 mr-1" />
+                Pozornost
+              </Button>
+            </div>
+          </div>
+
+          {/* Client List - Unified Rows */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Klienti ({sortedStats.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : sortedStats.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p>Žádní klienti nenalezeni</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {sortedStats.map((stat) => (
+                    <UnifiedClientRow
+                      key={stat.clientId}
+                      client={{
+                        id: stat.clientId,
+                        name: stat.clientName,
+                        photo_url: null,
+                      }}
+                      status={stat.hasWarning ? 'warning' : stat.hasActiveSession ? 'active' : 'inactive'}
+                      primaryText={`${formatLastEntry(stat.lastEntryDate)} • ${stat.weekEntries} záz. tento týden`}
+                      secondaryText={stat.lateCaffeineCount > 0 ? `${stat.lateCaffeineCount}× pozdní kofein` : undefined}
+                      badges={stat.hasWarning ? [{ label: 'Pozornost', variant: 'destructive', icon: AlertTriangle }] : undefined}
+                      onClick={() => navigate(`/nutrition/client/${stat.clientId}`)}
+                    />
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
-      )}
 
-      {/* Most Active Client */}
-      {dashboard.mostActiveClient && (
-        <div className="px-1">
-          <p className="text-sm text-muted-foreground">
-            🏆 Nejaktivnější tento týden: <span className="font-medium text-foreground">{dashboard.mostActiveClient}</span>
-          </p>
-        </div>
-      )}
+        {/* Sidebar - 1/3 */}
+        <div className="space-y-4">
+          {/* Recent Activity */}
+          <UnifiedActivityTimeline
+            title="Nedávná aktivita"
+            titleIcon={Activity}
+            activities={recentActivity}
+            isLoading={activityLoading}
+            maxHeight="250px"
+            emptyMessage="Žádná nedávná aktivita"
+          />
 
-      {/* Search and Filter */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Hledat klienta..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+          {/* Attention Inbox */}
+          <AttentionInbox
+            title="Vyžaduje pozornost"
+            items={attentionItems}
+            isLoading={isLoading}
+            maxHeight="250px"
+            emptyMessage="Všichni klienti OK"
+            limit={5}
           />
         </div>
-        <div className="flex gap-1 flex-wrap">
-          <Button 
-            variant={filter === 'all' ? 'default' : 'outline'} 
-            size="sm"
-            onClick={() => setFilter('all')}
-          >
-            Vše
-          </Button>
-          <Button 
-            variant={filter === 'active' ? 'default' : 'outline'} 
-            size="sm"
-            onClick={() => setFilter('active')}
-          >
-            Aktivní
-          </Button>
-          <Button 
-            variant={filter === 'attention' ? 'default' : 'outline'} 
-            size="sm"
-            onClick={() => setFilter('attention')}
-            className={cn(
-              filter === 'attention' && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            )}
-          >
-            <AlertTriangle className="w-3.5 h-3.5 mr-1" />
-            Pozornost
-          </Button>
-        </div>
       </div>
-
-      {/* Clients List */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Klienti ({sortedStats.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map(i => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
-            </div>
-          ) : sortedStats.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>Žádní klienti nenalezeni</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {sortedStats.map((stat) => {
-                // Parse client name into first and last name
-                const nameParts = stat.clientName.split(' ');
-                const lastName = nameParts[0] || '';
-                const firstName = nameParts.slice(1).join(' ') || '';
-                
-                return (
-                  <NutritionClientRow
-                    key={stat.clientId}
-                    client={{
-                      id: stat.clientId,
-                      first_name: firstName,
-                      last_name: lastName,
-                      photo_url: null,
-                    }}
-                    stats={{
-                      hasActiveSession: stat.hasActiveSession,
-                      lastEntryDate: stat.lastEntryDate,
-                      weeklyFoodCount: stat.weekEntries,
-                      weeklyDrinkCount: stat.recentDrinkCount,
-                      weeklyCoffeeCount: stat.recentCoffeeCount,
-                      emptyDays: stat.emptyDays,
-                      lateCaffeineCount: stat.lateCaffeineCount,
-                    }}
-                    needsAttention={stat.hasWarning}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
