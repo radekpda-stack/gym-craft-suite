@@ -42,13 +42,7 @@ const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
 };
 
 const CATEGORY_STYLES: Record<NotificationCategory, { bg: string; border: string; icon: string; badge: string }> = {
-  training: {
-    bg: 'bg-orange-50 dark:bg-orange-900/20',
-    border: 'border-orange-200 dark:border-orange-800/50',
-    icon: 'text-orange-600 dark:text-orange-400',
-    badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
-  },
-  nutrition: {
+  activity: {
     bg: 'bg-green-50 dark:bg-green-900/20',
     border: 'border-green-200 dark:border-green-800/50',
     icon: 'text-green-600 dark:text-green-400',
@@ -60,11 +54,11 @@ const CATEGORY_STYLES: Record<NotificationCategory, { bg: string; border: string
     icon: 'text-blue-600 dark:text-blue-400',
     badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
   },
-  admin: {
-    bg: 'bg-muted/50',
-    border: 'border-border',
-    icon: 'text-muted-foreground',
-    badge: 'bg-muted text-muted-foreground',
+  events: {
+    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    border: 'border-amber-200 dark:border-amber-800/50',
+    icon: 'text-amber-600 dark:text-amber-400',
+    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
   },
 };
 

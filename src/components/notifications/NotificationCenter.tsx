@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { Bell, Check, MessageSquare, ChevronDown, ChevronRight, Search, X, Dumbbell, Utensils, FileText, Briefcase } from "lucide-react";
+import { Bell, Check, MessageSquare, ChevronDown, ChevronRight, Search, X, Utensils, FileText, PartyPopper, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -27,15 +27,16 @@ import { FeedbackDetailDialog } from "@/components/feedback/FeedbackDetailDialog
 import { ProfileUpdateDetailDialog } from "./ProfileUpdateDetailDialog";
 import { NutritionEntryDetailDialog } from "./NutritionEntryDetailDialog";
 import { WorkoutLogDetailDialog } from "./WorkoutLogDetailDialog";
+import { BirthdayDetailDialog } from "./BirthdayDetailDialog";
+import { AnniversaryDetailDialog } from "./AnniversaryDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { TrainingFeedback } from "@/hooks/useTrainingFeedback";
 import { NotificationEmptyState } from "./NotificationEmptyState";
 import { UnifiedNotificationItem } from "./UnifiedNotificationItem";
 import { InlineNotificationSettings } from "./InlineNotificationSettings";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAppSettings } from "@/hooks/useAppSettings";
 
-// Category section config
+// Category section config - NEW 3-category structure
 const CATEGORY_SECTIONS: Record<NotificationCategory, {
   label: string;
   icon: typeof Bell;
@@ -43,33 +44,26 @@ const CATEGORY_SECTIONS: Record<NotificationCategory, {
   bgColor: string;
   emoji: string;
 }> = {
-  training: {
-    label: "Tréninky & Cvičení",
-    icon: Dumbbell,
-    color: "text-orange-600 dark:text-orange-400",
-    bgColor: "bg-orange-100 dark:bg-orange-900/30",
-    emoji: "🏋️",
-  },
-  nutrition: {
-    label: "Výživa & Zdraví",
+  activity: {
+    label: "Klientská aktivita",
     icon: Utensils,
     color: "text-green-600 dark:text-green-400",
     bgColor: "bg-green-100 dark:bg-green-900/30",
     emoji: "🍎",
   },
   forms: {
-    label: "Formuláře & Zpětná vazba",
+    label: "Zpětná vazba & Formuláře",
     icon: FileText,
     color: "text-blue-600 dark:text-blue-400",
     bgColor: "bg-blue-100 dark:bg-blue-900/30",
     emoji: "📝",
   },
-  admin: {
-    label: "Administrativa",
-    icon: Briefcase,
-    color: "text-muted-foreground",
-    bgColor: "bg-muted",
-    emoji: "💼",
+  events: {
+    label: "Důležité události",
+    icon: PartyPopper,
+    color: "text-amber-600 dark:text-amber-400",
+    bgColor: "bg-amber-100 dark:bg-amber-900/30",
+    emoji: "🎉",
   },
 };
 
@@ -96,12 +90,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const markAllMessagesRead = useMarkAllMessagesAsRead();
   const unreadConversations = conversations.filter(c => c.unreadCount > 0);
   
-  const { training, nutrition, forms, admin, all, unreadCount, isLoading } = useAggregatedNotifications();
-  const { data: settings } = useAppSettings();
-  
-  // Check if admin category should be shown (default: hidden)
-  const prefs = (settings?.notification_preferences as Record<string, boolean>) || {};
-  const showAdmin = prefs.adminNotifications ?? false;
+  const { activity, forms, events, all, unreadCount, isLoading } = useAggregatedNotifications();
   
   const totalUnread = unreadCount + unreadConversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
@@ -127,11 +116,15 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const [selectedNutritionNotification, setSelectedNutritionNotification] = useState<UnifiedNotification | null>(null);
   const [workoutDialogOpen, setWorkoutDialogOpen] = useState(false);
   const [selectedWorkoutNotification, setSelectedWorkoutNotification] = useState<UnifiedNotification | null>(null);
+  const [birthdayDialogOpen, setBirthdayDialogOpen] = useState(false);
+  const [selectedBirthdayNotification, setSelectedBirthdayNotification] = useState<UnifiedNotification | null>(null);
+  const [anniversaryDialogOpen, setAnniversaryDialogOpen] = useState(false);
+  const [selectedAnniversaryNotification, setSelectedAnniversaryNotification] = useState<UnifiedNotification | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  // Training section collapsed by default (low priority - PRs, milestones)
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["messages", "nutrition", "forms"]));
+  // All sections expanded by default
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["messages", "activity", "forms", "events"]));
 
   const handleSheetOpenChange = (open: boolean) => {
     setSheetOpen(open);
@@ -155,7 +148,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   // Filter notifications by search query
   const filteredNotifications = useMemo(() => {
     if (!searchQuery.trim()) {
-      return { training, nutrition, forms, admin };
+      return { activity, forms, events };
     }
     
     const query = searchQuery.toLowerCase();
@@ -167,12 +160,11 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
       );
 
     return {
-      training: filter(training),
-      nutrition: filter(nutrition),
+      activity: filter(activity),
       forms: filter(forms),
-      admin: filter(admin),
+      events: filter(events),
     };
-  }, [training, nutrition, forms, admin, searchQuery]);
+  }, [activity, forms, events, searchQuery]);
 
   // Handle chat notification click
   const handleChatClick = (clientId: string, conversationId: string) => {
@@ -191,13 +183,16 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     }
   }, [unreadCount, markAllRead, unreadConversations.length, markAllMessagesRead]);
 
-  // Handle notification click with feedback dialog support and improved navigation
+  // Handle notification click with improved navigation - every notification is actionable
   const handleNotificationClick = async (notification: UnifiedNotification) => {
-    const isFeedbackNotification = ['feedback_received', 'feedback_red_flag', 'feedback_trend_alert'].includes(notification.type);
+    const isFeedbackNotification = ['feedback_received', 'feedback_red_flag'].includes(notification.type);
     const isNutritionNotification = notification.type === 'nutrition_entry_added' || notification.type === 'client_nutrition_started';
     const isProfileUpdateNotification = notification.type === 'client_profile_updated';
-    const isPrNotification = ['pr_achieved', 'pr_created', 'pr_updated'].includes(notification.type);
     const isWorkoutLogNotification = notification.type === 'client_workout_logged';
+    const isBirthdayNotification = notification.type === 'birthday';
+    const isAnniversaryNotification = notification.type === 'client_anniversary';
+    const isWeightNotification = notification.type === 'client_weight_added';
+    const isDiagnosticNotification = ['diagnostic_completed', 'pre_diagnostic_completed'].includes(notification.type);
     
     const trainingId = notification.entity_type === 'training' ? notification.entity_id : null;
     const clientId = notification.client_id || (notification.entity_type === 'client' ? notification.entity_id : null);
@@ -205,6 +200,36 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     // Mark as read first
     if (!notification.is_read && !notification.id.startsWith('aggregated-')) {
       markRead.mutate(notification.id);
+    }
+
+    // Birthday → BirthdayDetailDialog
+    if (isBirthdayNotification && clientId) {
+      setSelectedBirthdayNotification(notification);
+      setBirthdayDialogOpen(true);
+      setSheetOpen(false);
+      return;
+    }
+
+    // Anniversary → AnniversaryDetailDialog
+    if (isAnniversaryNotification && clientId) {
+      setSelectedAnniversaryNotification(notification);
+      setAnniversaryDialogOpen(true);
+      setSheetOpen(false);
+      return;
+    }
+
+    // Weight → Navigate to client progress tab
+    if (isWeightNotification && clientId) {
+      setSheetOpen(false);
+      navigate(`/clients/${clientId}?tab=progress`);
+      return;
+    }
+
+    // Diagnostic → Navigate to client profile
+    if (isDiagnosticNotification && clientId) {
+      setSheetOpen(false);
+      navigate(`/clients/${clientId}?tab=profile`);
+      return;
     }
 
     // Nutrition notifications → Navigate to nutrition diary
@@ -227,13 +252,6 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
       setSelectedWorkoutNotification(notification);
       setWorkoutDialogOpen(true);
       setSheetOpen(false);
-      return;
-    }
-
-    // PR notifications → Navigate to client trainings tab
-    if (isPrNotification && clientId) {
-      setSheetOpen(false);
-      navigate(`/clients/${clientId}?tab=trainings`);
       return;
     }
 
@@ -326,8 +344,6 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     category: NotificationCategory,
     notifications: UnifiedNotification[]
   ) => {
-    // Skip admin if not enabled
-    if (category === 'admin' && !showAdmin) return null;
     if (notifications.length === 0) return null;
 
     const config = CATEGORY_SECTIONS[category];
@@ -384,9 +400,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
                   onDelete={handleDelete}
                   onClick={() => handleNotificationClick(notification)}
                   onItemClick={
-                    category === 'nutrition' ? handleNutritionItemClick :
-                    category === 'training' ? handleWorkoutItemClick :
-                    undefined
+                    category === 'activity' ? handleNutritionItemClick : undefined
                   }
                   enableSwipe={true}
                 />
@@ -526,18 +540,16 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
                     </Collapsible>
                   )}
 
-                  {/* Category Sections - Ordered by priority: Nutrition → Forms → Training → Admin */}
-                  {renderCategorySection('nutrition', filteredNotifications.nutrition)}
+                  {/* Category Sections - New order: Activity → Forms → Events */}
+                  {renderCategorySection('activity', filteredNotifications.activity)}
                   {renderCategorySection('forms', filteredNotifications.forms)}
-                  {renderCategorySection('training', filteredNotifications.training)}
-                  {renderCategorySection('admin', filteredNotifications.admin)}
+                  {renderCategorySection('events', filteredNotifications.events)}
 
                   {/* No results for search */}
                   {searchQuery && 
-                   filteredNotifications.training.length === 0 && 
-                   filteredNotifications.nutrition.length === 0 && 
+                   filteredNotifications.activity.length === 0 && 
                    filteredNotifications.forms.length === 0 &&
-                   filteredNotifications.admin.length === 0 && (
+                   filteredNotifications.events.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <Search className="w-8 h-8 mx-auto mb-2 opacity-30" />
                       <p className="text-sm">Žádné výsledky pro "{searchQuery}"</p>
@@ -601,6 +613,28 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
           }
         }}
         notification={selectedWorkoutNotification}
+      />
+
+      <BirthdayDetailDialog
+        open={birthdayDialogOpen}
+        onOpenChange={(open) => {
+          setBirthdayDialogOpen(open);
+          if (!open) {
+            setSelectedBirthdayNotification(null);
+          }
+        }}
+        notification={selectedBirthdayNotification}
+      />
+
+      <AnniversaryDetailDialog
+        open={anniversaryDialogOpen}
+        onOpenChange={(open) => {
+          setAnniversaryDialogOpen(open);
+          if (!open) {
+            setSelectedAnniversaryNotification(null);
+          }
+        }}
+        notification={selectedAnniversaryNotification}
       />
     </>
   );

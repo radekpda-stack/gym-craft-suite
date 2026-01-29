@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useNotifications, type Notification } from './useNotifications';
 
-// Notification categories based on activity type
-export type NotificationCategory = 'training' | 'nutrition' | 'forms' | 'admin';
+// Notification categories - simplified for trainer workflow
+export type NotificationCategory = 'activity' | 'forms' | 'events';
 
 export interface UnifiedNotification {
   id: string;
@@ -21,54 +21,55 @@ export interface UnifiedNotification {
   aggregatedItems?: UnifiedNotification[];
 }
 
-// Map notification types to categories
+// Map notification types to NEW categories
 const TYPE_CATEGORY: Record<string, NotificationCategory> = {
-  // Tréninky & Cvičení
-  client_workout_logged: 'training',
-  pr_created: 'training',
-  pr_updated: 'training',
-  pr_achieved: 'training',
-  training_streak: 'training',
-  incomplete_training: 'training',
+  // Klientská aktivita (priorita 1) - co klient aktivně dělá
+  nutrition_entry_added: 'activity',
+  client_nutrition_started: 'activity',
+  client_workout_logged: 'activity',
+  client_profile_updated: 'activity',
+  client_weight_added: 'activity',
   
-  // Výživa & Zdraví
-  nutrition_entry_added: 'nutrition',
-  client_nutrition_started: 'nutrition',
-  client_weight_added: 'nutrition',
-  nutrition_inactive: 'nutrition',
-  
-  // Formuláře & Zpětná vazba
+  // Zpětná vazba & Formuláře (priorita 2)
   feedback_received: 'forms',
   feedback_red_flag: 'forms',
-  feedback_trend_alert: 'forms',
-  feedback_pending: 'forms',
   diagnostic_completed: 'forms',
   pre_diagnostic_completed: 'forms',
-  client_profile_updated: 'forms',
   
-  // Administrativa
-  low_credit: 'admin',
-  negative_credit: 'admin',
-  package_low: 'admin',
-  package_expiring: 'admin',
-  inactivity_warning: 'admin',
-  client_anniversary: 'admin',
-  birthday: 'admin',
-  milestone_100: 'admin',
-  milestone_500: 'admin',
-  milestone_1000: 'admin',
+  // Důležité události (priorita 3)
+  birthday: 'events',
+  client_anniversary: 'events',
 };
+
+// Types EXCLUDED from notification center (dashboard only)
+const EXCLUDED_TYPES = [
+  'low_credit',
+  'negative_credit',
+  'package_low',
+  'package_expiring',
+  'inactivity_warning',
+  'milestone_100',
+  'milestone_500',
+  'milestone_1000',
+  'training_streak',
+  'incomplete_training',
+  'nutrition_inactive',
+  'pr_achieved',
+  'pr_created',
+  'pr_updated',
+  'feedback_pending',
+  'feedback_trend_alert',
+];
 
 // Types that should be aggregated when there are 3+ of the same type
 const AGGREGATABLE_TYPES = [
   'client_workout_logged',
   'nutrition_entry_added',
   'feedback_received',
-  'pr_achieved',
 ];
 
 function getCategory(type: string): NotificationCategory {
-  return TYPE_CATEGORY[type] || 'admin';
+  return TYPE_CATEGORY[type] || 'activity';
 }
 
 function convertNotification(notification: Notification): UnifiedNotification {
@@ -160,10 +161,9 @@ function getAggregatedMessage(_type: string, notifications: UnifiedNotification[
 }
 
 export interface CategorizedNotificationsResult {
-  training: UnifiedNotification[];
-  nutrition: UnifiedNotification[];
+  activity: UnifiedNotification[];
   forms: UnifiedNotification[];
-  admin: UnifiedNotification[];
+  events: UnifiedNotification[];
   all: UnifiedNotification[];
   unreadCount: number;
   isLoading: boolean;
@@ -174,9 +174,9 @@ export function useAggregatedNotifications(): CategorizedNotificationsResult {
   const { data: notifications = [], isLoading } = useNotifications();
 
   const result = useMemo(() => {
-    // Convert DB notifications only, filter out incomplete_training and nutrition_inactive notifications
+    // Filter out excluded types AND filter by allowed types only
     const dbNotifications = notifications
-      .filter(n => n.type !== 'incomplete_training' && n.type !== 'nutrition_inactive')
+      .filter(n => !EXCLUDED_TYPES.includes(n.type) && TYPE_CATEGORY[n.type])
       .map(convertNotification);
 
     // Aggregate similar notifications
@@ -193,19 +193,17 @@ export function useAggregatedNotifications(): CategorizedNotificationsResult {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
-    // Split by category
-    const training = sorted.filter((n) => n.category === 'training');
-    const nutrition = sorted.filter((n) => n.category === 'nutrition');
+    // Split by NEW categories
+    const activity = sorted.filter((n) => n.category === 'activity');
     const forms = sorted.filter((n) => n.category === 'forms');
-    const admin = sorted.filter((n) => n.category === 'admin');
+    const events = sorted.filter((n) => n.category === 'events');
 
     const unreadCount = sorted.filter((n) => !n.is_read).length;
 
     return {
-      training,
-      nutrition,
+      activity,
       forms,
-      admin,
+      events,
       all: sorted,
       unreadCount,
     };
