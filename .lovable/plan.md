@@ -1,200 +1,247 @@
 
-# Oprava UI bugů a vylepšení sekce Klasifikace
+# Redesign modulu "Feedbacky" - Perspektiva trenéra
 
-## Identifikované problémy
+## Analýza současného stavu
 
-| Problém | Příčina | Řešení |
-|---------|---------|--------|
-| **Dvojitá fajfka (před a za slovem)** | `TagDropdownSelect.tsx` přidává vlastní `<Check>` ikonu (řádek 82), ale Radix UI `SelectItem` již má vestavěnou fajfku přes `SelectPrimitive.ItemIndicator` | Odstranit duplicitní fajfku z `TagDropdownSelect.tsx` |
-| **Tečky/překrývající se text pod typem tréninku** | V dropdown trigger se zobrazuje špatně emoji + text | Opravit renderování v `SelectValue` |
-| **Chybí možnost specifikovat konkrétní partie** | Při výběru "Horní část", "Dolní část" nebo "Břicho" v compact view se automaticky neotevře podvýběr | Přidat hierarchický výběr přímo do compact dropdownu pomocí sub-menu |
+### Co funguje dobře:
+- Přehledné status karty (K odeslání, Čekající, Vyplněno, Expirováno, Red Flags)
+- Attention Inbox s prioritou položek
+- Korelační grafy a trendy
+- Detail feedbacku s vizuálními progress bary
 
----
+### Co chybí z pohledu trenéra:
 
-## Technické řešení
-
-### 1. Odstranění dvojité fajfky
-
-**Soubor:** `src/components/trainings/TagDropdownSelect.tsx`
-
-**Změna:** Odstranit vlastní `<Check>` ikonu z `SelectItem`, protože Radix UI ji již zobrazuje automaticky.
-
-```typescript
-// PŘED (řádek 78-84):
-<SelectItem key={option.id} value={option.id}>
-  <span className="flex items-center gap-2">
-    {option.icon && <span>{option.icon}</span>}
-    <span>{option.label}</span>
-    {option.id === value && <Check className="h-3.5 w-3.5 text-primary ml-auto" />}
-  </span>
-</SelectItem>
-
-// PO:
-<SelectItem key={option.id} value={option.id}>
-  <span className="flex items-center gap-2">
-    {option.icon && <span>{option.icon}</span>}
-    <span>{option.label}</span>
-  </span>
-</SelectItem>
-```
+| Problém | Dopad na workflow |
+|---------|-------------------|
+| **Historie nemá rychlý pohled na metriky** | Musím klikat na každý feedback zvlášť |
+| **Chybí filtr podle severity** | Nemohu rychle najít problémové feedbacky |
+| **Nelze porovnat klienty mezi sebou** | Nevím, kdo potřebuje více pozornosti |
+| **Žádné rychlé akce u vyplněných** | Nemohu okamžitě reagovat (poznámka, úprava programu) |
+| **Statistiky jsou příliš obecné** | Chci vidět konkrétní čísla pro konkrétní klienty |
 
 ---
 
-### 2. Oprava překrývajícího se textu u typu tréninku
-
-**Soubor:** `src/components/trainings/TagDropdownSelect.tsx`
-
-**Problém:** `SelectValue` může mít problémy s renderováním při změně hodnoty. Ujistit se, že `SelectValue` má správný placeholder a children.
-
-```typescript
-// Oprava SelectValue - použít key pro vynucení re-renderu
-<SelectValue placeholder={placeholder}>
-  {selectedOption ? (
-    <span key={selectedOption.id} className="flex items-center gap-1.5">
-      {selectedOption.icon && <span className="shrink-0">{selectedOption.icon}</span>}
-      <span className="truncate">{selectedOption.label}</span>
-    </span>
-  ) : (
-    placeholder
-  )}
-</SelectValue>
-```
-
----
-
-### 3. Hierarchický výběr partií těla v compact view
-
-**Nový přístup:** Nahradit jednoduchý dropdown pro "Partie" speciální komponentou s rozbalovacím sub-menu.
-
-**Nová komponenta:** `BodyPartDropdownSelect.tsx`
+## Návrh nového layoutu
 
 ```text
-┌─────────────────────────────────────────┐
-│ Partie                                  │
-│ ┌─────────────────────────────────────┐ │
-│ │ Horní část ▼                        │ │  ← Dropdown trigger
-│ └─────────────────────────────────────┘ │
-└─────────────────────────────────────────┘
-                    ↓
-┌─────────────────────────────────────────┐
-│ Celé tělo                               │  ← Bez podkategorií
-├─────────────────────────────────────────┤
-│ Horní část                          ▶  │  ← Kliknutí rozbalí
-├─────────────────────────────────────────┤
-│   ☑ Ramena                              │
-│   ☐ Biceps                              │
-│   ☐ Triceps                             │
-│   ☐ Hrudník                             │
-│   ☐ Záda                                │
-│   ...                                   │
-├─────────────────────────────────────────┤
-│ Dolní část                          ▶  │
-├─────────────────────────────────────────┤
-│ Břicho                              ▶  │
-└─────────────────────────────────────────┘
-```
-
-**Implementace:**
-
-Použijeme `Popover` s vnořeným `Collapsible` pro každou kategorii:
-
-```typescript
-interface BodyPartDropdownSelectProps {
-  bodyPartTagIds: string[];
-  onBodyPartTagsChange: (ids: string[]) => void;
-  availableTags: Tag[];
-}
-
-export function BodyPartDropdownSelect({ ... }) {
-  const [open, setOpen] = useState(false);
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  
-  // Kategorie s podkategoriemi
-  const CATEGORIES = [
-    { key: 'full', name: 'Celé tělo', hasChildren: false },
-    { key: 'upper', name: 'Horní část', hasChildren: true, children: [...] },
-    { key: 'lower', name: 'Dolní část', hasChildren: true, children: [...] },
-    { key: 'core', name: 'Břicho', hasChildren: true, children: [...] },
-  ];
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger>...</PopoverTrigger>
-      <PopoverContent className="w-64 p-0">
-        {CATEGORIES.map(category => (
-          <div key={category.key}>
-            {/* Hlavní kategorie */}
-            <div 
-              className="flex items-center justify-between p-2 hover:bg-muted cursor-pointer"
-              onClick={() => {
-                if (category.hasChildren) {
-                  setExpandedCategory(
-                    expandedCategory === category.key ? null : category.key
-                  );
-                } else {
-                  toggleTag(category.tagId);
-                }
-              }}
-            >
-              <span className="flex items-center gap-2">
-                {isSelected && <Check className="h-4 w-4" />}
-                {category.name}
-              </span>
-              {category.hasChildren && (
-                <ChevronRight className={cn(
-                  "h-4 w-4 transition-transform",
-                  expandedCategory === category.key && "rotate-90"
-                )} />
-              )}
-            </div>
-            
-            {/* Podkategorie */}
-            {category.hasChildren && expandedCategory === category.key && (
-              <div className="pl-4 border-l-2 border-primary/20 ml-3 space-y-1">
-                {category.children.map(child => (
-                  <div 
-                    key={child.id}
-                    className="flex items-center gap-2 p-1.5 hover:bg-muted rounded cursor-pointer"
-                    onClick={() => toggleTag(child.id)}
-                  >
-                    <Checkbox checked={bodyPartTagIds.includes(child.id)} />
-                    <span className="text-sm">{child.name}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </PopoverContent>
-    </Popover>
-  );
-}
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 📊 Přehled zpětné vazby                                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐                                │
+│ │ 3   │ │ 5   │ │ 12  │ │ 2   │ │ 1   │  ← Status karty (bez změny)   │
+│ │Send │ │Wait │ │Done │ │Exp. │ │Red  │                                │
+│ └─────┘ └─────┘ └─────┘ └─────┘ └─────┘                                │
+│                                                                         │
+│ ┌───────────────────────────────┐ ┌───────────────────────────────────┐│
+│ │ 🔔 POTŘEBUJE POZORNOST        │ │  [K odeslání][Vyplněné][Statistiky]│
+│ │ (Attention Inbox - beze změny)│ │                                   ││
+│ │                               │ │                                   ││
+│ │                               │ │  ← NOVÝ TAB: "Vyplněné"           ││
+│ │                               │ │     s rozšířenými kartami         ││
+│ │                               │ │                                   ││
+│ └───────────────────────────────┘ └───────────────────────────────────┘│
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Soubory k úpravě
+## Klíčové změny
 
-| Soubor | Typ | Změna |
-|--------|-----|-------|
-| `src/components/trainings/TagDropdownSelect.tsx` | Úprava | Odstranit duplicitní fajfku, opravit SelectValue |
-| `src/components/trainings/BodyPartDropdownSelect.tsx` | **Nový** | Hierarchický výběr partií s rozbalovacími podkategoriemi |
-| `src/components/trainings/CompactTagGridSelector.tsx` | Úprava | Nahradit dropdown pro partie novou komponentou |
+### 1. Nový tab "Vyplněné" s rozšířenými kartami feedbacků
+
+Nahrazení starého "Historie" tabu novým "Vyplněné" tabem zaměřeným na práci s vyplněnými feedbacky.
+
+**Nový design karty feedbacku:**
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ 🟢 Jana Nováková                  27.1.2025 • Silový           │
+│                                                                 │
+│ ┌────────────────────────────────────────────────────────────┐ │
+│ │ Pocit 8/10 │ Energie 7/10 │ Svalovka 6/10 │ Bolest 2/10   │ │
+│ │ ████████░░ │ ███████░░░  │ ██████░░░░   │ ██░░░░░░░░    │ │
+│ └────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ 💬 "Cítím se super, jen lehká svalovka na nohou..."           │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐│
+│ │ [📝 Poznámka] [📅 Naplánovat] [💬 Chat] [▼ Detail]        ││
+│ └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Klíčové prvky:**
+- **Inline metriky** - bez nutnosti rozklikávání vidím všechny hodnoty
+- **Mini progress bary** - vizuální indikace hodnot
+- **Zkrácený komentář** - první věta s možností rozbalit
+- **Rychlé akce** - poznámka, naplánování kontroly, otevření chatu
+- **Barevné kódování** - zelená/žlutá/červená podle celkového stavu
 
 ---
 
-## Shrnutí změn
+### 2. Rozšířené filtry a třídění
 
-1. **Oprava dvojité fajfky** - Odstranění zbytečné `<Check>` ikony, ponechání pouze vestavěné od Radix UI
+Přidání pokročilých filtrů pro rychlejší práci:
 
-2. **Oprava překrývajícího se textu** - Přidání `key` prop a `shrink-0` pro emoji
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ Filtry:                                                         │
+│                                                                 │
+│ [Období: 7d ▼] [Klient: Všichni ▼] [Severita: Vše ▼]          │
+│                                                                 │
+│ Řazení: [Datum ▼] [Pocit těla ▲] [Bolest ▼] [Red flags první] │
+│                                                                 │
+│ Rychlé filtry:                                                  │
+│ [🔴 Bolest ≥6] [⚠️ Nízká energie] [💪 Vysoká svalovka] [📝 S komentářem]
+└─────────────────────────────────────────────────────────────────┘
+```
 
-3. **Hierarchický výběr partií** - Nový dropdown s možností rozbalit podkategorie:
-   - "Celé tělo" - jednoduchý výběr bez podkategorií
-   - "Horní část" → rozbalí se: Ramena, Biceps, Triceps, Hrudník, Záda...
-   - "Dolní část" → rozbalí se: Přední stehna, Zadní stehna, Hýždě, Lýtka...
-   - "Břicho" → rozbalí se: Přímé břišní, Šikmé břišní, Hluboké břišní...
+**Nové možnosti filtrování:**
+- **Severita**: Kritické (bolest ≥7), Varování (bolest 4-6), OK (bolest ≤3)
+- **Metrika**: Nejvyšší bolest, Nejnižší energie, Nejvyšší svalovka
+- **Typ**: S komentářem, Bez komentáře, Red flags
 
-4. **Multi-select s checkboxy** - Možnost vybrat více konkrétních svalů najednou
+---
 
-5. **Badge s počtem** - Zobrazení počtu vybraných partií na trigger tlačítku
+### 3. "Client Leaderboard" - Přehled klientů
+
+Nová sekce zobrazující agregované metriky za období:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ 👥 Přehled klientů za posledních 30 dní                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ Klient          │ Feedbacků │ Ø Pocit │ Ø Bolest │ Red Flags  │
+│ ─────────────────────────────────────────────────────────────  │
+│ 🟢 Jana N.      │    8      │   8.2   │   1.5    │    0       │
+│ 🟡 Petr S.      │    6      │   6.5   │   4.2    │    1       │
+│ 🔴 Martin K.    │    4      │   4.8   │   6.5    │    3       │
+│ ⚪ Eva M.       │    2      │   7.0   │   2.0    │    0       │
+│                                                                 │
+│ [Řadit: Ø Pocit ▲] [Řadit: Ø Bolest ▼] [Řadit: Red Flags ▼]  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Přínosy:**
+- Na první pohled vidím, který klient potřebuje pozornost
+- Barevné kódování podle celkového stavu
+- Kliknutím na klienta se vyfiltrují jeho feedbacky
+
+---
+
+### 4. Rychlé akce u feedbacku
+
+**Tlačítko "Poznámka"** - inline editor pro trenérskou reakci:
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ 📝 Poznámka k feedbacku                                         │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐│
+│ │ Zeptat se na bolest v koleni, zvážit redukci dřepů...      ││
+│ └─────────────────────────────────────────────────────────────┘│
+│                                                                 │
+│ [Uložit poznámku]                      Privátní - klient nevidí│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Tlačítko "Naplánovat"** - rychlé vytvoření followupu:
+- Otevře dialog pro vytvoření úkolu/připomínky
+- Předvyplní kontext (klient, datum feedbacku, metrika)
+
+**Tlačítko "Chat"** - otevře konverzaci s klientem:
+- Rychlá reakce na feedback přímo z přehledu
+
+---
+
+### 5. Vylepšený detail feedbacku
+
+Rozšíření dialogu o trenérské nástroje:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ 💬 Zpětná vazba                                        [✕]     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ [Přehled] [Historie klienta] [Korelace s tréninkem]           │
+│                                                                 │
+│ ─── Tab: Přehled (stávající obsah) ───────────────────────────│
+│ Metriky, bolesti, komentář...                                  │
+│                                                                 │
+│ ─── Tab: Historie klienta ─────────────────────────────────────│
+│ Mini graf posledních 10 feedbacků tohoto klienta               │
+│ Porovnání aktuálního vs průměru                                │
+│                                                                 │
+│ ─── Tab: Korelace s tréninkem ─────────────────────────────────│
+│ Typ tréninku: Silový                                           │
+│ RPE: 7/10                                                      │
+│ Objem: 24 setů                                                 │
+│ Hlavní partie: Nohy, Záda                                      │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐│
+│ │ 📝 Trenérská poznámka:                                      ││
+│ │ ┌─────────────────────────────────────────────────────────┐ ││
+│ │ │ [Prázdné - přidat poznámku]                             │ ││
+│ │ └─────────────────────────────────────────────────────────┘ ││
+│ └─────────────────────────────────────────────────────────────┘│
+│                                                                 │
+│ [Přejít na trénink] [Otevřít profil klienta] [Naplánovat followup]
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Technické změny
+
+### Nové komponenty:
+
+| Komponenta | Účel |
+|------------|------|
+| `FeedbackExpandedCard.tsx` | Rozšířená karta s inline metrikami a rychlými akcemi |
+| `FeedbackQuickFilters.tsx` | Rychlé filtry podle severity a metrik |
+| `ClientFeedbackLeaderboard.tsx` | Tabulka agregovaných metrik klientů |
+| `FeedbackTrainerNote.tsx` | Inline editor pro trenérskou poznámku |
+| `FeedbackDetailTabs.tsx` | Tabované zobrazení v detail dialogu |
+
+### Úpravy existujících souborů:
+
+| Soubor | Změna |
+|--------|-------|
+| `FeedbackOverview.tsx` | Nahradit tab "Historie" za "Vyplněné", přidat leaderboard sekci |
+| `FeedbackDetailDialog.tsx` | Přidat taby pro historii a korelaci |
+| `useTrainingFeedback.ts` | Přidat hook pro agregované metriky klientů |
+
+### Databázové změny:
+
+**Nový sloupec v `training_feedback`:**
+```sql
+ALTER TABLE training_feedback 
+ADD COLUMN trainer_note TEXT;
+```
+
+---
+
+## Workflow trenéra po implementaci
+
+1. **Ráno**: Otevřu Feedbacky → vidím Attention Inbox s red flags
+2. **Rychlý přehled**: Kliknu na "Vyplněné" → vidím všechny feedbacky s inline metrikami
+3. **Identifikace problémů**: Použiju filtr "Bolest ≥6" → vidím klienty s bolestí
+4. **Reakce**: U feedbacku kliknu "Poznámka" → zapíšu si co udělat
+5. **Plánování**: Kliknu "Naplánovat" → vytvořím followup úkol
+6. **Komunikace**: Kliknu "Chat" → pošlu klientovi zprávu
+7. **Analýza**: V Client Leaderboard vidím, kdo má nejhorší průměr → zaměřím se na něj
+
+---
+
+## Shrnutí přínosů
+
+1. **Méně klikání** - inline metriky bez nutnosti otevírat detail
+2. **Rychlejší identifikace problémů** - filtry podle severity
+3. **Lepší přehled o klientech** - agregovaná tabulka
+4. **Okamžitá reakce** - rychlé akce přímo z přehledu
+5. **Kontext v detailu** - historie klienta a korelace s tréninkem
+6. **Trenérské poznámky** - možnost zapisovat si reakce
+
+Tento návrh transformuje modul Feedbacky z pasivního přehledu na aktivní nástroj pro práci s klientskými daty.
