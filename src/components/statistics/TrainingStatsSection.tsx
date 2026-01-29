@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useGlobalTrainingTagStats, GlobalDateRange } from '@/hooks/useGlobalTrainingTagStats';
 import { useTrainingHeatmap } from '@/hooks/useTrainingHeatmap';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,9 +9,10 @@ import { TrainingDurationCard } from './TrainingDurationCard';
 import { GlobalTagDistributionCard } from './GlobalTagDistributionCard';
 import { InteractiveHeatmapCard } from './InteractiveHeatmapCard';
 import { HeatmapSummary } from './HeatmapSummary';
+import { PeriodComparisonCard } from './PeriodComparisonCard';
 import { FeedbackTagCorrelation } from '@/components/feedback/FeedbackTagCorrelation';
 import type { StatsPeriodRange } from './StatsPeriodSelector';
-import { differenceInDays, subMonths } from 'date-fns';
+import { differenceInDays } from 'date-fns';
 
 interface TrainingStatsSectionProps {
   periodRange?: StatsPeriodRange;
@@ -27,11 +28,20 @@ export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps)
     const days = differenceInDays(periodRange.end, periodRange.start);
     return days as GlobalDateRange;
   }, [periodRange]);
+
+  // Convert to heatmap period type
+  const heatmapPeriod = useMemo(() => {
+    if (!periodRange) return '3months';
+    if (periodRange.type === 'all') return 'all';
+    if (periodRange.type === '1m') return 'month';
+    if (periodRange.type === '3m') return '3months';
+    return 'year';
+  }, [periodRange]);
   
   const stats = useGlobalTrainingTagStats(dateRange);
   
-  // Get heatmap data for summary
-  const { data: heatmapData } = useTrainingHeatmap('3months');
+  // Get heatmap data for summary - now uses global period
+  const { data: heatmapData } = useTrainingHeatmap(heatmapPeriod as any);
 
   // Calculate trend vs previous period (simplified: vs previous month)
   const trendVsPrevious = useMemo(() => {
@@ -66,6 +76,9 @@ export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps)
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
+      {/* Period Comparison Card - uses global periodRange */}
+      <PeriodComparisonCard periodRange={periodRange} />
+
       {/* Hero KPI Cards with trend */}
       <TrainingHeroKPI
         totalTrainings={stats.totalTrainings}
@@ -78,7 +91,7 @@ export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps)
       {/* Training Type Distribution and Duration */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <TrainingTypeDistributionCard distribution={stats.trainingTypeDistribution} />
-        <TrainingDurationCard />
+        <TrainingDurationCard periodRange={periodRange} />
       </div>
 
       {/* Heatmap Summary - extracted insights */}
@@ -89,8 +102,8 @@ export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps)
         />
       )}
 
-      {/* Interactive Heatmap */}
-      <InteractiveHeatmapCard />
+      {/* Interactive Heatmap - now uses global periodRange */}
+      <InteractiveHeatmapCard periodRange={periodRange} />
 
       {/* Tag Distribution */}
       <GlobalTagDistributionCard

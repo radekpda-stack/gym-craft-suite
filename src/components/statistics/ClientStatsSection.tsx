@@ -4,10 +4,8 @@ import { InsightsBar, generateClientInsights } from './InsightsBar';
 import { ClientHeroKPI } from './ClientHeroKPI';
 import { ClientLTVRankingCard } from './ClientLTVRankingCard';
 import { ClientTenureCard } from './ClientTenureCard';
-import { ClientAgeCard } from './ClientAgeCard';
 import { ClientFeedbackCard } from './ClientFeedbackCard';
-import { ClientTagsCard } from './ClientTagsCard';
-// ClientAnalyticsCard removed - duplicates ChurnRiskCard
+import { ClientHealthDashboard } from './ClientHealthDashboard';
 import { CohortRetentionCard } from './CohortRetentionCard';
 import { ChurnRiskCard } from './ChurnRiskCard';
 import { Loader2 } from 'lucide-react';
@@ -59,7 +57,7 @@ export function ClientStatsSection({ periodRange }: ClientStatsSectionProps) {
   const retentionRate = analytics?.retentionRate || 0;
   const avgLifetime = analytics?.averageClientLifetimeMonths || 0;
   const totalClients = stats?.totalClients || 0;
-  const avgFeedback = stats?.avgBodyFeel || 0; // Using body feel as satisfaction metric
+  const avgFeedback = stats?.avgBodyFeel || 0;
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
@@ -67,6 +65,9 @@ export function ClientStatsSection({ periodRange }: ClientStatsSectionProps) {
       {insights.length > 0 && (
         <InsightsBar insights={insights} />
       )}
+
+      {/* Client Health Dashboard - NEW consolidated view */}
+      <ClientHealthDashboard periodRange={periodRange} />
 
       {/* Hero KPI Cards */}
       <ClientHeroKPI
@@ -87,14 +88,10 @@ export function ClientStatsSection({ periodRange }: ClientStatsSectionProps) {
         <ChurnRiskCard />
       </div>
 
-      {/* Removed ClientAnalyticsCard - duplicates ChurnRiskCard logic */}
-
-      {/* Stats Grid - tenure, age, feedback, tags */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* Stats Grid - tenure and feedback (removed age and tags cards) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <ClientTenureCard />
-        <ClientAgeCard />
         <ClientFeedbackCard stats={stats} />
-        <ClientTagsCard />
       </div>
     </div>
   );
