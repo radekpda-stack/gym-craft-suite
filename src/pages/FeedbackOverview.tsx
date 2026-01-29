@@ -75,11 +75,12 @@ import { FeedbackTagCorrelation } from '@/components/feedback/FeedbackTagCorrela
 import { FeedbackPeriodComparison } from '@/components/feedback/FeedbackPeriodComparison';
 import { ClientVsBaselineCard } from '@/components/feedback/ClientVsBaselineCard';
 import { FeedbackCoachInsights } from '@/components/feedback/FeedbackCoachInsights';
+import { CompletedFeedbacksTab } from '@/components/feedback/CompletedFeedbacksTab';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 type PeriodOption = '7' | '30' | '90' | 'all';
 type StatusFilter = 'all' | 'red_flags' | 'completed' | 'pending' | 'expired' | 'unfilled';
-type TabValue = 'to_send' | 'analytics' | 'history' | 'settings';
+type TabValue = 'to_send' | 'completed' | 'analytics' | 'history' | 'settings';
 
 export default function FeedbackOverview() {
   usePageTracking('feedback_overview');
@@ -140,12 +141,14 @@ export default function FeedbackOverview() {
   const handleStatusClick = (status: 'to_send' | 'pending' | 'completed' | 'expired' | 'red_flags') => {
     if (status === 'to_send') {
       setActiveTab('to_send');
+    } else if (status === 'completed') {
+      // Navigate to new Vyplněné tab for completed feedbacks
+      setActiveTab('completed');
     } else {
+      // Use history tab for pending, expired, red_flags
       setActiveTab('history');
       if (status === 'pending') {
         setStatusFilter('pending');
-      } else if (status === 'completed') {
-        setStatusFilter('completed');
       } else if (status === 'expired') {
         setStatusFilter('expired');
       } else if (status === 'red_flags') {
@@ -486,13 +489,17 @@ export default function FeedbackOverview() {
         {/* Tabs - Main content */}
         <div className="lg:col-span-2 order-1 lg:order-2">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="to_send" className="gap-2">
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">K odeslání</span>
                 {pendingTrainings.length > 0 && (
                   <Badge variant="secondary" className="ml-1">{pendingTrainings.length}</Badge>
                 )}
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Vyplněné</span>
               </TabsTrigger>
               <TabsTrigger value="analytics" className="gap-2">
                 <TrendingUp className="w-4 h-4" />
@@ -507,6 +514,11 @@ export default function FeedbackOverview() {
                 <span className="hidden sm:inline">Nastavení</span>
               </TabsTrigger>
             </TabsList>
+
+            {/* Tab: Completed (New) */}
+            <TabsContent value="completed" className="space-y-4">
+              <CompletedFeedbacksTab initialClientId={selectedClientId === 'all' ? undefined : selectedClientId} />
+            </TabsContent>
 
             {/* Tab: Analytics */}
             <TabsContent value="analytics" className="space-y-6">
