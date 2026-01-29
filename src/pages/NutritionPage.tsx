@@ -354,17 +354,24 @@ export default function NutritionPage() {
     return true;
   });
 
-  // Sort: clients with warnings first, then active, then by last entry
+  // Sort: clients who log nutrition first (most recent first), then those without any entries at the end
+  // Priority: 1) Has entries (sorted by most recent) → 2) Has active session but no entries → 3) No entries at all
   const sortedStats = [...filteredStats].sort((a, b) => {
-    if (a.hasWarning && !b.hasWarning) return -1;
-    if (!a.hasWarning && b.hasWarning) return 1;
+    const aHasEntries = a.lastEntryDate !== null;
+    const bHasEntries = b.lastEntryDate !== null;
+    
+    // Clients with entries always come before those without
+    if (aHasEntries && !bHasEntries) return -1;
+    if (!aHasEntries && bHasEntries) return 1;
+    
+    // Both have entries - sort by most recent first
+    if (aHasEntries && bHasEntries) {
+      return b.lastEntryDate!.localeCompare(a.lastEntryDate!);
+    }
+    
+    // Neither has entries - active sessions first, then alphabetically
     if (a.hasActiveSession && !b.hasActiveSession) return -1;
     if (!a.hasActiveSession && b.hasActiveSession) return 1;
-    if (a.lastEntryDate && b.lastEntryDate) {
-      return b.lastEntryDate.localeCompare(a.lastEntryDate);
-    }
-    if (a.lastEntryDate) return -1;
-    if (b.lastEntryDate) return 1;
     return a.clientName.localeCompare(b.clientName);
   });
 
