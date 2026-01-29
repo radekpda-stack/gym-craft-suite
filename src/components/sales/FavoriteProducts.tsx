@@ -50,7 +50,7 @@ export function FavoriteProducts({
                   : "bg-secondary/50 hover:bg-secondary"
               )}
             >
-              <span className="font-medium truncate max-w-[100px]">
+              <span className="font-medium line-clamp-2 text-left">
                 {product.name}
               </span>
               <span className="text-primary font-semibold whitespace-nowrap">
