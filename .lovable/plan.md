@@ -1,247 +1,219 @@
 
-# Vylepšení klientského jídelního deníku + Notifikace pro trenérské akce
+# Refaktoring notifikačního centra pro trenéry
 
 ## Analýza současného stavu
 
-### Co funguje dobře:
-- **Přehledný WeekStrip** pro navigaci mezi dny
-- **Rychlé tlačítka** pro snídani/oběd/večeři/svačinu
-- **Widgety** pro vodu a kofein s progress indikátory
-- **Timeline záznamů** chronologicky seřazená
-- **Možnost odpovědět trenérovi** na komentář
+### Aktuálně zobrazované typy notifikací:
+
+| Kategorie | Typy notifikací | Akce při kliknutí |
+|-----------|----------------|-------------------|
+| **Výživa** | `nutrition_entry_added`, `client_nutrition_started`, `client_weight_added` | Otevře dialog/navigace na deník |
+| **Formuláře** | `feedback_received`, `feedback_red_flag`, `client_profile_updated`, `diagnostic_completed` | Otevře dialog zpětné vazby / profil |
+| **Tréninky** | `client_workout_logged`, `pr_achieved`, `pr_created`, `pr_updated` | Otevře dialog s tréninkem |
+| **Admin** (skryté) | `birthday`, `low_credit`, `client_anniversary`, `milestone_*`, `inactivity_warning` | Navigace na profil klienta |
 
 ### Identifikované problémy:
 
-| Problém | Popis |
-|---------|-------|
-| **Chybějící notifikace při "Zkontrolováno"** | Když trenér klikne na tlačítko Zkontrolováno, klient se to nedozví |
-| **Chybějící notifikace při komentáři** | Když trenér komentuje jídlo nebo den, klient neobdrží notifikaci |
-| **Žádný vizuální indikátor kontroly** | Klient nevidí, že den byl zkontrolován trenérem |
-| **Poznámka dne není prominentní** | Poznámka od trenéra by měla být viditelnější |
-| **Dlouhé formuláře** | Příliš mnoho scrollování při přidávání jídla |
+1. **Narozeniny jsou v sekci Admin** - která je ve výchozím stavu skrytá, takže trenér narozeniny neuvidí
+2. **Některé notifikace nejsou klikatelné** - např. `feedback_pending` nemá správný handler
+3. **Fallback navigace** - pokud chybí speciální handler, naviguje se na profil klienta, což není vždy užitečné
+4. **Příliš mnoho typů** - některé typy jako `milestone_*`, `training_streak` nejsou pro trenéra tak důležité
 
 ---
 
 ## Navrhované změny
 
-### 1. Notifikace pro klienta
-
-#### 1.1 Notifikace při "Zkontrolováno"
-Když trenér označí den jako zkontrolovaný:
+### 1. Zjednodušená kategorizace - pouze 3 důležité kategorie
 
 ```text
-┌──────────────────────────────────────────┐
-│ 🔔 Notifikace pro klienta               │
-├──────────────────────────────────────────┤
-│ ✅ Jídelníček zkontrolován              │
-│ Trenér zkontroloval váš jídelníček      │
-│ pro 28.01.2026                          │
-│                                          │
-│ [Zobrazit v deníku]                     │
-└──────────────────────────────────────────┘
+NOVÁ STRUKTURA:
+┌─────────────────────────────────────────┐
+│ 🔔 Notifikace                           │
+├─────────────────────────────────────────┤
+│                                         │
+│ 📨 ZPRÁVY (nepřečtené konverzace)      │ ← Zůstává stejné
+│                                         │
+│ 🍎 KLIENTSKÁ AKTIVITA                  │ ← NOVÁ kategorie
+│ • Jídlo zapisují                        │
+│ • Trénink zapisují                      │
+│ • Profil aktualizují                    │
+│ • Váha přidána                          │
+│                                         │
+│ 📋 ZPĚTNÁ VAZBA & FORMULÁŘE            │
+│ • Feedback přijat                       │
+│ • Red flag                              │
+│ • Diagnostika dokončena                 │
+│                                         │
+│ 🎂 DŮLEŽITÉ UDÁLOSTI                   │ ← Přesunuté z Admin
+│ • Narozeniny                            │
+│ • Výročí spolupráce                     │
+│                                         │
+└─────────────────────────────────────────┘
 ```
 
-#### 1.2 Notifikace při komentáři k jídlu
-Když trenér přidá komentář nebo hodnocení:
+### 2. Vyřazené notifikace (přesunuty pouze na Dashboard)
+
+Tyto notifikace by se měly zobrazovat **pouze na dashboardu**, ne v notifikačním centru:
+- `low_credit` / `negative_credit` - Smart Alert na dashboardu
+- `package_low` / `package_expiring` - Smart Alert  
+- `inactivity_warning` - Smart Alert
+- `milestone_100/500/1000` - Nepodstatné pro workflow
+- `training_streak` - Nepodstatné
+- `pr_achieved/created/updated` - Méně důležité, ale ponecháme v případě zájmu
+
+### 3. Povinné click handlery pro všechny typy
 
 ```text
-┌──────────────────────────────────────────┐
-│ 💬 Nový komentář od trenéra             │
-├──────────────────────────────────────────┤
-│ Trenér okomentoval váš oběd:            │
-│ "Výborná volba bílkovin..."             │
-│                                          │
-│ [Zobrazit a odpovědět]                  │
-└──────────────────────────────────────────┘
+NOTIFIKACE → AKCE PŘI KLIKNUTÍ:
+──────────────────────────────────────────────────
+nutrition_entry_added     → NutritionEntryDetailDialog
+client_workout_logged     → WorkoutLogDetailDialog
+client_profile_updated    → ProfileUpdateDetailDialog
+feedback_received         → FeedbackDetailDialog
+feedback_red_flag         → FeedbackDetailDialog
+diagnostic_completed      → Navigace /clients/{id}?tab=profile
+pre_diagnostic_completed  → Navigace /clients/{id}?tab=profile
+birthday                  → BirthdayDetailDialog (NOVÝ)
+client_anniversary        → AnniversaryDetailDialog (NOVÝ)
+client_weight_added       → Navigace /clients/{id}?tab=progress (NOVÝ handler)
+client_nutrition_started  → Navigace /nutrition/client/{id}
 ```
 
-#### 1.3 Notifikace při poznámce k celému dni
+### 4. Nové komponenty pro speciální události
+
+#### 4.1 `BirthdayDetailDialog`
 ```text
-┌──────────────────────────────────────────┐
-│ 📝 Trenér přidal poznámku ke dni        │
-├──────────────────────────────────────────┤
-│ "Dobrá práce, jen přidej víc zeleniny"  │
-│                                          │
-│ [Zobrazit v deníku]                     │
-└──────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ 🎂 Narozeniny                           │
+├─────────────────────────────────────────┤
+│                                         │
+│  Jana Nováková                          │
+│  Dnes slaví 35. narozeniny!             │
+│                                         │
+│  📅 Začátek spolupráce: 15.3.2024       │
+│  📊 Počet tréninků: 48                  │
+│                                         │
+│  ┌───────────────────────────────────┐  │
+│  │ 💬 Poslat přání přes chat        │  │
+│  └───────────────────────────────────┘  │
+│                                         │
+│  [Zavřít]        [Zobrazit profil]      │
+│                                         │
+└─────────────────────────────────────────┘
 ```
 
----
-
-### 2. Vizuální vylepšení klientského deníku
-
-#### 2.1 Banner "Zkontrolováno trenérem"
-Na vrchu dne, který trenér zkontroloval:
-
+#### 4.2 `AnniversaryDetailDialog`
 ```text
-┌───────────────────────────────────────────────────────┐
-│ ✅ Zkontrolováno trenérem • 28.01. v 14:32           │
-└───────────────────────────────────────────────────────┘
-```
-
-#### 2.2 Prominentní zobrazení poznámky trenéra
-```text
-┌───────────────────────────────────────────────────────┐
-│ 💬 TRENÉR                                             │
-│ ┌─────────────────────────────────────────────────┐  │
-│ │ Dobrá práce dnes! Příště zkus přidat víc       │  │
-│ │ bílkovin k obědu. 👍                           │  │
-│ └─────────────────────────────────────────────────┘  │
-│ [Odpovědět...]                                       │
-└───────────────────────────────────────────────────────┘
-```
-
-#### 2.3 Nová struktura stránky
-```text
-┌─────────────────────────────────────────────────────────┐
-│ Nutriční deník                                          │
-│ Jednoduché sledování stravy                             │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│ [ Po | Út | St | Čt | Pá | So | Ne ]  ← WeekStrip      │
-│                                                         │
-│ ┌─────────────────────────────────────────────────────┐│
-│ │ ✅ Den zkontrolován trenérem • 28.01. 14:32        ││ ← NOVÉ
-│ └─────────────────────────────────────────────────────┘│
-│                                                         │
-│ ┌─────────────────────────────────────────────────────┐│
-│ │ 💬 Poznámka od trenéra                             ││ ← VYLEPŠENÉ
-│ │ "Výborně, dnes perfektní!"                         ││
-│ │ [Odpovědět]                                        ││
-│ └─────────────────────────────────────────────────────┘│
-│                                                         │
-│ ┌─────────────────┐ ┌─────────────────┐                │
-│ │ 💧 Voda: 1.5L  │ │ ☕ Káva: 2× OK │  ← Widgety     │
-│ │ ████████░░ 75% │ │ ✓ Před 14:00   │                │
-│ └─────────────────┘ └─────────────────┘                │
-│                                                         │
-│ ┌─────────────────────────────────────────────────────┐│
-│ │  📊  Dnešní záznamy: 3 jídel, 1.5L, 2☕            ││ ← ZJEDNODUŠENÉ
-│ └─────────────────────────────────────────────────────┘│
-│                                                         │
-│ ┌──────────────────────────────────────────┐           │
-│ │ + Přidat jídlo nebo nápoj               │ ← Hlavní  │
-│ └──────────────────────────────────────────┘   tlačítko│
-│                                                         │
-│ ZÁZNAMY                                                 │
-│ ┌─────────────────────────────────────────────────────┐│
-│ │ 🌅 7:30 • Snídaně                                  ││
-│ │ Ovesná kaše s ovocem                               ││
-│ │ ┌────────────────────────────────┐                 ││
-│ │ │ ⭐ 8/10 • 💬 "Výborná volba!" │ ← Trenér        ││
-│ │ │ [Odpovědět]                    │                 ││
-│ │ └────────────────────────────────┘                 ││
-│ └─────────────────────────────────────────────────────┘│
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ 🎉 Výročí spolupráce                    │
+├─────────────────────────────────────────┤
+│                                         │
+│  Petr Svoboda                           │
+│  2 roky společného tréninku!            │
+│                                         │
+│  📅 Od: 29.1.2024                       │
+│  📊 Celkem tréninků: 156                │
+│  💪 Pokrok: +15kg na bench pressu       │
+│                                         │
+│  [Zavřít]        [Zobrazit profil]      │
+│                                         │
+└─────────────────────────────────────────┘
 ```
 
 ---
 
 ## Technické změny
 
-### Soubory k úpravě
+### Soubory k úpravě:
 
-| Soubor | Změny |
+| Soubor | Změna |
 |--------|-------|
-| `src/hooks/useNutritionFeedback.ts` | Přidat vytváření notifikace pro klienta při komentáři |
-| `src/hooks/useNutritionDayNotes.ts` | Přidat notifikaci při isChecked=true a při trainerNote |
-| `src/pages/client-portal/ClientPortalNutrition.tsx` | Přidat banner "Zkontrolováno" a vylepšit zobrazení poznámky |
-| `src/components/client-portal/nutrition/TodayEntries.tsx` | Vylepšit zobrazení trenérských komentářů |
-| `src/components/client-portal/ClientNotificationCenter.tsx` | Přidat nové typy notifikací |
+| `src/hooks/useAggregatedNotifications.ts` | Nová kategorizace, filtrování nepodstatných typů |
+| `src/components/notifications/NotificationCenter.tsx` | Nové handlery, nové dialogy, nová struktura sekcí |
+| `src/components/notifications/BirthdayDetailDialog.tsx` | **NOVÝ** - detail narozenin s akcí |
+| `src/components/notifications/AnniversaryDetailDialog.tsx` | **NOVÝ** - detail výročí |
 
-### Nové typy notifikací pro klienta
+### Změna v `useAggregatedNotifications.ts`:
 
 ```typescript
-// Nové typy v client_portal_notifications:
-'nutrition_day_checked'     // Trenér zkontroloval den
-'nutrition_entry_comment'   // Trenér komentoval jídlo/nápoj
-'nutrition_day_note'        // Trenér přidal poznámku ke dni
+// NOVÁ kategorizace
+const TYPE_CATEGORY: Record<string, NotificationCategory> = {
+  // Klientská aktivita (priorita 1)
+  nutrition_entry_added: 'activity',
+  client_nutrition_started: 'activity',
+  client_workout_logged: 'activity',
+  client_profile_updated: 'activity',
+  client_weight_added: 'activity',
+  
+  // Zpětná vazba & Formuláře (priorita 2)
+  feedback_received: 'forms',
+  feedback_red_flag: 'forms',
+  diagnostic_completed: 'forms',
+  pre_diagnostic_completed: 'forms',
+  
+  // Důležité události (priorita 3)
+  birthday: 'events',
+  client_anniversary: 'events',
+};
+
+// VYŘAZENÉ z notifikačního centra (pouze dashboard):
+const EXCLUDED_TYPES = [
+  'low_credit', 'negative_credit',
+  'package_low', 'package_expiring',
+  'inactivity_warning',
+  'milestone_100', 'milestone_500', 'milestone_1000',
+  'training_streak',
+  'incomplete_training',
+  'nutrition_inactive',
+  'pr_achieved', 'pr_created', 'pr_updated', // PRs zůstávají na klientském profilu
+  'feedback_pending', 'feedback_trend_alert',
+];
 ```
 
-### Implementace notifikací
+### Změna v `NotificationCenter.tsx`:
 
-#### V `useUpsertDayNote`:
 ```typescript
-// Při isChecked = true (nově zaškrtnuto):
-await supabase.from('client_portal_notifications').insert({
-  client_id: clientId,
-  type: 'nutrition_day_checked',
-  title: '✅ Jídelníček zkontrolován',
-  message: `Trenér zkontroloval váš jídelníček pro ${formattedDate}`,
-  action_url: '/client/nutrition',
-  metadata: { date: dateStr },
-});
+// Přidání handleru pro narozeniny
+const isBirthdayNotification = notification.type === 'birthday';
+const isAnniversaryNotification = notification.type === 'client_anniversary';
+const isWeightNotification = notification.type === 'client_weight_added';
 
-// Při trainerNote (nová poznámka):
-await supabase.from('client_portal_notifications').insert({
-  client_id: clientId,
-  type: 'nutrition_day_note',
-  title: '📝 Nová poznámka od trenéra',
-  message: trainerNote.substring(0, 100) + (trainerNote.length > 100 ? '...' : ''),
-  action_url: '/client/nutrition',
-  metadata: { date: dateStr },
-});
-```
+// Birthday → BirthdayDetailDialog
+if (isBirthdayNotification && clientId) {
+  setSelectedBirthdayNotification(notification);
+  setBirthdayDialogOpen(true);
+  setSheetOpen(false);
+  return;
+}
 
-#### V `useTrainerFeedback`:
-```typescript
-// Při komentáři k jídlu/nápoji:
-if (comment) {
-  // Získat client_id z entry
-  const { data: entry } = await supabase
-    .from(table)
-    .select('client_id, description, entry_date')
-    .eq('id', entryId)
-    .single();
-    
-  await supabase.from('client_portal_notifications').insert({
-    client_id: entry.client_id,
-    type: 'nutrition_entry_comment',
-    title: '💬 Nový komentář od trenéra',
-    message: `Trenér okomentoval: ${entry.description?.substring(0, 50)}...`,
-    action_url: '/client/nutrition',
-    metadata: { entry_date: entry.entry_date },
-  });
+// Anniversary → AnniversaryDetailDialog  
+if (isAnniversaryNotification && clientId) {
+  setSelectedAnniversaryNotification(notification);
+  setAnniversaryDialogOpen(true);
+  setSheetOpen(false);
+  return;
+}
+
+// Weight → Navigate to progress tab
+if (isWeightNotification && clientId) {
+  setSheetOpen(false);
+  navigate(`/clients/${clientId}?tab=progress`);
+  return;
 }
 ```
-
----
-
-## Vylepšení UI klientského deníku
-
-### Nová komponenta: `TrainerReviewBanner`
-
-```typescript
-interface TrainerReviewBannerProps {
-  isChecked: boolean;
-  checkedAt: string | null;
-  trainerNote: string | null;
-  onReply?: () => void;
-}
-```
-
-Zobrazí:
-- Zelený banner pokud je den zkontrolován
-- Prominentní sekci s poznámkou trenéra
-- Tlačítko pro odpověď
-
-### Vylepšená `TodayEntries`
-
-- Jasnější vizuální odlišení trenérských komentářů
-- Animace při novém komentáři
-- Rychlá odpověď inline (ne v dialogu)
 
 ---
 
 ## Shrnutí klíčových změn
 
-1. **Notifikace fungují obousměrně** - trenér vidí aktivitu klienta, klient vidí reakce trenéra
+1. **Zjednodušení na 3 kategorie** - Klientská aktivita, Zpětná vazba, Důležité události
 
-2. **Vizuální potvrzení kontroly** - klient jasně vidí, že trenér zkontroloval jeho jídelníček
+2. **Narozeniny viditelné ve výchozím stavu** - přesunuty z Admin do nové kategorie "Události"
 
-3. **Prominentní poznámky trenéra** - komentáře nejsou schované, ale jsou hlavním prvkem
+3. **Každá notifikace je akciovatelná** - kliknutí otevře relevantní detail dialog
 
-4. **Rychlá komunikace** - možnost odpovědět přímo z notifikace i z deníku
+4. **Vyřazení nepodstatných notifikací** - kredity, milníky, streaky zůstávají pouze na dashboardu
 
-5. **Akční URL** - kliknutí na notifikaci přenese klienta na správný den v deníku
+5. **Nové dialogy pro události** - BirthdayDetailDialog a AnniversaryDetailDialog s rychlými akcemi
+
+6. **Konzistentní UX** - všechny notifikace fungují stejným způsobem (kliknutí = detail)
