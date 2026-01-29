@@ -2,15 +2,19 @@ import { motion } from 'framer-motion';
 import { Trophy, Dumbbell, Heart, Zap } from 'lucide-react';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useExercisesWithPercentiles } from '@/hooks/useExercisePercentiles';
-import OverallPositionHero from '@/components/client-portal/leaderboard/OverallPositionHero';
+import { usePerformanceBenchmarks } from '@/hooks/usePerformanceBenchmarks';
+import LeaderboardHeroEnhanced from '@/components/client-portal/leaderboard/LeaderboardHeroEnhanced';
+import { CategoryQuickStats } from '@/components/client-portal/leaderboard/CategoryQuickStats';
 import ExerciseComparisonGrid from '@/components/client-portal/leaderboard/ExerciseComparisonGrid';
-import GamificationSection from '@/components/client-portal/leaderboard/GamificationSection';
+import { MilestonesSection } from '@/components/client-portal/leaderboard/MilestonesSection';
+import { GamificationProfileCard } from '@/components/client-portal/leaderboard/GamificationProfileCard';
 
 export default function ClientPortalLeaderboard() {
   const { clientId, clientAccount } = useClientPortal();
   const trainerId = clientAccount?.trainer_id;
   
   const { data: exercises, isLoading: exercisesLoading } = useExercisesWithPercentiles(trainerId);
+  const { data: benchmarks } = usePerformanceBenchmarks(clientId ?? undefined);
 
   return (
     <div className="space-y-6">
@@ -31,8 +35,16 @@ export default function ClientPortalLeaderboard() {
         </div>
       </motion.div>
 
-      {/* Hero - Overall Position */}
-      <OverallPositionHero clientId={clientId ?? undefined} />
+      {/* Enhanced Hero - Overall Position */}
+      <LeaderboardHeroEnhanced clientId={clientId ?? undefined} />
+
+      {/* Milestones Section - Close Goals */}
+      <MilestonesSection
+        strengthExercises={exercises?.strength || []}
+        cardioExercises={exercises?.cardio || []}
+        plyometricsExercises={exercises?.plyometrics || []}
+        overallPercentile={benchmarks?.overallPercentile ?? null}
+      />
 
       {/* Strength Exercises Section */}
       <motion.section
@@ -50,6 +62,12 @@ export default function ClientPortalLeaderboard() {
             ({exercises?.strength.length || 0} cviků)
           </span>
         </div>
+        
+        {/* Category Quick Stats */}
+        <CategoryQuickStats 
+          exercises={exercises?.strength || []} 
+          exerciseType="strength" 
+        />
         
         <ExerciseComparisonGrid
           exercises={exercises?.strength || []}
@@ -77,6 +95,12 @@ export default function ClientPortalLeaderboard() {
           </span>
         </div>
         
+        {/* Category Quick Stats */}
+        <CategoryQuickStats 
+          exercises={exercises?.plyometrics || []} 
+          exerciseType="plyometrics" 
+        />
+        
         <ExerciseComparisonGrid
           exercises={exercises?.plyometrics || []}
           exerciseType="plyometrics"
@@ -103,6 +127,12 @@ export default function ClientPortalLeaderboard() {
           </span>
         </div>
         
+        {/* Category Quick Stats */}
+        <CategoryQuickStats 
+          exercises={exercises?.cardio || []} 
+          exerciseType="cardio" 
+        />
+        
         <ExerciseComparisonGrid
           exercises={exercises?.cardio || []}
           exerciseType="cardio"
@@ -112,13 +142,13 @@ export default function ClientPortalLeaderboard() {
         />
       </motion.section>
 
-      {/* Gamification Section - Collapsible */}
+      {/* Gamification Profile Card - Replaces old GamificationSection */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
-        <GamificationSection clientId={clientId ?? undefined} />
+        <GamificationProfileCard clientId={clientId ?? undefined} />
       </motion.div>
 
       {/* Info tip */}
@@ -126,7 +156,7 @@ export default function ClientPortalLeaderboard() {
         className="p-3 rounded-lg bg-muted/50 border border-border/50"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.5 }}
       >
         <p className="text-xs text-muted-foreground text-center">
           💡 Klikni na cvik pro zobrazení detailního žebříčku. Tvá data jsou ve výchozím nastavení anonymní.
