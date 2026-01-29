@@ -6186,6 +6186,7 @@ export type Database = {
           id: string
           is_read: boolean | null
           message: string
+          metadata: Json | null
           severity: string | null
           title: string
           type: string
@@ -6199,6 +6200,7 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           message: string
+          metadata?: Json | null
           severity?: string | null
           title: string
           type: string
@@ -6212,6 +6214,7 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           message?: string
+          metadata?: Json | null
           severity?: string | null
           title?: string
           type?: string

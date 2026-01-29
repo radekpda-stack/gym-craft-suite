@@ -24,6 +24,7 @@ import { cs } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { FeedbackDetailDialog } from "@/components/feedback/FeedbackDetailDialog";
+import { ProfileUpdateDetailDialog } from "./ProfileUpdateDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { TrainingFeedback } from "@/hooks/useTrainingFeedback";
 import { NotificationEmptyState } from "./NotificationEmptyState";
@@ -118,6 +119,8 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const [selectedFeedback, setSelectedFeedback] = useState<TrainingFeedback | null>(null);
   const [feedbackMeta, setFeedbackMeta] = useState<{ clientName?: string; trainingDate?: string }>({});
   const [loadingFeedback, setLoadingFeedback] = useState(false);
+  const [profileUpdateDialogOpen, setProfileUpdateDialogOpen] = useState(false);
+  const [selectedProfileNotification, setSelectedProfileNotification] = useState<UnifiedNotification | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -204,10 +207,11 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
       return;
     }
 
-    // Profile update notifications → Navigate to client profile tab
-    if (isProfileUpdateNotification && clientId) {
+    // Profile update notifications → Open detail dialog
+    if (isProfileUpdateNotification) {
+      setSelectedProfileNotification(notification);
+      setProfileUpdateDialogOpen(true);
       setSheetOpen(false);
-      navigate(`/clients/${clientId}?tab=profile`);
       return;
     }
 
@@ -522,6 +526,17 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
         }}
         clientName={feedbackMeta.clientName}
         trainingDate={feedbackMeta.trainingDate}
+      />
+
+      <ProfileUpdateDetailDialog
+        open={profileUpdateDialogOpen}
+        onOpenChange={(open) => {
+          setProfileUpdateDialogOpen(open);
+          if (!open) {
+            setSelectedProfileNotification(null);
+          }
+        }}
+        notification={selectedProfileNotification}
       />
     </>
   );

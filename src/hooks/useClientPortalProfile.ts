@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useClientPortalAuth } from "./useClientPortalAuth";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface ClientProfileData {
   id: string;
@@ -84,26 +85,29 @@ export function useUpdateClientPortalProfile() {
 
       if (error) throw error;
 
-      // Create notification for trainer about profile update
-      const changedFields: string[] = [];
-      if (updates.email !== undefined) changedFields.push("email");
-      if (updates.phone !== undefined) changedFields.push("telefon");
-      if (updates.birth_date !== undefined) changedFields.push("datum narození");
-      if (updates.gender !== undefined) changedFields.push("pohlaví");
-      if (updates.handedness !== undefined) changedFields.push("dominantní ruka");
-      if (updates.occupation !== undefined) changedFields.push("typ práce");
-      if (updates.sitting_hours_daily !== undefined) changedFields.push("hodiny vsedě");
-      if (updates.sleep_hours !== undefined) changedFields.push("spánek");
-      if (updates.stress_level !== undefined) changedFields.push("úroveň stresu");
-      if (updates.health_restrictions !== undefined) changedFields.push("zdravotní omezení");
-      if (updates.sports_history !== undefined) changedFields.push("sportovní historie");
-      if (updates.current_activities !== undefined) changedFields.push("aktuální aktivity");
-      if (updates.training_goals !== undefined) changedFields.push("tréninkové cíle");
-      if (updates.supplements !== undefined) changedFields.push("doplňky stravy");
-      if (updates.dietary_restrictions !== undefined) changedFields.push("stravovací omezení");
+      // Create notification for trainer about profile update with metadata
+      const changes: Record<string, { value: unknown }> = {};
+      
+      if (updates.email !== undefined) changes["email"] = { value: updates.email };
+      if (updates.phone !== undefined) changes["telefon"] = { value: updates.phone };
+      if (updates.birth_date !== undefined) changes["datum narození"] = { value: updates.birth_date };
+      if (updates.gender !== undefined) changes["pohlaví"] = { value: updates.gender };
+      if (updates.handedness !== undefined) changes["dominantní ruka"] = { value: updates.handedness };
+      if (updates.occupation !== undefined) changes["typ práce"] = { value: updates.occupation };
+      if (updates.sitting_hours_daily !== undefined) changes["hodiny vsedě"] = { value: updates.sitting_hours_daily };
+      if (updates.sleep_hours !== undefined) changes["spánek"] = { value: updates.sleep_hours };
+      if (updates.stress_level !== undefined) changes["úroveň stresu"] = { value: updates.stress_level };
+      if (updates.health_restrictions !== undefined) changes["zdravotní omezení"] = { value: updates.health_restrictions };
+      if (updates.sports_history !== undefined) changes["sportovní historie"] = { value: updates.sports_history };
+      if (updates.current_activities !== undefined) changes["aktuální aktivity"] = { value: updates.current_activities };
+      if (updates.training_goals !== undefined) changes["tréninkové cíle"] = { value: updates.training_goals };
+      if (updates.supplements !== undefined) changes["doplňky stravy"] = { value: updates.supplements };
+      if (updates.dietary_restrictions !== undefined) changes["stravovací omezení"] = { value: updates.dietary_restrictions };
 
+      const changedFields = Object.keys(changes);
+      
       if (changedFields.length > 0) {
-        await supabase.from("notifications").insert({
+        await supabase.from("notifications").insert([{
           client_id: clientAccount.client_id,
           user_id: clientAccount.trainer_id,
           type: "client_profile_updated",
@@ -111,7 +115,8 @@ export function useUpdateClientPortalProfile() {
           message: `${clientProfile?.name || "Klient"} upravil(a): ${changedFields.join(", ")}`,
           entity_type: "client",
           entity_id: clientAccount.client_id,
-        });
+          metadata: { changes } as Json,
+        }]);
       }
 
       return { success: true };
