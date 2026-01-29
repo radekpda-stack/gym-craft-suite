@@ -2454,6 +2454,64 @@ export type Database = {
           },
         ]
       }
+      client_percentile_history: {
+        Row: {
+          best_value: number
+          client_id: string
+          created_at: string
+          exercise_name: string
+          exercise_type: string
+          id: string
+          metric_type: string
+          percentile: number
+          recorded_at: string
+        }
+        Insert: {
+          best_value: number
+          client_id: string
+          created_at?: string
+          exercise_name: string
+          exercise_type?: string
+          id?: string
+          metric_type?: string
+          percentile: number
+          recorded_at?: string
+        }
+        Update: {
+          best_value?: number
+          client_id?: string
+          created_at?: string
+          exercise_name?: string
+          exercise_type?: string
+          id?: string
+          metric_type?: string
+          percentile?: number
+          recorded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_percentile_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_percentile_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_percentile_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_product_sales_report"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       client_portal_activity: {
         Row: {
           activity_date: string
