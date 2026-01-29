@@ -1,61 +1,56 @@
 
-# Kliknutelné notifikace o stravě s detailem záznamů
+# Detail tréninku klienta v notifikacích
 
 ## Přehled problému
 
-Při kliknutí na agregovanou notifikaci "18 záznamů stravy" se rozklikne seznam položek, ale:
-1. Jednotlivé položky nejsou klikatelné
-2. Zobrazují pouze "Klient zapisuje stravu" + datum
-3. Trenér nevidí, co klient zapsal
-
-## Navrhované řešení
-
-Vytvořit nový dialog `NutritionEntryDetailDialog`, který:
-- Zobrazí záznamy stravy pro konkrétní den
-- Načte data z `nutrition_food_entries`, `nutrition_drink_entries`, `nutrition_coffee_entries`
-- Umožní přímou navigaci na celý deník klienta
+Při kliknutí na notifikaci "Klient cvičil" se nic neotevře - notifikace není klikatelná a trenér nevidí, co klient zapsal.
 
 ```text
 AKTUÁLNÍ STAV:
 ┌─────────────────────────────────────────┐
-│ 18 záznamů stravy                       │
-│ └─ Klient zapisuje stravu    Včera      │ ← Neklikatelné
-│ └─ Klient zapisuje stravu    Před 2 dny │ ← Nic neukáže
+│ 🏋️ Tréninky & Cvičení                  │
+│ └─ Jana Nováková si zapsal/a vlastní   │
+│    silový trénink.            Včera    │ ← Neklikatelné
 └─────────────────────────────────────────┘
 
 NOVÝ STAV:
 ┌─────────────────────────────────────────┐
-│ 18 záznamů stravy                       │
-│ └─ Jana Nováková             Včera  [>] │ ← Kliknutí otevře dialog
-│ └─ Petr Svoboda         Před 2 dny  [>] │
+│ 🏋️ Tréninky & Cvičení                  │
+│ └─ Jana Nováková si zapsal/a vlastní   │
+│    silový trénink.            Včera [>]│ ← Kliknutí otevře dialog
 └─────────────────────────────────────────┘
 
 DIALOG PO KLIKNUTÍ:
 ┌─────────────────────────────────────────────┐
-│ 🍎 Strava klienta                      [✕] │
+│ 🏋️ Trénink klienta                    [✕] │
 │ Jana Nováková • Úterý 28.1.2025            │
 ├─────────────────────────────────────────────┤
 │                                             │
-│ JÍDLA                                       │
+│ PŘEHLED                                     │
 │ ┌─────────────────────────────────────────┐ │
-│ │ 🍳 Snídaně (08:30)                      │ │
-│ │ Ovesná kaše s ovocem, med               │ │
-│ │ Porce: střední                          │ │
-│ └─────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────┐ │
-│ │ 🥗 Oběd (12:15)                         │ │
-│ │ Kuřecí salát s quinoou                  │ │
-│ │ Porce: velká                            │ │
+│ │ 💪 Silový trénink                       │ │
+│ │ ⏱️ 45 minut                             │ │
+│ │ ⚡ Energie: 6 → 8                        │ │
 │ └─────────────────────────────────────────┘ │
 │                                             │
-│ NÁPOJE                                      │
+│ CVIKY (3)                                   │
 │ ┌─────────────────────────────────────────┐ │
-│ │ 💧 Voda (10:00) - 500ml                 │ │
+│ │ 1. Bench Press                          │ │
+│ │    3×10 @ 80 kg • RPE 8                 │ │
+│ └─────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────┐ │
+│ │ 2. Dřepy                                │ │
+│ │    4×8 @ 100 kg • RPE 9                 │ │
+│ └─────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────┐ │
+│ │ 3. Mrtvý tah                            │ │
+│ │    3×5 @ 120 kg • RPE 7                 │ │
 │ └─────────────────────────────────────────┘ │
 │                                             │
-│ KOFEIN                                      │
+│ POZNÁMKY                                    │
 │ ┌─────────────────────────────────────────┐ │
-│ │ ☕ Espresso (07:45)                      │ │
+│ │ Cítil jsem se skvěle, ale trochu       │ │
+│ │ bolelo rameno u bench pressu.           │ │
 │ └─────────────────────────────────────────┘ │
 │                                             │
 ├─────────────────────────────────────────────┤
@@ -63,20 +58,43 @@ DIALOG PO KLIKNUTÍ:
 └─────────────────────────────────────────────┘
 ```
 
+---
+
 ## Technická implementace
 
 ### 1. Data dostupná v notifikaci
 
-Notifikace `nutrition_entry_added` obsahuje:
+Notifikace `client_workout_logged` obsahuje:
 - `client_id` - ID klienta
-- `entity_type: 'nutrition_session'`
-- `entity_id` - ID session
-- `created_at` - Datum vytvoření (= den zápisu)
+- `entity_type: 'workout_log'`
+- `entity_id` - ID záznamu v `client_workout_logs`
+- `message` - "{clientName} si zapsal/a vlastní {workoutType}."
 
-### 2. Nová komponenta - NutritionEntryDetailDialog
+### 2. Data v databázi
+
+**client_workout_logs:**
+- `id`, `client_id`, `trainer_id`
+- `date` - datum tréninku
+- `workout_type` - typ tréninku (silový, kardio, atd.)
+- `duration_minutes` - délka v minutách
+- `energy_before`, `energy_after` - energie před/po (1-10)
+- `notes` - poznámky klienta
+- `trainer_comment` - komentář trenéra
+
+**client_workout_exercises:**
+- `workout_log_id` - vazba na log
+- `exercise_name` - název cviku
+- `sets`, `reps` - série a opakování
+- `weight_kg` - váha
+- `rpe` - intenzita
+- `duration_seconds`, `distance_meters` - pro kardio
+- `notes` - poznámky ke cviku
+- `side` - strana (left/right/both/none)
+
+### 3. Nová komponenta - WorkoutLogDetailDialog
 
 ```typescript
-interface NutritionEntryDetailDialogProps {
+interface WorkoutLogDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   notification: UnifiedNotification | null;
@@ -84,96 +102,157 @@ interface NutritionEntryDetailDialogProps {
 ```
 
 Dialog:
-1. Extrahuje `client_id` a datum z `notification.created_at`
-2. Načte záznamy z DB pro daný den
-3. Zobrazí jídla, nápoje a kávu v přehledné formě
-4. Tlačítko pro navigaci na celý deník
+1. Extrahuje `entity_id` z notifikace (= workout_log_id)
+2. Načte data z `client_workout_logs` a `client_workout_exercises`
+3. Zobrazí přehled tréninku a seznam cviků
+4. Tlačítko pro navigaci na celý deník klienta
 
-### 3. Úprava UnifiedNotificationItem
-
-Aktuálně agregované položky volají pouze `onClick?.()` bez předání konkrétní položky:
-
-```typescript
-// PŘED (řádek 250-253)
-onClick={(e) => {
-  e.stopPropagation();
-  onClick?.();  // ← Volá handler pro celou agregaci
-}}
-```
-
-Potřeba:
-- Přidat nový callback `onItemClick?: (item: UnifiedNotification) => void`
-- Volat s konkrétní položkou
-
-### 4. Úprava NotificationCenter
-
-- Přidat stav pro vybranou nutrition notifikaci
-- Přidat `NutritionEntryDetailDialog`
-- Předat `onItemClick` do `UnifiedNotificationItem`
+---
 
 ## Změny v souborech
 
 | Soubor | Změna |
 |--------|-------|
-| `NutritionEntryDetailDialog.tsx` | **Nový** - Dialog pro zobrazení denních záznamů |
-| `UnifiedNotificationItem.tsx` | Přidat `onItemClick` callback pro agregované položky |
-| `NotificationCenter.tsx` | Integrovat dialog a handler |
+| `WorkoutLogDetailDialog.tsx` | **Nový** - Dialog pro zobrazení detailu tréninku |
+| `NotificationCenter.tsx` | Přidat handler pro `client_workout_logged` notifikace |
+| `UnifiedNotificationItem.tsx` | Přidat `onItemClick` i pro training kategorii |
 
-## Detailní design dialogu
+---
 
-### Sekce JÍDLA
-Pro každý záznam z `nutrition_food_entries`:
-- Ikona podle `meal_type` (snídaně 🍳, oběd 🥗, večeře 🍽️, svačina 🍎)
-- Čas (`entry_time`)
-- Popis (`description`)
-- Porce (`portion_size`)
-- Volitelně: kvalita, sytost
+## Detail dialogu - sekce
 
-### Sekce NÁPOJE
-Pro každý záznam z `nutrition_drink_entries`:
-- Ikona podle typu (voda 💧, slazený 🥤, alkohol 🍺)
-- Čas + objem
+### Sekce PŘEHLED
+- Ikona typu tréninku (💪 silový, 🏃 kardio, 🧘 mobilita, atd.)
+- Typ tréninku (text)
+- Délka tréninku (minuty)
+- Energie před → po (vizuální indikátor)
 
-### Sekce KOFEIN
-Pro každý záznam z `nutrition_coffee_entries`:
-- Ikona ☕
-- Typ (espresso, čaj, energy)
-- Čas
+### Sekce CVIKY
+Pro každý cvik z `client_workout_exercises`:
+- Číslo pořadí + název cviku
+- Formát: `{sets}×{reps} @ {weight_kg} kg`
+- RPE badge
+- Pro kardio: `{duration_seconds}s` nebo `{distance_meters}m`
+- Poznámky ke cviku (pokud existují)
+- Strana (L/R badge pro jednostranné cviky)
+
+### Sekce POZNÁMKY
+- Poznámky klienta k celému tréninku
+- Pokud prázdné, sekce se nezobrazí
 
 ### Prázdný stav
-Pokud pro daný den nejsou žádné záznamy:
-- "Pro tento den nebyly nalezeny záznamy"
-- Nabídnout přechod na celý deník
+Pokud workout_log neexistuje nebo nebyl nalezen:
+- "Záznam tréninku nebyl nalezen"
+- Nabídnout přechod na profil klienta
+
+---
+
+## Integrace do NotificationCenter
+
+### Přidat stav
+```typescript
+const [workoutDialogOpen, setWorkoutDialogOpen] = useState(false);
+const [selectedWorkoutNotification, setSelectedWorkoutNotification] = 
+  useState<UnifiedNotification | null>(null);
+```
+
+### Přidat handler pro `client_workout_logged`
+```typescript
+const isWorkoutLogNotification = notification.type === 'client_workout_logged';
+
+if (isWorkoutLogNotification && notification.entity_id) {
+  setSelectedWorkoutNotification(notification);
+  setWorkoutDialogOpen(true);
+  setSheetOpen(false);
+  return;
+}
+```
+
+### Přidat handler pro agregované položky
+```typescript
+const handleWorkoutItemClick = useCallback((item: UnifiedNotification) => {
+  if (!item.is_read && !item.id.startsWith('aggregated-')) {
+    markRead.mutate(item.id);
+  }
+  setSelectedWorkoutNotification(item);
+  setWorkoutDialogOpen(true);
+}, [markRead]);
+```
+
+### Předat do UnifiedNotificationItem
+```typescript
+<UnifiedNotificationItem
+  // ...
+  onItemClick={
+    category === 'nutrition' ? handleNutritionItemClick :
+    category === 'training' ? handleWorkoutItemClick :
+    undefined
+  }
+/>
+```
+
+---
+
+## Formátování cviků
+
+```text
+Příklady zobrazení:
+
+SILOVÝ CVIK:
+┌─────────────────────────────────────────┐
+│ 1. Bench Press                          │
+│    3×10 @ 80 kg                    RPE 8│
+└─────────────────────────────────────────┘
+
+KARDIO CVIK:
+┌─────────────────────────────────────────┐
+│ 2. Běh na páse                          │
+│    20 min • 3.5 km                      │
+└─────────────────────────────────────────┘
+
+JEDNOSTRANNÝ CVIK:
+┌─────────────────────────────────────────┐
+│ 3. Výpady                          [L]  │
+│    3×12 @ 20 kg                    RPE 7│
+│    Poznámka: Levá noha slabší           │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## Ikony typů tréninku
+
+| Typ | Ikona | Label |
+|-----|-------|-------|
+| strength / silový | 💪 | Silový trénink |
+| cardio / kardio | 🏃 | Kardio |
+| mobility / mobilita | 🧘 | Mobilita |
+| hiit | ⚡ | HIIT |
+| crossfit | 🏋️ | CrossFit |
+| other / ostatní | 🎯 | Trénink |
+
+---
 
 ## Implementační kroky
 
-### Krok 1: NutritionEntryDetailDialog (nový soubor)
-- Vytvoření komponenty s fetch logikou
-- UI pro zobrazení jídel/nápojů/kávy
-- Navigace na celý deník
+### Krok 1: WorkoutLogDetailDialog.tsx (nový soubor)
+- Fetch logika pro `client_workout_logs` a `client_workout_exercises`
+- UI pro přehled, cviky a poznámky
+- Navigace na deník klienta
 
-### Krok 2: UnifiedNotificationItem
-- Přidat prop `onItemClick?: (item: UnifiedNotification) => void`
-- Upravit onClick v rozbalených položkách
+### Krok 2: NotificationCenter.tsx
+- Přidat stavy pro dialog
+- Přidat handler v `handleNotificationClick` pro `client_workout_logged`
+- Přidat `handleWorkoutItemClick` pro agregované položky
+- Předat `onItemClick` pro training kategorii
+- Přidat `WorkoutLogDetailDialog` do JSX
 
-### Krok 3: NotificationCenter
-- Přidat stav `selectedNutritionNotification`
-- Přidat stav `nutritionDialogOpen`
-- Přidat handler `handleNutritionItemClick`
-- Předat `onItemClick` do `UnifiedNotificationItem`
-- Přidat `NutritionEntryDetailDialog`
-
-## Pořadí implementace
-
-1. **NutritionEntryDetailDialog.tsx** - nová komponenta
-2. **UnifiedNotificationItem.tsx** - přidat onItemClick
-3. **NotificationCenter.tsx** - integrace
+---
 
 ## Časový odhad
 
 | Úkol | Čas |
 |------|-----|
-| NutritionEntryDetailDialog | 40 min |
-| UnifiedNotificationItem úprava | 10 min |
+| WorkoutLogDetailDialog | 35 min |
 | NotificationCenter integrace | 15 min |
-| **Celkem** | **~1 hodina** |
+| **Celkem** | **~50 minut** |
