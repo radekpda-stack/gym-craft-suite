@@ -29,6 +29,7 @@ import { AsymmetryCard } from '@/components/client-portal/progress/AsymmetryCard
 // Tab content components
 import { ClientFinanceLedger } from './ClientFinanceLedger';
 import { ClientPeriodizationCard } from './ClientPeriodizationCard';
+import { ClientSelfWorkoutsCard } from './ClientSelfWorkoutsCard';
 import { ClientFeedbackAnalysisSection } from './ClientFeedbackAnalysisSection';
 import { ClientTrainingLoadCard } from './ClientTrainingLoadCard';
 import { ClientPRsCard } from './ClientPRsCard';
@@ -200,6 +201,9 @@ export function ClientDetailTabs({
       <TabsContent value="trainings" className="mt-0 space-y-4">
         {/* Periodization */}
         <ClientPeriodizationCard clientId={client.id} defaultOpen={false} />
+        
+        {/* Client Self-Logged Workouts */}
+        <ClientSelfWorkoutsCard clientId={client.id} defaultOpen={true} />
         
         {/* Unified Finance Ledger */}
         <ClientFinanceLedger
