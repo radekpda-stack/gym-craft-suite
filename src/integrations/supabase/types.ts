@@ -9651,6 +9651,7 @@ export type Database = {
           soreness: number | null
           source: string | null
           technique_rating: number
+          trainer_note: string | null
           training_date: string
           training_session_id: string
           training_type: string | null
@@ -9697,6 +9698,7 @@ export type Database = {
           soreness?: number | null
           source?: string | null
           technique_rating: number
+          trainer_note?: string | null
           training_date: string
           training_session_id: string
           training_type?: string | null
@@ -9743,6 +9745,7 @@ export type Database = {
           soreness?: number | null
           source?: string | null
           technique_rating?: number
+          trainer_note?: string | null
           training_date?: string
           training_session_id?: string
           training_type?: string | null
