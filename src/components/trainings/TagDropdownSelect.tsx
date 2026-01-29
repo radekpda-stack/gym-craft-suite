@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils';
-import { Check } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -59,8 +58,8 @@ export function TagDropdownSelect({
         >
           <SelectValue placeholder={placeholder}>
             {selectedOption ? (
-              <span className="flex items-center gap-1.5">
-                {selectedOption.icon && <span>{selectedOption.icon}</span>}
+              <span key={selectedOption.id} className="flex items-center gap-1.5">
+                {selectedOption.icon && <span className="shrink-0">{selectedOption.icon}</span>}
                 <span className="truncate">{selectedOption.label}</span>
               </span>
             ) : (
@@ -77,9 +76,8 @@ export function TagDropdownSelect({
           {options.map((option) => (
             <SelectItem key={option.id} value={option.id}>
               <span className="flex items-center gap-2">
-                {option.icon && <span>{option.icon}</span>}
+                {option.icon && <span className="shrink-0">{option.icon}</span>}
                 <span>{option.label}</span>
-                {option.id === value && <Check className="h-3.5 w-3.5 text-primary ml-auto" />}
               </span>
             </SelectItem>
           ))}
