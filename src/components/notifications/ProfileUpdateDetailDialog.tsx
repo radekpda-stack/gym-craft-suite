@@ -59,6 +59,15 @@ const FIELD_CONFIG: Record<string, { icon: typeof Mail; label: string }> = {
   "stravovací omezení": { icon: Salad, label: "Stravovací omezení" },
 };
 
+// Parse field names from message for older notifications without metadata
+function parseFieldsFromMessage(message: string): string[] {
+  // Message format: "Jana upravil(a): email, telefon, datum narození"
+  const match = message.match(/upravil\(a\):\s*(.+)$/i);
+  if (!match) return [];
+  
+  return match[1].split(",").map(field => field.trim()).filter(Boolean);
+}
+
 function formatValue(value: string | number | string[] | null | undefined): string {
   if (value === null || value === undefined) return "Odstraněno";
   if (Array.isArray(value)) {
@@ -108,6 +117,12 @@ export function ProfileUpdateDetailDialog({
   const metadata = notification.metadata as ProfileUpdateMetadata | null;
   const changes = metadata?.changes || {};
   const hasChanges = Object.keys(changes).length > 0;
+  
+  // For older notifications without metadata, parse field names from message
+  const parsedFieldsFromMessage = !hasChanges && notification.message
+    ? parseFieldsFromMessage(notification.message)
+    : [];
+  const hasAnyData = hasChanges || parsedFieldsFromMessage.length > 0;
   
   const clientId = notification.client_id || notification.entity_id;
   const displayName = clientName || notification.title?.split(" upravil")?.[0] || "Klient";
@@ -182,6 +197,40 @@ export function ProfileUpdateDetailDialog({
                     );
                   })}
                 </div>
+              </>
+            ) : parsedFieldsFromMessage.length > 0 ? (
+              <>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Změněná pole
+                </p>
+                <div className="space-y-2">
+                  {parsedFieldsFromMessage.map((fieldKey) => {
+                    const config = FIELD_CONFIG[fieldKey] || { 
+                      icon: User, 
+                      label: fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1) 
+                    };
+                    const Icon = config.icon;
+
+                    return (
+                      <div
+                        key={fieldKey}
+                        className="rounded-lg border bg-muted/30 p-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center shrink-0">
+                            <Icon className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                          <p className="text-sm font-medium">
+                            {config.label}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground text-center pt-2">
+                  Pro zobrazení aktuálních hodnot klikněte na "Zobrazit profil"
+                </p>
               </>
             ) : (
               <div className="text-center py-6">
