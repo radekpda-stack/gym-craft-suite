@@ -15,6 +15,7 @@ import { CaffeineWindowWidget } from '@/components/client-portal/nutrition/Caffe
 import { DayNoteInput, DayNoteDisplay } from '@/components/client-portal/nutrition/DayNoteInput';
 import { HabitSettingsForm } from '@/components/client-portal/nutrition/HabitSettingsForm';
 import { QuickAddTimeDialog } from '@/components/client-portal/nutrition/QuickAddTimeDialog';
+import { TrainerReviewBanner } from '@/components/client-portal/nutrition/TrainerReviewBanner';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { type MealTypeId, QUICK_WATER_AMOUNTS } from '@/components/client-portal/nutrition/constants';
@@ -264,6 +265,25 @@ export default function ClientPortalNutrition() {
     }
   };
 
+  // Handle reply to trainer note
+  const [isReplyingToNote, setIsReplyingToNote] = useState(false);
+  const handleReplyToTrainerNote = async (reply: string) => {
+    if (!clientId) return;
+    setIsReplyingToNote(true);
+    try {
+      await upsertDayNote.mutateAsync({
+        clientId,
+        date: selectedDateStr,
+        clientNote: reply,
+      });
+      toast.success('Odpověď odeslána');
+    } catch (error) {
+      toast.error('Nepodařilo se odeslat odpověď');
+    } finally {
+      setIsReplyingToNote(false);
+    }
+  };
+
   useEffect(() => {
     trackPageMount();
   }, [trackPageMount]);
@@ -510,27 +530,27 @@ export default function ClientPortalNutrition() {
             />
           </div>
 
-          {/* Day Note Section */}
-          <div className="flex items-center gap-2">
-            <DayNoteInput
-              currentNote={dayNote?.client_note || ''}
-              onSave={handleSaveDayNote}
-              isSaving={upsertDayNote.isPending}
-            />
-            {dayNote?.trainer_note && (
-              <span className="text-xs text-muted-foreground ml-2">
-                (Trenér odpověděl)
-              </span>
-            )}
-          </div>
+          {/* Trainer Review Banner - Most Prominent */}
+          <TrainerReviewBanner
+            isChecked={dayNote?.is_checked || false}
+            checkedAt={dayNote?.checked_at || null}
+            trainerNote={dayNote?.trainer_note || null}
+            clientReply={dayNote?.client_note || null}
+            onReply={handleReplyToTrainerNote}
+            isReplying={isReplyingToNote}
+          />
 
-          {/* Day Note Display */}
-          {(dayNote?.client_note || dayNote?.trainer_note) && (
-            <DayNoteDisplay
-              clientNote={dayNote?.client_note || undefined}
-              trainerNote={dayNote?.trainer_note || undefined}
-              onEditClient={() => {/* handled by DayNoteInput above */}}
-            />
+          {/* Client Note Section (only if no trainer interaction yet) */}
+          {!dayNote?.is_checked && !dayNote?.trainer_note && (
+            <div className="flex items-center gap-2">
+              <DayNoteInput
+                currentNote={dayNote?.client_note || ''}
+                onSave={handleSaveDayNote}
+                isSaving={upsertDayNote.isPending}
+                label="Poznámka k dnešku"
+                placeholder="Narozeniny, pracovní večeře, cestování..."
+              />
+            </div>
           )}
 
           {/* Quick Stats Row */}
@@ -549,7 +569,7 @@ export default function ClientPortalNutrition() {
             </div>
           </div>
 
-          {/* Trainer Comment Notice */}
+          {/* Trainer Comment Notice - show only when there are comments on entries */}
           {hasTrainerComments && (
             <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/10 text-primary">
               <MessageSquare className="w-4 h-4 shrink-0" />

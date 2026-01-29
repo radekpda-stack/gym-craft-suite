@@ -417,6 +417,7 @@ export default function NutritionClientDetail() {
       clientId,
       date: trainerNoteDialog.dateStr,
       trainerNote: trainerNoteText.trim() || null,
+      isTrainerAction: true,
     });
     setTrainerNoteDialog({ ...trainerNoteDialog, open: false });
   };
@@ -700,6 +701,7 @@ export default function NutritionClientDetail() {
                             clientId,
                             date: dateStr,
                             isChecked: !dayNote?.is_checked,
+                            isTrainerAction: true,
                           });
                         }}
                       >
@@ -712,6 +714,7 @@ export default function NutritionClientDetail() {
                               clientId,
                               date: dateStr,
                               isChecked: !!checked,
+                              isTrainerAction: true,
                             });
                           }}
                         />

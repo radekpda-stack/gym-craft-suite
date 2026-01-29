@@ -35,6 +35,18 @@ export function useTrainerFeedback() {
     }) => {
       const table = getTableName(type);
 
+      // First get the entry to check previous state and get client_id
+      // Different tables have different columns, so we select what we need
+      const selectColumns = type === 'coffee' 
+        ? 'client_id, coffee_type, entry_date, trainer_comment'
+        : 'client_id, description, entry_date, trainer_comment';
+      
+      const { data: entry } = await supabase
+        .from(table)
+        .select(selectColumns)
+        .eq('id', entryId)
+        .single();
+
       const { error } = await supabase
         .from(table)
         .update({
@@ -44,6 +56,27 @@ export function useTrainerFeedback() {
         .eq('id', entryId);
 
       if (error) throw error;
+
+      // Create notification for client if trainer added a new comment
+      const prevComment = (entry as any)?.trainer_comment;
+      if (comment && entry && comment !== prevComment) {
+        // Get description or coffee_type for the preview
+        const itemDescription = type === 'coffee' 
+          ? (entry as any).coffee_type || 'kávu'
+          : (entry as any).description;
+        const descriptionPreview = itemDescription 
+          ? String(itemDescription).substring(0, 40) + (String(itemDescription).length > 40 ? '...' : '')
+          : 'záznam';
+        
+        await supabase.from('client_portal_notifications').insert({
+          client_id: (entry as any).client_id,
+          type: 'nutrition_entry_comment',
+          title: '💬 Nový komentář od trenéra',
+          message: `Trenér okomentoval: ${descriptionPreview}`,
+          action_url: '/client/nutrition',
+          metadata: { entry_date: (entry as any).entry_date },
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainer-client-nutrition'] });
@@ -51,6 +84,7 @@ export function useTrainerFeedback() {
       queryClient.invalidateQueries({ queryKey: ['nutrition-food'] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-drinks'] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-coffee'] });
+      queryClient.invalidateQueries({ queryKey: ['client-portal-notifications'] });
       toast.success('Hodnocení uloženo');
     },
     onError: () => {

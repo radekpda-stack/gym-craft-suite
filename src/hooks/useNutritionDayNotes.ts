@@ -96,38 +96,29 @@ export function useUpsertDayNote() {
       clientNote,
       trainerNote,
       isChecked,
+      // Track if this is a trainer action (to send notifications)
+      isTrainerAction = false,
     }: {
       clientId: string;
       date: Date | string;
       clientNote?: string | null;
       trainerNote?: string | null;
       isChecked?: boolean;
+      isTrainerAction?: boolean;
     }) => {
       const dateStr = date instanceof Date ? format(date, 'yyyy-MM-dd') : date;
-
-      const updateData: Record<string, unknown> = {
-        client_id: clientId,
-        date: dateStr,
-      };
-
-      if (clientNote !== undefined) {
-        updateData.client_note = clientNote || null;
-      }
-      if (trainerNote !== undefined) {
-        updateData.trainer_note = trainerNote || null;
-      }
-      if (isChecked !== undefined) {
-        updateData.is_checked = isChecked;
-        updateData.checked_at = isChecked ? new Date().toISOString() : null;
-      }
+      const formattedDate = format(new Date(dateStr), 'd.M.yyyy');
 
       // First check if note exists
       const { data: existing } = await supabase
         .from('nutrition_day_notes')
-        .select('id')
+        .select('id, is_checked, trainer_note')
         .eq('client_id', clientId)
         .eq('date', dateStr)
         .maybeSingle();
+
+      const wasChecked = existing?.is_checked || false;
+      const hadTrainerNote = !!existing?.trainer_note;
 
       let result;
       if (existing) {
@@ -166,11 +157,39 @@ export function useUpsertDayNote() {
         result = data;
       }
 
+      // Create notifications for client when trainer actions occur
+      if (isTrainerAction) {
+        // Notification when trainer checks the day (only if newly checked)
+        if (isChecked === true && !wasChecked) {
+          await supabase.from('client_portal_notifications').insert({
+            client_id: clientId,
+            type: 'nutrition_day_checked',
+            title: '✅ Jídelníček zkontrolován',
+            message: `Trenér zkontroloval váš jídelníček pro ${formattedDate}`,
+            action_url: '/client/nutrition',
+            metadata: { date: dateStr },
+          });
+        }
+
+        // Notification when trainer adds a day note
+        if (trainerNote && trainerNote !== existing?.trainer_note) {
+          await supabase.from('client_portal_notifications').insert({
+            client_id: clientId,
+            type: 'nutrition_day_note',
+            title: '📝 Nová poznámka od trenéra',
+            message: trainerNote.substring(0, 100) + (trainerNote.length > 100 ? '...' : ''),
+            action_url: '/client/nutrition',
+            metadata: { date: dateStr },
+          });
+        }
+      }
+
       return result as NutritionDayNote;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['nutrition-day-note', data.client_id, data.date] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-day-notes', data.client_id] });
+      queryClient.invalidateQueries({ queryKey: ['client-portal-notifications'] });
       toast.success('Poznámka uložena');
     },
     onError: (error) => {
