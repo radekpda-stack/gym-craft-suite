@@ -43,6 +43,7 @@ export interface Notification {
   entity_type?: string | null;
   entity_id?: string | null;
   severity?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export function useNotifications() {

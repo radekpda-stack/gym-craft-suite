@@ -14,6 +14,7 @@ export interface UnifiedNotification {
   client_id?: string | null;
   entity_type?: string | null;
   entity_id?: string | null;
+  metadata?: Record<string, unknown> | null;
   category: NotificationCategory;
   isAggregated?: boolean;
   aggregatedCount?: number;
@@ -81,6 +82,7 @@ function convertNotification(notification: Notification): UnifiedNotification {
     client_id: notification.client_id,
     entity_type: notification.entity_type,
     entity_id: notification.entity_id,
+    metadata: notification.metadata,
     category: getCategory(notification.type),
   };
 }
