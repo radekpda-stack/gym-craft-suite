@@ -71,7 +71,8 @@ export function useFeedbackAnalytics(days: number = 30) {
       }
 
       // Calculate response rate with safe limits (≤100%, completed ≤ sent)
-      const totalSent = (requests || []).filter(r => r.sent_at).length;
+      // Count all created requests as "sent" (includes link copies, not just emails)
+      const totalSent = (requests || []).length;
       const totalCompleted = completedRequestIds.length;
       const responseRate = safeResponseRate(totalCompleted, totalSent);
 
@@ -104,7 +105,7 @@ export function useFeedbackAnalytics(days: number = 30) {
           label: useWeekly 
             ? `${format(intervalStart, 'd.M.', { locale: cs })} - ${format(intervalEnd, 'd.M.', { locale: cs })}`
             : format(date, 'd.M.', { locale: cs }),
-          sent: intervalRequests.filter(r => r.sent_at).length,
+          sent: intervalRequests.length, // Count all created as sent
           completed: intervalRequests.filter(r => r.status === 'completed').length,
           avgBodyFeel: bodyFeelValues.length > 0 
             ? Math.round(bodyFeelValues.reduce((a: number, b: number) => a + b, 0) / bodyFeelValues.length * 10) / 10 
@@ -184,13 +185,13 @@ export function useFeedbackAnalytics(days: number = 30) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-      // Average response time
+      // Average response time - use created_at as fallback for sent_at
       const responseTimes = (requests || [])
-        .filter(r => r.sent_at && r.completed_at)
+        .filter(r => r.completed_at)
         .map(r => {
-          const sent = new Date(r.sent_at!);
+          const sentTime = r.sent_at || r.created_at;
           const completed = new Date(r.completed_at!);
-          return (completed.getTime() - sent.getTime()) / (1000 * 60 * 60);
+          return (completed.getTime() - new Date(sentTime).getTime()) / (1000 * 60 * 60);
         });
       const avgResponseTimeHours = responseTimes.length > 0
         ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length * 10) / 10

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { subDays, startOfDay } from 'date-fns';
-import { Lightbulb, AlertTriangle, TrendingDown, Activity, Heart } from 'lucide-react';
+import { Lightbulb, AlertTriangle, TrendingDown, Activity, Heart, Moon, Target, Frown } from 'lucide-react';
 import { safeAverage } from '@/lib/feedbackCalculations';
 
 interface Insight {
@@ -39,6 +39,11 @@ export function FeedbackCoachInsights() {
           pain,
           pain_area,
           rpe_rating,
+          session_fit,
+          difficulty,
+          fun,
+          sleep_hours,
+          sleep_after,
           created_at,
           feedback_request_id
         `)
@@ -177,6 +182,64 @@ export function FeedbackCoachInsights() {
           description: `Ø ${avgSoreness.toFixed(1)}/10 za posledních 14 dní`,
           priority: 'medium'
         });
+      }
+      
+      // Insight 5: Low session fit per client
+      for (const [clientId, data] of clientFeedbacks) {
+        const sessionFitValues = data.feedbacks
+          .map(f => f.session_fit)
+          .filter((v): v is number => v !== null);
+        
+        if (sessionFitValues.length >= 3) {
+          const avgSessionFit = safeAverage(sessionFitValues);
+          if (avgSessionFit !== null && avgSessionFit <= 4) {
+            results.push({
+              id: `low-session-fit-${clientId}`,
+              icon: <Target className="h-4 w-4 text-amber-500" />,
+              title: `Tréninky nesedí`,
+              description: `${data.name}: Ø session fit ${avgSessionFit.toFixed(1)}/10`,
+              priority: 'medium',
+              clientName: data.name
+            });
+          }
+        }
+      }
+      
+      // Insight 6: Poor sleep pattern
+      for (const [clientId, data] of clientFeedbacks) {
+        const poorSleepCount = data.feedbacks.filter(f => f.sleep_after === 'poor').length;
+        const lowSleepHours = data.feedbacks.filter(f => f.sleep_hours !== null && (f.sleep_hours as number) < 6).length;
+        
+        if (poorSleepCount >= 2 || lowSleepHours >= 2) {
+          results.push({
+            id: `poor-sleep-${clientId}`,
+            icon: <Moon className="h-4 w-4 text-amber-500" />,
+            title: `Problémy se spánkem`,
+            description: `${data.name}: ${poorSleepCount > 0 ? `${poorSleepCount}× špatný spánek` : `${lowSleepHours}× méně než 6h`}`,
+            priority: 'medium',
+            clientName: data.name
+          });
+        }
+      }
+      
+      // Insight 7: High difficulty + low fun (demotivation signal)
+      for (const [clientId, data] of clientFeedbacks) {
+        const recentFeedbacks = data.feedbacks.slice(0, 5);
+        const highDiffLowFun = recentFeedbacks.filter(f => 
+          f.difficulty !== null && (f.difficulty as number) >= 7 && 
+          f.fun !== null && (f.fun as number) <= 4
+        );
+        
+        if (highDiffLowFun.length >= 2) {
+          results.push({
+            id: `demotivation-${clientId}`,
+            icon: <Frown className="h-4 w-4 text-amber-500" />,
+            title: `Možná demotivace`,
+            description: `${data.name}: ${highDiffLowFun.length}× vysoká náročnost + nízká zábava`,
+            priority: 'medium',
+            clientName: data.name
+          });
+        }
       }
       
       // Sort by priority

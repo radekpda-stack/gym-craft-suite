@@ -32,6 +32,9 @@ import {
 import { useFeedbackAnalytics } from '@/hooks/useFeedbackAnalytics';
 import { cn } from '@/lib/utils';
 import { METRIC_EXPLANATIONS } from '@/lib/feedbackCalculations';
+import { SessionFitStatsCard } from './SessionFitStatsCard';
+import { SleepRecoveryStatsCard } from './SleepRecoveryStatsCard';
+import { DifficultyVsFeelCard } from './DifficultyVsFeelCard';
 
 interface FeedbackTrendsOverviewProps {
   days?: number;
@@ -370,6 +373,13 @@ export function FeedbackTrendsOverview({ days = 30 }: FeedbackTrendsOverviewProp
           </CardContent>
         </Card>
       )}
+
+      {/* New Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SessionFitStatsCard days={days} />
+        <SleepRecoveryStatsCard days={days} />
+        <DifficultyVsFeelCard days={days} />
+      </div>
     </div>
   );
 }

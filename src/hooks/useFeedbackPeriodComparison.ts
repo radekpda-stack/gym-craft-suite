@@ -77,7 +77,7 @@ async function fetchPeriodMetrics(
   // Fetch requests
   let requestsQuery = supabase
     .from('feedback_requests')
-    .select('id, client_id, status, sent_at, completed_at')
+    .select('id, client_id, status, sent_at, completed_at, created_at')
     .gte('created_at', start.toISOString())
     .lte('created_at', end.toISOString());
   
@@ -102,18 +102,20 @@ async function fetchPeriodMetrics(
   }
   
   // Calculate metrics
-  const totalSent = (requests || []).filter(r => r.sent_at).length;
+  // Count all created requests as "sent" (includes link copies, not just emails)
+  const totalSent = (requests || []).length;
   const totalCompleted = completedIds.length;
   // Use safe response rate to ensure ≤100% and completed ≤ sent
   const responseRate = safeResponseRate(totalCompleted, totalSent);
   const redFlagsCount = feedbacks.filter(f => f.is_red_flag).length;
   
+  // Use created_at as fallback for sent_at (for link-copied feedbacks)
   const responseTimes = (requests || [])
-    .filter(r => r.sent_at && r.completed_at)
+    .filter(r => r.completed_at)
     .map(r => {
-      const sent = new Date(r.sent_at!);
+      const sentTime = r.sent_at || r.created_at;
       const completed = new Date(r.completed_at!);
-      return (completed.getTime() - sent.getTime()) / (1000 * 60 * 60);
+      return (completed.getTime() - new Date(sentTime).getTime()) / (1000 * 60 * 60);
     });
   
   return {
