@@ -77,6 +77,28 @@ interface CachedPR {
   updatedAt: string;
 }
 
+interface CachedProduct {
+  id: string;
+  name: string;
+  price: number;
+  kind: 'inventory' | 'service' | 'credit_topup';
+  category: string;
+  stock_quantity: number;
+  is_active: boolean;
+  updatedAt: string;
+}
+
+interface CachedScheduleSession {
+  id: string;
+  date: string;
+  clientId: string;
+  clientName: string;
+  status: 'scheduled' | 'completed' | 'cancelled' | 'canceled';
+  duration: number;
+  price?: number;
+  updatedAt: string;
+}
+
 interface OfflineDBSchema extends DBSchema {
   trainings: {
     key: string;
@@ -118,6 +140,21 @@ interface OfflineDBSchema extends DBSchema {
       'by-exercise': string;
     };
   };
+  products: {
+    key: string;
+    value: CachedProduct;
+    indexes: {
+      'by-kind': string;
+    };
+  };
+  schedule: {
+    key: string;
+    value: CachedScheduleSession;
+    indexes: {
+      'by-date': string;
+      'by-client': string;
+    };
+  };
   metadata: {
     key: string;
     value: {
@@ -129,7 +166,7 @@ interface OfflineDBSchema extends DBSchema {
 }
 
 const DB_NAME = 'justmove-offline';
-const DB_VERSION = 2; // Incremented for PR cache
+const DB_VERSION = 3; // Incremented for products and schedule stores
 
 let dbInstance: IDBPDatabase<OfflineDBSchema> | null = null;
 
@@ -179,6 +216,19 @@ async function getDB(): Promise<IDBPDatabase<OfflineDBSchema>> {
       // Metadata store for general settings
       if (!db.objectStoreNames.contains('metadata')) {
         db.createObjectStore('metadata', { keyPath: 'key' });
+      }
+
+      // Products cache store
+      if (!db.objectStoreNames.contains('products')) {
+        const productsStore = db.createObjectStore('products', { keyPath: 'id' });
+        productsStore.createIndex('by-kind', 'kind');
+      }
+
+      // Schedule cache store
+      if (!db.objectStoreNames.contains('schedule')) {
+        const scheduleStore = db.createObjectStore('schedule', { keyPath: 'id' });
+        scheduleStore.createIndex('by-date', 'date');
+        scheduleStore.createIndex('by-client', 'clientId');
       }
     },
   });
@@ -370,6 +420,56 @@ export async function getMetadata<T>(key: string): Promise<T | undefined> {
   return item?.value as T | undefined;
 }
 
+// ============ PRODUCTS CACHE ============
+
+export async function cacheProducts(products: CachedProduct[]): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction('products', 'readwrite');
+  await tx.store.clear();
+  await Promise.all([
+    ...products.map(product => tx.store.put({
+      ...product,
+      updatedAt: new Date().toISOString(),
+    })),
+    tx.done,
+  ]);
+}
+
+export async function getCachedProducts(): Promise<CachedProduct[]> {
+  const db = await getDB();
+  return db.getAll('products');
+}
+
+export async function getCachedProductsByKind(kind: string): Promise<CachedProduct[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('products', 'by-kind', kind);
+}
+
+// ============ SCHEDULE CACHE ============
+
+export async function cacheSchedule(sessions: CachedScheduleSession[]): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction('schedule', 'readwrite');
+  await tx.store.clear();
+  await Promise.all([
+    ...sessions.map(session => tx.store.put({
+      ...session,
+      updatedAt: new Date().toISOString(),
+    })),
+    tx.done,
+  ]);
+}
+
+export async function getCachedSchedule(): Promise<CachedScheduleSession[]> {
+  const db = await getDB();
+  return db.getAll('schedule');
+}
+
+export async function getCachedScheduleByDate(date: string): Promise<CachedScheduleSession[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('schedule', 'by-date', date);
+}
+
 // ============ UTILITIES ============
 
 export async function clearAllOfflineData(): Promise<void> {
@@ -380,6 +480,8 @@ export async function clearAllOfflineData(): Promise<void> {
     db.clear('clients'),
     db.clear('exercises'),
     db.clear('personalRecords'),
+    db.clear('products'),
+    db.clear('schedule'),
     db.clear('metadata'),
   ]);
 }
@@ -390,16 +492,20 @@ export async function getOfflineStats(): Promise<{
   cachedClients: number;
   cachedExercises: number;
   cachedPRs: number;
+  cachedProducts: number;
+  cachedScheduleSessions: number;
 }> {
   const db = await getDB();
-  const [pendingTrainings, syncQueueItems, cachedClients, cachedExercises, cachedPRs] = await Promise.all([
+  const [pendingTrainings, syncQueueItems, cachedClients, cachedExercises, cachedPRs, cachedProducts, cachedScheduleSessions] = await Promise.all([
     db.countFromIndex('trainings', 'by-status', 'pending_sync'),
     db.count('syncQueue'),
     db.count('clients'),
     db.count('exercises'),
     db.count('personalRecords'),
+    db.count('products'),
+    db.count('schedule'),
   ]);
-  return { pendingTrainings, syncQueueItems, cachedClients, cachedExercises, cachedPRs };
+  return { pendingTrainings, syncQueueItems, cachedClients, cachedExercises, cachedPRs, cachedProducts, cachedScheduleSessions };
 }
 
 // Export types
@@ -411,4 +517,6 @@ export type {
   CachedClient, 
   CachedExercise,
   CachedPR,
+  CachedProduct,
+  CachedScheduleSession,
 };
