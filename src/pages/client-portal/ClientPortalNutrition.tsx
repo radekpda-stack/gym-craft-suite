@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { Apple, Plus, Droplets, Coffee, Loader2, Clock, RotateCcw, MessageSquare, Settings } from 'lucide-react';
+import { Apple, Plus, Loader2, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleFoodForm } from '@/components/client-portal/nutrition/SimpleFoodForm';
@@ -12,13 +12,14 @@ import { EditEntryDialog } from '@/components/client-portal/nutrition/EditEntryD
 import { WeekStrip } from '@/components/client-portal/nutrition/WeekStrip';
 import { WaterGoalWidget, calculateDailyWaterIntake } from '@/components/client-portal/nutrition/WaterGoalWidget';
 import { CaffeineWindowWidget } from '@/components/client-portal/nutrition/CaffeineWindowWidget';
-import { DayNoteInput, DayNoteDisplay } from '@/components/client-portal/nutrition/DayNoteInput';
+import { DayNoteInput } from '@/components/client-portal/nutrition/DayNoteInput';
 import { HabitSettingsForm } from '@/components/client-portal/nutrition/HabitSettingsForm';
 import { QuickAddTimeDialog } from '@/components/client-portal/nutrition/QuickAddTimeDialog';
 import { TrainerReviewBanner } from '@/components/client-portal/nutrition/TrainerReviewBanner';
+import { FrequentItemsSection } from '@/components/client-portal/nutrition/FrequentItemsSection';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { type MealTypeId, QUICK_WATER_AMOUNTS } from '@/components/client-portal/nutrition/constants';
+import { type MealTypeId } from '@/components/client-portal/nutrition/constants';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -418,8 +419,11 @@ export default function ClientPortalNutrition() {
     setShowAddForm(true);
   };
 
-  // Quick re-add recent food
-  const handleQuickReaddFood = async (food: { description: string; meal_type: string; portion_size: string }) => {
+  // Quick re-add recent food with time
+  const handleQuickReaddFoodWithTime = async (
+    food: { description: string; meal_type: string; portion_size: string },
+    time: string
+  ) => {
     if (!session || !clientId) return;
     
     try {
@@ -430,9 +434,11 @@ export default function ClientPortalNutrition() {
         entry: {
           meal_type: food.meal_type as MealTypeId,
           description: food.description,
-          portion_size: food.portion_size as any,
+          portion_size: food.portion_size as 'small' | 'medium' | 'large',
+          entry_time: time,
         },
       });
+      
       toast.success(`${food.description} přidáno`);
       trackPortalEvent('client_portal_quick_readd_food');
       
@@ -585,144 +591,41 @@ export default function ClientPortalNutrition() {
             triggerLabel="⚙️ Nastavení návyků"
           />
 
-          {/* Quick Actions - Main Focus */}
-          <Card className="overflow-hidden">
-            <CardContent className="p-4 space-y-4">
-              {/* Quick Meal Buttons - Large and Easy to Tap */}
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  variant="outline"
-                  size="lg"
-                  onClick={() => handleQuickMeal('breakfast')}
-                  className="h-16 flex-col gap-1 text-left"
-                >
-                  <span className="text-lg">🌅</span>
-                  <span className="text-sm font-medium">Snídaně</span>
-                </Button>
-                <Button 
-                  variant="outline"
-                  size="lg"
-                  onClick={() => handleQuickMeal('lunch')}
-                  className="h-16 flex-col gap-1 text-left"
-                >
-                  <span className="text-lg">☀️</span>
-                  <span className="text-sm font-medium">Oběd</span>
-                </Button>
-                <Button 
-                  variant="outline"
-                  size="lg"
-                  onClick={() => handleQuickMeal('dinner')}
-                  className="h-16 flex-col gap-1 text-left"
-                >
-                  <span className="text-lg">🌙</span>
-                  <span className="text-sm font-medium">Večeře</span>
-                </Button>
-                <Button 
-                  variant="outline"
-                  size="lg"
-                  onClick={() => handleQuickMeal('snack')}
-                  className="h-16 flex-col gap-1 text-left"
-                >
-                  <span className="text-lg">🍎</span>
-                  <span className="text-sm font-medium">Svačina</span>
-                </Button>
-              </div>
+          {/* Frequent Items Section - Smart Quick Add */}
+          <FrequentItemsSection
+            clientId={clientId || ''}
+            recentFoods={recentFoods}
+            onQuickAddFood={handleQuickReaddFoodWithTime}
+            onQuickAddWater={(amount) => setQuickAddDialog({ open: true, type: 'water', value: amount })}
+            onQuickAddCoffee={(type) => setQuickAddDialog({ open: true, type: 'coffee', value: type })}
+            onOpenMealForm={handleQuickMeal}
+            isAdding={isQuickAdding}
+          />
 
-              {/* Quick Water Buttons */}
-              <div className="space-y-2">
-                <span className="text-xs text-muted-foreground">Rychlé přidání vody</span>
-                <div className="grid grid-cols-3 gap-2">
-                  {QUICK_WATER_AMOUNTS.map((item) => (
-                    <Button 
-                      key={item.amount}
-                      variant="secondary"
-                      size="lg"
-                      onClick={() => handleQuickWaterClick(item.amount)}
-                      disabled={isQuickAdding}
-                      className="h-14 flex-col gap-1"
-                    >
-                      <span className="text-lg">{item.icon}</span>
-                      <span className="text-xs font-medium">{item.amount} ml</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
+          {/* Quick Add Time Dialog for water/coffee */}
+          {quickAddDialog && (
+            <QuickAddTimeDialog
+              open={quickAddDialog.open}
+              onOpenChange={(open) => !open && setQuickAddDialog(null)}
+              type={quickAddDialog.type}
+              value={quickAddDialog.value}
+              onConfirm={handleQuickAddConfirm}
+              isPending={isQuickAdding}
+            />
+          )}
 
-              {/* Quick Coffee/Tea */}
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  variant="secondary"
-                  size="lg"
-                  onClick={() => handleQuickCoffeeClick('espresso')}
-                  disabled={isQuickAdding}
-                  className="h-14 gap-2"
-                >
-                  <Coffee className="w-5 h-5 text-amber-600" />
-                  <span className="font-medium">+1 Káva</span>
-                </Button>
-                <Button 
-                  variant="secondary"
-                  size="lg"
-                  onClick={() => handleQuickCoffeeClick('tea')}
-                  disabled={isQuickAdding}
-                  className="h-14 gap-2"
-                >
-                  <span className="text-lg">🍵</span>
-                  <span className="font-medium">+1 Čaj</span>
-                </Button>
-              </div>
-
-              {/* Quick Add Time Dialog */}
-              {quickAddDialog && (
-                <QuickAddTimeDialog
-                  open={quickAddDialog.open}
-                  onOpenChange={(open) => !open && setQuickAddDialog(null)}
-                  type={quickAddDialog.type}
-                  value={quickAddDialog.value}
-                  onConfirm={handleQuickAddConfirm}
-                  isPending={isQuickAdding}
-                />
-              )}
-
-              {/* Recent/Favorite Foods - Quick Re-add */}
-              {recentFoods.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Oblíbená & nedávná jídla</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {recentFoods.map((food, idx) => (
-                      <Button
-                        key={idx}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleQuickReaddFood(food)}
-                        disabled={addFood.isPending}
-                        className="h-auto py-1.5 px-3 text-xs bg-muted/50 hover:bg-muted"
-                      >
-                        <RotateCcw className="w-3 h-3 mr-1.5 text-muted-foreground" />
-                        <span className="truncate max-w-[140px]">{food.description}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Add Other Button */}
-              <Button 
-                onClick={() => {
-                  setPrefilledMealType(undefined);
-                  setShowAddForm(true);
-                }} 
-                variant="outline"
-                className="w-full gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Přidat jiný záznam
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Add Other Button */}
+          <Button 
+            onClick={() => {
+              setPrefilledMealType(undefined);
+              setShowAddForm(true);
+            }} 
+            variant="outline"
+            className="w-full gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Přidat jiný záznam
+          </Button>
 
           {/* Add Form Modal - SimpleFoodForm */}
           <SimpleFoodForm
