@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { 
   Bell, Check, Trash2, ChevronRight, ChevronDown,
@@ -85,19 +85,15 @@ function getDateLabel(dateStr: string) {
 
 // Extract client name from notification message
 function getClientNameFromMessage(message: string, type: string): string {
-  // Pattern for workout: "Jméno si zapsal/a..."
   const workoutMatch = message.match(/^(.+?)\s+si zapsal/);
   if (workoutMatch) return workoutMatch[1];
   
-  // Pattern for feedback: "Jméno: 💪 Svalovka..." or "Jméno - nějaký text"
   const feedbackMatch = message.match(/^(.+?):\s+💪/);
   if (feedbackMatch) return feedbackMatch[1];
 
-  // Pattern for nutrition: "Jméno přidal/a záznam"
   const nutritionMatch = message.match(/^(.+?)\s+přidal/);
   if (nutritionMatch) return nutritionMatch[1];
   
-  // Generic pattern: take first part before colon or dash
   const genericMatch = message.match(/^(.+?)(?::|–|-)/);
   if (genericMatch) return genericMatch[1].trim();
   
@@ -124,7 +120,6 @@ function getFeedbackPreview(notification: UnifiedNotification): string | null {
     return `Svalovka ${metadata.muscle_soreness} | Pocit ${metadata.body_feeling}`;
   }
   
-  // Try to extract from message
   const match = notification.message.match(/💪\s*Svalovka[:\s]+(\d+)[^📊]*📊[^:]+[:\s]+(\d+)/);
   if (match) {
     return `Svalovka ${match[1]} | Pocit ${match[2]}`;
@@ -151,7 +146,6 @@ export function UnifiedNotificationItem({
   enableSwipe = true,
 }: UnifiedNotificationItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const x = useMotionValue(0);
   const background = useTransform(
     x,
@@ -161,29 +155,68 @@ export function UnifiedNotificationItem({
   const leftOpacity = useTransform(x, [0, 40, 100], [0, 0.5, 1]);
   const rightOpacity = useTransform(x, [-100, -40, 0], [1, 0.5, 0]);
 
+  // Touch tracking for reliable click detection
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const didDragRef = useRef(false);
+
   const Icon = NOTIFICATION_ICONS[notification.type] || Bell;
   const styles = CATEGORY_STYLES[notification.category];
 
   const handleDragStart = useCallback(() => {
-    setIsDragging(true);
+    didDragRef.current = true;
   }, []);
 
   const handleDragEnd = useCallback(
     (_: any, info: PanInfo) => {
-      setIsDragging(false);
       const threshold = 80;
       if (info.offset.x > threshold) {
-        // Swipe right = mark as read
         if (!notification.is_read) {
           onMarkRead(notification.id);
         }
       } else if (info.offset.x < -threshold) {
-        // Swipe left = delete
         onDelete(notification.id);
       }
+      // Reset drag flag after a short delay
+      setTimeout(() => {
+        didDragRef.current = false;
+      }, 100);
     },
     [notification.id, notification.is_read, onMarkRead, onDelete]
   );
+
+  // Handle pointer events for reliable click on touch devices
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    touchStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
+    didDragRef.current = false;
+  }, []);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    if (!touchStartRef.current) return;
+    
+    const deltaX = Math.abs(e.clientX - touchStartRef.current.x);
+    const deltaY = Math.abs(e.clientY - touchStartRef.current.y);
+    const deltaTime = Date.now() - touchStartRef.current.time;
+    
+    // If movement is small and time is short, treat as click
+    const isClick = deltaX < 10 && deltaY < 10 && deltaTime < 300 && !didDragRef.current;
+    
+    touchStartRef.current = null;
+    
+    if (isClick) {
+      if (notification.isAggregated) {
+        setIsExpanded(!isExpanded);
+      } else {
+        onClick?.();
+      }
+    }
+  }, [notification.isAggregated, isExpanded, onClick]);
+
+  // Handle sub-item clicks
+  const handleSubItemClick = useCallback((e: React.MouseEvent | React.TouchEvent, item: UnifiedNotification) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onItemClick?.(item);
+  }, [onItemClick]);
 
   const displayMessage = notification.message.replace(/\s*ID:\s*[a-f0-9-]+/i, '');
 
@@ -215,16 +248,10 @@ export function UnifiedNotificationItem({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         style={{ x }}
-        onClick={() => {
-          if (isDragging) return;
-          if (notification.isAggregated) {
-            setIsExpanded(!isExpanded);
-          } else {
-            onClick?.();
-          }
-        }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
         className={cn(
-          'relative flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer',
+          'relative flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer select-none',
           'hover:shadow-sm active:scale-[0.99]',
           notification.is_read 
             ? 'bg-background border-border' 
@@ -271,7 +298,10 @@ export function UnifiedNotificationItem({
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => onMarkRead(notification.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkRead(notification.id);
+                  }}
                 >
                   <Check className="w-3 h-3" />
                 </Button>
@@ -280,7 +310,10 @@ export function UnifiedNotificationItem({
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                onClick={() => onDelete(notification.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(notification.id);
+                }}
               >
                 <Trash2 className="w-3 h-3" />
               </Button>
@@ -312,18 +345,14 @@ export function UnifiedNotificationItem({
             const feedbackPreview = isFeedback ? getFeedbackPreview(item) : null;
             
             return (
-              <div
+              <button
                 key={item.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onItemClick) {
-                    onItemClick(item);
-                  } else {
-                    onClick?.();
-                  }
-                }}
+                type="button"
+                onClick={(e) => handleSubItemClick(e, item)}
+                onTouchEnd={(e) => handleSubItemClick(e, item)}
                 className={cn(
-                  'flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer hover:bg-muted/80 transition-colors group',
+                  'flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer w-full text-left',
+                  'hover:bg-muted/80 active:bg-muted transition-colors group',
                   item.is_read ? 'bg-background' : 'bg-muted/50'
                 )}
               >
@@ -365,9 +394,9 @@ export function UnifiedNotificationItem({
                   {getDateLabel(item.created_at)}
                 </span>
                 
-                {/* Chevron - indicates clickable */}
+                {/* Chevron */}
                 <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
-              </div>
+              </button>
             );
           })}
         </motion.div>
@@ -376,5 +405,4 @@ export function UnifiedNotificationItem({
   );
 }
 
-// Re-export types for backward compatibility
 export type { UnifiedNotification, NotificationCategory };

@@ -214,7 +214,7 @@ export function ProfileUpdateDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] p-0 gap-0">
+      <DialogContent className="sm:max-w-md max-h-[85vh] p-0 gap-0 z-[120]">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">

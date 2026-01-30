@@ -59,7 +59,7 @@ export function AnniversaryDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md z-[120]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PartyPopper className="w-5 h-5 text-amber-500" />
