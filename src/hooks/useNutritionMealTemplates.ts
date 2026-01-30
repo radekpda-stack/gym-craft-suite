@@ -120,3 +120,84 @@ export function useDeleteMealTemplate() {
     },
   });
 }
+
+/**
+ * Auto-save a meal to templates database when food entry is created.
+ * If template with similar description exists, increment use_count.
+ * If not, create a new template.
+ */
+export async function autoSaveMealTemplate(
+  clientId: string, 
+  entry: {
+    description: string;
+    meal_type?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+    portion_size?: 'small' | 'medium' | 'large';
+    quality?: 'good' | 'normal' | 'poor';
+    note?: string;
+  }
+): Promise<void> {
+  const normalizedDescription = entry.description.toLowerCase().trim();
+  
+  try {
+    // Check if template with similar description already exists
+    const { data: existing } = await supabase
+      .from('nutrition_meal_templates')
+      .select('id, use_count')
+      .eq('client_id', clientId)
+      .ilike('description', normalizedDescription)
+      .maybeSingle();
+    
+    if (existing) {
+      // Increment use_count for existing template
+      await supabase
+        .from('nutrition_meal_templates')
+        .update({ 
+          use_count: (existing.use_count || 0) + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id);
+    } else {
+      // Create new template
+      await supabase
+        .from('nutrition_meal_templates')
+        .insert({
+          client_id: clientId,
+          name: entry.description,
+          description: entry.description,
+          meal_type: entry.meal_type,
+          portion_size: entry.portion_size,
+          quality: entry.quality,
+          note: entry.note,
+          use_count: 1,
+        });
+    }
+  } catch (error) {
+    // Silently fail - template auto-save is not critical
+    console.error('[autoSaveMealTemplate] Failed to save template:', error);
+  }
+}
+
+/**
+ * Hook to search meal templates for autocomplete
+ */
+export function useMealTemplatesSearch(clientId: string | undefined, searchTerm: string) {
+  return useQuery({
+    queryKey: ['meal-templates-search', clientId, searchTerm],
+    queryFn: async () => {
+      if (!clientId || searchTerm.length < 2) return [];
+
+      const { data, error } = await supabase
+        .from('nutrition_meal_templates')
+        .select('id, name, description, meal_type, portion_size, quality, use_count')
+        .eq('client_id', clientId)
+        .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
+        .order('use_count', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return data as MealTemplate[];
+    },
+    enabled: !!clientId && searchTerm.length >= 2,
+    staleTime: 30000,
+  });
+}
