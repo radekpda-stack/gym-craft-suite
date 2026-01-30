@@ -238,6 +238,9 @@ export function InteractionTracker({
 
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
+      // Guard: ensure target is a DOM element with closest method
+      if (!target || typeof target.closest !== 'function') return;
+      
       const clickable = target.closest('button, a, [role="button"], [data-track-id], input, select, textarea');
       
       if (!clickable) return;
@@ -317,6 +320,9 @@ export function InteractionTracker({
 
     const handleMouseEnter = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
+      // Guard: ensure target is a DOM element with closest method
+      if (!target || typeof target.closest !== 'function') return;
+      
       const hoverable = target.closest('[data-track-hover], [data-track-id]');
       
       if (!hoverable || hoverTimers.current.has(hoverable as HTMLElement)) return;
@@ -334,6 +340,9 @@ export function InteractionTracker({
 
     const handleMouseLeave = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
+      // Guard: ensure target is a DOM element with closest method
+      if (!target || typeof target.closest !== 'function') return;
+      
       const hoverable = target.closest('[data-track-hover], [data-track-id]');
       
       if (hoverable && hoverTimers.current.has(hoverable as HTMLElement)) {
@@ -359,6 +368,9 @@ export function InteractionTracker({
 
     const handleFocus = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
+      // Guard: ensure target is a DOM element with tagName
+      if (!target || !target.tagName) return;
+      
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
         saveInteraction('focus', target);
       }
@@ -366,6 +378,9 @@ export function InteractionTracker({
 
     const handleBlur = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
+      // Guard: ensure target is a DOM element with tagName
+      if (!target || !target.tagName) return;
+      
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
         saveInteraction('blur', target);
       }
