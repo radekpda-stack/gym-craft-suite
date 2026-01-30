@@ -1,6 +1,5 @@
 /**
- * CompletedFeedbacksTab - New "Vyplněné" tab with expanded cards and advanced filtering
- * Replaces the basic history view for completed feedbacks
+ * CompletedFeedbacksTab - Simplified chronological list of completed feedbacks
  */
 
 import { useState, useMemo } from 'react';
@@ -11,7 +10,6 @@ import {
   Calendar,
   CheckCircle2,
   MessageSquare,
-  Users,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -26,8 +24,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useClients } from '@/hooks/useClients';
 import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { FeedbackExpandedCard } from './FeedbackExpandedCard';
-import { FeedbackQuickFilters, useDefaultQuickFilters, SeverityFilter, SortField, SortOrder } from './FeedbackQuickFilters';
-import { ClientFeedbackLeaderboard } from './ClientFeedbackLeaderboard';
 import { FeedbackDetailDialog } from './FeedbackDetailDialog';
 import type { TrainingFeedback } from '@/hooks/useTrainingFeedback';
 
@@ -38,21 +34,18 @@ interface CompletedFeedbacksTabProps {
 }
 
 export function CompletedFeedbacksTab({ initialClientId }: CompletedFeedbacksTabProps) {
-  const [period, setPeriod] = useState<PeriodOption>('30');
+  // Default to 'all' for simpler chronological view
+  const [period, setPeriod] = useState<PeriodOption>('all');
   const [selectedClientId, setSelectedClientId] = useState<string>(initialClientId || 'all');
-  const [severity, setSeverity] = useState<SeverityFilter>('all');
-  const [sortField, setSortField] = useState<SortField>('date');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   
   // Dialog state
   const [selectedFeedback, setSelectedFeedback] = useState<TrainingFeedback | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMeta, setDialogMeta] = useState<{ clientName?: string; trainingDate?: string }>({});
 
-  const { filters, toggleFilter, clearFilters, activeCount } = useDefaultQuickFilters();
   const { data: clients = [] } = useClients();
 
-  // Fetch completed feedbacks
+  // Fetch completed feedbacks - FIXED: removed non-existent training_template_id
   const { data: feedbackData, isLoading } = useQuery({
     queryKey: ['completed-feedbacks', period, selectedClientId],
     queryFn: async () => {
@@ -60,10 +53,10 @@ export function CompletedFeedbacksTab({ initialClientId }: CompletedFeedbacksTab
         .from('training_feedback')
         .select(`
           *,
-          training_sessions!inner (
+          training_sessions (
             id,
             date,
-            training_template_id
+            training_type
           )
         `)
         .order('created_at', { ascending: false });
@@ -84,98 +77,19 @@ export function CompletedFeedbacksTab({ initialClientId }: CompletedFeedbacksTab
 
       return (data || []).map((item) => ({
         ...item,
-        trainingDate: (item.training_sessions as any)?.date,
+        trainingDate: item.training_sessions?.date || item.training_date,
+        trainingType: item.training_sessions?.training_type,
       }));
     },
   });
 
-  // Apply filters and sorting
-  const filteredFeedbacks = useMemo(() => {
+  // Simple chronological sorting (newest first)
+  const sortedFeedbacks = useMemo(() => {
     if (!feedbackData) return [];
-
-    let result = [...feedbackData];
-
-    // Severity filter
-    if (severity !== 'all') {
-      result = result.filter((f) => {
-        const isRedFlag = f.is_red_flag;
-        const highPain = f.pain && f.pain >= 6;
-        const mediumPain = f.pain && f.pain >= 4 && f.pain < 6;
-        const lowBodyFeel = f.body_feel && f.body_feel <= 5;
-
-        switch (severity) {
-          case 'critical':
-            return isRedFlag || highPain;
-          case 'warning':
-            return mediumPain || lowBodyFeel;
-          case 'ok':
-            return !isRedFlag && (!f.pain || f.pain < 4) && (!f.body_feel || f.body_feel > 5);
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Quick filters
-    const activeFilters = filters.filter((f) => f.active);
-    if (activeFilters.length > 0) {
-      result = result.filter((f) => {
-        return activeFilters.every((filter) => {
-          switch (filter.id) {
-            case 'high_pain':
-              return f.pain && f.pain >= 6;
-            case 'low_energy':
-              return f.energy_rating && f.energy_rating <= 4;
-            case 'high_soreness':
-              return f.soreness && f.soreness >= 7;
-            case 'has_comment':
-              return !!f.comment;
-            case 'red_flags':
-              return f.is_red_flag;
-            default:
-              return true;
-          }
-        });
-      });
-    }
-
-    // Sorting
-    result.sort((a, b) => {
-      let aVal: number | string;
-      let bVal: number | string;
-
-      switch (sortField) {
-        case 'date':
-          aVal = a.created_at;
-          bVal = b.created_at;
-          break;
-        case 'pain':
-          aVal = a.pain ?? 0;
-          bVal = b.pain ?? 0;
-          break;
-        case 'body_feel':
-          aVal = a.body_feel ?? 0;
-          bVal = b.body_feel ?? 0;
-          break;
-        case 'energy':
-          aVal = a.energy_rating ?? 0;
-          bVal = b.energy_rating ?? 0;
-          break;
-        default:
-          return 0;
-      }
-
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        return sortOrder === 'desc' 
-          ? bVal.localeCompare(aVal) 
-          : aVal.localeCompare(bVal);
-      }
-
-      return sortOrder === 'desc' ? (bVal as number) - (aVal as number) : (aVal as number) - (bVal as number);
-    });
-
-    return result;
-  }, [feedbackData, severity, filters, sortField, sortOrder]);
+    return [...feedbackData].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [feedbackData]);
 
   const handleOpenDetail = (feedback: TrainingFeedback, clientName: string, trainingDate?: string) => {
     setSelectedFeedback(feedback);
@@ -183,41 +97,23 @@ export function CompletedFeedbacksTab({ initialClientId }: CompletedFeedbacksTab
     setDialogOpen(true);
   };
 
-  const handleClientFromLeaderboard = (clientId: string) => {
-    setSelectedClientId(clientId);
-  };
-
-  const handleClearFilters = () => {
-    setSeverity('all');
-    clearFilters();
-  };
-
-  const totalActiveFilters = activeCount + (severity !== 'all' ? 1 : 0);
-
   return (
     <div className="space-y-4">
-      {/* Client Leaderboard */}
-      <ClientFeedbackLeaderboard 
-        days={parseInt(period) || 30}
-        limit={5}
-        onClientClick={handleClientFromLeaderboard}
-      />
-
-      {/* Filters Card */}
+      {/* Simple Filters Card */}
       <Card className="glass">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-success" />
             Vyplněné feedbacky
-            {filteredFeedbacks.length > 0 && (
+            {sortedFeedbacks.length > 0 && (
               <span className="text-sm font-normal text-muted-foreground">
-                ({filteredFeedbacks.length})
+                ({sortedFeedbacks.length})
               </span>
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Basic Filters */}
+        <CardContent>
+          {/* Simple Filters - Period and Client only */}
           <div className="flex flex-wrap gap-3">
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodOption)}>
               <SelectTrigger className="w-[130px] h-9">
@@ -225,10 +121,10 @@ export function CompletedFeedbacksTab({ initialClientId }: CompletedFeedbacksTab
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Vše</SelectItem>
                 <SelectItem value="7">7 dní</SelectItem>
                 <SelectItem value="30">30 dní</SelectItem>
                 <SelectItem value="90">90 dní</SelectItem>
-                <SelectItem value="all">Vše</SelectItem>
               </SelectContent>
             </Select>
 
@@ -242,26 +138,10 @@ export function CompletedFeedbacksTab({ initialClientId }: CompletedFeedbacksTab
               className="w-[180px]"
             />
           </div>
-
-          {/* Advanced Filters */}
-          <FeedbackQuickFilters
-            severity={severity}
-            onSeverityChange={setSeverity}
-            sortField={sortField}
-            sortOrder={sortOrder}
-            onSortChange={(field, order) => {
-              setSortField(field);
-              setSortOrder(order);
-            }}
-            quickFilters={filters}
-            onQuickFilterToggle={toggleFilter}
-            activeFilterCount={totalActiveFilters}
-            onClearFilters={handleClearFilters}
-          />
         </CardContent>
       </Card>
 
-      {/* Feedback List */}
+      {/* Feedback List - Simple chronological */}
       <Card className="glass">
         <CardContent className="pt-6">
           {isLoading ? (
@@ -270,9 +150,9 @@ export function CompletedFeedbacksTab({ initialClientId }: CompletedFeedbacksTab
                 <Skeleton key={i} className="h-32 rounded-xl" />
               ))}
             </div>
-          ) : filteredFeedbacks.length > 0 ? (
+          ) : sortedFeedbacks.length > 0 ? (
             <div className="space-y-3">
-              {filteredFeedbacks.map((feedback) => {
+              {sortedFeedbacks.map((feedback) => {
                 const client = clients.find((c) => c.id === feedback.client_id);
                 const clientName = client?.name || 'Neznámý klient';
 
@@ -291,9 +171,7 @@ export function CompletedFeedbacksTab({ initialClientId }: CompletedFeedbacksTab
             <div className="text-center py-12">
               <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
               <p className="text-muted-foreground">
-                {totalActiveFilters > 0 
-                  ? 'Žádné feedbacky odpovídající filtrům' 
-                  : 'Žádné vyplněné feedbacky za vybrané období'}
+                Žádné vyplněné feedbacky
               </p>
             </div>
           )}
