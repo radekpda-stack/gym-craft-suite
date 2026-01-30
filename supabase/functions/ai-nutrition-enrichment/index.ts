@@ -44,9 +44,17 @@ serve(async (req) => {
     const input: NutritionEnrichmentInput = await req.json();
     const { entryId, templateId, description, portionSize = 'medium', clientId } = input;
 
-    console.log('[ai-nutrition-enrichment] Processing:', { description, portionSize, clientId, templateId, entryId });
+    console.log('[ai-nutrition-enrichment] Processing:', { 
+      description, 
+      portionSize, 
+      clientId, 
+      templateId, 
+      entryId,
+      hasEntryId: !!entryId,
+    });
 
     if (!description || !clientId) {
+      console.error('[ai-nutrition-enrichment] Missing required fields:', { description, clientId });
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -164,24 +172,55 @@ Velikost porce: ${portionDesc}`;
     // Calculate average calories
     const avgCalories = Math.round((nutritionData.calories_low + nutritionData.calories_high) / 2);
 
-    // Find or create the meal template to update
+    // PRIORITY 1: Update the specific food entry with nutrition data (most important)
+    let entryUpdated = false;
+    if (entryId) {
+      console.log('[ai-nutrition-enrichment] Updating entry:', entryId, 'with calories:', avgCalories);
+      
+      const { data: updatedEntry, error: entryUpdateError } = await supabase
+        .from('nutrition_food_entries')
+        .update({
+          calories: avgCalories,
+          protein_g: nutritionData.protein_g,
+          carbs_g: nutritionData.carbs_g,
+          fat_g: nutritionData.fat_g,
+          fiber_g: nutritionData.fiber_g || null,
+          ai_enriched: true,
+          ai_enriched_at: new Date().toISOString(),
+        })
+        .eq('id', entryId)
+        .select('id')
+        .maybeSingle();
+
+      if (entryUpdateError) {
+        console.error('[ai-nutrition-enrichment] Failed to update entry:', entryUpdateError.message, entryUpdateError.details);
+      } else if (updatedEntry) {
+        console.log('[ai-nutrition-enrichment] ✅ Successfully updated entry:', entryId);
+        entryUpdated = true;
+      } else {
+        console.warn('[ai-nutrition-enrichment] Entry not found or not updated:', entryId);
+      }
+    } else {
+      console.warn('[ai-nutrition-enrichment] No entryId provided, skipping entry update');
+    }
+
+    // PRIORITY 2: Find or update meal template (secondary)
     let targetTemplateId = templateId;
 
     if (!targetTemplateId) {
-      // Find template by normalized description
+      // Find template by description (case-insensitive search with partial match)
       const normalizedDesc = description.toLowerCase().trim();
       const { data: existingTemplate } = await supabase
         .from('nutrition_meal_templates')
         .select('id')
         .eq('client_id', clientId)
-        .ilike('description', normalizedDesc)
+        .ilike('description', `%${normalizedDesc}%`)
         .maybeSingle();
 
       targetTemplateId = existingTemplate?.id;
     }
 
     if (targetTemplateId) {
-      // Update the template with nutrition data
       const { error: updateError } = await supabase
         .from('nutrition_meal_templates')
         .update({
@@ -205,32 +244,11 @@ Velikost porce: ${portionDesc}`;
       console.log('[ai-nutrition-enrichment] No template found to update for:', description);
     }
 
-    // Also update the specific food entry with nutrition data
-    if (entryId) {
-      const { error: entryUpdateError } = await supabase
-        .from('nutrition_food_entries')
-        .update({
-          calories: avgCalories,
-          protein_g: nutritionData.protein_g,
-          carbs_g: nutritionData.carbs_g,
-          fat_g: nutritionData.fat_g,
-          fiber_g: nutritionData.fiber_g || null,
-          ai_enriched: true,
-          ai_enriched_at: new Date().toISOString(),
-        })
-        .eq('id', entryId);
-
-      if (entryUpdateError) {
-        console.error('[ai-nutrition-enrichment] Failed to update entry:', entryUpdateError);
-      } else {
-        console.log('[ai-nutrition-enrichment] Successfully updated entry:', entryId);
-      }
-    }
-
     return new Response(JSON.stringify({ 
       success: true, 
       data: nutritionData,
       templateId: targetTemplateId,
+      entryUpdated,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

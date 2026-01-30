@@ -108,6 +108,12 @@ export function useAddFoodEntry() {
           portionSize: entry.portion_size || 'medium',
           clientId: clientId,
         }
+      }).then(() => {
+        // Refresh data after AI enrichment completes (with small delay for DB propagation)
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId] });
+          queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId] });
+        }, 2000);
       }).catch(err => console.error('[useAddFoodEntry] AI enrichment failed:', err));
       
       // Notify trainer about food entry (max 1x per day per client)

@@ -17,6 +17,7 @@ import { useClientReply } from '@/hooks/useNutritionFeedback';
 import { EnhancedFoodCard } from './EnhancedFoodCard';
 import { EnhancedDrinkCard } from './EnhancedDrinkCard';
 import { DaySummaryHeader } from './DaySummaryHeader';
+import { ClientDayNutritionSummary } from './ClientDayNutritionSummary';
 
 interface TodayEntriesProps {
   food: any[];
@@ -211,6 +212,11 @@ export function TodayEntries({
           trainerDayNote={dayNote}
           onReply={onReplyToDayNote}
         />
+
+        {/* Nutrition Summary - AI-enriched calories and macros */}
+        {food.length > 0 && (
+          <ClientDayNutritionSummary foodEntries={food} />
+        )}
 
         {/* Timeline - Enhanced Cards */}
         <div className="space-y-3">
