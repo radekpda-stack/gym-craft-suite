@@ -13,6 +13,15 @@ export interface MealTemplate {
   use_count: number;
   created_at: string;
   updated_at: string;
+  // AI enriched nutrition data
+  calories_per_portion: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  fiber_g: number | null;
+  ai_enriched: boolean;
+  ai_enriched_at: string | null;
+  normalized_name: string | null;
 }
 
 export interface CreateMealTemplateInput {
@@ -188,7 +197,7 @@ export function useMealTemplatesSearch(clientId: string | undefined, searchTerm:
 
       const { data, error } = await supabase
         .from('nutrition_meal_templates')
-        .select('id, name, description, meal_type, portion_size, quality, use_count')
+        .select('id, name, description, meal_type, portion_size, quality, use_count, calories_per_portion, protein_g, carbs_g, fat_g, ai_enriched')
         .eq('client_id', clientId)
         .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
         .order('use_count', { ascending: false })

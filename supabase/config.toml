@@ -131,3 +131,9 @@ verify_jwt = false
 
 [functions.parse-invoice]
 verify_jwt = true
+
+[functions.ai-nutrition-enrichment]
+verify_jwt = false
+
+[functions.ai-workout-calories]
+verify_jwt = false

@@ -13,6 +13,12 @@ interface FoodSuggestion {
   meal_type?: string;
   use_count?: number;
   source: 'template' | 'history' | 'common';
+  // AI enriched nutrition data
+  calories_per_portion?: number | null;
+  protein_g?: number | null;
+  carbs_g?: number | null;
+  fat_g?: number | null;
+  ai_enriched?: boolean;
 }
 
 interface FoodAutocompleteProps {
@@ -87,6 +93,12 @@ export function FoodAutocomplete({
     meal_type: t.meal_type || undefined,
     use_count: t.use_count,
     source: 'template' as const,
+    // AI nutrition data
+    calories_per_portion: t.calories_per_portion,
+    protein_g: t.protein_g,
+    carbs_g: t.carbs_g,
+    fat_g: t.fat_g,
+    ai_enriched: t.ai_enriched,
   }));
 
   // Filter common foods based on input
@@ -208,11 +220,22 @@ export function FoodAutocomplete({
                 )}
                 <div className="flex-1 min-w-0">
                   <span className="truncate block">{suggestion.description}</span>
-                  {suggestion.source === 'template' && suggestion.use_count && suggestion.use_count > 1 && (
-                    <span className="text-[10px] text-amber-600">
-                      použito {suggestion.use_count}×
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Show nutrition data if AI enriched */}
+                    {suggestion.source === 'template' && suggestion.ai_enriched && suggestion.calories_per_portion && (
+                      <span className="text-[10px] text-emerald-600 font-medium">
+                        ~{suggestion.calories_per_portion} kcal
+                        {suggestion.protein_g && ` • ${Math.round(suggestion.protein_g)}g B`}
+                        {suggestion.carbs_g && ` • ${Math.round(suggestion.carbs_g)}g S`}
+                        {suggestion.fat_g && ` • ${Math.round(suggestion.fat_g)}g T`}
+                      </span>
+                    )}
+                    {suggestion.source === 'template' && suggestion.use_count && suggestion.use_count > 1 && (
+                      <span className="text-[10px] text-amber-600">
+                        použito {suggestion.use_count}×
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <span className="text-[10px] text-muted-foreground shrink-0 mt-0.5">
                   {suggestion.source === 'template' ? 'oblíbené' : 

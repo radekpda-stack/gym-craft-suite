@@ -79,7 +79,7 @@ export function useAddFoodEntry() {
       if (error) throw error;
       return data;
     },
-    onSuccess: async (_, { sessionId, clientId, entry }) => {
+    onSuccess: async (data, { sessionId, clientId, entry }) => {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-food-entries', sessionId] });
@@ -98,6 +98,16 @@ export function useAddFoodEntry() {
       // Invalidate templates cache
       queryClient.invalidateQueries({ queryKey: ['meal-templates', clientId] });
       queryClient.invalidateQueries({ queryKey: ['meal-templates-search', clientId] });
+      
+      // AI enrichment on background (fire-and-forget)
+      // This will analyze the food and add nutritional values to the template
+      supabase.functions.invoke('ai-nutrition-enrichment', {
+        body: {
+          description: entry.description,
+          portionSize: entry.portion_size || 'medium',
+          clientId: clientId,
+        }
+      }).catch(err => console.error('[useAddFoodEntry] AI enrichment failed:', err));
       
       // Notify trainer about food entry (max 1x per day per client)
       try {

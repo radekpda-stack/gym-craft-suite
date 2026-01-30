@@ -154,6 +154,40 @@ export function useCreateWorkoutLog() {
       queryClient.invalidateQueries({ queryKey: ['all-client-workout-logs'] });
       toast.success('Trénink byl zaznamenán');
       
+      // AI calories calculation on background (fire-and-forget)
+      // First get client's weight from latest measurement
+      try {
+        const { data: measurement } = await supabase
+          .from('measurements')
+          .select('weight')
+          .eq('client_id', variables.client_id)
+          .order('date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        // Format exercises for AI
+        const exercisesForAI = variables.exercises.map(ex => ({
+          exercise_name: ex.exercise_name,
+          sets: ex.sets,
+          reps: ex.reps,
+          weight_kg: ex.weight_kg,
+          duration_seconds: ex.duration_seconds,
+          distance_meters: ex.distance_meters,
+        }));
+        
+        supabase.functions.invoke('ai-workout-calories', {
+          body: {
+            workoutLogId: log.id,
+            workoutType: variables.workout_type,
+            durationMinutes: variables.duration_minutes,
+            exercises: exercisesForAI,
+            clientWeight: measurement?.weight || 70,
+          }
+        }).catch(err => console.error('[useCreateWorkoutLog] AI calories calc failed:', err));
+      } catch (error) {
+        console.error('[useCreateWorkoutLog] Failed to get weight for AI:', error);
+      }
+      
       // Notify trainer about client workout (max 1x per day per client)
       try {
         const today = format(new Date(), 'yyyy-MM-dd');
