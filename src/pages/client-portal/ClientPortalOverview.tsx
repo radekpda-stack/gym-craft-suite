@@ -11,6 +11,7 @@ import { HeroStatsRow } from '@/components/client-portal/dashboard/HeroStatsRow'
 import { ClientQuickStats } from '@/components/client-portal/dashboard/ClientQuickStats';
 import { OverallPerformanceCard } from '@/components/client-portal/dashboard/OverallPerformanceCard';
 import { LeaderboardPreviewCard } from '@/components/client-portal/dashboard/LeaderboardPreviewCard';
+import { MyExercisesWidget } from '@/components/client-portal/dashboard/MyExercisesWidget';
 
 export default function ClientPortalOverview() {
   const { clientProfile, clientId } = useClientPortal();
@@ -49,7 +50,10 @@ export default function ClientPortalOverview() {
       {/* 7. Leaderboard Preview - Compare with others */}
       <LeaderboardPreviewCard />
 
-      {/* 8. Active Challenges (only if any) - moved to bottom */}
+      {/* 8. My Exercises Progress - Interactive sparkline cards */}
+      <MyExercisesWidget />
+
+      {/* 9. Active Challenges (only if any) - moved to bottom */}
       <ActiveChallengeWidget />
     </div>
   );
