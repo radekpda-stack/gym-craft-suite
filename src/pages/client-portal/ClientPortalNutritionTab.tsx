@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
-import { Apple, Plus, Droplets, Coffee, Loader2, MessageSquare } from 'lucide-react';
+import { Apple, Plus, Droplets, Coffee, Loader2, MessageSquare, BarChart3 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FoodLogForm } from '@/components/client-portal/nutrition/FoodLogForm';
 import { TodayEntries } from '@/components/client-portal/nutrition/TodayEntries';
@@ -14,8 +14,9 @@ import { WaterGoalWidget, calculateDailyWaterIntake } from '@/components/client-
 import { CaffeineWindowWidget } from '@/components/client-portal/nutrition/CaffeineWindowWidget';
 import { QuickAddTimeDialog } from '@/components/client-portal/nutrition/QuickAddTimeDialog';
 import { HabitSettingsForm } from '@/components/client-portal/nutrition/HabitSettingsForm';
+import { WeeklyNutritionChart } from '@/components/client-portal/nutrition/WeeklyNutritionChart';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { type MealTypeId } from '@/components/client-portal/nutrition/constants';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +25,7 @@ import {
 } from '@/hooks/useClientPortalNutrition';
 import { useNutritionXP } from '@/hooks/useNutritionXP';
 import { useEffectiveHabitSettings } from '@/hooks/useClientHabitSettings';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 type EditingEntry = {
   type: 'food' | 'drink' | 'coffee';
@@ -155,6 +157,34 @@ function useCompletedDays(sessionId: string | undefined) {
   });
 }
 
+// Hook to get food entries for the last 7 days (for weekly chart)
+function useWeeklyFoodEntries(sessionId: string | undefined) {
+  return useQuery({
+    queryKey: ['client-nutrition-weekly-food', sessionId],
+    queryFn: async () => {
+      if (!sessionId) return [];
+
+      const today = new Date();
+      const weekAgo = subDays(today, 7);
+      const startDate = format(weekAgo, 'yyyy-MM-dd');
+      const endDate = format(today, 'yyyy-MM-dd');
+
+      const { data, error } = await supabase
+        .from('nutrition_food_entries')
+        .select('id, entry_date, calories, protein_g, carbs_g, fat_g, ai_enriched')
+        .eq('session_id', sessionId)
+        .gte('entry_date', startDate)
+        .lte('entry_date', endDate)
+        .order('entry_date', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!sessionId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
 export default function ClientPortalNutritionTab() {
   const { clientId, clientAccount } = useClientPortal();
   const trainerId = clientAccount?.trainer_id;
@@ -171,6 +201,7 @@ export default function ClientPortalNutritionTab() {
     selectedDateStr
   );
   const { data: completedDays = [] } = useCompletedDays(session?.id);
+  const { data: weeklyFoodEntries = [] } = useWeeklyFoodEntries(session?.id);
   const deleteEntry = useDeleteNutritionEntryPortal();
   const nutritionXP = useNutritionXP();
   const { trackPortalEvent } = useClientPortalPageTracking('client_portal_nutrition');
@@ -184,6 +215,7 @@ export default function ClientPortalNutritionTab() {
   const [quickAddDialog, setQuickAddDialog] = useState<QuickAddDialogState>(null);
   const [isQuickAdding, setIsQuickAdding] = useState(false);
   const [showHabitSettings, setShowHabitSettings] = useState(false);
+  const [showWeeklyStats, setShowWeeklyStats] = useState(false);
 
   // Calculate water intake for widget
   const waterIntake = dayData?.drinks ? calculateDailyWaterIntake(dayData.drinks) : 0;
@@ -395,6 +427,21 @@ export default function ClientPortalNutritionTab() {
           onSetSleepTime={() => setShowHabitSettings(true)}
         />
       </div>
+
+      {/* Weekly Statistics - Collapsible */}
+      {weeklyFoodEntries.length > 0 && (
+        <Collapsible open={showWeeklyStats} onOpenChange={setShowWeeklyStats}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full gap-2">
+              <BarChart3 className="w-4 h-4" />
+              {showWeeklyStats ? 'Skrýt statistiky' : 'Zobrazit týdenní statistiky'}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <WeeklyNutritionChart allFoodEntries={weeklyFoodEntries} />
+          </CollapsibleContent>
+        </Collapsible>
+      )}
 
       {/* Single Add Button - ONE clear CTA */}
       <Button 

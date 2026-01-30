@@ -10,6 +10,8 @@ import {
   Pencil,
   Trash2,
   MoreVertical,
+  Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -91,6 +93,12 @@ interface FoodEntry {
   client_reply?: string | null;
   occurred_at?: string | null;
   created_at?: string;
+  // AI nutrition data
+  calories?: number | null;
+  protein_g?: number | null;
+  carbs_g?: number | null;
+  fat_g?: number | null;
+  ai_enriched?: boolean;
 }
 
 interface EnhancedFoodCardProps {
@@ -180,6 +188,23 @@ export function EnhancedFoodCard({
               </div>
               
               <p className="text-sm mt-1 leading-relaxed">{entry.description}</p>
+              
+              {/* AI Nutrition Data */}
+              {entry.calories ? (
+                <div className="flex items-center gap-2 mt-2 text-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="font-semibold text-foreground">~{entry.calories} kcal</span>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-muted-foreground">
+                    {entry.protein_g || 0}g B • {entry.carbs_g || 0}g S • {entry.fat_g || 0}g T
+                  </span>
+                </div>
+              ) : entry.ai_enriched === false ? (
+                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Počítám nutrienty...</span>
+                </div>
+              ) : null}
               
               {/* Metadata */}
               {(portionLabel || satiationLabel) && (
