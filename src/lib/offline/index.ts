@@ -8,5 +8,11 @@ export {
   cachePRs, 
   getCachedPRs, 
   getCachedPRsByClient, 
-  getCachedPRsByExercise 
+  getCachedPRsByExercise,
+  cacheProducts,
+  getCachedProducts,
+  getCachedProductsByKind,
+  cacheSchedule,
+  getCachedSchedule,
+  getCachedScheduleByDate,
 } from './database';
