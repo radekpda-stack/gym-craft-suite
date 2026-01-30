@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useId } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus, Trophy, ChevronRight, Dumbbell, Timer, Zap } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area } from 'recharts';
@@ -23,6 +23,11 @@ const TYPE_COLORS = {
   strength: 'hsl(var(--primary))',
   cardio: 'hsl(217 91% 60%)', // blue
   skill: 'hsl(38 92% 50%)', // amber
+};
+
+// Sanitize ID for SVG gradients - remove all non-alphanumeric characters
+const sanitizeGradientId = (name: string): string => {
+  return name.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
 };
 
 export function ExerciseSparklineItem({ exercise, onClick, index = 0 }: ExerciseSparklineItemProps) {
@@ -152,7 +157,7 @@ export function ExerciseSparklineItem({ exercise, onClick, index = 0 }: Exercise
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={sparklineData}>
               <defs>
-                <linearGradient id={`gradient-${exercise.exerciseName.replace(/\s/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={`gradient-${sanitizeGradientId(exercise.exerciseName)}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={color} stopOpacity={0.3} />
                   <stop offset="100%" stopColor={color} stopOpacity={0} />
                 </linearGradient>
@@ -162,7 +167,7 @@ export function ExerciseSparklineItem({ exercise, onClick, index = 0 }: Exercise
                 dataKey="value"
                 stroke={color}
                 strokeWidth={1.5}
-                fill={`url(#gradient-${exercise.exerciseName.replace(/\s/g, '-')})`}
+                fill={`url(#gradient-${sanitizeGradientId(exercise.exerciseName)})`}
               />
             </AreaChart>
           </ResponsiveContainer>
