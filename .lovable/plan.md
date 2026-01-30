@@ -1,246 +1,231 @@
 
-# AI na pozadí - Inteligentní nutriční a kalorická analýza
+# Makronutrienty a kalorie v trenérském rozhraní
 
-## Přehled návrhu
+## Přehled změn
 
-Vytvoříme **background AI systém**, který na pozadí:
-1. **U jídel**: Odhaduje kalorie + makroživiny (bílkoviny, sacharidy, tuky) a sjednocuje podobné názvy
-2. **U tréninků**: Počítá kalorický výdej na základě typu cvičení a délky
-3. **Správa databáze**: Automaticky merguje duplicity a normalizuje názvy jídel
-
-Klient nevidí AI přímo - vše probíhá na pozadí po uložení záznamu.
+Rozšíříme trenérský pohled o zobrazení kalorií a makroživin z AI analýzy, a to jak pro jídla, tak pro tréninky. Tyto údaje se také propíší do PDF exportu.
 
 ---
 
-## Architektura systému
+## Současný stav vs. cílový
+
+| Oblast | Současný stav | Cílový stav |
+|--------|---------------|-------------|
+| **Jídla v trenér view** | Zobrazuje popis, porci, kvalitu | + kalorie, bílkoviny, sacharidy, tuky |
+| **Denní souhrn** | Počty jídel, vody, kávy | + celkové kalorie, makra za den |
+| **Tréninky klienta** | Typ, délka, cviky | + spálené kalorie (z AI) |
+| **PDF export** | Základní tabulky jídel | + nutriční hodnoty, denní souhrny |
+
+---
+
+## Architektura změn
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                           KLIENT ZADÁ JÍDLO                                  │
-│                              "Kuřecí prsa s rýží"                           │
-└─────────────────────────────────┬────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    1. OKAMŽITÉ ULOŽENÍ (sync)                               │
-│   • Záznam se uloží do DB ihned                                             │
-│   • Klient vidí potvrzení "Přidáno ✓"                                       │
-└─────────────────────────────────┬────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│              2. AI OBOHACENÍ NA POZADÍ (async/fire-and-forget)              │
-│   • Volá se Edge Function "ai-nutrition-enrichment"                         │
-│   • AI analyzuje popis jídla a doplní:                                      │
-│     - calories_estimate (low/high)                                          │
-│     - protein_g, carbs_g, fat_g                                             │
-│   • Sjednotí podobné názvy v meal_templates                                 │
-└─────────────────────────────────┬────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    3. DATABÁZE AKTUALIZOVÁNA                                │
-│   • Template má nyní nutriční hodnoty                                       │
-│   • Při příštím použití se hodnoty předvyplní                              │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                     TRENÉRSKÝ POHLED                            │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ DENÍK NÁVYKŮ - Klient XY                                   │ │
+│  │                                                             │ │
+│  │ 📊 DENNÍ SOUHRN (25.1.2026)                                │ │
+│  │ ───────────────────────────────────────────────────────────│ │
+│  │ 🍽️ Příjem:  ~1850 kcal                                     │ │
+│  │    Bílkoviny: 125g • Sacharidy: 180g • Tuky: 65g          │ │
+│  │ 🏋️ Výdej:    ~420 kcal (trénink)                          │ │
+│  │ ⚖️ Bilance:  ~1430 kcal                                    │ │
+│  ├─────────────────────────────────────────────────────────────┤ │
+│  │ JÍDLA                                                      │ │
+│  │                                                             │ │
+│  │ ┌───────────────────────────────────────────────────────┐  │ │
+│  │ │ 08:30 | 🌅 Snídaně                                    │  │ │
+│  │ │ Ovesná kaše s ovocem                                  │  │ │
+│  │ │ ~420 kcal • 12g B • 65g S • 8g T                     │  │ │
+│  │ └───────────────────────────────────────────────────────┘  │ │
+│  │                                                             │ │
+│  │ ┌───────────────────────────────────────────────────────┐  │ │
+│  │ │ 12:30 | ☀️ Oběd                                       │  │ │
+│  │ │ Kuřecí prsa s rýží                                    │  │ │
+│  │ │ ~520 kcal • 45g B • 55g S • 12g T                    │  │ │
+│  │ └───────────────────────────────────────────────────────┘  │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ VLASTNÍ TRÉNINKY KLIENTA                                   │ │
+│  │                                                             │ │
+│  │ ┌───────────────────────────────────────────────────────┐  │ │
+│  │ │ 💪 Silový trénink                    25.1.2026        │  │ │
+│  │ │ 45 min • 🔥 ~320 kcal                                 │  │ │
+│  │ └───────────────────────────────────────────────────────┘  │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Databázové změny
 
-### 1. Rozšíření tabulky `nutrition_meal_templates`
+### 1. Rozšíření `nutrition_food_entries` o makronutrienty
 
-Přidáme sloupce pro makroživiny:
+Aby AI mohla uložit konkrétní hodnoty k jednotlivým záznamům (ne jen k šablonám):
 
-| Sloupec | Typ | Popis |
-|---------|-----|-------|
-| `calories_per_portion` | integer | Kalorie pro střední porci |
-| `protein_g` | numeric | Bílkoviny v gramech |
-| `carbs_g` | numeric | Sacharidy v gramech |
-| `fat_g` | numeric | Tuky v gramech |
-| `fiber_g` | numeric | Vláknina v gramech (volitelné) |
-| `ai_enriched` | boolean | Zda AI již obohatila záznam |
-| `ai_enriched_at` | timestamptz | Kdy bylo AI obohacení provedeno |
-| `normalized_name` | text | Sjednocený název pro deduplication |
+```sql
+ALTER TABLE public.nutrition_food_entries
+ADD COLUMN IF NOT EXISTS calories integer,
+ADD COLUMN IF NOT EXISTS protein_g numeric(5,1),
+ADD COLUMN IF NOT EXISTS carbs_g numeric(5,1),
+ADD COLUMN IF NOT EXISTS fat_g numeric(5,1),
+ADD COLUMN IF NOT EXISTS fiber_g numeric(5,1),
+ADD COLUMN IF NOT EXISTS ai_enriched boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS ai_enriched_at timestamptz;
+```
 
-### 2. Rozšíření tabulky `client_workout_logs`
-
-Přidáme sloupec pro kalorický výdej:
-
-| Sloupec | Typ | Popis |
-|---------|-----|-------|
-| `calories_burned` | integer | Odhadované spálené kalorie |
-| `ai_enriched` | boolean | Zda AI již obohatila záznam |
+Tím zajistíme, že každý záznam jídla bude mít vlastní nutriční hodnoty.
 
 ---
 
-## Nové Edge Functions
+## Technická implementace
 
-### 1. `ai-nutrition-enrichment`
+### 1. Update AI Edge Function
 
-Tato funkce běží na pozadí po uložení jídla.
-
-```text
-Input:
-{
-  "entryId": "uuid",         // ID záznamu v nutrition_food_entries
-  "templateId": "uuid",      // ID šablony v nutrition_meal_templates
-  "description": "Kuřecí prsa s rýží",
-  "portionSize": "medium",
-  "clientId": "uuid"
-}
-
-AI Prompt:
-"Analyzuj toto české jídlo a odhadni nutriční hodnoty pro střední porci (~250g):
-- Kalorie (rozmezí min-max)
-- Bílkoviny v gramech
-- Sacharidy v gramech
-- Tuky v gramech
-Také navrhni normalizovaný název pro databázi (bez překlepů, jednotný formát)."
-
-Output (JSON):
-{
-  "calories_low": 380,
-  "calories_high": 450,
-  "protein_g": 35,
-  "carbs_g": 40,
-  "fat_g": 8,
-  "fiber_g": 2,
-  "normalized_name": "Kuřecí prsa s rýží",
-  "confidence": "high"
-}
-```
-
-### 2. `ai-workout-calories`
-
-Tato funkce běží na pozadí po uložení tréninku.
-
-```text
-Input:
-{
-  "workoutLogId": "uuid",
-  "workoutType": "cardio",
-  "durationMinutes": 45,
-  "exercises": [
-    { "name": "Běh", "durationSeconds": 1800, "distanceMeters": 5000 },
-    { "name": "Posilování", "sets": 4, "reps": 10 }
-  ],
-  "clientWeight": 75  // Váha klienta z měření
-}
-
-AI Prompt:
-"Na základě těchto údajů o tréninku odhadni kalorický výdej.
-Použij MET hodnoty pro jednotlivé aktivity.
-Váha klienta: 75 kg, Délka tréninku: 45 minut."
-
-Output (JSON):
-{
-  "calories_burned": 420,
-  "breakdown": [
-    { "activity": "Běh", "calories": 350 },
-    { "activity": "Posilování", "calories": 70 }
-  ],
-  "confidence": "medium"
-}
-```
-
-### 3. `ai-merge-similar-foods` (plánované)
-
-Pravidelný job pro deduplikaci databáze jídel.
-
----
-
-## Integrace do stávajícího kódu
-
-### Úprava `useAddFoodEntry` (onSuccess)
+Rozšíříme `ai-nutrition-enrichment` aby kromě šablony aktualizoval i konkrétní entry:
 
 ```typescript
-onSuccess: async (data, { clientId, entry }) => {
-  // ... stávající invalidace cache ...
-  
-  // Auto-save template (již existuje)
-  await autoSaveMealTemplate(clientId, { ... });
-  
-  // NEW: AI enrichment na pozadí (fire-and-forget)
-  supabase.functions.invoke('ai-nutrition-enrichment', {
-    body: {
-      entryId: data.id,
-      description: entry.description,
-      portionSize: entry.portion_size,
-      clientId: clientId,
-    }
-  }).catch(err => console.error('AI enrichment failed:', err));
-  // Nečekáme na výsledek - běží na pozadí
+// Přidat entryId do inputu a aktualizovat i jednotlivý záznam
+if (entryId) {
+  await supabase
+    .from('nutrition_food_entries')
+    .update({
+      calories: avgCalories,
+      protein_g: nutritionData.protein_g,
+      carbs_g: nutritionData.carbs_g,
+      fat_g: nutritionData.fat_g,
+      ai_enriched: true,
+      ai_enriched_at: new Date().toISOString(),
+    })
+    .eq('id', entryId);
 }
 ```
 
-### Úprava `useCreateWorkoutLog` (onSuccess)
+### 2. Rozšíření NutritionFoodCard
+
+Přidáme props pro nutriční hodnoty a zobrazíme je pod popisem:
 
 ```typescript
-onSuccess: async (log, variables) => {
-  // ... stávající notifikace ...
+interface NutritionFoodCardProps {
+  // ... stávající props
+  calories?: number | null;
+  protein_g?: number | null;
+  carbs_g?: number | null;
+  fat_g?: number | null;
+  ai_enriched?: boolean;
+}
+
+// V renderování přidat:
+{calories && (
+  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+    <span className="font-medium text-foreground">~{calories} kcal</span>
+    {protein_g && <span>{protein_g}g B</span>}
+    {carbs_g && <span>{carbs_g}g S</span>}
+    {fat_g && <span>{fat_g}g T</span>}
+    {ai_enriched && <Sparkles className="w-3 h-3 text-primary" />}
+  </div>
+)}
+```
+
+### 3. Komponenta denního souhrnu kalorií
+
+Nová komponenta `NutritionDaySummary.tsx` pro trenérský pohled:
+
+```typescript
+interface DayNutritionSummary {
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  caloriesBurned: number;  // Z workout_logs
+  entriesWithData: number;
+  totalEntries: number;
+}
+
+function NutritionDaySummary({ 
+  foodEntries, 
+  workoutLogs,
+  date 
+}: Props) {
+  const summary = useMemo(() => {
+    // Sečíst všechny nutrienty z jídel daného dne
+    // + spálené kalorie z tréninků
+  }, [foodEntries, workoutLogs]);
   
-  // NEW: Výpočet kalorií na pozadí
-  // Nejprve získat váhu klienta z posledního měření
-  const { data: measurement } = await supabase
-    .from('measurements')
-    .select('weight')
-    .eq('client_id', variables.client_id)
-    .order('date', { ascending: false })
-    .limit(1)
-    .single();
-    
-  supabase.functions.invoke('ai-workout-calories', {
-    body: {
-      workoutLogId: log.id,
-      workoutType: variables.workout_type,
-      durationMinutes: variables.duration_minutes,
-      exercises: variables.exercises,
-      clientWeight: measurement?.weight || 70,
-    }
-  }).catch(err => console.error('AI calories calc failed:', err));
+  return (
+    <Card className="bg-gradient-to-r from-primary/5 to-accent/5">
+      <CardContent className="p-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">🍽️ Příjem: ~{summary.totalCalories} kcal</p>
+            <p className="text-xs text-muted-foreground">
+              {summary.totalProtein}g B • {summary.totalCarbs}g S • {summary.totalFat}g T
+            </p>
+          </div>
+          {summary.caloriesBurned > 0 && (
+            <div className="text-right">
+              <p className="text-sm font-medium">🔥 Výdej: ~{summary.caloriesBurned} kcal</p>
+              <p className="text-xs text-muted-foreground">
+                Bilance: ~{summary.totalCalories - summary.caloriesBurned} kcal
+              </p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 ```
 
----
+### 4. Zobrazení kalorií u tréninků
 
-## Jak to vypadá pro klienta
+Rozšířit `ClientSelfWorkoutsCard.tsx` a `WorkoutLogItem`:
 
-### Při zadávání jídla
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ 🍽️ Co jsi jedl/a?                                           │
-│                                                              │
-│ [Kuře_] ← začne psát                                        │
-│                                                              │
-│ Návrhy:                                                      │
-│ ┌────────────────────────────────────────────────────────┐  │
-│ │ ⭐ Kuřecí prsa s rýží                                  │  │
-│ │    ~420 kcal • 35g B • 40g S • 8g T     (použito 5×)  │  │
-│ ├────────────────────────────────────────────────────────┤  │
-│ │ ⭐ Kuřecí řízek                                        │  │
-│ │    ~550 kcal • 28g B • 25g S • 35g T    (použito 3×)  │  │
-│ └────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
+```typescript
+// V WorkoutLogItem přidat zobrazení spálených kalorií
+{log.calories_burned && (
+  <span className="flex items-center gap-1">
+    <Flame className="w-3 h-3 text-orange-500" />
+    {log.calories_burned} kcal
+  </span>
+)}
 ```
 
-### V přehledu dne
+### 5. Rozšíření PDF exportu
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ 📊 DNEŠNÍ SHRNUTÍ                                           │
-│                                                              │
-│ 🍽️ Příjem:     ~1850 kcal                                   │
-│    Bílkoviny:  125g  ████████████████░░░░ 83%               │
-│    Sacharidy:  180g  ██████████████░░░░░░ 72%               │
-│    Tuky:       65g   ████████████████████ 100%              │
-│                                                              │
-│ 🏋️ Výdej:      ~420 kcal (45 min kardio + síla)             │
-│                                                              │
-│ ⚖️ Bilance:    ~1430 kcal                                    │
-└──────────────────────────────────────────────────────────────┘
+Upravit `exportToPDF` v `NutritionClientDetail.tsx`:
+
+```typescript
+// V summary sekci přidat celkové nutrienty za období
+const periodNutrition = calculatePeriodNutrition(entries.food);
+const summaryData = [
+  // ... stávající položky
+  ['Celkem kalorií (odhad)', `~${periodNutrition.totalCalories} kcal`],
+  ['Celkem bílkovin', `${periodNutrition.totalProtein}g`],
+  ['Celkem sacharidů', `${periodNutrition.totalCarbs}g`],
+  ['Celkem tuků', `${periodNutrition.totalFat}g`],
+];
+
+// V denní tabulce jídel přidat sloupec "Kcal"
+const foodData = dayFood.map(e => [
+  e.entry_time?.slice(0, 5) || '-',
+  mealTypeLabels[e.meal_type],
+  e.description,
+  e.calories ? `~${e.calories}` : '-',  // Nový sloupec
+  portionLabels[e.portion_size] || '-',
+]);
+
+autoTable(doc, {
+  head: [['Čas', 'Typ', 'Popis', 'Kcal', 'Porce']],
+  body: foodData,
+  // ...
+});
 ```
 
 ---
@@ -249,118 +234,87 @@ onSuccess: async (log, variables) => {
 
 | Soubor | Akce | Popis |
 |--------|------|-------|
-| `supabase/functions/ai-nutrition-enrichment/index.ts` | VYTVOŘIT | Edge Function pro AI analýzu jídla |
-| `supabase/functions/ai-workout-calories/index.ts` | VYTVOŘIT | Edge Function pro výpočet kalorií tréninku |
-| `src/hooks/useClientPortalNutrition.ts` | UPRAVIT | Přidat volání AI enrichment v onSuccess |
-| `src/hooks/useClientWorkoutLogs.ts` | UPRAVIT | Přidat volání AI calories v onSuccess |
-| `src/hooks/useNutritionMealTemplates.ts` | UPRAVIT | Rozšířit interface o nutriční hodnoty |
-| `src/components/client-portal/nutrition/FoodAutocomplete.tsx` | UPRAVIT | Zobrazit nutriční hodnoty v návrzích |
-| `src/components/client-portal/nutrition/NutritionDaySummary.tsx` | VYTVOŘIT | Komponenta pro denní souhrn kalorií |
-| `supabase/config.toml` | UPRAVIT | Přidat nové edge functions |
+| `supabase/migrations/...` | VYTVOŘIT | Přidat sloupce do `nutrition_food_entries` |
+| `supabase/functions/ai-nutrition-enrichment/index.ts` | UPRAVIT | Aktualizovat i jednotlivé entry |
+| `src/components/nutrition/NutritionFoodCard.tsx` | UPRAVIT | Přidat zobrazení nutrientů |
+| `src/components/nutrition/NutritionDaySummary.tsx` | VYTVOŘIT | Denní souhrn kalorií |
+| `src/pages/NutritionClientDetail.tsx` | UPRAVIT | Integrovat souhrn, upravit PDF export |
+| `src/components/clients/ClientSelfWorkoutsCard.tsx` | UPRAVIT | Zobrazit spálené kalorie |
+| `src/hooks/useClientWorkoutLogs.ts` | UPRAVIT | Přidat `calories_burned` do interface |
 
 ---
 
-## Databázová migrace
+## Vizuální návrh PDF exportu
 
-```sql
--- Rozšíření nutrition_meal_templates o nutriční hodnoty
-ALTER TABLE nutrition_meal_templates
-ADD COLUMN IF NOT EXISTS calories_per_portion integer,
-ADD COLUMN IF NOT EXISTS protein_g numeric(5,1),
-ADD COLUMN IF NOT EXISTS carbs_g numeric(5,1),
-ADD COLUMN IF NOT EXISTS fat_g numeric(5,1),
-ADD COLUMN IF NOT EXISTS fiber_g numeric(5,1),
-ADD COLUMN IF NOT EXISTS ai_enriched boolean DEFAULT false,
-ADD COLUMN IF NOT EXISTS ai_enriched_at timestamptz,
-ADD COLUMN IF NOT EXISTS normalized_name text;
-
--- Rozšíření client_workout_logs o kalorie
-ALTER TABLE client_workout_logs
-ADD COLUMN IF NOT EXISTS calories_burned integer,
-ADD COLUMN IF NOT EXISTS ai_enriched boolean DEFAULT false;
-
--- Index pro rychlé vyhledávání
-CREATE INDEX IF NOT EXISTS idx_meal_templates_normalized 
-ON nutrition_meal_templates (client_id, normalized_name);
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                  DENÍK NÁVYKŮ - Jan Novák                   │
+│         Období: 20.1. - 30.1.2026                           │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│ SOUHRN (10 dní)                                             │
+│ ─────────────────────────────────────────────────────────── │
+│ Celkem jídel:              42                               │
+│ Celkem kalorií (odhad):    ~18,500 kcal                     │
+│ Celkem bílkovin:           ~950g                            │
+│ Celkem sacharidů:          ~1,800g                          │
+│ Celkem tuků:               ~620g                            │
+│ Průměr kalorií/den:        ~1,850 kcal                      │
+│                                                              │
+├──────────────────────────────────────────────────────────────┤
+│ PONDĚLÍ 20.1.2026                                           │
+│ Denní příjem: ~1,920 kcal • 130g B • 195g S • 68g T        │
+│                                                              │
+│ ┌────────────────────────────────────────────────────────┐  │
+│ │ Čas   │ Typ     │ Popis              │ Kcal  │ Porce  │  │
+│ ├───────┼─────────┼────────────────────┼───────┼────────┤  │
+│ │ 08:30 │ Snídaně │ Ovesná kaše        │ ~420  │ Střední│  │
+│ │ 12:15 │ Oběd    │ Kuřecí s rýží      │ ~580  │ Velká  │  │
+│ │ 18:45 │ Večeře  │ Salát s tuňákem    │ ~450  │ Střední│  │
+│ └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│ Trénink: 45 min silový • 🔥 ~320 kcal spáleno              │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Výhody tohoto řešení
+## Logika výpočtu denních nutrientů
 
-| Výhoda | Popis |
-|--------|-------|
-| **Transparentní pro klienta** | Klient nevidí AI, pouze výsledky |
-| **Neblokující** | AI běží na pozadí, nezdržuje ukládání |
-| **Učící se** | Systém se učí z každého záznamu |
-| **Deduplikace** | AI sjednocuje podobné názvy jídel |
-| **Personalizované** | Každý klient má vlastní databázi |
-| **Využívá existující** | LOVABLE_API_KEY, sloupce v DB |
-
----
-
-## Technické detaily
-
-### Edge Function prompt pro jídla
-
-```text
-Jsi nutriční expert. Analyzuj tento popis jídla a odhadni nutriční hodnoty.
-
-Jídlo: "${description}"
-Porce: ${portionSize} (malá ~150g, střední ~250g, velká ~400g)
-
-Pravidla:
-- Odhadni kalorie s rozmezím (low/high)
-- Bílkoviny, sacharidy, tuky v gramech
-- Pokud je popis nejasný, použij průměrné hodnoty pro typické české jídlo
-- Normalizuj název (oprav překlepy, sjednoť formát)
-
-Odpověz POUZE ve formátu JSON:
-{
-  "calories_low": number,
-  "calories_high": number,
-  "protein_g": number,
-  "carbs_g": number,
-  "fat_g": number,
-  "normalized_name": "string",
-  "confidence": "high" | "medium" | "low"
+```typescript
+function calculateDayNutrition(foodEntries: FoodEntry[]): DayNutrition {
+  const entriesWithData = foodEntries.filter(e => e.calories && e.ai_enriched);
+  
+  return {
+    totalCalories: foodEntries.reduce((sum, e) => sum + (e.calories || 0), 0),
+    totalProtein: foodEntries.reduce((sum, e) => sum + (e.protein_g || 0), 0),
+    totalCarbs: foodEntries.reduce((sum, e) => sum + (e.carbs_g || 0), 0),
+    totalFat: foodEntries.reduce((sum, e) => sum + (e.fat_g || 0), 0),
+    coverage: entriesWithData.length / foodEntries.length, // Procento pokrytí AI daty
+    isEstimate: entriesWithData.length < foodEntries.length,
+  };
 }
 ```
 
-### Edge Function prompt pro tréninky
+---
 
-```text
-Jsi fitness expert. Vypočítej kalorický výdej tréninku.
+## Důležité poznámky
 
-Typ tréninku: ${workoutType}
-Délka: ${durationMinutes} minut
-Váha klienta: ${clientWeight} kg
-Cviky: ${JSON.stringify(exercises)}
+1. **Postupné obohacování**: Starší záznamy nebudou mít nutriční data. UI bude zobrazovat "~" a "(odhad)" pro jasnost.
 
-Použij MET hodnoty:
-- Běh 8 km/h = 8.3 MET
-- Silový trénink = 6.0 MET
-- HIIT = 8.0 MET
-- Jóga = 3.0 MET
-- Cyklistika = 7.5 MET
+2. **Fallback na šablony**: Pokud entry nemá vlastní data, pokusíme se je načíst z odpovídající šablony v `nutrition_meal_templates`.
 
-Vzorec: Kalorie = MET × váha(kg) × čas(h)
+3. **AI indikátor**: Záznamy obohacené AI budou mít ikonu ✨ (Sparkles) pro transparentnost.
 
-Odpověz POUZE ve formátu JSON:
-{
-  "calories_burned": number,
-  "breakdown": [{ "activity": "string", "calories": number }],
-  "confidence": "high" | "medium" | "low"
-}
-```
+4. **Workout kalorie**: Sloupec `calories_burned` již existuje v DB, jen ho zobrazíme v UI.
 
 ---
 
 ## Shrnutí workflow
 
-1. **Klient zadá jídlo** → uloží se ihned
-2. **Na pozadí běží AI** → doplní kalorie a nutrienty do templates
-3. **Při příštím hledání** → klient vidí nutriční hodnoty v návrzích
-4. **Klient zadá trénink** → uloží se ihned
-5. **Na pozadí běží AI** → doplní kalorický výdej
-6. **V přehledu dne** → klient vidí bilanci příjem vs. výdej
+1. **Klient zadá jídlo** → AI na pozadí doplní nutrienty
+2. **Trenér otevře deník klienta** → vidí kalorie a makra u každého jídla
+3. **Trenér vidí denní souhrn** → příjem vs. výdej (pokud klient trénoval)
+4. **Trenér exportuje PDF** → obsahuje nutriční data za celé období
+5. **Trenér vidí tréninky klienta** → včetně spálených kalorií
