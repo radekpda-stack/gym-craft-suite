@@ -2,14 +2,17 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Search, Clock, Utensils } from 'lucide-react';
+import { Search, Clock, Utensils, Star, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COMMON_FOODS } from './constants';
+import { useMealTemplatesSearch } from '@/hooks/useNutritionMealTemplates';
 
 interface FoodSuggestion {
   description: string;
   portion_size?: string;
-  source: 'history' | 'common';
+  meal_type?: string;
+  use_count?: number;
+  source: 'template' | 'history' | 'common';
 }
 
 interface FoodAutocompleteProps {
@@ -35,6 +38,9 @@ export function FoodAutocomplete({
   useEffect(() => {
     setInputValue(value);
   }, [value]);
+
+  // Query meal templates (favorites/frequently used)
+  const { data: templateResults = [] } = useMealTemplatesSearch(clientId, inputValue);
 
   // Query client's food history
   const { data: historyResults = [] } = useQuery({
@@ -74,6 +80,15 @@ export function FoodAutocomplete({
     staleTime: 30000,
   });
 
+  // Convert templates to suggestions format
+  const templateSuggestions: FoodSuggestion[] = templateResults.map(t => ({
+    description: t.description,
+    portion_size: t.portion_size || undefined,
+    meal_type: t.meal_type || undefined,
+    use_count: t.use_count,
+    source: 'template' as const,
+  }));
+
   // Filter common foods based on input
   const commonResults: FoodSuggestion[] = inputValue.length >= 2
     ? COMMON_FOODS
@@ -87,15 +102,40 @@ export function FoodAutocomplete({
         }))
     : [];
 
-  // Combine results, prioritizing history
-  const suggestions: FoodSuggestion[] = [
-    ...historyResults,
-    ...commonResults.filter(
-      common => !historyResults.some(
-        h => h.description.toLowerCase() === common.description.toLowerCase()
-      )
-    ),
-  ].slice(0, 8);
+  // Combine results with priority: Templates > History > Common
+  // Remove duplicates by description (case-insensitive)
+  const seenDescriptions = new Set<string>();
+  const suggestions: FoodSuggestion[] = [];
+
+  // 1. Templates first (favorites ⭐)
+  for (const item of templateSuggestions) {
+    const key = item.description.toLowerCase().trim();
+    if (!seenDescriptions.has(key)) {
+      seenDescriptions.add(key);
+      suggestions.push(item);
+    }
+  }
+
+  // 2. History second (recent ⏰)
+  for (const item of historyResults) {
+    const key = item.description.toLowerCase().trim();
+    if (!seenDescriptions.has(key)) {
+      seenDescriptions.add(key);
+      suggestions.push(item);
+    }
+  }
+
+  // 3. Common foods last (📖)
+  for (const item of commonResults) {
+    const key = item.description.toLowerCase().trim();
+    if (!seenDescriptions.has(key) && suggestions.length < 8) {
+      seenDescriptions.add(key);
+      suggestions.push(item);
+    }
+  }
+
+  // Limit to 8 suggestions
+  const limitedSuggestions = suggestions.slice(0, 8);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -146,30 +186,38 @@ export function FoodAutocomplete({
         />
       </div>
 
-      {isOpen && suggestions.length > 0 && (
+      {isOpen && limitedSuggestions.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
-          <div className="py-1 max-h-[200px] overflow-y-auto">
-            {suggestions.map((suggestion, idx) => (
+          <div className="py-1 max-h-[280px] overflow-y-auto">
+            {limitedSuggestions.map((suggestion, idx) => (
               <button
                 key={`${suggestion.description}-${idx}`}
                 type="button"
                 onClick={() => handleSelect(suggestion)}
                 className={cn(
-                  "w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-accent/50 transition-colors text-sm",
+                  "w-full px-3 py-2 text-left flex items-start gap-2 hover:bg-accent/50 transition-colors text-sm",
                   idx > 0 && "border-t border-border/50"
                 )}
               >
-                {suggestion.source === 'history' ? (
-                  <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                {suggestion.source === 'template' ? (
+                  <Star className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                ) : suggestion.source === 'history' ? (
+                  <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
                 ) : (
-                  <Utensils className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <BookOpen className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
                 )}
-                <span className="truncate">{suggestion.description}</span>
-                {suggestion.source === 'history' && (
-                  <span className="text-[10px] text-muted-foreground ml-auto shrink-0">
-                    nedávné
-                  </span>
-                )}
+                <div className="flex-1 min-w-0">
+                  <span className="truncate block">{suggestion.description}</span>
+                  {suggestion.source === 'template' && suggestion.use_count && suggestion.use_count > 1 && (
+                    <span className="text-[10px] text-amber-600">
+                      použito {suggestion.use_count}×
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground shrink-0 mt-0.5">
+                  {suggestion.source === 'template' ? 'oblíbené' : 
+                   suggestion.source === 'history' ? 'nedávné' : 'běžné'}
+                </span>
               </button>
             ))}
           </div>

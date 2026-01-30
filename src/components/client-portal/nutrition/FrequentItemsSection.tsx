@@ -6,11 +6,12 @@
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Coffee, Droplets, RotateCcw, Star, Utensils, Plus } from 'lucide-react';
+import { Coffee, Droplets, Star, Utensils, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { haptic } from '@/lib/haptics';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFrequentWaterAmounts, useFrequentCoffeeTypes } from '@/hooks/useFrequentNutrition';
+import { useMealTemplates } from '@/hooks/useNutritionMealTemplates';
 import { QUICK_WATER_AMOUNTS, COFFEE_TYPES, COFFEE_LABELS, type MealTypeId } from './constants';
 import { QuickAddFoodDialog } from './QuickAddFoodDialog';
 
@@ -18,6 +19,7 @@ interface FrequentFood {
   description: string;
   meal_type: string;
   portion_size: string;
+  use_count?: number;
 }
 
 interface FrequentItemsSectionProps {
@@ -41,6 +43,17 @@ export function FrequentItemsSection({
 }: FrequentItemsSectionProps) {
   const { data: waterData } = useFrequentWaterAmounts(clientId);
   const { data: coffeeData } = useFrequentCoffeeTypes(clientId);
+  const { data: mealTemplates = [] } = useMealTemplates(clientId);
+  
+  // Use meal templates as primary source, fallback to recent foods
+  const displayFoods: FrequentFood[] = mealTemplates.length > 0
+    ? mealTemplates.slice(0, 6).map(t => ({
+        description: t.description,
+        meal_type: t.meal_type || 'lunch',
+        portion_size: t.portion_size || 'medium',
+        use_count: t.use_count,
+      }))
+    : recentFoods.slice(0, 6);
   
   const [foodDialogOpen, setFoodDialogOpen] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FrequentFood | null>(null);
@@ -146,16 +159,21 @@ export function FrequentItemsSection({
             </div>
           </div>
 
-          {/* Frequent Foods */}
-          {recentFoods.length > 0 && (
+          {/* Frequent Foods - from templates or history */}
+          {displayFoods.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                <Star className="w-3.5 h-3.5" />
+                <Star className="w-3.5 h-3.5 text-amber-500" />
                 <span>Tvoje častá jídla</span>
+                {mealTemplates.length > 0 && (
+                  <span className="text-[10px] text-muted-foreground/70 font-normal normal-case">
+                    (automaticky se učí)
+                  </span>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 <AnimatePresence>
-                  {recentFoods.slice(0, 6).map((food, idx) => (
+                  {displayFoods.map((food, idx) => (
                     <motion.div
                       key={`${food.description}-${idx}`}
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -169,11 +187,16 @@ export function FrequentItemsSection({
                         disabled={isAdding}
                         className={cn(
                           "h-auto py-2 px-3 text-xs bg-muted/50 hover:bg-muted border border-transparent hover:border-primary/20",
-                          "transition-all duration-200"
+                          "transition-all duration-200 relative"
                         )}
                       >
                         <Plus className="w-3 h-3 mr-1.5 text-primary" />
                         <span className="truncate max-w-[140px]">{food.description}</span>
+                        {food.use_count && food.use_count > 2 && (
+                          <span className="ml-1.5 text-[9px] text-amber-600 font-medium">
+                            {food.use_count}×
+                          </span>
+                        )}
                       </Button>
                     </motion.div>
                   ))}

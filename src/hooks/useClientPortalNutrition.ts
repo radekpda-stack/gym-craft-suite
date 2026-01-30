@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, addDays } from 'date-fns';
+import { autoSaveMealTemplate } from './useNutritionMealTemplates';
 export interface FoodEntryInput {
   meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   description: string;
@@ -78,12 +79,25 @@ export function useAddFoodEntry() {
       if (error) throw error;
       return data;
     },
-    onSuccess: async (_, { sessionId, clientId }) => {
+    onSuccess: async (_, { sessionId, clientId, entry }) => {
       queryClient.invalidateQueries({ queryKey: ['client-portal-nutrition-campaign', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-portal-today-nutrition', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-food-entries', sessionId] });
       queryClient.invalidateQueries({ queryKey: ['client-nutrition-by-date', clientId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['client-nutrition-completed-days', sessionId] });
+      
+      // Auto-save to meal templates database (for autocomplete learning)
+      await autoSaveMealTemplate(clientId, {
+        description: entry.description,
+        meal_type: entry.meal_type,
+        portion_size: entry.portion_size,
+        quality: entry.quality,
+        note: entry.note,
+      });
+      
+      // Invalidate templates cache
+      queryClient.invalidateQueries({ queryKey: ['meal-templates', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['meal-templates-search', clientId] });
       
       // Notify trainer about food entry (max 1x per day per client)
       try {
