@@ -400,7 +400,16 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
                   onDelete={handleDelete}
                   onClick={() => handleNotificationClick(notification)}
                   onItemClick={
-                    category === 'activity' ? handleNutritionItemClick : undefined
+                    category === 'activity' 
+                      ? (item: UnifiedNotification) => {
+                          // Route to correct handler based on notification type
+                          if (item.type === 'client_workout_logged') {
+                            handleWorkoutItemClick(item);
+                          } else {
+                            handleNutritionItemClick(item);
+                          }
+                        }
+                      : undefined
                   }
                   enableSwipe={true}
                 />
