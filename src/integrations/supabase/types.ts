@@ -6585,8 +6585,12 @@ export type Database = {
       }
       nutrition_food_entries: {
         Row: {
+          ai_enriched: boolean | null
+          ai_enriched_at: string | null
           calorie_estimate_high: number | null
           calorie_estimate_low: number | null
+          calories: number | null
+          carbs_g: number | null
           client_id: string
           client_reply: string | null
           client_request_id: string | null
@@ -6596,7 +6600,9 @@ export type Database = {
           energy_after: string | null
           entry_date: string
           entry_time: string
+          fat_g: number | null
           feeling_after: string | null
+          fiber_g: number | null
           grams: number | null
           id: string
           meal_type: string | null
@@ -6606,6 +6612,7 @@ export type Database = {
           portion_estimate: string | null
           portion_mode: string
           portion_size: string | null
+          protein_g: number | null
           quality: string | null
           satiation: string | null
           session_id: string
@@ -6618,8 +6625,12 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          ai_enriched?: boolean | null
+          ai_enriched_at?: string | null
           calorie_estimate_high?: number | null
           calorie_estimate_low?: number | null
+          calories?: number | null
+          carbs_g?: number | null
           client_id: string
           client_reply?: string | null
           client_request_id?: string | null
@@ -6629,7 +6640,9 @@ export type Database = {
           energy_after?: string | null
           entry_date: string
           entry_time?: string
+          fat_g?: number | null
           feeling_after?: string | null
+          fiber_g?: number | null
           grams?: number | null
           id?: string
           meal_type?: string | null
@@ -6639,6 +6652,7 @@ export type Database = {
           portion_estimate?: string | null
           portion_mode: string
           portion_size?: string | null
+          protein_g?: number | null
           quality?: string | null
           satiation?: string | null
           session_id: string
@@ -6651,8 +6665,12 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          ai_enriched?: boolean | null
+          ai_enriched_at?: string | null
           calorie_estimate_high?: number | null
           calorie_estimate_low?: number | null
+          calories?: number | null
+          carbs_g?: number | null
           client_id?: string
           client_reply?: string | null
           client_request_id?: string | null
@@ -6662,7 +6680,9 @@ export type Database = {
           energy_after?: string | null
           entry_date?: string
           entry_time?: string
+          fat_g?: number | null
           feeling_after?: string | null
+          fiber_g?: number | null
           grams?: number | null
           id?: string
           meal_type?: string | null
@@ -6672,6 +6692,7 @@ export type Database = {
           portion_estimate?: string | null
           portion_mode?: string
           portion_size?: string | null
+          protein_g?: number | null
           quality?: string | null
           satiation?: string | null
           session_id?: string

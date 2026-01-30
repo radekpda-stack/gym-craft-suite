@@ -29,6 +29,8 @@ export interface WorkoutLog {
   duration_minutes?: number | null;
   energy_before?: number | null;
   energy_after?: number | null;
+  calories_burned?: number | null;
+  ai_enriched?: boolean;
   trainer_comment?: string | null;
   trainer_commented_at?: string | null;
   created_at: string;

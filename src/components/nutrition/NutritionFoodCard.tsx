@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Pencil, MessageCircle, ChevronDown, ChevronUp, Star } from 'lucide-react';
+import { Clock, Pencil, MessageCircle, ChevronDown, ChevronUp, Star, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,12 @@ interface NutritionFoodCardProps {
   trainerRating?: number | null;
   clientReply?: string | null;
   trainerEdited?: boolean;
+  // Nutrition data from AI
+  calories?: number | null;
+  proteinG?: number | null;
+  carbsG?: number | null;
+  fatG?: number | null;
+  aiEnriched?: boolean;
   onEdit?: () => void;
   onComment?: () => void;
   className?: string;
@@ -57,6 +63,11 @@ export function NutritionFoodCard({
   trainerRating,
   clientReply,
   trainerEdited,
+  calories,
+  proteinG,
+  carbsG,
+  fatG,
+  aiEnriched,
   onEdit,
   onComment,
   className,
@@ -140,6 +151,21 @@ export function NutritionFoodCard({
         )}>
           {description}
         </p>
+        
+        {/* Nutrition data from AI */}
+        {calories && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">~{calories} kcal</span>
+            {proteinG && <span>{proteinG}g B</span>}
+            {carbsG && <span>{carbsG}g S</span>}
+            {fatG && <span>{fatG}g T</span>}
+            {aiEnriched && (
+              <span title="AI odhad">
+                <Sparkles className="w-3 h-3 text-primary" />
+              </span>
+            )}
+          </div>
+        )}
         
         {/* Metadata row */}
         {(portionLabel || satiationLabel) && (

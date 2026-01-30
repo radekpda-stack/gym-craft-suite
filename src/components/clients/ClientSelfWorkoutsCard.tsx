@@ -14,6 +14,7 @@ import {
   Zap,
   Trophy,
   MessageSquare,
+  Flame,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -98,6 +99,12 @@ function WorkoutLogItem({ log, onComment }: { log: WorkoutLog; onComment: (logId
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {log.duration_minutes} min
+                  </span>
+                )}
+                {log.calories_burned && (
+                  <span className="flex items-center gap-1 text-orange-500">
+                    <Flame className="w-3 h-3" />
+                    {log.calories_burned} kcal
                   </span>
                 )}
                 {(log.energy_before || log.energy_after) && (

@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 interface NutritionEnrichmentInput {
+  entryId?: string;
   templateId?: string;
   description: string;
   portionSize?: string;
@@ -41,9 +42,9 @@ serve(async (req) => {
     }
 
     const input: NutritionEnrichmentInput = await req.json();
-    const { templateId, description, portionSize = 'medium', clientId } = input;
+    const { entryId, templateId, description, portionSize = 'medium', clientId } = input;
 
-    console.log('[ai-nutrition-enrichment] Processing:', { description, portionSize, clientId, templateId });
+    console.log('[ai-nutrition-enrichment] Processing:', { description, portionSize, clientId, templateId, entryId });
 
     if (!description || !clientId) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -202,6 +203,28 @@ Velikost porce: ${portionDesc}`;
       }
     } else {
       console.log('[ai-nutrition-enrichment] No template found to update for:', description);
+    }
+
+    // Also update the specific food entry with nutrition data
+    if (entryId) {
+      const { error: entryUpdateError } = await supabase
+        .from('nutrition_food_entries')
+        .update({
+          calories: avgCalories,
+          protein_g: nutritionData.protein_g,
+          carbs_g: nutritionData.carbs_g,
+          fat_g: nutritionData.fat_g,
+          fiber_g: nutritionData.fiber_g || null,
+          ai_enriched: true,
+          ai_enriched_at: new Date().toISOString(),
+        })
+        .eq('id', entryId);
+
+      if (entryUpdateError) {
+        console.error('[ai-nutrition-enrichment] Failed to update entry:', entryUpdateError);
+      } else {
+        console.log('[ai-nutrition-enrichment] Successfully updated entry:', entryId);
+      }
     }
 
     return new Response(JSON.stringify({ 
