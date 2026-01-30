@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Dumbbell, Heart, Zap, Move, Coffee, Shuffle, Footprints, Activity } from 'lucide-react';
+import { Dumbbell, Heart, Zap, Move, Coffee, Shuffle, Footprints, Activity, Ship, Mountain, Circle, Bike, PersonStanding, Waves } from 'lucide-react';
 
 export const WORKOUT_TYPES = [
   { value: 'strength', label: 'Silový', icon: Dumbbell, color: 'text-accent' },
@@ -9,6 +9,15 @@ export const WORKOUT_TYPES = [
   { value: 'functional', label: 'Funkční', icon: Activity, color: 'text-accent' },
   { value: 'mobility', label: 'Mobilita', icon: Move, color: 'text-success' },
   { value: 'regeneration', label: 'Regenerace', icon: Coffee, color: 'text-primary' },
+  // Machine types
+  { value: 'rowing', label: 'Veslo', icon: Ship, color: 'text-accent' },
+  { value: 'skierg', label: 'SkiErg', icon: Mountain, color: 'text-accent' },
+  { value: 'treadmill_motor', label: 'Pás motor', icon: Zap, color: 'text-success' },
+  { value: 'treadmill_curved', label: 'Pás curved', icon: Activity, color: 'text-success' },
+  { value: 'jumprope', label: 'Švihadlo', icon: Circle, color: 'text-warning' },
+  { value: 'cycling', label: 'Kolo', icon: Bike, color: 'text-accent' },
+  { value: 'walk', label: 'Chůze', icon: PersonStanding, color: 'text-accent' },
+  { value: 'swimming', label: 'Plavání', icon: Waves, color: 'text-accent' },
   { value: 'other', label: 'Jiný', icon: Shuffle, color: 'text-muted-foreground' },
 ] as const;
 

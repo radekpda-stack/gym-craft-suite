@@ -22,6 +22,11 @@ import {
   Check,
   PersonStanding,
   X,
+  Ship,
+  Mountain,
+  Zap,
+  Activity,
+  Circle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -29,6 +34,7 @@ import { ExerciseAutocomplete } from './ExerciseAutocomplete';
 import { QuickExercisePicker } from './QuickExercisePicker';
 import { SideSelector, SideBadge, type Side } from '@/components/ui/side-selector';
 import { useAllExerciseDetails } from '@/hooks/useExerciseDetailsLookup';
+import { MachineMetricsInput, type MachineMetrics, hasMachineMetrics, formatMachineMetrics } from './MachineMetricsInput';
 
 // Simplified workout types with large icons
 const SIMPLE_WORKOUT_TYPES = [
@@ -38,6 +44,13 @@ const SIMPLE_WORKOUT_TYPES = [
   { value: 'walk', label: 'Chůze', icon: PersonStanding, color: 'text-accent bg-accent/10', isCardio: true },
   { value: 'swimming', label: 'Plavání', icon: Waves, color: 'text-accent bg-accent/10', isCardio: true },
   { value: 'mobility', label: 'Protažení', icon: MoveHorizontal, color: 'text-primary bg-primary/10', isCardio: false },
+  // Cardio machines
+  { value: 'rowing', label: 'Veslo', icon: Ship, color: 'text-accent bg-accent/10', isCardio: true, hasMachine: true },
+  { value: 'skierg', label: 'SkiErg', icon: Mountain, color: 'text-accent bg-accent/10', isCardio: true, hasMachine: true },
+  { value: 'treadmill_motor', label: 'Pás motor', icon: Zap, color: 'text-success bg-success/10', isCardio: true, hasMachine: true },
+  { value: 'treadmill_curved', label: 'Pás curved', icon: Activity, color: 'text-success bg-success/10', isCardio: true, hasMachine: true },
+  { value: 'jumprope', label: 'Švihadlo', icon: Circle, color: 'text-warning bg-warning/10', isCardio: true, hasMachine: true },
+  // Other
   { value: 'other', label: 'Jiné', icon: Sparkles, color: 'text-primary bg-primary/10', isCardio: false },
 ];
 
@@ -77,6 +90,7 @@ interface SimpleAddWorkoutDialogProps {
     date: string;
     distanceKm?: number;
     paceMinPerKm?: string;
+    machineMetrics?: MachineMetrics;
     exercises?: Array<{
       exercise_name: string;
       exercise_id?: string | null;
@@ -107,6 +121,9 @@ export function SimpleAddWorkoutDialog({
   const [distanceKm, setDistanceKm] = useState('');
   const [paceMinPerKm, setPaceMinPerKm] = useState('');
   
+  // Machine-specific metrics (rowing, skierg, treadmill, jumprope)
+  const [machineMetrics, setMachineMetrics] = useState<MachineMetrics>({});
+  
   // Strength exercises
   const [exercises, setExercises] = useState<ExerciseInput[]>([]);
   
@@ -121,6 +138,7 @@ export function SimpleAddWorkoutDialog({
     setNotes('');
     setDistanceKm('');
     setPaceMinPerKm('');
+    setMachineMetrics({});
     setExercises([]);
   };
 
@@ -166,6 +184,7 @@ export function SimpleAddWorkoutDialog({
       date: format(new Date(), 'yyyy-MM-dd'),
       distanceKm: distanceKm ? parseFloat(distanceKm) : undefined,
       paceMinPerKm: paceMinPerKm || undefined,
+      machineMetrics: hasMachineMetrics(workoutType) && Object.keys(machineMetrics).length > 0 ? machineMetrics : undefined,
       exercises: validExercises.length > 0 ? validExercises : undefined,
     });
     
@@ -175,6 +194,7 @@ export function SimpleAddWorkoutDialog({
   const selectedType = SIMPLE_WORKOUT_TYPES.find(t => t.value === workoutType);
   const isCardioType = selectedType?.isCardio || false;
   const isStrengthType = workoutType === 'strength';
+  const isMachineType = workoutType ? hasMachineMetrics(workoutType) : false;
 
   // Exercise handlers
   const addExerciseFromQuickPick = (exercise: { id: string; name: string; name_cs: string | null }) => {
@@ -340,8 +360,26 @@ export function SimpleAddWorkoutDialog({
               </div>
 
 
-              {/* Cardio metrics - always visible */}
-              {isCardioType && (
+              {/* Machine-specific metrics (rowing, skierg, treadmill, jumprope) */}
+              {isMachineType && workoutType && (
+                <div className={cn(
+                  "p-4 rounded-lg space-y-3",
+                  selectedType?.color
+                )}>
+                  <div className="flex items-center gap-2 font-medium text-sm">
+                    {selectedType && <selectedType.icon className="w-4 h-4" />}
+                    Metriky
+                  </div>
+                  <MachineMetricsInput
+                    workoutType={workoutType}
+                    metrics={machineMetrics}
+                    onChange={setMachineMetrics}
+                  />
+                </div>
+              )}
+
+              {/* Simple cardio metrics (run, cycling, walk, swimming) */}
+              {isCardioType && !isMachineType && (
                 <div className={cn(
                   "p-4 rounded-lg space-y-3",
                   selectedType?.color
@@ -549,8 +587,15 @@ export function SimpleAddWorkoutDialog({
                   </span>
                 </div>
                 
+                {/* Show machine metrics in summary */}
+                {isMachineType && workoutType && Object.keys(machineMetrics).length > 0 && (
+                  <div className="text-sm text-muted-foreground text-center">
+                    {formatMachineMetrics(workoutType, machineMetrics)}
+                  </div>
+                )}
+                
                 {/* Show cardio details in summary */}
-                {isCardioType && (distanceKm || paceMinPerKm) && (
+                {isCardioType && !isMachineType && (distanceKm || paceMinPerKm) && (
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     {distanceKm && <span>{distanceKm} km</span>}
                     {paceMinPerKm && <span>@ {paceMinPerKm} min/km</span>}

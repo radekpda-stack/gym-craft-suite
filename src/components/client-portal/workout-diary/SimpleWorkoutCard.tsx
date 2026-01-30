@@ -33,6 +33,14 @@ const WORKOUT_ICONS: Record<string, React.ComponentType<{ className?: string }>>
   hiit: Sparkles,
   recovery: MoveHorizontal,
   conditioning: Bike,
+  // New machine types
+  rowing: Waves,
+  skierg: MoveHorizontal,
+  treadmill_motor: Footprints,
+  treadmill_curved: Footprints,
+  jumprope: Sparkles,
+  cycling: Bike,
+  walk: Footprints,
 };
 
 const WORKOUT_COLORS: Record<string, string> = {
@@ -45,6 +53,14 @@ const WORKOUT_COLORS: Record<string, string> = {
   hiit: 'text-destructive bg-destructive/10',
   recovery: 'text-success bg-success/10',
   conditioning: 'text-warning bg-warning/10',
+  // New machine types
+  rowing: 'text-accent bg-accent/10',
+  skierg: 'text-accent bg-accent/10',
+  treadmill_motor: 'text-success bg-success/10',
+  treadmill_curved: 'text-success bg-success/10',
+  jumprope: 'text-warning bg-warning/10',
+  cycling: 'text-accent bg-accent/10',
+  walk: 'text-accent bg-accent/10',
 };
 
 const FEELING_EMOJIS = ['', '😩', '😕', '😐', '😊', '🔥'];
