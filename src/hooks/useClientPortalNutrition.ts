@@ -100,9 +100,10 @@ export function useAddFoodEntry() {
       queryClient.invalidateQueries({ queryKey: ['meal-templates-search', clientId] });
       
       // AI enrichment on background (fire-and-forget)
-      // This will analyze the food and add nutritional values to the template
+      // This will analyze the food and add nutritional values to both template and entry
       supabase.functions.invoke('ai-nutrition-enrichment', {
         body: {
+          entryId: data.id,
           description: entry.description,
           portionSize: entry.portion_size || 'medium',
           clientId: clientId,

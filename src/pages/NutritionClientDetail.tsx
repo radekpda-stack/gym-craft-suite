@@ -43,10 +43,12 @@ import { useEffectiveHabitSettings } from '@/hooks/useClientHabitSettings';
 import { useDayNotes, useUpsertDayNote } from '@/hooks/useNutritionDayNotes';
 import { analyzeCaffeineForPeriod } from '@/components/client-portal/nutrition/CaffeineWindowWidget';
 import { NutritionFoodCard } from '@/components/nutrition/NutritionFoodCard';
+import { NutritionDayCaloriesSummary, calculateDayNutrition } from '@/components/nutrition/NutritionDayCaloriesSummary';
 import { HabitSettingsForm } from '@/components/client-portal/nutrition/HabitSettingsForm';
 import { TrainerFeedbackDialog, NutritionRatingDisplay } from '@/components/nutrition/TrainerFeedbackDialog';
 import { ChatGPTExportDialog } from '@/components/nutrition/ChatGPTExportDialog';
 import { useTrainerFeedback } from '@/hooks/useNutritionFeedback';
+import { useClientWorkoutLogs } from '@/hooks/useClientWorkoutLogs';
 import {
   MEAL_TYPES,
   PORTION_SIZES,
@@ -281,6 +283,9 @@ export default function NutritionClientDetail() {
 
   const trainerFeedback = useTrainerFeedback();
   const trainerUpdate = useTrainerUpdateEntry();
+  
+  // Get workout logs for calories burned data
+  const { data: workoutLogs } = useClientWorkoutLogs(clientId ?? null);
 
   const [commentDialog, setCommentDialog] = useState<CommentDialogState>({
     open: false,
@@ -436,6 +441,12 @@ export default function NutritionClientDetail() {
     doc.text(`Období: ${format(periodStart, 'd.M.', { locale: cs })} - ${format(periodEnd, 'd.M.yyyy', { locale: cs })}`, 14, 28);
     doc.text(`Vygenerováno: ${format(new Date(), 'd. MMMM yyyy', { locale: cs })}`, 14, 34);
     
+    // Calculate total nutrition for period
+    const periodNutrition = calculateDayNutrition(entries.food, workoutLogs);
+    const avgCaloriesPerDay = periodNutrition.totalEntries > 0 
+      ? Math.round(periodNutrition.totalCalories / periodDays) 
+      : 0;
+    
     // Summary
     const summaryData = [
       ['Celkem jídel', periodStats.totalFood.toString()],
@@ -446,6 +457,22 @@ export default function NutritionClientDetail() {
       ['Dní se splněným cílem vody', `${periodStats.daysWithWaterGoalMet}/${periodDays}`],
       ['Dní s pozdním kofeinem', `${periodStats.caffeineAnalysis.daysWithLateCaffeine}/${periodDays}`],
     ];
+    
+    // Add nutrition summary if we have AI-enriched data
+    if (periodNutrition.hasData) {
+      summaryData.push(
+        ['', ''], // Empty row separator
+        ['NUTRIČNÍ ODHADY (AI)', ''],
+        ['Celkem kalorií', `~${periodNutrition.totalCalories} kcal`],
+        ['Průměr kalorií/den', `~${avgCaloriesPerDay} kcal`],
+        ['Celkem bílkovin', `~${periodNutrition.totalProtein}g`],
+        ['Celkem sacharidů', `~${periodNutrition.totalCarbs}g`],
+        ['Celkem tuků', `~${periodNutrition.totalFat}g`],
+      );
+      if (periodNutrition.caloriesBurned > 0) {
+        summaryData.push(['Celkem spáleno (tréninky)', `~${periodNutrition.caloriesBurned} kcal`]);
+      }
+    }
     
     doc.setFontSize(12);
     doc.setTextColor(0);
@@ -472,22 +499,42 @@ export default function NutritionClientDetail() {
       }
 
       const dayNames = ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'];
+      
+      // Calculate daily nutrition summary
+      const dayNutrition = calculateDayNutrition(
+        dayEntries.food, 
+        workoutLogs?.filter(w => w.date === dateStr)
+      );
+      
       doc.setFontSize(11);
       doc.setTextColor(0);
       doc.text(`${dayNames[day.getDay()]} ${format(day, 'd.M.yyyy', { locale: cs })}`, 14, currentY);
-      currentY += 6;
+      
+      // Add daily nutrition summary if available
+      if (dayNutrition.hasData) {
+        doc.setFontSize(8);
+        doc.setTextColor(80);
+        let nutritionText = `~${dayNutrition.totalCalories} kcal • ${dayNutrition.totalProtein}g B • ${dayNutrition.totalCarbs}g S • ${dayNutrition.totalFat}g T`;
+        if (dayNutrition.caloriesBurned > 0) {
+          nutritionText += ` | Výdej: ~${dayNutrition.caloriesBurned} kcal`;
+        }
+        doc.text(nutritionText, 14, currentY + 5);
+        currentY += 10;
+      } else {
+        currentY += 6;
+      }
 
       if (dayEntries.food.length > 0) {
         const foodData = dayEntries.food.map(e => [
           e.entry_time?.slice(0, 5) || '-',
           mealTypeLabels[e.meal_type] || e.meal_type,
           e.description,
+          e.calories ? `~${e.calories}` : '-',
           portionLabels[e.portion_size] || e.portion_size || '-',
-          e.trainer_comment || '-',
         ]);
 
         autoTable(doc, {
-          head: [['Čas', 'Typ', 'Popis', 'Porce', 'Komentář']],
+          head: [['Čas', 'Typ', 'Popis', 'Kcal', 'Porce']],
           body: foodData,
           startY: currentY,
           styles: { fontSize: 8 },
@@ -773,6 +820,15 @@ export default function NutritionClientDetail() {
 
                   {hasEntries && (
                     <>
+                      {/* Daily calories summary */}
+                      {dayEntries.food.length > 0 && (
+                        <NutritionDayCaloriesSummary
+                          foodEntries={dayEntries.food}
+                          workoutLogs={workoutLogs?.filter(w => w.date === dateStr)}
+                          className="mb-2"
+                        />
+                      )}
+                      
                       {/* Food entries */}
                       {dayEntries.food.length > 0 && (
                         <div className="space-y-2">
@@ -793,6 +849,11 @@ export default function NutritionClientDetail() {
                               trainerRating={f.trainer_rating}
                               clientReply={f.client_reply}
                               trainerEdited={f.trainer_edited}
+                              calories={f.calories}
+                              proteinG={f.protein_g}
+                              carbsG={f.carbs_g}
+                              fatG={f.fat_g}
+                              aiEnriched={f.ai_enriched}
                               onEdit={() => openEditDialog('food', f)}
                               onComment={() => openCommentDialog('food', f.id, f.trainer_comment, f.trainer_rating, f.client_reply)}
                             />
