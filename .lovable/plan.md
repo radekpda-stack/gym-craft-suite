@@ -1,181 +1,211 @@
 
-# Seznam cviků s grafy pokroku pro klientský portál
+# Rozšíření tréninkového deníku o kardio stroje a švihadlo
 
-## Přehled
+## Přehled změn
 
-Na stránku **Přehled** (ClientPortalOverview) pod kartu **Žebříček** přidáme novou interaktivní sekci s klikatelným seznamem cviků klienta. Po kliknutí na cvik se zobrazí moderní, snadno čitelný graf zobrazující vývoj výsledků v čase.
+Přidáme nové typy aktivit do klientského dialogu pro zápis tréninků se specifickými metrikami pro každý typ stroje.
+
+## Nové typy aktivit
+
+| Aktivita | Ikona | Klíčové metriky |
+|----------|-------|-----------------|
+| **Běžecký pás (motor)** | 🏃 | Čas, vzdálenost, rychlost (km/h), sklon (%) |
+| **Běžecký pás (curved)** | 🏃 | Čas, vzdálenost, tempo (min/km), kalorie |
+| **Veslovací trenažér** | 🚣 | Čas, vzdálenost (m), pace/500m, watty, tempo tahů |
+| **SkiErg** | ⛷️ | Čas, vzdálenost (m), pace/500m, watty |
+| **Švihadlo** | ⭕ | Čas, počet přeskoků, dvojité přeskoky |
 
 ---
 
-## Vizuální návrh
+## Vizuální návrh - Rozšířený dialog
 
-### Seznam cviků (kompaktní karty):
+### Nový grid typů aktivit (12 typů):
 ```text
-┌──────────────────────────────────────────────────────────────────┐
-│ 📊 Tvůj pokrok                                      Vše →      │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│ ┌────────────────────┐ ┌────────────────────┐ ┌──────────────┐ │
-│ │ 💪 Bench press     │ │ 🦵 Dřep           │ │ 🏃 Běžec. pás│ │
-│ │ 85 kg              │ │ 120 kg            │ │ 5:42         │ │
-│ │ ▲ +15%  ~~~╱~~     │ │ ▲ +8%   ~~╱~~~   │ │ ▼ -12% ~~╲~~ │ │
-│ │ (zlepšuješ se!)    │ │ (stoupá!)         │ │ (rychlejší!) │ │
-│ └────────────────────┘ └────────────────────┘ └──────────────┘ │
-│                                                                  │
-│ ┌────────────────────┐ ┌────────────────────┐                   │
-│ │ ⚡ Skok do dálky   │ │ 🚣 Veslo          │                   │
-│ │ 2.35 m             │ │ 8:15/2000m        │                   │
-│ │ ▲ +5%   ~~╱~~~    │ │ ▼ -10% ~~╲~~      │                   │
-│ └────────────────────┘ └────────────────────┘                   │
-└──────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ 💪 Co jsi dělal/a?                                          │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐                 │
+│ │  💪    │ │  🏃    │ │  🚴    │ │  🚶    │                 │
+│ │Posilovna│ │  Běh   │ │ Kolo   │ │ Chůze  │                │
+│ └────────┘ └────────┘ └────────┘ └────────┘                 │
+│                                                              │
+│ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐                 │
+│ │  🏊    │ │  🧘    │ │  🚣    │ │  ⛷️    │                 │
+│ │Plavání │ │Protažení│ │ Veslo  │ │ SkiErg │                │
+│ └────────┘ └────────┘ └────────┘ └────────┘                 │
+│                                                              │
+│ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐                 │
+│ │  🏃‍♂️   │ │  🏃‍♀️   │ │  ⭕    │ │  ✨    │                 │
+│ │Pás motor│ │Pás curved│ │Švihadlo│ │  Jiné  │               │
+│ └────────┘ └────────┘ └────────┘ └────────┘                 │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-### Detail cviku (po kliknutí - Sheet):
+### Metriky pro Veslo/SkiErg:
 ```text
-┌──────────────────────────────────────────────────────────────────┐
-│                                                              ✕   │
-│ 💪 Bench press                                                   │
-│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                                  │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ AKTUÁLNÍ       │ MAXIMUM        │ TREND                     │ │
-│ │ 85 kg          │ 90 kg 🏆       │ ▲ +15% za 30 dní         │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                  │
-│         TVŮJ POKROK ZA POSLEDNÍCH 6 MĚSÍCŮ                      │
-│                                                                  │
-│  90 ┤                                        ●←──────── 🏆 PR    │
-│     │                                    ●───┘                   │
-│  80 ┤                          ●─────●───┘                       │
-│     │                    ●─────┘                                 │
-│  70 ┤          ●─────●───┘                                       │
-│     │    ●─────┘                                                 │
-│  60 ┤────┘                                                       │
-│     └────┼────┼────┼────┼────┼────┼────                         │
-│         Zář  Říj  Lis  Pro  Led  Úno                            │
-│                                                                  │
-│ ─────────────────────────────────────────────────────────────── │
-│                                                                  │
-│ 📈 Analýza trendu:                                              │
-│ • Stoupající trend (+2.5 kg/měsíc)                              │
-│ • Konzistentní zlepšování                                       │
-│ • Doporučeno: pokračovat v aktuálním tempu                      │
-└──────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ 🚣 Veslovací trenažér                                       │
+│ ────────────────────────────────────────────────────────────│
+│                                                              │
+│ ┌─────────────────┐  ┌─────────────────┐                    │
+│ │ Vzdálenost (m)  │  │ Čas             │                    │
+│ │ [  2000       ] │  │ [ 8:15        ] │                    │
+│ └─────────────────┘  └─────────────────┘                    │
+│                                                              │
+│ ┌─────────────────┐  ┌─────────────────┐                    │
+│ │ Pace/500m       │  │ Průměr wattů    │                    │
+│ │ [ 2:04.5      ] │  │ [   185       ] │                    │
+│ └─────────────────┘  └─────────────────┘                    │
+│                                                              │
+│ ┌─────────────────┐                                         │
+│ │ Tempo tahů/min  │                                         │
+│ │ [   24        ] │                                         │
+│ └─────────────────┘                                         │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-### Kardio cviky (klesající = lepší):
+### Metriky pro Běžecký pás (motorový):
 ```text
-┌──────────────────────────────────────────────────────────────────┐
-│ 🏃 Běžecký pás (5 km)                                       ✕   │
-│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                                  │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ AKTUÁLNÍ       │ NEJLEPŠÍ       │ TREND                     │ │
-│ │ 25:30          │ 24:15 🏆       │ ▼ -12% (rychlejší!)       │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                  │
-│         TVŮJ POKROK (NIŽŠÍ = LEPŠÍ)                             │
-│                                                                  │
-│  30:00 ┤────●                                                    │
-│        │      ╲                                                  │
-│  28:00 ┤        ●───●                                           │
-│        │              ╲                                          │
-│  26:00 ┤                ●───●                                   │
-│        │                      ╲                                  │
-│  24:00 ┤                        ●───●←──── 🏆 Nejlepší čas      │
-│        └────┼────┼────┼────┼────┼────┼                          │
-│            Zář  Říj  Lis  Pro  Led  Úno                         │
-│                                                                  │
-│ 📈 Analýza trendu:                                              │
-│ • Klesající trend (zrychlení o 1:30/měsíc)                      │
-│ • Výborný pokrok!                                               │
-└──────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ 🏃 Běžecký pás (motorový)                                   │
+│ ────────────────────────────────────────────────────────────│
+│                                                              │
+│ ┌─────────────────┐  ┌─────────────────┐                    │
+│ │ Vzdálenost (km) │  │ Čas (min)       │                    │
+│ │ [  5.0        ] │  │ [   30        ] │                    │
+│ └─────────────────┘  └─────────────────┘                    │
+│                                                              │
+│ ┌─────────────────┐  ┌─────────────────┐                    │
+│ │ Rychlost (km/h) │  │ Sklon (%)       │                    │
+│ │ [  10.0       ] │  │ [   2         ] │                    │
+│ └─────────────────┘  └─────────────────┘                    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Metriky pro Švihadlo:
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ ⭕ Švihadlo                                                  │
+│ ────────────────────────────────────────────────────────────│
+│                                                              │
+│ ┌─────────────────┐  ┌─────────────────┐                    │
+│ │ Čas (min)       │  │ Počet přeskoků  │                    │
+│ │ [   10        ] │  │ [   500       ] │                    │
+│ └─────────────────┘  └─────────────────┘                    │
+│                                                              │
+│ ☐ Dvojité přeskoky (double unders)                          │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Technická implementace
 
-### Nové komponenty
-
-| Komponenta | Účel |
-|------------|------|
-| `MyExercisesWidget.tsx` | Hlavní widget na dashboardu s horizontálním seznamem cviků |
-| `ExerciseProgressSheet.tsx` | Spodní sheet s detailním grafem po kliknutí na cvik |
-| `ExerciseSparklineItem.tsx` | Jednotlivá karta cviku s mini-grafem a trendem |
-
-### Rozšíření existujících hooků
-
-| Hook | Změna |
-|------|-------|
-| `useClientAllExercises.ts` | Již obsahuje vše potřebné (exerciseType, isTimeBased, data) |
-
-### Klíčová logika trendů
-
-Pro správné zobrazení trendu (zda je klient lepší nebo horší):
+### Rozšíření typů aktivit v SimpleAddWorkoutDialog.tsx
 
 ```typescript
-// Síla/plyometrie: vyšší = lepší
-if (exerciseType === 'strength' || exerciseType === 'skill') {
-  trendPositive = change > 0;
-  trendColor = trendPositive ? 'success' : 'destructive';
+const SIMPLE_WORKOUT_TYPES = [
+  // Stávající typy
+  { value: 'strength', label: 'Posilovna', icon: Dumbbell, color: 'text-warning bg-warning/10', isCardio: false },
+  { value: 'run', label: 'Běh', icon: Footprints, color: 'text-success bg-success/10', isCardio: true },
+  { value: 'cycling', label: 'Kolo', icon: Bike, color: 'text-accent bg-accent/10', isCardio: true },
+  { value: 'walk', label: 'Chůze', icon: PersonStanding, color: 'text-accent bg-accent/10', isCardio: true },
+  { value: 'swimming', label: 'Plavání', icon: Waves, color: 'text-accent bg-accent/10', isCardio: true },
+  { value: 'mobility', label: 'Protažení', icon: MoveHorizontal, color: 'text-primary bg-primary/10', isCardio: false },
+  
+  // NOVÉ typy
+  { value: 'rowing', label: 'Veslo', icon: Ship, color: 'text-accent bg-accent/10', isCardio: true, machineType: 'erg' },
+  { value: 'skierg', label: 'SkiErg', icon: Mountain, color: 'text-accent bg-accent/10', isCardio: true, machineType: 'erg' },
+  { value: 'treadmill_motor', label: 'Pás motor', icon: Zap, color: 'text-success bg-success/10', isCardio: true, machineType: 'treadmill' },
+  { value: 'treadmill_curved', label: 'Pás curved', icon: Activity, color: 'text-success bg-success/10', isCardio: true, machineType: 'treadmill' },
+  { value: 'jumprope', label: 'Švihadlo', icon: Circle, color: 'text-warning bg-warning/10', isCardio: true, machineType: 'jumprope' },
+  
+  { value: 'other', label: 'Jiné', icon: Sparkles, color: 'text-primary bg-primary/10', isCardio: false },
+];
+```
+
+### Nová komponenta pro dynamické metriky
+
+Vytvoříme komponentu `MachineMetricsInput.tsx` která zobrazí správné vstupy podle typu stroje:
+
+```typescript
+interface MachineMetricsInputProps {
+  workoutType: string;
+  metrics: MachineMetrics;
+  onChange: (metrics: MachineMetrics) => void;
 }
 
-// Kardio: nižší čas = lepší (rychlejší)
-if (exerciseType === 'cardio') {
-  trendPositive = change < 0; // Záporná změna = zlepšení
-  trendColor = trendPositive ? 'success' : 'destructive';
+interface MachineMetrics {
+  distance_meters?: number;
+  duration_seconds?: number;
+  pace_per_500m?: string;      // Pro veslo/skierg (mm:ss.cc)
+  avg_watts?: number;          // Pro veslo/skierg
+  cadence?: number;            // Tempo tahů
+  avg_speed_kmh?: number;      // Pro běžecký pás
+  incline_percent?: number;    // Sklon pásu
+  jump_count?: number;         // Počet přeskoků
+  is_double_unders?: boolean;  // Dvojité přeskoky
 }
 ```
 
-### Graf s obrácenou osou pro kardio
+### Ukládání rozšířených metrik
 
-Pro kardio cviky bude Y-osa obrácená, takže graf vizuálně "stoupá" i když hodnoty klesají:
+Rozšíříme `handleSaveWorkout` v `ClientPortalWorkoutDiary.tsx`:
 
 ```typescript
-<YAxis 
-  reversed={isCardio} // Obrátit osu pro kardio
-  tickFormatter={(v) => formatTime(v)}
-/>
+const handleSaveWorkout = async (data: {
+  // ... stávající pole
+  machineMetrics?: {
+    distance_meters?: number;
+    pace_per_500m?: string;
+    avg_watts?: number;
+    cadence?: number;
+    avg_speed_kmh?: number;
+    incline_percent?: number;
+    jump_count?: number;
+    is_double_unders?: boolean;
+  };
+}) => {
+  // Přidat metriky do poznámek pro trenéra
+  let fullNotes = data.notes || '';
+  if (data.machineMetrics) {
+    const metricsInfo = formatMachineMetrics(data.workoutType, data.machineMetrics);
+    fullNotes = metricsInfo + (fullNotes ? `\n${fullNotes}` : '');
+  }
+  
+  // Uložit
+  await createLog.mutateAsync({
+    // ... stávající data
+    notes: fullNotes,
+    // Metriky se uloží jako strukturovaná data do metrics_json
+    distance_meters: data.machineMetrics?.distance_meters,
+    // atd.
+  });
+};
 ```
 
 ---
 
-## Integrační bod
+## Soubory k úpravě
 
-Widget bude přidán do `ClientPortalOverview.tsx`:
-
-```typescript
-// src/pages/client-portal/ClientPortalOverview.tsx
-
-<LeaderboardPreviewCard />
-
-{/* NOVÉ: 8. Tvůj pokrok - seznam cviků s grafy */}
-<MyExercisesWidget />
-
-<ActiveChallengeWidget />
-```
+| Soubor | Změny |
+|--------|-------|
+| `src/components/client-portal/workout-diary/SimpleAddWorkoutDialog.tsx` | Rozšířit typy aktivit, přidat dynamické metriky |
+| `src/components/client-portal/workout-diary/MachineMetricsInput.tsx` | NOVÝ - Komponenta pro metriky strojů |
+| `src/pages/client-portal/ClientPortalWorkoutDiary.tsx` | Rozšířit ukládání o nové metriky |
+| `src/components/client-portal/workout-diary/SimpleWorkoutCard.tsx` | Zobrazit metriky strojů v kartě |
 
 ---
 
-## Soubory k vytvoření/úpravě
+## Shrnutí nových aktivit
 
-| Soubor | Akce |
-|--------|------|
-| `src/components/client-portal/dashboard/MyExercisesWidget.tsx` | Nový - hlavní widget |
-| `src/components/client-portal/dashboard/ExerciseProgressSheet.tsx` | Nový - detail s grafem |
-| `src/components/client-portal/dashboard/ExerciseSparklineItem.tsx` | Nový - mini karta cviku |
-| `src/pages/client-portal/ClientPortalOverview.tsx` | Úprava - přidat MyExercisesWidget |
-
----
-
-## Shrnutí UX
-
-| Aspekt | Implementace |
-|--------|-------------|
-| **Jednoduchost** | Kompaktní karty s jasným číslem a trendem |
-| **Moderní design** | Sparkline grafy, gradient pozadí, Framer Motion animace |
-| **Čitelnost trendů** | Zelená šipka ↑ = zlepšení, bez ohledu na typ cviku |
-| **Kardio logika** | Graf "stoupá" vizuálně, i když časy klesají |
-| **Mobile-first** | Horizontální scroll, touch-friendly velikosti |
-| **Okamžitá zpětná vazba** | Haptic feedback při interakci |
+| Typ | Hodnota DB | Metriky |
+|-----|------------|---------|
+| Veslo | `rowing` | vzdálenost (m), čas, pace/500m, watty, tempo tahů |
+| SkiErg | `skierg` | vzdálenost (m), čas, pace/500m, watty |
+| Běžecký pás motor | `treadmill_motor` | vzdálenost (km), čas, rychlost (km/h), sklon (%) |
+| Běžecký pás curved | `treadmill_curved` | vzdálenost (km), čas, tempo (min/km), kalorie |
+| Švihadlo | `jumprope` | čas, počet přeskoků, dvojité přeskoky |
