@@ -38,7 +38,7 @@ export function MyExercisesWidget() {
 
   const handleViewAll = () => {
     haptic('selection');
-    navigate('/client-portal/progress?tab=cviky');
+    navigate('/zona/progress');
   };
 
   // Don't render if no exercises with data
