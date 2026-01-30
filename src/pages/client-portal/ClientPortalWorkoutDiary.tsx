@@ -109,6 +109,17 @@ export default function ClientPortalWorkoutDiary() {
     date: string;
     distanceKm?: number;
     paceMinPerKm?: string;
+    machineMetrics?: {
+      distance_meters?: number;
+      duration_ms?: number;
+      pace_per_500m_ms?: number;
+      avg_watts?: number;
+      cadence?: number;
+      avg_speed_kmh?: number;
+      incline_percent?: number;
+      jump_count?: number;
+      is_double_unders?: boolean;
+    };
     exercises?: Array<{
       exercise_name: string;
       exercise_id?: string | null;
@@ -121,7 +132,14 @@ export default function ClientPortalWorkoutDiary() {
 
     // Build notes with cardio metrics if provided
     let fullNotes = data.notes || '';
-    if (data.distanceKm || data.paceMinPerKm) {
+    
+    // Add machine metrics to notes for trainer visibility
+    if (data.machineMetrics && Object.keys(data.machineMetrics).length > 0) {
+      const metricsInfo = formatMachineMetricsForNotes(data.workoutType, data.machineMetrics);
+      if (metricsInfo) {
+        fullNotes = metricsInfo + (fullNotes ? `\n${fullNotes}` : '');
+      }
+    } else if (data.distanceKm || data.paceMinPerKm) {
       const cardioInfo = [];
       if (data.distanceKm) cardioInfo.push(`${data.distanceKm} km`);
       if (data.paceMinPerKm) cardioInfo.push(`@ ${data.paceMinPerKm} min/km`);
@@ -156,7 +174,59 @@ export default function ClientPortalWorkoutDiary() {
       feeling: data.feeling,
       has_exercises: exercisesToSave.length > 0,
       has_cardio_metrics: !!(data.distanceKm || data.paceMinPerKm),
+      has_machine_metrics: !!(data.machineMetrics && Object.keys(data.machineMetrics).length > 0),
     });
+  };
+
+  // Helper to format machine metrics for notes
+  const formatMachineMetricsForNotes = (workoutType: string, metrics: {
+    distance_meters?: number;
+    duration_ms?: number;
+    pace_per_500m_ms?: number;
+    avg_watts?: number;
+    cadence?: number;
+    avg_speed_kmh?: number;
+    incline_percent?: number;
+    jump_count?: number;
+    is_double_unders?: boolean;
+  }) => {
+    const parts: string[] = [];
+    
+    const formatTime = (ms: number): string => {
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      const centiseconds = Math.floor((ms % 1000) / 10);
+      if (centiseconds > 0) {
+        return `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
+      }
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    };
+    
+    // Erg machines (rowing, skierg)
+    if (workoutType === 'rowing' || workoutType === 'skierg') {
+      if (metrics.distance_meters) parts.push(`${metrics.distance_meters} m`);
+      if (metrics.duration_ms) parts.push(formatTime(metrics.duration_ms));
+      if (metrics.pace_per_500m_ms) parts.push(`@ ${formatTime(metrics.pace_per_500m_ms)}/500m`);
+      if (metrics.avg_watts) parts.push(`${metrics.avg_watts} W`);
+      if (metrics.cadence) parts.push(`${metrics.cadence} spm`);
+    }
+    // Treadmill
+    else if (workoutType === 'treadmill_motor' || workoutType === 'treadmill_curved') {
+      if (metrics.distance_meters) parts.push(`${(metrics.distance_meters / 1000).toFixed(1)} km`);
+      if (metrics.duration_ms) parts.push(formatTime(metrics.duration_ms));
+      if (metrics.avg_speed_kmh) parts.push(`${metrics.avg_speed_kmh} km/h`);
+      if (metrics.incline_percent) parts.push(`sklon ${metrics.incline_percent}%`);
+      if (metrics.cadence) parts.push(`${metrics.cadence} spm`);
+    }
+    // Jump rope
+    else if (workoutType === 'jumprope') {
+      if (metrics.duration_ms) parts.push(formatTime(metrics.duration_ms));
+      if (metrics.jump_count) parts.push(`${metrics.jump_count} přeskoků`);
+      if (metrics.is_double_unders) parts.push('(double unders)');
+    }
+    
+    return parts.join(' • ');
   };
 
   const handleCompleteAssignedWorkout = async (workout: UnifiedDiaryEntry) => {
