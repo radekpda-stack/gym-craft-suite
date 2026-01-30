@@ -325,6 +325,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     // Open nutrition detail dialog
     setSelectedNutritionNotification(item);
     setNutritionDialogOpen(true);
+    setSheetOpen(false);
   }, [markRead]);
 
   // Handle workout item click (for aggregated items)
@@ -336,10 +337,13 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     // Open workout detail dialog
     setSelectedWorkoutNotification(item);
     setWorkoutDialogOpen(true);
+    setSheetOpen(false);
   }, [markRead]);
 
   // Handle feedback item click (for aggregated items in forms category)
   const handleFeedbackItemClick = useCallback(async (item: UnifiedNotification) => {
+    console.log('[NotificationCenter] handleFeedbackItemClick called:', item);
+    
     // Mark as read
     if (!item.is_read && !item.id.startsWith('aggregated-')) {
       markRead.mutate(item.id);
@@ -347,46 +351,61 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     
     // Fetch feedback data and show dialog
     const trainingId = item.entity_type === 'training' ? item.entity_id : null;
-    if (trainingId) {
-      setLoadingFeedback(true);
-      try {
-        const { data: feedbacks } = await supabase
-          .from('training_feedback')
-          .select('*')
-          .eq('training_session_id', trainingId)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        const feedback = feedbacks?.[0];
-        if (feedback) {
-          const { data: training } = await supabase
-            .from('training_sessions')
-            .select('date, client_id')
-            .eq('id', trainingId)
-            .maybeSingle();
-
-          let clientName = 'Neznámý klient';
-          if (training?.client_id) {
-            const { data: client } = await supabase
-              .from('clients')
-              .select('name')
-              .eq('id', training.client_id)
-              .maybeSingle();
-            clientName = client?.name || clientName;
-          }
-
-          setSelectedFeedback(feedback as TrainingFeedback);
-          setFeedbackMeta({ clientName, trainingDate: training?.date });
-          setFeedbackDialogOpen(true);
-          setSheetOpen(false);
-        }
-      } catch (error) {
-        console.error('[NotificationCenter] Error loading feedback:', error);
-      } finally {
-        setLoadingFeedback(false);
+    
+    if (!trainingId) {
+      console.warn('[NotificationCenter] No trainingId for feedback item, navigating to client:', item.client_id);
+      setSheetOpen(false);
+      if (item.client_id) {
+        navigate(`/clients/${item.client_id}?tab=history`);
       }
+      return;
     }
-  }, [markRead]);
+    
+    setLoadingFeedback(true);
+    try {
+      const { data: feedbacks } = await supabase
+        .from('training_feedback')
+        .select('*')
+        .eq('training_session_id', trainingId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const feedback = feedbacks?.[0];
+      if (feedback) {
+        const { data: training } = await supabase
+          .from('training_sessions')
+          .select('date, client_id')
+          .eq('id', trainingId)
+          .maybeSingle();
+
+        let clientName = 'Neznámý klient';
+        if (training?.client_id) {
+          const { data: client } = await supabase
+            .from('clients')
+            .select('name')
+            .eq('id', training.client_id)
+            .maybeSingle();
+          clientName = client?.name || clientName;
+        }
+
+        setSelectedFeedback(feedback as TrainingFeedback);
+        setFeedbackMeta({ clientName, trainingDate: training?.date });
+        setFeedbackDialogOpen(true);
+        setSheetOpen(false);
+      } else {
+        // No feedback found, navigate to training detail
+        console.warn('[NotificationCenter] No feedback found for training:', trainingId);
+        setSheetOpen(false);
+        navigate(`/trainings/${trainingId}`);
+      }
+    } catch (error) {
+      console.error('[NotificationCenter] Error loading feedback:', error);
+      setSheetOpen(false);
+      navigate(`/trainings/${trainingId}`);
+    } finally {
+      setLoadingFeedback(false);
+    }
+  }, [markRead, navigate]);
 
   // Handle event item click (birthdays, anniversaries)
   const handleEventItemClick = useCallback((item: UnifiedNotification) => {
