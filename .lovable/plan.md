@@ -1,278 +1,215 @@
 
-# Častá jídla, nápoje a káva - Quick Add rozšíření
+# Databáze jídel - Inteligentní našeptávač a úspora času
 
-## Přehled návrhu
+## Shrnutí současného stavu
 
-Rozšíříme nutriční deník o inteligentní **"Častá jídla"** sekci, která se automaticky učí z historie klienta a nabízí rychlé přidání nejčastěji zadávaných položek. Systém bude fungovat pro jídla, vodu i kávu.
+| Komponenta | Status | Využití |
+|------------|--------|---------|
+| `nutrition_food_entries` | Aktivní | Ukládá záznamy jídel klientů |
+| `nutrition_meal_templates` | Existuje, ale PRÁZDNÁ | Nikde se nepoužívá v UI |
+| `FoodAutocomplete` | Aktivní | Našeptává z historie klienta + statický seznam |
+| `useRecentFoodEntries` | Aktivní | Zobrazuje 8 nejčastějších jídel klienta |
 
-## Současný stav vs. cílový
+## Navrhované řešení
 
-| Oblast | Současný stav | Cílový stav |
-|--------|---------------|-------------|
-| **Jídla** | Existuje `useRecentFoodEntries` - zobrazuje 8 nejčastějších | Vylepšit UI, přidat do SimpleFoodForm |
-| **Voda** | Statické presety (200, 300, 500 ml) | Automaticky detekovat nejčastější množství z historie |
-| **Káva** | Statické presety (espresso, čaj) | Zobrazit nejčastější kombinace (typ + kofeinem ano/ne) |
+Využijeme **již existující** tabulku `nutrition_meal_templates` jako databázi oblíbených/častých jídel klienta. Jídla se budou automaticky ukládat při prvním zadání a při opětovném použití se zvýší jejich `use_count`.
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ Workflow klienta při zadávání jídla                         │
+│ ════════════════════════════════════════════════════════════│
+│                                                              │
+│  1. Klient začne psát "Oves..."                             │
+│     ↓                                                       │
+│  2. Autocomplete zobrazí návrhy:                            │
+│     ┌─────────────────────────────────────────────────────┐ │
+│     │ ⭐ Ovesná kaše s ovocem (tvoje oblíbené - 8x)      │ │
+│     │ ⏰ Ovesná kaše (nedávno zadané)                    │ │
+│     │ 📖 Ovesná kaše                                     │ │
+│     └─────────────────────────────────────────────────────┘ │
+│     ↓                                                       │
+│  3. Klient vybere nebo napíše nové jídlo                    │
+│     ↓                                                       │
+│  4. Při uložení:                                            │
+│     • Pokud jídlo existuje v templates → zvýší use_count    │
+│     • Pokud neexistuje → vytvoří nový template              │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Vizuální návrh
+## Klíčové změny
 
-### 1. Rozšířená sekce rychlého přidání na hlavní stránce
+### 1. Vylepšený FoodAutocomplete
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ ⭐ TVOJE ČASTÁ JÍDLA                                        │
-│ ────────────────────────────────────────────────────────────│
-│                                                              │
-│ ┌────────────────┐ ┌────────────────┐ ┌────────────────┐    │
-│ │ 🥣 Ovesná kaše │ │ 🍳 Míchaná    │ │ 🍗 Kuřecí prsa │    │
-│ │ s ovocem      │ │ vajíčka       │ │ s rýží         │    │
-│ │ [+]           │ │ [+]           │ │ [+]            │    │
-│ └────────────────┘ └────────────────┘ └────────────────┘    │
-│                                                              │
-│ 💧 TVOJE VODA                                               │
-│ ────────────────────────────────────────────────────────────│
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
-│ │ 200ml    │ │ 330ml ⭐ │ │ 500ml ⭐ │ │ 750ml    │        │
-│ │          │ │ (nejčast.)│ │ (2. nej.)│ │          │        │
-│ └──────────┘ └──────────┘ └──────────┘ └──────────┘        │
-│                                                              │
-│ ☕ TVOJE KÁVA/ČAJ                                            │
-│ ────────────────────────────────────────────────────────────│
-│ ┌────────────┐ ┌────────────┐ ┌────────────┐               │
-│ │ ☕ Espresso │ │ 🥛 Capucc. │ │ 🍵 Čaj     │               │
-│ │    [+]     │ │    [+]     │ │    [+]     │               │
-│ └────────────┘ └────────────┘ └────────────┘               │
-└──────────────────────────────────────────────────────────────┘
-```
+Rozšíříme autocomplete o 3 zdroje dat:
 
-### 2. Dialog pro potvrzení rychlého přidání s časem
+| Zdroj | Ikona | Priorita | Popis |
+|-------|-------|----------|-------|
+| **Oblíbená** | ⭐ | 1 (nejvyšší) | Z `nutrition_meal_templates` podle `use_count` |
+| **Historie** | ⏰ | 2 | Nedávno zadaná jídla z `nutrition_food_entries` |
+| **Běžná** | 📖 | 3 | Statický seznam českých jídel |
 
-Při kliknutí na "+" se otevře dialog:
+### 2. Automatické ukládání do databáze jídel
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ ✓ Přidat: Ovesná kaše s ovocem                              │
-│ ────────────────────────────────────────────────────────────│
-│                                                              │
-│ 📏 Porce: [Malá] [STŘEDNÍ] [Velká]                          │
-│                                                              │
-│ ⏰ Čas:   [_07:30_]                                          │
-│                                                              │
-│ Rychlá volba: [Nyní] [Ráno] [Poledne] [Večer]               │
-│                                                              │
-│ ┌─────────────────────────┐ ┌─────────────────────────────┐ │
-│ │       Zrušit            │ │         ✓ Přidat           │ │
-│ └─────────────────────────┘ └─────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────┘
-```
+Při každém uložení jídla:
+- Zkontrolujeme, zda podobné jídlo existuje v `nutrition_meal_templates`
+- Pokud ANO → inkrementujeme `use_count`
+- Pokud NE → vytvoříme nový záznam
+
+### 3. Integrace do FrequentItemsSection
+
+Sekce "Tvoje častá jídla" bude načítat data primárně z `nutrition_meal_templates` místo z `nutrition_food_entries`.
 
 ---
 
 ## Technická implementace
 
-### 1. Nové hooky pro častá data
+### Úprava FoodAutocomplete.tsx
 
-#### `useFrequentDrinks.ts`
 ```typescript
-// Analyzuje historii nápojů a vrací nejčastější množství vody + typy nápojů
-function useFrequentDrinks(clientId: string) {
-  return useQuery({
-    queryKey: ['frequent-drinks', clientId],
-    queryFn: async () => {
-      // Načíst posledních 100 drink entries
-      const { data } = await supabase
-        .from('nutrition_drink_entries')
-        .select('drink_type, amount_ml')
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false })
-        .limit(100);
+// Přidáme query na meal templates
+const { data: templates = [] } = useQuery({
+  queryKey: ['meal-templates-search', clientId, inputValue],
+  queryFn: async () => {
+    if (!clientId || inputValue.length < 2) return [];
+    
+    const { data } = await supabase
+      .from('nutrition_meal_templates')
+      .select('id, name, description, meal_type, portion_size, use_count')
+      .eq('client_id', clientId)
+      .or(`name.ilike.%${inputValue}%,description.ilike.%${inputValue}%`)
+      .order('use_count', { ascending: false })
+      .limit(5);
+    
+    return data;
+  },
+});
 
-      // Spočítat frekvence pro vodu (water)
-      const waterAmounts = data
-        .filter(d => d.drink_type === 'water')
-        .map(d => d.amount_ml);
-      
-      // Najít nejčastější množství
-      const waterFrequency = countFrequency(waterAmounts);
-      const topWaterAmounts = getTopN(waterFrequency, 4);
+// Kombinace výsledků s prioritou:
+// 1. Templates (oblíbená ⭐)
+// 2. Historie (⏰)
+// 3. Běžná (📖)
+```
 
-      // Spočítat frekvence pro ostatní nápoje
-      const otherDrinks = data.filter(d => d.drink_type !== 'water');
-      const drinkTypeFrequency = countFrequency(otherDrinks.map(d => d.drink_type));
+### Nový hook useAutoSaveMealTemplate
 
-      return {
-        frequentWaterAmounts: topWaterAmounts, // [330, 500, 200, ...]
-        frequentDrinkTypes: getTopN(drinkTypeFrequency, 3),
-      };
-    },
+```typescript
+// Volá se po úspěšném uložení food entry
+async function autoSaveMealTemplate(clientId: string, entry: FoodEntry) {
+  const normalizedName = entry.description.toLowerCase().trim();
+  
+  // Zkontroluj, zda template existuje
+  const { data: existing } = await supabase
+    .from('nutrition_meal_templates')
+    .select('id, use_count')
+    .eq('client_id', clientId)
+    .ilike('description', normalizedName)
+    .maybeSingle();
+  
+  if (existing) {
+    // Inkrementuj use_count
+    await supabase
+      .from('nutrition_meal_templates')
+      .update({ 
+        use_count: existing.use_count + 1,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', existing.id);
+  } else {
+    // Vytvoř nový template
+    await supabase
+      .from('nutrition_meal_templates')
+      .insert({
+        client_id: clientId,
+        name: entry.description,
+        description: entry.description,
+        meal_type: entry.meal_type,
+        portion_size: entry.portion_size,
+        use_count: 1,
+      });
+  }
+}
+```
+
+### Úprava useAddFoodEntry
+
+```typescript
+// Po úspěšném uložení entry automaticky uložit/aktualizovat template
+onSuccess: async (data, { clientId, entry }) => {
+  // ... existující invalidace cache ...
+  
+  // Automaticky uložit do databáze jídel
+  await autoSaveMealTemplate(clientId, {
+    description: entry.description,
+    meal_type: entry.meal_type,
+    portion_size: entry.portion_size,
   });
+  
+  // Invalidovat templates cache
+  queryClient.invalidateQueries({ queryKey: ['meal-templates', clientId] });
 }
 ```
 
-#### `useFrequentCoffee.ts`
-```typescript
-// Analyzuje historii kávy a vrací nejčastější kombinace
-function useFrequentCoffee(clientId: string) {
-  return useQuery({
-    queryKey: ['frequent-coffee', clientId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('nutrition_coffee_entries')
-        .select('coffee_type, is_caffeinated, count')
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      // Spočítat frekvence typů kávy
-      const coffeeFrequency = countFrequency(data.map(c => c.coffee_type));
-      
-      return {
-        frequentCoffeeTypes: getTopN(coffeeFrequency, 4), // ['espresso', 'tea', 'cappuccino']
-        defaultIsCaffeinated: mostCommonValue(data.map(c => c.is_caffeinated)),
-      };
-    },
-  });
-}
-```
-
-### 2. Nová komponenta `FrequentItemsSection.tsx`
+### Úprava FrequentItemsSection
 
 ```typescript
-interface FrequentItemsSectionProps {
-  clientId: string;
-  sessionId: string;
-  selectedDate: Date;
-  onQuickAddFood: (food: FrequentFood) => void;
-  onQuickAddWater: (amount: number) => void;
-  onQuickAddCoffee: (type: string) => void;
-}
+// Načítat častá jídla primárně z templates
+const { data: frequentFoods = [] } = useMealTemplates(clientId);
 
-function FrequentItemsSection({...}) {
-  const { data: frequentFoods } = useRecentFoodEntries(clientId);
-  const { data: frequentDrinks } = useFrequentDrinks(clientId);
-  const { data: frequentCoffee } = useFrequentCoffee(clientId);
-
-  return (
-    <Card>
-      {/* Častá jídla */}
-      {frequentFoods?.length > 0 && (
-        <Section title="⭐ Tvoje častá jídla">
-          <FrequentFoodGrid items={frequentFoods} onSelect={onQuickAddFood} />
-        </Section>
-      )}
-
-      {/* Rychlá voda - dynamické množství */}
-      <Section title="💧 Rychle přidat vodu">
-        <WaterAmountGrid 
-          amounts={frequentDrinks?.frequentWaterAmounts || [200, 300, 500]}
-          onSelect={onQuickAddWater}
-        />
-      </Section>
-
-      {/* Častá káva/čaj */}
-      <Section title="☕ Tvoje káva/čaj">
-        <CoffeeTypeGrid 
-          types={frequentCoffee?.frequentCoffeeTypes || ['espresso', 'tea']}
-          onSelect={onQuickAddCoffee}
-        />
-      </Section>
-    </Card>
-  );
-}
-```
-
-### 3. Dialog pro rychlé přidání s volbou času
-
-#### `QuickAddFoodDialog.tsx`
-```typescript
-// Otevře se po kliknutí na častý item
-// Umožní upravit porci a čas před uložením
-
-interface QuickAddFoodDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  food: {
-    description: string;
-    meal_type: string;
-    portion_size: string;
-  };
-  onConfirm: (data: {
-    description: string;
-    meal_type: string;
-    portion_size: string;
-    entry_time: string;
-  }) => Promise<void>;
-}
-```
-
-### 4. Integrace do `ClientPortalNutrition.tsx`
-
-Nahradíme současnou sekci "Quick Actions" za vylepšenou verzi:
-
-```typescript
-// Místo statických presetů použít dynamické
-{/* Frequent Items Section */}
-<FrequentItemsSection
-  clientId={clientId}
-  sessionId={session.id}
-  selectedDate={selectedDate}
-  onQuickAddFood={handleQuickAddFrequentFood}
-  onQuickAddWater={(amount) => setQuickAddDialog({ open: true, type: 'water', value: amount })}
-  onQuickAddCoffee={(type) => setQuickAddDialog({ open: true, type: 'coffee', value: type })}
-/>
+// Fallback na historii pokud templates prázdné
+const displayFoods = frequentFoods.length > 0 
+  ? frequentFoods.slice(0, 6).map(t => ({
+      description: t.description,
+      meal_type: t.meal_type || 'lunch',
+      portion_size: t.portion_size || 'medium',
+    }))
+  : recentFoods;
 ```
 
 ---
 
-## Logika detekce častých položek
+## Vizuální změny v Autocomplete
 
-### Pro vodu
-1. Načíst posledních 100 záznamů vody
-2. Seskupit podle `amount_ml`
-3. Seřadit podle počtu výskytů
-4. Vzít top 4 (nebo méně pokud nemá dost historie)
-5. Fallback na statické [200, 300, 500] pokud historie prázdná
-
-### Pro kávu
-1. Načíst posledních 50 záznamů kávy
-2. Seskupit podle `coffee_type`
-3. Zobrazit maximálně 4 nejčastější typy
-4. Fallback na statické ['espresso', 'tea']
-
-### Pro jídla
-Již existuje `useRecentFoodEntries` - pouze vylepšíme UI
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ 🔍 Ovesná ka...                                             │
+├──────────────────────────────────────────────────────────────┤
+│ ⭐ Ovesná kaše s ovocem                                     │
+│    Snídaně • Střední • použito 8×                           │
+├──────────────────────────────────────────────────────────────┤
+│ ⏰ Ovesná kaše                                    nedávné   │
+├──────────────────────────────────────────────────────────────┤
+│ 📖 Ovesná kaše s ovocem                          běžné      │
+└──────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Soubory k vytvoření/úpravě
+## Soubory k úpravě
 
-| Soubor | Akce | Popis |
-|--------|------|-------|
-| `src/hooks/useFrequentNutrition.ts` | VYTVOŘIT | Hooky pro častá data (voda, káva) |
-| `src/components/client-portal/nutrition/FrequentItemsSection.tsx` | VYTVOŘIT | Hlavní komponenta pro častá jídla |
-| `src/components/client-portal/nutrition/QuickAddFoodDialog.tsx` | VYTVOŘIT | Dialog pro rychlé přidání jídla s časem |
-| `src/pages/client-portal/ClientPortalNutrition.tsx` | UPRAVIT | Integrace nové sekce |
-
----
-
-## UX vylepšení
-
-| Prvek | Implementace |
-|-------|-------------|
-| **Vizuální označení** | Nejčastější položky mají ⭐ nebo "(nejčastější)" label |
-| **Fallback** | Pokud klient nemá historii, zobrazí se statické presety |
-| **Animace** | Framer Motion pro přidání nové položky |
-| **Haptic feedback** | Vibrace při úspěšném přidání |
-| **Čas** | Dialog vždy vyžaduje potvrzení času konzumace |
+| Soubor | Změna |
+|--------|-------|
+| `src/components/client-portal/nutrition/FoodAutocomplete.tsx` | Přidat query na templates, zobrazit 3 typy zdrojů |
+| `src/hooks/useClientPortalNutrition.ts` | Přidat automatické ukládání templates v `onSuccess` |
+| `src/hooks/useNutritionMealTemplates.ts` | Přidat hook `useAutoSaveMealTemplate` |
+| `src/components/client-portal/nutrition/FrequentItemsSection.tsx` | Použít templates jako primární zdroj |
 
 ---
 
-## Shrnutí workflow
+## Shrnutí výhod
 
-1. **Klient otevře nutriční deník**
-2. **Vidí sekci "Tvoje častá jídla"** - automaticky generované z historie
-3. **Ťukne na položku** (např. "Ovesná kaše")
-4. **Otevře se dialog** s předvyplněnými daty + výběr času
-5. **Potvrdí** → záznam se uloží
-6. **Systém se učí** - častěji použité položky se posouvají nahoru
+| Výhoda | Popis |
+|--------|-------|
+| **Automatické učení** | Systém se učí z každého zadaného jídla |
+| **Personalizace** | Každý klient má vlastní databázi oblíbených jídel |
+| **Rychlejší zadávání** | Nejčastější jídla jsou vždy nahoře |
+| **Bez duplicit** | Normalizace názvů zabrání duplicitám |
+| **Zpětná kompatibilita** | Využívá existující tabulku `nutrition_meal_templates` |
+
+---
+
+## Pro vodu a kávu
+
+Současný systém pro vodu (`useFrequentWaterAmounts`) a kávu (`useFrequentCoffeeTypes`) **již funguje správně** - analyzuje historii a zobrazuje nejčastější volby. Není potřeba vytvářet další tabulky.
