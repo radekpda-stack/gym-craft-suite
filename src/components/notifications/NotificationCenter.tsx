@@ -338,6 +338,74 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     setWorkoutDialogOpen(true);
   }, [markRead]);
 
+  // Handle feedback item click (for aggregated items in forms category)
+  const handleFeedbackItemClick = useCallback(async (item: UnifiedNotification) => {
+    // Mark as read
+    if (!item.is_read && !item.id.startsWith('aggregated-')) {
+      markRead.mutate(item.id);
+    }
+    
+    // Fetch feedback data and show dialog
+    const trainingId = item.entity_type === 'training' ? item.entity_id : null;
+    if (trainingId) {
+      setLoadingFeedback(true);
+      try {
+        const { data: feedbacks } = await supabase
+          .from('training_feedback')
+          .select('*')
+          .eq('training_session_id', trainingId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        const feedback = feedbacks?.[0];
+        if (feedback) {
+          const { data: training } = await supabase
+            .from('training_sessions')
+            .select('date, client_id')
+            .eq('id', trainingId)
+            .maybeSingle();
+
+          let clientName = 'Neznámý klient';
+          if (training?.client_id) {
+            const { data: client } = await supabase
+              .from('clients')
+              .select('name')
+              .eq('id', training.client_id)
+              .maybeSingle();
+            clientName = client?.name || clientName;
+          }
+
+          setSelectedFeedback(feedback as TrainingFeedback);
+          setFeedbackMeta({ clientName, trainingDate: training?.date });
+          setFeedbackDialogOpen(true);
+          setSheetOpen(false);
+        }
+      } catch (error) {
+        console.error('[NotificationCenter] Error loading feedback:', error);
+      } finally {
+        setLoadingFeedback(false);
+      }
+    }
+  }, [markRead]);
+
+  // Handle event item click (birthdays, anniversaries)
+  const handleEventItemClick = useCallback((item: UnifiedNotification) => {
+    // Mark as read
+    if (!item.is_read && !item.id.startsWith('aggregated-')) {
+      markRead.mutate(item.id);
+    }
+    
+    if (item.type === 'birthday') {
+      setSelectedBirthdayNotification(item);
+      setBirthdayDialogOpen(true);
+      setSheetOpen(false);
+    } else if (item.type === 'client_anniversary') {
+      setSelectedAnniversaryNotification(item);
+      setAnniversaryDialogOpen(true);
+      setSheetOpen(false);
+    }
+  }, [markRead]);
+
   const hasAnyNotifications = all.length > 0 || unreadConversations.length > 0;
 
   const renderCategorySection = (
@@ -399,18 +467,27 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
                   onMarkRead={handleMarkRead}
                   onDelete={handleDelete}
                   onClick={() => handleNotificationClick(notification)}
-                  onItemClick={
-                    category === 'activity' 
-                      ? (item: UnifiedNotification) => {
-                          // Route to correct handler based on notification type
-                          if (item.type === 'client_workout_logged') {
-                            handleWorkoutItemClick(item);
-                          } else {
-                            handleNutritionItemClick(item);
-                          }
-                        }
-                      : undefined
-                  }
+                  onItemClick={(item: UnifiedNotification) => {
+                    if (category === 'activity') {
+                      // Route to correct handler based on notification type
+                      if (item.type === 'client_workout_logged') {
+                        handleWorkoutItemClick(item);
+                      } else {
+                        handleNutritionItemClick(item);
+                      }
+                    } else if (category === 'forms') {
+                      // Feedback and diagnostic forms
+                      if (item.type === 'feedback_received' || item.type === 'feedback_red_flag') {
+                        handleFeedbackItemClick(item);
+                      } else {
+                        // Diagnostics - navigate to client profile
+                        handleNotificationClick(item);
+                      }
+                    } else if (category === 'events') {
+                      // Birthdays, anniversaries
+                      handleEventItemClick(item);
+                    }
+                  }}
                   enableSwipe={true}
                 />
               </motion.div>

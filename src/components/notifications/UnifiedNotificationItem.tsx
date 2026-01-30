@@ -4,7 +4,8 @@ import {
   Bell, Check, Trash2, ChevronRight, ChevronDown,
   CreditCard, Cake, Trophy, Dumbbell, TrendingDown, 
   AlertTriangle, Clock, Gift, MessageSquare, Medal, 
-  Target, Stethoscope, Utensils, Scale
+  Target, Stethoscope, Utensils, Scale, Bike, 
+  Footprints, PersonStanding
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +42,19 @@ const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   client_workout_logged: Dumbbell,
 };
 
+const WORKOUT_TYPE_ICONS: Record<string, { icon: typeof Dumbbell; emoji: string }> = {
+  gym: { icon: Dumbbell, emoji: '💪' },
+  strength: { icon: Dumbbell, emoji: '💪' },
+  cardio: { icon: Footprints, emoji: '🏃' },
+  run: { icon: Footprints, emoji: '🏃' },
+  running: { icon: Footprints, emoji: '🏃' },
+  cycling: { icon: Bike, emoji: '🚴' },
+  bike: { icon: Bike, emoji: '🚴' },
+  yoga: { icon: PersonStanding, emoji: '🧘' },
+  stretching: { icon: PersonStanding, emoji: '🧘' },
+  other: { icon: Dumbbell, emoji: '🏋️' },
+};
+
 const CATEGORY_STYLES: Record<NotificationCategory, { bg: string; border: string; icon: string; badge: string }> = {
   activity: {
     bg: 'bg-green-50 dark:bg-green-900/20',
@@ -67,6 +81,56 @@ function getDateLabel(dateStr: string) {
   if (isToday(date)) return 'Dnes';
   if (isYesterday(date)) return 'Včera';
   return formatDistanceToNow(date, { addSuffix: true, locale: cs });
+}
+
+// Extract client name from notification message
+function getClientNameFromMessage(message: string, type: string): string {
+  // Pattern for workout: "Jméno si zapsal/a..."
+  const workoutMatch = message.match(/^(.+?)\s+si zapsal/);
+  if (workoutMatch) return workoutMatch[1];
+  
+  // Pattern for feedback: "Jméno: 💪 Svalovka..." or "Jméno - nějaký text"
+  const feedbackMatch = message.match(/^(.+?):\s+💪/);
+  if (feedbackMatch) return feedbackMatch[1];
+
+  // Pattern for nutrition: "Jméno přidal/a záznam"
+  const nutritionMatch = message.match(/^(.+?)\s+přidal/);
+  if (nutritionMatch) return nutritionMatch[1];
+  
+  // Generic pattern: take first part before colon or dash
+  const genericMatch = message.match(/^(.+?)(?::|–|-)/);
+  if (genericMatch) return genericMatch[1].trim();
+  
+  return message.split(':')[0] || message;
+}
+
+// Extract workout type from metadata or message
+function getWorkoutTypeInfo(notification: UnifiedNotification): { icon: typeof Dumbbell; emoji: string; label: string } {
+  const metadata = notification.metadata as Record<string, unknown> | null;
+  const workoutType = (metadata?.workout_type as string) || 'other';
+  const typeInfo = WORKOUT_TYPE_ICONS[workoutType.toLowerCase()] || WORKOUT_TYPE_ICONS.other;
+  
+  return {
+    ...typeInfo,
+    label: workoutType,
+  };
+}
+
+// Extract feedback preview from message
+function getFeedbackPreview(notification: UnifiedNotification): string | null {
+  const metadata = notification.metadata as Record<string, unknown> | null;
+  
+  if (metadata?.muscle_soreness !== undefined && metadata?.body_feeling !== undefined) {
+    return `Svalovka ${metadata.muscle_soreness} | Pocit ${metadata.body_feeling}`;
+  }
+  
+  // Try to extract from message
+  const match = notification.message.match(/💪\s*Svalovka[:\s]+(\d+)[^📊]*📊[^:]+[:\s]+(\d+)/);
+  if (match) {
+    return `Svalovka ${match[1]} | Pocit ${match[2]}`;
+  }
+  
+  return null;
 }
 
 interface UnifiedNotificationItemProps {
@@ -238,31 +302,74 @@ export function UnifiedNotificationItem({
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-3"
+          className="ml-6 mt-2 space-y-1.5 border-l-2 border-muted pl-3"
         >
-          {notification.aggregatedItems.map((item) => (
-            <div
-              key={item.id}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onItemClick) {
-                  onItemClick(item);
-                } else {
-                  onClick?.();
-                }
-              }}
-              className={cn(
-                'flex items-center gap-2 p-2 rounded-lg text-sm cursor-pointer hover:bg-muted transition-colors',
-                item.is_read ? 'bg-background' : 'bg-muted/50'
-              )}
-            >
-              <span className="flex-1 truncate">{item.title}</span>
-              <span className="text-[10px] text-muted-foreground shrink-0">
-                {getDateLabel(item.created_at)}
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            </div>
-          ))}
+          {notification.aggregatedItems.map((item) => {
+            const isWorkout = item.type === 'client_workout_logged';
+            const isFeedback = item.type === 'feedback_received' || item.type === 'feedback_red_flag';
+            const clientName = getClientNameFromMessage(item.message, item.type);
+            const workoutInfo = isWorkout ? getWorkoutTypeInfo(item) : null;
+            const feedbackPreview = isFeedback ? getFeedbackPreview(item) : null;
+            
+            return (
+              <div
+                key={item.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onItemClick) {
+                    onItemClick(item);
+                  } else {
+                    onClick?.();
+                  }
+                }}
+                className={cn(
+                  'flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer hover:bg-muted/80 transition-colors group',
+                  item.is_read ? 'bg-background' : 'bg-muted/50'
+                )}
+              >
+                {/* Type Icon/Emoji */}
+                {isWorkout && workoutInfo && (
+                  <span className="text-base shrink-0" title={workoutInfo.label}>
+                    {workoutInfo.emoji}
+                  </span>
+                )}
+                {isFeedback && (
+                  <span className="text-base shrink-0">📬</span>
+                )}
+                {!isWorkout && !isFeedback && (
+                  <span className="text-base shrink-0">📝</span>
+                )}
+                
+                {/* Client Name */}
+                <span className={cn(
+                  "flex-1 truncate font-medium",
+                  !item.is_read && "text-foreground"
+                )}>
+                  {clientName}
+                </span>
+                
+                {/* Workout Type Label or Feedback Preview */}
+                {isWorkout && workoutInfo && (
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                    {workoutInfo.label}
+                  </span>
+                )}
+                {isFeedback && feedbackPreview && (
+                  <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:block">
+                    {feedbackPreview}
+                  </span>
+                )}
+                
+                {/* Date */}
+                <span className="text-[10px] text-muted-foreground shrink-0">
+                  {getDateLabel(item.created_at)}
+                </span>
+                
+                {/* Chevron - indicates clickable */}
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
+              </div>
+            );
+          })}
         </motion.div>
       )}
     </div>
