@@ -3184,6 +3184,9 @@ export type Database = {
       }
       client_workout_logs: {
         Row: {
+          ai_enriched: boolean | null
+          ai_enriched_at: string | null
+          calories_burned: number | null
           client_id: string
           created_at: string
           date: string
@@ -3204,6 +3207,9 @@ export type Database = {
           workout_type: string | null
         }
         Insert: {
+          ai_enriched?: boolean | null
+          ai_enriched_at?: string | null
+          calories_burned?: number | null
           client_id: string
           created_at?: string
           date?: string
@@ -3224,6 +3230,9 @@ export type Database = {
           workout_type?: string | null
         }
         Update: {
+          ai_enriched?: boolean | null
+          ai_enriched_at?: string | null
+          calories_burned?: number | null
           client_id?: string
           created_at?: string
           date?: string
@@ -6777,40 +6786,64 @@ export type Database = {
       }
       nutrition_meal_templates: {
         Row: {
+          ai_enriched: boolean | null
+          ai_enriched_at: string | null
+          calories_per_portion: number | null
+          carbs_g: number | null
           client_id: string
           created_at: string
           description: string
+          fat_g: number | null
+          fiber_g: number | null
           id: string
           meal_type: string | null
           name: string
+          normalized_name: string | null
           note: string | null
           portion_size: string | null
+          protein_g: number | null
           quality: string | null
           updated_at: string
           use_count: number | null
         }
         Insert: {
+          ai_enriched?: boolean | null
+          ai_enriched_at?: string | null
+          calories_per_portion?: number | null
+          carbs_g?: number | null
           client_id: string
           created_at?: string
           description: string
+          fat_g?: number | null
+          fiber_g?: number | null
           id?: string
           meal_type?: string | null
           name: string
+          normalized_name?: string | null
           note?: string | null
           portion_size?: string | null
+          protein_g?: number | null
           quality?: string | null
           updated_at?: string
           use_count?: number | null
         }
         Update: {
+          ai_enriched?: boolean | null
+          ai_enriched_at?: string | null
+          calories_per_portion?: number | null
+          carbs_g?: number | null
           client_id?: string
           created_at?: string
           description?: string
+          fat_g?: number | null
+          fiber_g?: number | null
           id?: string
           meal_type?: string | null
           name?: string
+          normalized_name?: string | null
           note?: string | null
           portion_size?: string | null
+          protein_g?: number | null
           quality?: string | null
           updated_at?: string
           use_count?: number | null
