@@ -10,8 +10,9 @@ import {
 } from 'lucide-react';
 import { MobileMenu } from './MobileMenu';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import { useUnreadNotificationsCount } from '@/hooks/useNotifications';
+import { useAggregatedNotifications } from '@/hooks/useAggregatedNotifications';
 import { useUnreadMessageCount } from '@/hooks/useChatMessages';
+import { useTrainerConversations } from '@/hooks/useChatMessages';
 import { Badge } from '@/components/ui/badge';
 
 const mainNavItems = [
@@ -25,10 +26,11 @@ export function MobileNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   
-  // Combine notification count + unread messages
-  const { data: notificationCount = 0 } = useUnreadNotificationsCount();
-  const { data: unreadMessagesCount = 0 } = useUnreadMessageCount();
-  const totalUnread = notificationCount + unreadMessagesCount;
+  // Use same counting logic as NotificationCenter for consistency
+  const { unreadCount } = useAggregatedNotifications();
+  const { data: conversations = [] } = useTrainerConversations();
+  const unreadConversations = conversations.filter(c => c.unreadCount > 0);
+  const totalUnread = unreadCount + unreadConversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
   return (
     <>
