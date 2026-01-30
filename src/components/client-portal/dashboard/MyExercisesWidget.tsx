@@ -13,12 +13,22 @@ import { haptic } from '@/lib/haptics';
 export function MyExercisesWidget() {
   const { clientId } = useClientPortal();
   const navigate = useNavigate();
-  const { data: exercises, isLoading } = useClientAllExercises(clientId, 6);
+  const { data: exercises, isLoading } = useClientAllExercises(clientId, 12); // Extend to 12 months
   const [selectedExercise, setSelectedExercise] = useState<ClientExerciseProgress | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Show only exercises with at least 2 data points (for trend)
-  const displayExercises = exercises?.filter(e => e.data.length >= 2).slice(0, 8) || [];
+  // Show exercises with at least 1 data point, prioritize those with trends (2+ points)
+  const displayExercises = exercises
+    ?.filter(e => e.data.length >= 1)
+    .sort((a, b) => {
+      // First priority: exercises with 2+ points (can show trend)
+      const aHasTrend = a.data.length >= 2 ? 1 : 0;
+      const bHasTrend = b.data.length >= 2 ? 1 : 0;
+      if (bHasTrend !== aHasTrend) return bHasTrend - aHasTrend;
+      // Second priority: most recent activity
+      return new Date(b.lastDate).getTime() - new Date(a.lastDate).getTime();
+    })
+    .slice(0, 12) || []; // Show up to 12 exercises
 
   const handleExerciseClick = (exercise: ClientExerciseProgress) => {
     haptic('light');
@@ -87,9 +97,9 @@ export function MyExercisesWidget() {
               </motion.div>
               
               {/* Hint for more exercises */}
-              {exercises && exercises.length > 8 && (
+              {exercises && exercises.length > 12 && (
                 <p className="text-center text-xs text-muted-foreground mt-2 px-4">
-                  +{exercises.length - 8} dalších cviků
+                  +{exercises.length - 12} dalších cviků
                 </p>
               )}
             </div>
