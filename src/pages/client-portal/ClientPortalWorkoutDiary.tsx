@@ -33,7 +33,7 @@ import {
   Apple,
 } from 'lucide-react';
 import { SimpleAddWorkoutDialog } from '@/components/client-portal/workout-diary/SimpleAddWorkoutDialog';
-import { SimpleWorkoutCard } from '@/components/client-portal/workout-diary/SimpleWorkoutCard';
+import { EnhancedWorkoutCard } from '@/components/client-portal/workout-diary/EnhancedWorkoutCard';
 import { TrainingCalendar } from '@/components/client-portal/calendar/TrainingCalendar';
 import { getWorkoutTypeLabel, getWorkoutTypeIcon, getWorkoutTypeColor } from '@/components/client-portal/workout-diary/WorkoutTypeSelector';
 import { cn } from '@/lib/utils';
@@ -412,7 +412,7 @@ export default function ClientPortalWorkoutDiary() {
                 Moje záznamy ({completedEntries.length})
               </h3>
               {completedEntries.map((entry) => (
-                <SimpleWorkoutCard
+                <EnhancedWorkoutCard
                   key={entry.id}
                   entry={entry}
                   onDelete={entry.is_coached ? undefined : () => handleDeleteWorkout(entry)}
