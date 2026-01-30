@@ -83,7 +83,7 @@ export function BirthdayDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md z-[120]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Cake className="w-5 h-5 text-pink-500" />

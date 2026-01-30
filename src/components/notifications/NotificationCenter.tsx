@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
-import { Bell, Check, MessageSquare, ChevronDown, ChevronRight, Search, X, Utensils, FileText, PartyPopper, Scale } from "lucide-react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { Bell, Check, MessageSquare, ChevronDown, ChevronRight, Search, X, Utensils, FileText, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -36,7 +36,7 @@ import { UnifiedNotificationItem } from "./UnifiedNotificationItem";
 import { InlineNotificationSettings } from "./InlineNotificationSettings";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Category section config - NEW 3-category structure
+// Category section config
 const CATEGORY_SECTIONS: Record<NotificationCategory, {
   label: string;
   icon: typeof Bell;
@@ -74,6 +74,22 @@ function getDateLabel(dateStr: string) {
   return formatDistanceToNow(date, { addSuffix: true, locale: cs });
 }
 
+// Detect touch device
+function isTouchDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+}
+
+// Pending action types
+type PendingActionType = 
+  | { type: 'nutrition'; notification: UnifiedNotification }
+  | { type: 'workout'; notification: UnifiedNotification }
+  | { type: 'birthday'; notification: UnifiedNotification }
+  | { type: 'anniversary'; notification: UnifiedNotification }
+  | { type: 'profile'; notification: UnifiedNotification }
+  | { type: 'feedback'; notification: UnifiedNotification }
+  | { type: 'navigate'; path: string };
+
 interface NotificationCenterProps {
   onOpenChange?: (open: boolean) => void;
   children?: React.ReactNode;
@@ -94,6 +110,9 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   
   const totalUnread = unreadCount + unreadConversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
+  // Touch device detection
+  const isTouch = useMemo(() => isTouchDevice(), []);
+
   const handleMarkRead = useCallback((id: string) => {
     if (!id.startsWith('aggregated-')) {
       markRead.mutate(id);
@@ -106,6 +125,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     }
   }, [deleteNotification]);
 
+  // Dialog states
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<TrainingFeedback | null>(null);
   const [feedbackMeta, setFeedbackMeta] = useState<{ clientName?: string; trainingDate?: string }>({});
@@ -123,240 +143,57 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const [sheetOpen, setSheetOpen] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  // All sections expanded by default
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["messages", "activity", "forms", "events"]));
 
-  const handleSheetOpenChange = (open: boolean) => {
-    setSheetOpen(open);
-    onOpenChange?.(open);
-    if (!open) {
-      setSearchQuery("");
-      setSettingsExpanded(false);
+  // Pending action system - action executes AFTER sheet closes
+  const pendingActionRef = useRef<PendingActionType | null>(null);
+
+  // Execute pending action after sheet closes
+  const flushPendingAction = useCallback(async () => {
+    const action = pendingActionRef.current;
+    if (!action) return;
+    pendingActionRef.current = null;
+
+    // Small delay to ensure sheet animation completes
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    switch (action.type) {
+      case 'nutrition':
+        setSelectedNutritionNotification(action.notification);
+        setNutritionDialogOpen(true);
+        break;
+      case 'workout':
+        setSelectedWorkoutNotification(action.notification);
+        setWorkoutDialogOpen(true);
+        break;
+      case 'birthday':
+        setSelectedBirthdayNotification(action.notification);
+        setBirthdayDialogOpen(true);
+        break;
+      case 'anniversary':
+        setSelectedAnniversaryNotification(action.notification);
+        setAnniversaryDialogOpen(true);
+        break;
+      case 'profile':
+        setSelectedProfileNotification(action.notification);
+        setProfileUpdateDialogOpen(true);
+        break;
+      case 'feedback':
+        await loadAndOpenFeedback(action.notification);
+        break;
+      case 'navigate':
+        navigate(action.path);
+        break;
     }
-  };
+  }, [navigate]);
 
-  const toggleSection = (section: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(section)) {
-      newExpanded.delete(section);
-    } else {
-      newExpanded.add(section);
-    }
-    setExpandedSections(newExpanded);
-  };
-
-  // Filter notifications by search query
-  const filteredNotifications = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return { activity, forms, events };
-    }
-    
-    const query = searchQuery.toLowerCase();
-    const filter = (notifications: UnifiedNotification[]) =>
-      notifications.filter(
-        (n) =>
-          n.title.toLowerCase().includes(query) ||
-          n.message.toLowerCase().includes(query)
-      );
-
-    return {
-      activity: filter(activity),
-      forms: filter(forms),
-      events: filter(events),
-    };
-  }, [activity, forms, events, searchQuery]);
-
-  // Handle chat notification click
-  const handleChatClick = (clientId: string, conversationId: string) => {
-    markMessagesRead.mutate({ conversationId });
-    setSheetOpen(false);
-    navigate(`/clients/${clientId}?tab=chat`);
-  };
-
-  // Mark all as read
-  const handleMarkAllAsRead = useCallback(() => {
-    if (unreadCount > 0) {
-      markAllRead.mutate();
-    }
-    if (unreadConversations.length > 0) {
-      markAllMessagesRead.mutate();
-    }
-  }, [unreadCount, markAllRead, unreadConversations.length, markAllMessagesRead]);
-
-  // Handle notification click with improved navigation - every notification is actionable
-  const handleNotificationClick = async (notification: UnifiedNotification) => {
-    const isFeedbackNotification = ['feedback_received', 'feedback_red_flag'].includes(notification.type);
-    const isNutritionNotification = notification.type === 'nutrition_entry_added' || notification.type === 'client_nutrition_started';
-    const isProfileUpdateNotification = notification.type === 'client_profile_updated';
-    const isWorkoutLogNotification = notification.type === 'client_workout_logged';
-    const isBirthdayNotification = notification.type === 'birthday';
-    const isAnniversaryNotification = notification.type === 'client_anniversary';
-    const isWeightNotification = notification.type === 'client_weight_added';
-    const isDiagnosticNotification = ['diagnostic_completed', 'pre_diagnostic_completed'].includes(notification.type);
-    
+  // Load feedback data and open dialog
+  const loadAndOpenFeedback = async (notification: UnifiedNotification) => {
     const trainingId = notification.entity_type === 'training' ? notification.entity_id : null;
-    const clientId = notification.client_id || (notification.entity_type === 'client' ? notification.entity_id : null);
-
-    // Mark as read first
-    if (!notification.is_read && !notification.id.startsWith('aggregated-')) {
-      markRead.mutate(notification.id);
-    }
-
-    // Birthday → BirthdayDetailDialog
-    if (isBirthdayNotification && clientId) {
-      setSelectedBirthdayNotification(notification);
-      setBirthdayDialogOpen(true);
-      setSheetOpen(false);
-      return;
-    }
-
-    // Anniversary → AnniversaryDetailDialog
-    if (isAnniversaryNotification && clientId) {
-      setSelectedAnniversaryNotification(notification);
-      setAnniversaryDialogOpen(true);
-      setSheetOpen(false);
-      return;
-    }
-
-    // Weight → Navigate to client progress tab
-    if (isWeightNotification && clientId) {
-      setSheetOpen(false);
-      navigate(`/clients/${clientId}?tab=progress`);
-      return;
-    }
-
-    // Diagnostic → Navigate to client profile
-    if (isDiagnosticNotification && clientId) {
-      setSheetOpen(false);
-      navigate(`/clients/${clientId}?tab=profile`);
-      return;
-    }
-
-    // Nutrition notifications → Navigate to nutrition diary
-    if (isNutritionNotification && clientId) {
-      setSheetOpen(false);
-      navigate(`/nutrition/client/${clientId}`);
-      return;
-    }
-
-    // Profile update notifications → Open detail dialog
-    if (isProfileUpdateNotification) {
-      setSelectedProfileNotification(notification);
-      setProfileUpdateDialogOpen(true);
-      setSheetOpen(false);
-      return;
-    }
-
-    // Workout log notifications → Open workout detail dialog
-    if (isWorkoutLogNotification && notification.entity_id) {
-      setSelectedWorkoutNotification(notification);
-      setWorkoutDialogOpen(true);
-      setSheetOpen(false);
-      return;
-    }
-
-    // Feedback notifications → Open feedback dialog
-    if (isFeedbackNotification && trainingId) {
-      setLoadingFeedback(true);
-      try {
-        const { data: feedbacks } = await supabase
-          .from('training_feedback')
-          .select('*')
-          .eq('training_session_id', trainingId)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        const feedback = feedbacks?.[0];
-        if (feedback) {
-          const { data: training } = await supabase
-            .from('training_sessions')
-            .select('date, client_id')
-            .eq('id', trainingId)
-            .maybeSingle();
-
-          let clientName = 'Neznámý klient';
-          if (training?.client_id) {
-            const { data: client } = await supabase
-              .from('clients')
-              .select('name')
-              .eq('id', training.client_id)
-              .maybeSingle();
-            clientName = client?.name || clientName;
-          }
-
-          setSelectedFeedback(feedback as TrainingFeedback);
-          setFeedbackMeta({ clientName, trainingDate: training?.date });
-          setFeedbackDialogOpen(true);
-          setSheetOpen(false);
-        } else {
-          setSheetOpen(false);
-          navigate(`/trainings/${trainingId}`);
-        }
-      } catch (error) {
-        console.error('[NotificationCenter] Error loading feedback:', error);
-        setSheetOpen(false);
-        navigate(`/trainings/${trainingId}`);
-      } finally {
-        setLoadingFeedback(false);
-      }
-      return;
-    }
-    
-    // Training entity → Navigate to training detail
-    if (trainingId) {
-      setSheetOpen(false);
-      navigate(`/trainings/${trainingId}`);
-      return;
-    }
-    
-    // Fallback: Navigate to client profile
-    if (clientId) {
-      setSheetOpen(false);
-      navigate(`/clients/${clientId}`);
-    }
-  };
-
-  // Handle nutrition item click (for aggregated items)
-  const handleNutritionItemClick = useCallback((item: UnifiedNotification) => {
-    // Mark as read
-    if (!item.is_read && !item.id.startsWith('aggregated-')) {
-      markRead.mutate(item.id);
-    }
-    // Open nutrition detail dialog
-    setSelectedNutritionNotification(item);
-    setNutritionDialogOpen(true);
-    setSheetOpen(false);
-  }, [markRead]);
-
-  // Handle workout item click (for aggregated items)
-  const handleWorkoutItemClick = useCallback((item: UnifiedNotification) => {
-    // Mark as read
-    if (!item.is_read && !item.id.startsWith('aggregated-')) {
-      markRead.mutate(item.id);
-    }
-    // Open workout detail dialog
-    setSelectedWorkoutNotification(item);
-    setWorkoutDialogOpen(true);
-    setSheetOpen(false);
-  }, [markRead]);
-
-  // Handle feedback item click (for aggregated items in forms category)
-  const handleFeedbackItemClick = useCallback(async (item: UnifiedNotification) => {
-    console.log('[NotificationCenter] handleFeedbackItemClick called:', item);
-    
-    // Mark as read
-    if (!item.is_read && !item.id.startsWith('aggregated-')) {
-      markRead.mutate(item.id);
-    }
-    
-    // Fetch feedback data and show dialog
-    const trainingId = item.entity_type === 'training' ? item.entity_id : null;
     
     if (!trainingId) {
-      console.warn('[NotificationCenter] No trainingId for feedback item, navigating to client:', item.client_id);
-      setSheetOpen(false);
-      if (item.client_id) {
-        navigate(`/clients/${item.client_id}?tab=history`);
+      if (notification.client_id) {
+        navigate(`/clients/${notification.client_id}?tab=history`);
       }
       return;
     }
@@ -391,38 +228,206 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
         setSelectedFeedback(feedback as TrainingFeedback);
         setFeedbackMeta({ clientName, trainingDate: training?.date });
         setFeedbackDialogOpen(true);
-        setSheetOpen(false);
       } else {
-        // No feedback found, navigate to training detail
-        console.warn('[NotificationCenter] No feedback found for training:', trainingId);
-        setSheetOpen(false);
         navigate(`/trainings/${trainingId}`);
       }
     } catch (error) {
       console.error('[NotificationCenter] Error loading feedback:', error);
-      setSheetOpen(false);
       navigate(`/trainings/${trainingId}`);
     } finally {
       setLoadingFeedback(false);
     }
-  }, [markRead, navigate]);
+  };
+
+  const handleSheetOpenChange = useCallback((open: boolean) => {
+    setSheetOpen(open);
+    onOpenChange?.(open);
+    if (!open) {
+      setSearchQuery("");
+      setSettingsExpanded(false);
+      // Execute pending action after sheet closes
+      requestAnimationFrame(() => {
+        flushPendingAction();
+      });
+    }
+  }, [onOpenChange, flushPendingAction]);
+
+  const toggleSection = (section: string) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(section)) {
+      newExpanded.delete(section);
+    } else {
+      newExpanded.add(section);
+    }
+    setExpandedSections(newExpanded);
+  };
+
+  // Filter notifications by search query
+  const filteredNotifications = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return { activity, forms, events };
+    }
+    
+    const query = searchQuery.toLowerCase();
+    const filter = (notifications: UnifiedNotification[]) =>
+      notifications.filter(
+        (n) =>
+          n.title.toLowerCase().includes(query) ||
+          n.message.toLowerCase().includes(query)
+      );
+
+    return {
+      activity: filter(activity),
+      forms: filter(forms),
+      events: filter(events),
+    };
+  }, [activity, forms, events, searchQuery]);
+
+  // Handle chat notification click - direct navigation (no dialog)
+  const handleChatClick = (clientId: string, conversationId: string) => {
+    markMessagesRead.mutate({ conversationId });
+    pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}?tab=chat` };
+    setSheetOpen(false);
+  };
+
+  // Mark all as read
+  const handleMarkAllAsRead = useCallback(() => {
+    if (unreadCount > 0) {
+      markAllRead.mutate();
+    }
+    if (unreadConversations.length > 0) {
+      markAllMessagesRead.mutate();
+    }
+  }, [unreadCount, markAllRead, unreadConversations.length, markAllMessagesRead]);
+
+  // Unified click handler - sets pending action and closes sheet
+  const handleNotificationClick = useCallback((notification: UnifiedNotification) => {
+    const isFeedbackNotification = ['feedback_received', 'feedback_red_flag'].includes(notification.type);
+    const isNutritionNotification = notification.type === 'nutrition_entry_added' || notification.type === 'client_nutrition_started';
+    const isProfileUpdateNotification = notification.type === 'client_profile_updated';
+    const isWorkoutLogNotification = notification.type === 'client_workout_logged';
+    const isBirthdayNotification = notification.type === 'birthday';
+    const isAnniversaryNotification = notification.type === 'client_anniversary';
+    const isWeightNotification = notification.type === 'client_weight_added';
+    const isDiagnosticNotification = ['diagnostic_completed', 'pre_diagnostic_completed'].includes(notification.type);
+    
+    const trainingId = notification.entity_type === 'training' ? notification.entity_id : null;
+    const clientId = notification.client_id || (notification.entity_type === 'client' ? notification.entity_id : null);
+
+    // Mark as read first
+    if (!notification.is_read && !notification.id.startsWith('aggregated-')) {
+      markRead.mutate(notification.id);
+    }
+
+    // Birthday → BirthdayDetailDialog
+    if (isBirthdayNotification && clientId) {
+      pendingActionRef.current = { type: 'birthday', notification };
+      setSheetOpen(false);
+      return;
+    }
+
+    // Anniversary → AnniversaryDetailDialog
+    if (isAnniversaryNotification && clientId) {
+      pendingActionRef.current = { type: 'anniversary', notification };
+      setSheetOpen(false);
+      return;
+    }
+
+    // Weight → Navigate to client progress tab
+    if (isWeightNotification && clientId) {
+      pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}?tab=progress` };
+      setSheetOpen(false);
+      return;
+    }
+
+    // Diagnostic → Navigate to client profile
+    if (isDiagnosticNotification && clientId) {
+      pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}?tab=profile` };
+      setSheetOpen(false);
+      return;
+    }
+
+    // Nutrition notifications → Open nutrition dialog
+    if (isNutritionNotification && clientId) {
+      pendingActionRef.current = { type: 'nutrition', notification };
+      setSheetOpen(false);
+      return;
+    }
+
+    // Profile update notifications → Open detail dialog
+    if (isProfileUpdateNotification) {
+      pendingActionRef.current = { type: 'profile', notification };
+      setSheetOpen(false);
+      return;
+    }
+
+    // Workout log notifications → Open workout detail dialog
+    if (isWorkoutLogNotification && notification.entity_id) {
+      pendingActionRef.current = { type: 'workout', notification };
+      setSheetOpen(false);
+      return;
+    }
+
+    // Feedback notifications → Open feedback dialog
+    if (isFeedbackNotification && trainingId) {
+      pendingActionRef.current = { type: 'feedback', notification };
+      setSheetOpen(false);
+      return;
+    }
+    
+    // Training entity → Navigate to training detail
+    if (trainingId) {
+      pendingActionRef.current = { type: 'navigate', path: `/trainings/${trainingId}` };
+      setSheetOpen(false);
+      return;
+    }
+    
+    // Fallback: Navigate to client profile
+    if (clientId) {
+      pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}` };
+      setSheetOpen(false);
+    }
+  }, [markRead]);
+
+  // Handle nutrition item click (for aggregated items)
+  const handleNutritionItemClick = useCallback((item: UnifiedNotification) => {
+    if (!item.is_read && !item.id.startsWith('aggregated-')) {
+      markRead.mutate(item.id);
+    }
+    pendingActionRef.current = { type: 'nutrition', notification: item };
+    setSheetOpen(false);
+  }, [markRead]);
+
+  // Handle workout item click (for aggregated items)
+  const handleWorkoutItemClick = useCallback((item: UnifiedNotification) => {
+    if (!item.is_read && !item.id.startsWith('aggregated-')) {
+      markRead.mutate(item.id);
+    }
+    pendingActionRef.current = { type: 'workout', notification: item };
+    setSheetOpen(false);
+  }, [markRead]);
+
+  // Handle feedback item click (for aggregated items)
+  const handleFeedbackItemClick = useCallback((item: UnifiedNotification) => {
+    if (!item.is_read && !item.id.startsWith('aggregated-')) {
+      markRead.mutate(item.id);
+    }
+    pendingActionRef.current = { type: 'feedback', notification: item };
+    setSheetOpen(false);
+  }, [markRead]);
 
   // Handle event item click (birthdays, anniversaries)
   const handleEventItemClick = useCallback((item: UnifiedNotification) => {
-    // Mark as read
     if (!item.is_read && !item.id.startsWith('aggregated-')) {
       markRead.mutate(item.id);
     }
     
     if (item.type === 'birthday') {
-      setSelectedBirthdayNotification(item);
-      setBirthdayDialogOpen(true);
-      setSheetOpen(false);
+      pendingActionRef.current = { type: 'birthday', notification: item };
     } else if (item.type === 'client_anniversary') {
-      setSelectedAnniversaryNotification(item);
-      setAnniversaryDialogOpen(true);
-      setSheetOpen(false);
+      pendingActionRef.current = { type: 'anniversary', notification: item };
     }
+    setSheetOpen(false);
   }, [markRead]);
 
   const hasAnyNotifications = all.length > 0 || unreadConversations.length > 0;
@@ -488,26 +493,22 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
                   onClick={() => handleNotificationClick(notification)}
                   onItemClick={(item: UnifiedNotification) => {
                     if (category === 'activity') {
-                      // Route to correct handler based on notification type
                       if (item.type === 'client_workout_logged') {
                         handleWorkoutItemClick(item);
                       } else {
                         handleNutritionItemClick(item);
                       }
                     } else if (category === 'forms') {
-                      // Feedback and diagnostic forms
                       if (item.type === 'feedback_received' || item.type === 'feedback_red_flag') {
                         handleFeedbackItemClick(item);
                       } else {
-                        // Diagnostics - navigate to client profile
                         handleNotificationClick(item);
                       }
                     } else if (category === 'events') {
-                      // Birthdays, anniversaries
                       handleEventItemClick(item);
                     }
                   }}
-                  enableSwipe={true}
+                  enableSwipe={!isTouch}
                 />
               </motion.div>
             ))}
@@ -534,7 +535,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
             </Button>
           )}
         </SheetTrigger>
-        <SheetContent className="w-full sm:max-w-md p-0 flex flex-col z-[80]">
+        <SheetContent className="w-full sm:max-w-md p-0 flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden z-[80]">
           {/* Header */}
           <SheetHeader className="px-4 py-3 border-b flex flex-row items-center justify-between shrink-0 pr-12">
             <SheetTitle className="text-lg">Notifikace</SheetTitle>
@@ -555,7 +556,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
           </SheetHeader>
 
           {/* Search Bar */}
-          <div className="px-4 py-2 border-b">
+          <div className="px-4 py-2 border-b shrink-0">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -575,8 +576,8 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
             </div>
           </div>
 
-          {/* Content */}
-          <ScrollArea className="flex-1">
+          {/* Content - flex-1 with min-h-0 for proper overflow */}
+          <ScrollArea className="flex-1 min-h-0">
             <div className="p-3 space-y-3">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
@@ -645,7 +646,7 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
                     </Collapsible>
                   )}
 
-                  {/* Category Sections - New order: Activity → Forms → Events */}
+                  {/* Category Sections */}
                   {renderCategorySection('activity', filteredNotifications.activity)}
                   {renderCategorySection('forms', filteredNotifications.forms)}
                   {renderCategorySection('events', filteredNotifications.events)}
@@ -666,13 +667,16 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
           </ScrollArea>
 
           {/* Inline Settings */}
-          <InlineNotificationSettings
-            isExpanded={settingsExpanded}
-            onToggle={() => setSettingsExpanded(!settingsExpanded)}
-          />
+          <div className="shrink-0 pb-safe">
+            <InlineNotificationSettings
+              isExpanded={settingsExpanded}
+              onToggle={() => setSettingsExpanded(!settingsExpanded)}
+            />
+          </div>
         </SheetContent>
       </Sheet>
 
+      {/* Dialogs with higher z-index to appear above everything */}
       <FeedbackDetailDialog
         feedback={selectedFeedback}
         open={feedbackDialogOpen}
