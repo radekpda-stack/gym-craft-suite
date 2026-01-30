@@ -1,169 +1,181 @@
 
-# Oprava notifikačního centra - zobrazení jmen a klikatelnost
+# Seznam cviků s grafy pokroku pro klientský portál
 
-## Identifikované problémy
+## Přehled
 
-| Problém | Příčina | Řešení |
-|---------|---------|--------|
-| Agregované položky nezobrazují jména klientů | Zobrazuje se `item.title` ("Klient cvičil") místo `item.message` ("Honza Kynzl si zapsal...") | Extrahovat jméno z message nebo použít client_id pro lookup |
-| Zpětné vazby nejsou klikatelné | `onItemClick` je předáván pouze pro kategorii `activity`, ne pro `forms` | Přidat handler pro `forms` kategorii |
-| Chybí navigace po kliknutí na položku feedbacku | Není implementován `handleFeedbackItemClick` | Vytvořit handler podobný `handleWorkoutItemClick` |
+Na stránku **Přehled** (ClientPortalOverview) pod kartu **Žebříček** přidáme novou interaktivní sekci s klikatelným seznamem cviků klienta. Po kliknutí na cvik se zobrazí moderní, snadno čitelný graf zobrazující vývoj výsledků v čase.
 
 ---
 
-## Technické řešení
+## Vizuální návrh
 
-### 1. Vylepšení zobrazení jmen v agregovaných položkách
-
-V souboru `src/components/notifications/UnifiedNotificationItem.tsx` změnit zobrazení rozbalených položek:
-
-**Aktuálně (řádek 259):**
-```typescript
-<span className="flex-1 truncate">{item.title}</span>
+### Seznam cviků (kompaktní karty):
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│ 📊 Tvůj pokrok                                      Vše →      │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│ ┌────────────────────┐ ┌────────────────────┐ ┌──────────────┐ │
+│ │ 💪 Bench press     │ │ 🦵 Dřep           │ │ 🏃 Běžec. pás│ │
+│ │ 85 kg              │ │ 120 kg            │ │ 5:42         │ │
+│ │ ▲ +15%  ~~~╱~~     │ │ ▲ +8%   ~~╱~~~   │ │ ▼ -12% ~~╲~~ │ │
+│ │ (zlepšuješ se!)    │ │ (stoupá!)         │ │ (rychlejší!) │ │
+│ └────────────────────┘ └────────────────────┘ └──────────────┘ │
+│                                                                  │
+│ ┌────────────────────┐ ┌────────────────────┐                   │
+│ │ ⚡ Skok do dálky   │ │ 🚣 Veslo          │                   │
+│ │ 2.35 m             │ │ 8:15/2000m        │                   │
+│ │ ▲ +5%   ~~╱~~~    │ │ ▼ -10% ~~╲~~      │                   │
+│ └────────────────────┘ └────────────────────┘                   │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-**Nově:**
-```typescript
-// Extrahovat jméno klienta z message (např. "Honza Kynzl si zapsal...")
-const getClientNameFromMessage = (message: string): string => {
-  // Pattern pro workout: "Jméno si zapsal/a..."
-  const workoutMatch = message.match(/^(.+?)\s+si zapsal/);
-  if (workoutMatch) return workoutMatch[1];
-  
-  // Pattern pro feedback: "Jméno: 💪 Svalovka..."
-  const feedbackMatch = message.match(/^(.+?):\s+💪/);
-  if (feedbackMatch) return feedbackMatch[1];
-  
-  return message.split(':')[0] || message;
-};
-
-// V renderování:
-<span className="flex-1 truncate font-medium">
-  {getClientNameFromMessage(item.message)}
-</span>
+### Detail cviku (po kliknutí - Sheet):
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│                                                              ✕   │
+│ 💪 Bench press                                                   │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│                                                                  │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ AKTUÁLNÍ       │ MAXIMUM        │ TREND                     │ │
+│ │ 85 kg          │ 90 kg 🏆       │ ▲ +15% za 30 dní         │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│         TVŮJ POKROK ZA POSLEDNÍCH 6 MĚSÍCŮ                      │
+│                                                                  │
+│  90 ┤                                        ●←──────── 🏆 PR    │
+│     │                                    ●───┘                   │
+│  80 ┤                          ●─────●───┘                       │
+│     │                    ●─────┘                                 │
+│  70 ┤          ●─────●───┘                                       │
+│     │    ●─────┘                                                 │
+│  60 ┤────┘                                                       │
+│     └────┼────┼────┼────┼────┼────┼────                         │
+│         Zář  Říj  Lis  Pro  Led  Úno                            │
+│                                                                  │
+│ ─────────────────────────────────────────────────────────────── │
+│                                                                  │
+│ 📈 Analýza trendu:                                              │
+│ • Stoupající trend (+2.5 kg/měsíc)                              │
+│ • Konzistentní zlepšování                                       │
+│ • Doporučeno: pokračovat v aktuálním tempu                      │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-### 2. Přidání handleru pro kliknutí na feedback
-
-V souboru `src/components/notifications/NotificationCenter.tsx`:
-
-```typescript
-// Nový handler pro feedback položky
-const handleFeedbackItemClick = useCallback(async (item: UnifiedNotification) => {
-  // Mark as read
-  if (!item.is_read && !item.id.startsWith('aggregated-')) {
-    markRead.mutate(item.id);
-  }
-  
-  // Fetch feedback data a zobrazit dialog
-  const trainingId = item.entity_id;
-  if (trainingId) {
-    setLoadingFeedback(true);
-    try {
-      const { data: feedbacks } = await supabase
-        .from('training_feedback')
-        .select('*')
-        .eq('training_session_id', trainingId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      const feedback = feedbacks?.[0];
-      if (feedback) {
-        // ... fetch client name and training date
-        setSelectedFeedback(feedback);
-        setFeedbackMeta({ clientName, trainingDate });
-        setFeedbackDialogOpen(true);
-      }
-    } finally {
-      setLoadingFeedback(false);
-    }
-  }
-}, [markRead]);
+### Kardio cviky (klesající = lepší):
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│ 🏃 Běžecký pás (5 km)                                       ✕   │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│                                                                  │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ AKTUÁLNÍ       │ NEJLEPŠÍ       │ TREND                     │ │
+│ │ 25:30          │ 24:15 🏆       │ ▼ -12% (rychlejší!)       │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│         TVŮJ POKROK (NIŽŠÍ = LEPŠÍ)                             │
+│                                                                  │
+│  30:00 ┤────●                                                    │
+│        │      ╲                                                  │
+│  28:00 ┤        ●───●                                           │
+│        │              ╲                                          │
+│  26:00 ┤                ●───●                                   │
+│        │                      ╲                                  │
+│  24:00 ┤                        ●───●←──── 🏆 Nejlepší čas      │
+│        └────┼────┼────┼────┼────┼────┼                          │
+│            Zář  Říj  Lis  Pro  Led  Úno                         │
+│                                                                  │
+│ 📈 Analýza trendu:                                              │
+│ • Klesající trend (zrychlení o 1:30/měsíc)                      │
+│ • Výborný pokrok!                                               │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-### 3. Předání handleru pro forms kategorii
+---
 
-Změnit v `renderCategorySection`:
+## Technická implementace
 
-**Aktuálně (řádky 402-412):**
+### Nové komponenty
+
+| Komponenta | Účel |
+|------------|------|
+| `MyExercisesWidget.tsx` | Hlavní widget na dashboardu s horizontálním seznamem cviků |
+| `ExerciseProgressSheet.tsx` | Spodní sheet s detailním grafem po kliknutí na cvik |
+| `ExerciseSparklineItem.tsx` | Jednotlivá karta cviku s mini-grafem a trendem |
+
+### Rozšíření existujících hooků
+
+| Hook | Změna |
+|------|-------|
+| `useClientAllExercises.ts` | Již obsahuje vše potřebné (exerciseType, isTimeBased, data) |
+
+### Klíčová logika trendů
+
+Pro správné zobrazení trendu (zda je klient lepší nebo horší):
+
 ```typescript
-onItemClick={
-  category === 'activity' 
-    ? (item) => { ... }
-    : undefined
+// Síla/plyometrie: vyšší = lepší
+if (exerciseType === 'strength' || exerciseType === 'skill') {
+  trendPositive = change > 0;
+  trendColor = trendPositive ? 'success' : 'destructive';
+}
+
+// Kardio: nižší čas = lepší (rychlejší)
+if (exerciseType === 'cardio') {
+  trendPositive = change < 0; // Záporná změna = zlepšení
+  trendColor = trendPositive ? 'success' : 'destructive';
 }
 ```
 
-**Nově:**
+### Graf s obrácenou osou pro kardio
+
+Pro kardio cviky bude Y-osa obrácená, takže graf vizuálně "stoupá" i když hodnoty klesají:
+
 ```typescript
-onItemClick={(item: UnifiedNotification) => {
-  if (category === 'activity') {
-    if (item.type === 'client_workout_logged') {
-      handleWorkoutItemClick(item);
-    } else {
-      handleNutritionItemClick(item);
-    }
-  } else if (category === 'forms') {
-    handleFeedbackItemClick(item);
-  } else if (category === 'events') {
-    // Narozeniny, výročí - použít existující handlery
-    handleNotificationClick(item);
-  }
-}}
+<YAxis 
+  reversed={isCardio} // Obrátit osu pro kardio
+  tickFormatter={(v) => formatTime(v)}
+/>
 ```
 
 ---
 
-## Vylepšení UI agregovaných položek
+## Integrační bod
 
-### Vizuální změny v UnifiedNotificationItem.tsx
+Widget bude přidán do `ClientPortalOverview.tsx`:
 
-1. **Zobrazit ikonu typu tréninku** u workout položek (💪, 🏃, 🧘)
-2. **Přidat chevron** pro indikaci, že položka je klikatelná
-3. **Zobrazit náhled feedbacku** u zpětných vazeb (např. "Svalovka: 8/10")
+```typescript
+// src/pages/client-portal/ClientPortalOverview.tsx
 
-```text
-PŘED (rozbalená agregovaná notifikace):
-┌────────────────────────────────────────────────────────────┐
-│ Klient cvičil                                       Včera >│
-│ Klient cvičil                                       Včera >│
-│ Klient cvičil                                  před 1 dnem>│
-└────────────────────────────────────────────────────────────┘
+<LeaderboardPreviewCard />
 
-PO (vylepšená verze):
-┌────────────────────────────────────────────────────────────┐
-│ 💪 Honza Kynzl                               cycling  >    │
-│ 🏃 Milan Dolák                               run      >    │
-│ 🧘 Eva Nováková                              other    >    │
-└────────────────────────────────────────────────────────────┘
+{/* NOVÉ: 8. Tvůj pokrok - seznam cviků s grafy */}
+<MyExercisesWidget />
 
-┌────────────────────────────────────────────────────────────┐
-│ 📬 Honza Kynzl         Svalovka 8 | Pocit 5         Včera >│
-│ 📬 Milan Dolák         Svalovka 3 | Pocit 5         Včera >│
-│ 📬 Zuzka K.            Svalovka 6 | Pocit 10        Včera >│
-└────────────────────────────────────────────────────────────┘
+<ActiveChallengeWidget />
 ```
 
 ---
 
-## Soubory k úpravě
+## Soubory k vytvoření/úpravě
 
-| Soubor | Změny |
-|--------|-------|
-| `src/components/notifications/UnifiedNotificationItem.tsx` | Extrakce jména z message, lepší zobrazení položek |
-| `src/components/notifications/NotificationCenter.tsx` | Přidání handleFeedbackItemClick, rozšíření onItemClick pro všechny kategorie |
-| `src/hooks/useAggregatedNotifications.ts` | Vylepšit agregovanou message tak, aby obsahovala skutečná jména |
+| Soubor | Akce |
+|--------|------|
+| `src/components/client-portal/dashboard/MyExercisesWidget.tsx` | Nový - hlavní widget |
+| `src/components/client-portal/dashboard/ExerciseProgressSheet.tsx` | Nový - detail s grafem |
+| `src/components/client-portal/dashboard/ExerciseSparklineItem.tsx` | Nový - mini karta cviku |
+| `src/pages/client-portal/ClientPortalOverview.tsx` | Úprava - přidat MyExercisesWidget |
 
 ---
 
-## Shrnutí změn
+## Shrnutí UX
 
-1. **Zobrazení jmen** - Agregované položky budou zobrazovat jména klientů místo generického "Klient cvičil"
-2. **Klikatelnost** - Všechny rozbalené položky budou klikatelné a otevřou příslušný dialog
-3. **Lepší UX** - Přidání ikon a náhledů metrik přímo v seznamu
-4. **Konzistence** - Stejný handler pattern pro všechny kategorie notifikací
-
-### Očekávaný výsledek
-- Trenér vidí KDO cvičil/dal zpětnou vazbu přímo v seznamu
-- Kliknutím na položku se otevře detail (WorkoutLogDetailDialog nebo FeedbackDetailDialog)
-- Všechny notifikace jsou actionable
+| Aspekt | Implementace |
+|--------|-------------|
+| **Jednoduchost** | Kompaktní karty s jasným číslem a trendem |
+| **Moderní design** | Sparkline grafy, gradient pozadí, Framer Motion animace |
+| **Čitelnost trendů** | Zelená šipka ↑ = zlepšení, bez ohledu na typ cviku |
+| **Kardio logika** | Graf "stoupá" vizuálně, i když časy klesají |
+| **Mobile-first** | Horizontální scroll, touch-friendly velikosti |
+| **Okamžitá zpětná vazba** | Haptic feedback při interakci |
