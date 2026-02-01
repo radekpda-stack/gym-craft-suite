@@ -41,7 +41,7 @@ export function useAppSettings() {
 export function useTrainingPrices() {
   const { data: settings } = useAppSettings();
   
-  const defaultPrices: TrainingPrices = { "1": 800, "2": 1000, "3": 1200, "first_training": 1000 };
+  const defaultPrices: TrainingPrices = { "1": 900, "2": 1100, "3": 1300, "first_training": 1000 };
   
   return settings?.training_prices || defaultPrices;
 }

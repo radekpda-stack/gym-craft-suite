@@ -190,9 +190,9 @@ async function findTraining(supabase: any, userId: string, clientId: string, dat
 
 // Get pricing based on participant count
 function getTrainingPrice(participantCount: number): number {
-  if (participantCount === 1) return 800;
-  if (participantCount === 2) return 1000;
-  return 1200;
+  if (participantCount === 1) return 900;
+  if (participantCount === 2) return 1100;
+  return 1300;
 }
 
 // Process tool calls and prepare action proposals

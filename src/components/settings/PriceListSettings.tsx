@@ -42,17 +42,17 @@ export function PriceListSettings() {
 
   // Current prices from app_settings
   const currentPrices: PriceInputs = settings?.training_prices || {
-    PT_1: 800,
-    PT_2: 1000,
-    PT_3P: 1200,
+    PT_1: 900,
+    PT_2: 1100,
+    PT_3P: 1300,
     first_training: 1000,
   };
 
   // Map old keys to new keys for display
   const displayCurrentPrices = {
-    PT_1: currentPrices["1"] || currentPrices.PT_1 || 800,
-    PT_2: currentPrices["2"] || currentPrices.PT_2 || 1000,
-    PT_3P: currentPrices["3"] || currentPrices.PT_3P || 1200,
+    PT_1: currentPrices["1"] || currentPrices.PT_1 || 900,
+    PT_2: currentPrices["2"] || currentPrices.PT_2 || 1100,
+    PT_3P: currentPrices["3"] || currentPrices.PT_3P || 1300,
     first_training: currentPrices.first_training || 1000,
   };
 

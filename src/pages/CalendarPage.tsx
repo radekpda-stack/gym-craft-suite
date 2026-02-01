@@ -93,7 +93,7 @@ export default function CalendarPage() {
   const cancelTraining = useCancelTrainingSession();
   const addTrainingParticipants = useAddTrainingSessionParticipants();
   const { data: settings } = useAppSettings();
-  const trainingPrices = settings?.training_prices || { '1': 800, '2': 1000, '3': 1200 };
+  const trainingPrices = settings?.training_prices || { '1': 900, '2': 1100, '3': 1300 };
 
   // Get events for current day (agenda view)
   const dayEvents = useMemo(() => {

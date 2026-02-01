@@ -1053,15 +1053,15 @@ async function handleCredits(supabase: any, method: string, id: string | undefin
     if (!valid) return ownershipError!;
 
     const priceMap: Record<string, number> = {
-      "1": 800,
-      "2": 1000,
-      "3+": 1200,
+      "1": 900,
+      "2": 1100,
+      "3+": 1300,
       "first": 1000,
       "diagnostic": 500,
     };
     
     const sessionType = body!.session_type || "1";
-    const price = body!.price || priceMap[sessionType] || 800;
+    const price = body!.price || priceMap[sessionType] || 900;
 
     const { data: client, error: clientError } = await supabase
       .from("clients")

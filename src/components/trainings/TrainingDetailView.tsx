@@ -181,7 +181,7 @@ export function TrainingDetailView({
     return [{ client_id: training.client_id, name: 'Primární klient' }];
   }, [trainingParticipants, allClients, client, training.client_id]);
   
-  const trainingPrices = settings?.training_prices as { "1": number; "2": number; "3": number } || { "1": 800, "2": 1000, "3": 1200 };
+  const trainingPrices = settings?.training_prices as { "1": number; "2": number; "3": number } || { "1": 900, "2": 1100, "3": 1300 };
   
   // Get feedback request for this training
   const feedbackRequest = feedbackRequests.find(
