@@ -106,7 +106,7 @@ export default function SchedulePage() {
   const addTrainingParticipants = useAddTrainingSessionParticipants();
   const addTrainingTags = useAddTrainingSessionTags();
   const { data: settings } = useAppSettings();
-  const trainingPrices = settings?.training_prices || { '1': 800, '2': 1000, '3': 1200 };
+  const trainingPrices = settings?.training_prices || { '1': 900, '2': 1100, '3': 1300 };
 
   // Week navigation
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });

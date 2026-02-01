@@ -69,7 +69,7 @@ export function QuickPaymentDialog({
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('paid_credit');
   const updateTraining = useUpdateTrainingSession();
   const { data: settings } = useAppSettings();
-  const trainingPrices = settings?.training_prices || { '1': 800, '2': 1000, '3': 1200 };
+  const trainingPrices = settings?.training_prices || { '1': 900, '2': 1100, '3': 1300 };
 
   const handleSave = async () => {
     const paymentMethodMap: Record<PaymentMethod, string> = {

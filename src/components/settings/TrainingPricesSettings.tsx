@@ -10,9 +10,9 @@ export function TrainingPricesSettings() {
   const updateSetting = useUpdateSetting();
 
   const [prices, setPrices] = useState({
-    "1": 800,
-    "2": 1000,
-    "3": 1200,
+    "1": 900,
+    "2": 1100,
+    "3": 1300,
     "first_training": 1000,
   });
   
@@ -28,7 +28,7 @@ export function TrainingPricesSettings() {
   }, [settings]);
 
   const handleBlur = useCallback(async (key: string, value: number) => {
-    const currentPrices = settings?.training_prices || { "1": 800, "2": 1000, "3": 1200, "first_training": 1000 };
+    const currentPrices = settings?.training_prices || { "1": 900, "2": 1100, "3": 1300, "first_training": 1000 };
     
     // Only save if value actually changed
     if (currentPrices[key] === value) return;
