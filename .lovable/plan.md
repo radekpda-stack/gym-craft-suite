@@ -1,120 +1,157 @@
 
-Cíl: Notifikační centrum musí být 100% klikatelné na iPadu i desktopu a klik vždy otevře správný detail (inspektor dialog / konkrétní stránku). Zároveň nesmí přetékat mimo obrazovku iPadu.
+# Oprava cen tréninků - Aktualizace na nový ceník (900/1100/1300 Kč)
 
-## 1) Audit příčiny (co je teď objektivně špatně)
-### 1.1 Dialogy se otevírají “pod” notifikačním sheetem
-- `SheetContent` v `NotificationCenter.tsx` má explicitně `z-[80]`.
-- Globální `DialogContent` má `z-50` (viz `src/components/ui/dialog.tsx`).
-- I když v handleru voláme `setSheetOpen(false)`, Sheet se zavírá animací (`duration-300`) a ještě chvíli fyzicky existuje na obrazovce. Pokud v tom okamžiku nastavíme `dialogOpen(true)`, dialog se sice otevře, ale je schovaný pod SheetContent → uživatel má pocit “nic se nestalo”.
+## Identifikovaný problém
 
-Tohle přesně odpovídá hlášení “kliknu a nic”.
+Od 1.2.2026 platí nový ceník tréninků:
+- **1 osoba**: 900 Kč (místo 800 Kč)
+- **2 osoby**: 1100 Kč (místo 1000 Kč)  
+- **3+ osob**: 1300 Kč (místo 1200 Kč)
 
-### 1.2 Klikání na iPadu může “sežrat” swipe/drag logika
-- `UnifiedNotificationItem` používá `framer-motion` `drag="x"`.
-- Na dotykových zařízeních často dochází k drobnému pohybu prstu i při tapnutí → komponenta to vyhodnotí jako drag a klik se neprovede (nebo je velmi nespolehlivý).
-- V kódu je ochrana `if (isDragging) return;` – to může na iPadu způsobit, že tap nic neudělá.
+**Příčina problému**: V kódu je na mnoha místech hardcodovaná **stará cena 800/1000/1200 Kč** jako fallback, když se data z databáze nestihnou načíst. Barbora Vopavová nemá fixovanou cenu (`use_legacy_pricing = false`, `grandfathered_credit = null`), takže by měla platit nové ceny, ale aplikace zobrazuje staré.
 
-### 1.3 Přetékání / špatná výška na iPadu
-- `SheetContent` je `h-full` z variant, ale má zároveň `overflow-y-auto`.
-- Uvnitř je ještě `ScrollArea className="flex-1"`, ale bez explicitní výšky a bez ošetření `max-h`/`dvh`.
-- Na iPadu (a ještě víc v landscape) je velmi snadné “přetéci” pod spodní hranu (a navíc safe-area), protože hlavička + search zabere výšku a zbytek nemá striktně definované chování.
+### Ověřeno v databázi
 
-## 2) Návrh řešení (robustní, důsledné, jednotné)
-### 2.1 Změna architektury kliknutí: “close-then-open” (jeden zdroj pravdy)
-Implementace v `NotificationCenter.tsx`:
-- Zavedu koncept “pending action”:
-  - Klik na notifikaci neotevře dialog hned.
-  - Místo toho uloží, co se má stát (např. `{ type: 'openNutrition', notification }`), zavře Sheet (`setSheetOpen(false)`).
-  - Jakmile Sheet opravdu dojede do zavřeného stavu, teprve potom vykonáme pending akci (otevřeme dialog / navigaci).
+| Nastavení | Hodnota v DB |
+|-----------|--------------|
+| `training_prices` | `{"1": 900, "2": 1100, "3": 1300}` ✅ |
+| `legacy_training_prices` | `{"1": 800, "2": 1000, "3": 1200}` ✅ |
 
-Technicky:
-- `handleSheetOpenChange(open)` už existuje. Větší spolehlivost:
-  - při `open === false` spustit `flushPendingAction()` v `requestAnimationFrame()` nebo krátkém `setTimeout(0/50ms)`.
-- Výhoda: dialog se nikdy nebude otevírat “pod” sheetem.
+| Klient | `use_legacy_pricing` | `grandfathered_credit` |
+|--------|---------------------|------------------------|
+| Barbora Vopavová | `false` | `null` |
 
-### 2.2 Z-index jako druhá pojistka (aby nic nešlo “pod” nic)
-- U detail dialogů používaných z NotificationCenter (NutritionEntryDetailDialog, WorkoutLogDetailDialog, ProfileUpdateDetailDialog, BirthdayDetailDialog, AnniversaryDetailDialog, FeedbackDetailDialog) nastavím vyšší z-index pro jejich overlay i content (např. `z-[120]`).
-- To lze udělat:
-  1) buď přes `className` prop na DialogContent v těchto dialozích (preferované – scoped jen na notifikační inspektory),
-  2) nebo (méně vhodné) globálně v `src/components/ui/dialog.tsx`.
+→ Klientka by měla platit nové ceny (900 Kč), ale kód spadne na fallback se starou cenou.
 
-Cíl: i kdyby se někde Sheet ještě “dopohyboval”, dialog bude vizuálně navrchu.
+---
 
-### 2.3 Vypnutí / úprava swipe gest na dotykových zařízeních (iPad) pro 100% klik
-- Na iPadu je prioritou “tap otevře detail”.
-- Upravím `UnifiedNotificationItem.tsx`:
-  - Buď detekce touch zařízení a `enableSwipe={false}` pro dotyk (nejrychlejší a nejspolehlivější).
-  - Nebo přesnější tap/drag rozlišení:
-    - použít `onPointerDown` uložit start X/Y
-    - na `onPointerUp` pokud delta < např. 6px, brát jako click (i kdyby framer-motion považoval gesto za drag)
-    - případně použít `onTap` z framer-motion.
-- Doporučení pro “čistší, rychlý a 100% spolehlivý” workflow: na touch zařízeních swipe vypnout, a akce “Přečteno / Smazat” dát jako explicitní tlačítka (už tam jsou). Swipe je hezký, ale rizikový.
+## Nalezené problémové soubory
 
-### 2.4 Sjednocení chování: každý typ notifikace musí otevřít konkrétní “okno události”
-Teď je nekonzistence:
-- “Nutrition” single notifikace naviguje na `/nutrition/client/:id`, zatímco aggregated item otvírá dialog.
-Změním tak, aby:
-- klik na nutrition notifikaci vždy otevřel `NutritionEntryDetailDialog` (inspektor dne).
-- klik na workout notifikaci vždy otevřel `WorkoutLogDetailDialog`.
-- klik na feedback otevřel `FeedbackDetailDialog` (a pokud není dohledatelné, fallback na `/trainings/:id` nebo `/clients/:id?tab=history`).
-- diagnostiky: buď dialog (pokud existuje), nebo jednoznačný fallback na profil klienta, ale opět přes pending action (close-then-navigate).
+### 1. Hlavní zdroj fallbacku
 
-Výsledek: uživatel nikdy neuvidí “nic”.
+| Soubor | Řádek | Problém |
+|--------|-------|---------|
+| `src/hooks/useAppSettings.ts` | 44 | `defaultPrices = { "1": 800, "2": 1000, "3": 1200 }` |
 
-### 2.5 iPad overflow fix: pevná výška + správné scrollování + safe-area
-V `NotificationCenter.tsx` upravím layout:
-- `SheetContent` dostane:
-  - `h-[100dvh] max-h-[100dvh] overflow-hidden` (ScrollArea bude jediný scroll)
-  - `pb-safe` / `safe-area-bottom` (už existuje ve variantách pro bottom, ale tady jsme right sheet; přidáme padding bottom)
-- `ScrollArea` dostane explicitní výšku přes flex:
-  - header + search + settings jsou `shrink-0`
-  - content bude `flex-1 min-h-0` (kritické pro správný flex scroll na iOS)
-- Tím se notif nikdy “nevyteče” mimo obrazovku a bude korektně scrollovat.
+### 2. Další hardcodované fallbacky
 
-## 3) Konkrétní soubory a změny
-1) `src/components/notifications/NotificationCenter.tsx`
-- Přidat “pendingAction” state + `flushPendingAction` mechaniku.
-- Upravit všechny click handlery (single i aggregated), aby:
-  - jen nastavily pendingAction
-  - zavřely sheet
-  - nic dalšího nedělaly okamžitě
-- Změnit nutrition click z “navigate” na “open NutritionEntryDetailDialog”.
-- Opravit layout pro iPad: `SheetContent` + `ScrollArea` (min-h-0, overflow-hidden, 100dvh).
+| Soubor | Řádek | Aktuální hodnota |
+|--------|-------|------------------|
+| `src/pages/CalendarPage.tsx` | 96 | `{ '1': 800, '2': 1000, '3': 1200 }` |
+| `src/pages/SchedulePage.tsx` | 109 | `{ '1': 800, '2': 1000, '3': 1200 }` |
+| `src/components/calendar/QuickPaymentDialog.tsx` | 72 | `{ '1': 800, '2': 1000, '3': 1200 }` |
+| `src/components/trainings/TrainingDetailView.tsx` | 184 | `{ "1": 800, "2": 1000, "3": 1200 }` |
+| `src/components/settings/TrainingPricesSettings.tsx` | 31 | `{ "1": 800, "2": 1000, "3": 1200 }` |
+| `src/components/settings/PriceListSettings.tsx` | 44-47 | `PT_1: 800, PT_2: 1000, PT_3P: 1200` |
 
-2) `src/components/notifications/UnifiedNotificationItem.tsx`
-- Ošetřit dotykové zařízení:
-  - buď vypnout swipe na touch (preferované)
-  - nebo přepsat click logiku na pointer/tap-friendly implementaci.
-- Ponechat swipe funkci pro desktop myš (kde je spolehlivá).
+### 3. Backend (Edge Functions)
 
-3) Notifikační inspektor dialogy (podle potřeby)
-- `src/components/notifications/NutritionEntryDetailDialog.tsx`
-- `src/components/notifications/WorkoutLogDetailDialog.tsx`
-- `src/components/feedback/FeedbackDetailDialog.tsx` (pokud používá stejné Dialog primitives)
-- případně další detail dialogy
-Změna: přidat vyšší `z-index` přes className na Dialog overlay/content (jen pro tyto dialogy).
+| Soubor | Řádek | Problém |
+|--------|-------|---------|
+| `supabase/functions/ai-operator/index.ts` | 192-195 | Hardcodované `800/1000/1200` |
+| `supabase/functions/api-v1/index.ts` | 1055-1060 | Hardcodované `800/1000/1200` |
 
-## 4) Testovací scénáře (musí projít)
-### Funkční kliky
-- iPad: tap na “Honza Kimzo cvičil” → otevře WorkoutLogDetailDialog se jménem klienta a detaily.
-- iPad: tap na “Bubáková Petra dnes zapisuje stravu” → otevře NutritionEntryDetailDialog s denními záznamy.
-- Tap na feedback notifikaci → otevře FeedbackDetailDialog, případně fallback navigace.
-- Tap na aggregated notification → rozbalí, tap na sub-item → otevře odpovídající detail.
+---
 
-### Z-index / overlay
-- Při otevření detail dialogu nesmí být nic “pod sheetem” a uživatel musí vždy vidět dialog.
-- Zavření dialogu nevrací rozbitý stav sheetu.
+## Navrhované řešení
 
-### Layout
-- Notifikace na iPadu nepřetékají mimo obrazovku.
-- List je scrollovatelný, header zůstává nahoře, settings dole fungují.
+### Krok 1: Aktualizace centrálního fallbacku
 
-## 5) Minimální otázky (jen pokud narazíme na rozhodnutí)
-- Chceš na iPadu zachovat swipe gesta (přečteno/smazat), nebo je prioritou 100% klik (doporučuji swipe vypnout na touch)?
-- U “Strava” notifikací: preferuješ vždy “inspektor dialog dne” (rychlé ověření) nebo přímý přechod do celé stránky výživy klienta? (v plánu počítám s dialogem, protože chceš “otevřít to okno události”.)
+**Soubor**: `src/hooks/useAppSettings.ts`
 
-## 6) Kritéria hotovo
-- “Kliknu na notifikaci → vždy se otevře konkrétní okno události (dialog / stránka)”.
-- Žádné “nic se nestalo”.
-- Žádné přetékání na iPadu.
-- Jednotné chování pro single i aggregated notifikace.
+```typescript
+// PŘED (řádek 44):
+const defaultPrices: TrainingPrices = { "1": 800, "2": 1000, "3": 1200, "first_training": 1000 };
+
+// PO:
+const defaultPrices: TrainingPrices = { "1": 900, "2": 1100, "3": 1300, "first_training": 1000 };
+```
+
+### Krok 2: Aktualizace všech lokálních fallbacků
+
+Všechny soubory s hardcodovanou starou cenou budou aktualizovány:
+
+| Soubor | Změna |
+|--------|-------|
+| `CalendarPage.tsx` | `800/1000/1200` → `900/1100/1300` |
+| `SchedulePage.tsx` | `800/1000/1200` → `900/1100/1300` |
+| `QuickPaymentDialog.tsx` | `800/1000/1200` → `900/1100/1300` |
+| `TrainingDetailView.tsx` | `800/1000/1200` → `900/1100/1300` |
+| `TrainingPricesSettings.tsx` | `800/1000/1200` → `900/1100/1300` |
+| `PriceListSettings.tsx` | `800/1000/1200` → `900/1100/1300` |
+
+### Krok 3: Aktualizace Edge Functions
+
+**AI Operator** (`supabase/functions/ai-operator/index.ts`):
+```typescript
+// PŘED:
+function getTrainingPrice(participantCount: number): number {
+  if (participantCount === 1) return 800;
+  if (participantCount === 2) return 1000;
+  return 1200;
+}
+
+// PO:
+function getTrainingPrice(participantCount: number): number {
+  if (participantCount === 1) return 900;
+  if (participantCount === 2) return 1100;
+  return 1300;
+}
+```
+
+**API v1** (`supabase/functions/api-v1/index.ts`):
+```typescript
+// PŘED:
+const priceMap: Record<string, number> = {
+  "1": 800,
+  "2": 1000,
+  "3+": 1200,
+  ...
+};
+
+// PO:
+const priceMap: Record<string, number> = {
+  "1": 900,
+  "2": 1100,
+  "3+": 1300,
+  ...
+};
+```
+
+---
+
+## Soubory k úpravě (10 souborů)
+
+### Frontend (8 souborů)
+1. `src/hooks/useAppSettings.ts` - centrální fallback
+2. `src/pages/CalendarPage.tsx` - kalendář
+3. `src/pages/SchedulePage.tsx` - rozvrh
+4. `src/components/calendar/QuickPaymentDialog.tsx` - rychlá platba
+5. `src/components/trainings/TrainingDetailView.tsx` - detail tréninku
+6. `src/components/settings/TrainingPricesSettings.tsx` - nastavení cen
+7. `src/components/settings/PriceListSettings.tsx` - ceník nastavení
+
+### Backend (2 edge funkce)
+8. `supabase/functions/ai-operator/index.ts` - AI asistent
+9. `supabase/functions/api-v1/index.ts` - API
+
+---
+
+## Očekávaný výsledek
+
+| Scénář | Před | Po |
+|--------|------|-----|
+| Barbora Vopavová (bez fixace) | 800 Kč | 900 Kč ✅ |
+| Nový klient | 800 Kč | 900 Kč ✅ |
+| Klient s fixací (`use_legacy_pricing=true`) | 800 Kč | 800 Kč (správně) |
+| Duo trénink | 1000 Kč | 1100 Kč ✅ |
+| Skupinový trénink (3+) | 1200 Kč | 1300 Kč ✅ |
+
+---
+
+## Poznámka k fixaci cen
+
+Systém fixace cen zůstane funkční:
+- Klienti s `use_legacy_pricing = true` a `grandfathered_credit > 0` budou i nadále platit staré ceny (800/1000/1200)
+- Jakmile vyčerpají fixovaný kredit, automaticky přejdou na nové ceny
+- Toto chování je správné a bude zachováno
