@@ -1,223 +1,163 @@
 
-# Audit Statistik - Kompletní přehled a doporučení
+# Plán: Přehlednější finanční karta klienta + textový export
 
-## Shrnutí současného stavu
+## Problémy k řešení
 
-Stránka Statistiky je rozdělena do 4 záložek:
-1. **Kariéra** - celoživotní přehled trenéra
-2. **Finance** - příjmy, platby, ziskovost
-3. **Tréninky** - aktivita, heatmapa, distribuce
-4. **Klienti** - retence, LTV, rizikoví klienti
-
----
-
-## KARIÉRA (CareerStatsSection)
-
-### Správně funguje:
-| Komponenta | Status | Poznámka |
-|------------|--------|----------|
-| KPI Grid (tréninky, hodiny, klienti, hodinová sazba) | ✅ OK | Data z `useLifetimeStats` |
-| Rozdělení podle typu (silové, kardio, kondiční, ostatní) | ✅ OK | Správně agreguje |
-| CareerMilestonesTimeline | ✅ OK | Progress k dalšímu cíli + historie |
-
-### Problémy:
-| Komponenta | Problém | Doporučení |
-|------------|---------|------------|
-| PeriodComparisonCard | **Duplicita** - zobrazuje se i v Kariéře i v Trénincích | **Odstranit z Kariéry** - kariéra je celoživotní přehled, porovnání období sem nepatří |
-| Hodinová sazba | Záleží na tom, zda má trénink vyplněnou `duration` | Přidat varování pokud < 50% tréninků má délku |
-
-### Chybí:
-| Funkce | Popis | Priorita |
-|--------|-------|----------|
-| Graf vývoje přes čas | Jak rostl počet tréninků/klientů po rocích | Střední |
-| Top klienti celkově | Kdo přinesl nejvíc peněz za celou kariéru | Nízká |
+1. **"Osobní dluh" (-599 Kč)** - zobrazuje se u sdíleného budgetu jako `(skutečný stav: ...)` - odstraníme
+2. **Finance jsou v záložce "Tréninky"** - nelogické umístění
+3. **Chybí jednoduchý textový export** - trenér potřebuje kopírovatelný výpis
+4. **Nedostatečná přehlednost pro audit** - trenér potřebuje snadno zkontrolovat správnost
 
 ---
 
-## FINANCE (FinanceStatsSection)
+## Změny
 
-### Správně funguje:
-| Komponenta | Status | Poznámka |
-|------------|--------|----------|
-| FinanceHeroKPI | ✅ OK | Přijatý kredit, odtrénováno, průměr/trénink, nezaplaceno |
-| RevenueByTrainingTypeCard | ✅ OK | Výnosnost podle typu s hodinovou sazbou |
-| FinanceChartsSection (Trend + Pie) | ✅ OK | Správně zobrazuje trend a rozložení |
-| MonthlyIncomeCard | ✅ OK | Roční přehled s trendem vs loni |
-| CancellationStatsCard | ✅ OK | Zrušené tréninky, pozdní zrušení, storno poplatky |
+### 1. Odstranění "osobního dluhu" z ClientBudgetGroupCard
 
-### Problémy:
-| Komponenta | Problém | Doporučení |
-|------------|---------|------------|
-| InsightsBar | Některé insights jsou **evaluativní** ("Výborné", "Ke zlepšení") | Přeformulovat na fakta bez hodnocení |
-| RevenueBreakdownCard | **Duplicitní s Pie chartem** v FinanceChartsSection | **Odstranit** - ukazuje stejná data (tréninky vs produkty) |
-| Produkty karta (podmíněná) | Zobrazuje se jen pokud je nezaplaceno + produkty > 0 - nelogické | Buď zobrazit vždy, nebo smazat |
+**Soubor:** `src/components/clients/ClientBudgetGroupCard.tsx`
 
-### Chybí:
-| Funkce | Popis | Priorita |
-|--------|-------|----------|
-| Cash flow predikce | Očekávaný příjem na základě naplánovaných tréninků | Vysoká |
-| Provozní náklady | Karta s náklady chybí ve Finance sekci (existuje komponenta) | Střední |
-
----
-
-## TRÉNINKY (TrainingStatsSection)
-
-### Správně funguje:
-| Komponenta | Status | Poznámka |
-|------------|--------|----------|
-| TrainingHeroKPI | ✅ OK | Celkem, tento měsíc, průměr/týden, nejčastější typ |
-| TrainingTypeDistributionCard | ✅ OK | Pie + progress bary |
-| TrainingDurationCard | ✅ OK | Průměrná délka, min/max, celkem hodin |
-| InteractiveHeatmapCard | ✅ OK | Heatmapa kapacity |
-| GlobalTagDistributionCard | ✅ OK | Distribuce tagů (zaměření, partie, intenzita) |
-| FeedbackTagCorrelation | ✅ OK | Korelace feedback vs tagy |
-
-### Problémy:
-| Komponenta | Problém | Doporučení |
-|------------|---------|------------|
-| PeriodComparisonCard | **Duplicita** - zobrazuje se i zde | Ponechat zde (patří sem), odstranit z Kariéry |
-| HeatmapSummary | Jen text pod heatmapou | **Sloučit** do InteractiveHeatmapCard jako header |
-| Trend výpočet | `trendVsPrevious` je hrubý odhad z průměru | Použít skutečná data minulého období |
-
-### Chybí:
-| Funkce | Popis | Priorita |
-|--------|-------|----------|
-| Graf tréninků po dnech/týdnech | Area chart s historií | Střední |
-| Obsazenost kapacity | Kolik % slotů je využito (existuje hook) | Vysoká |
-
----
-
-## KLIENTI (ClientStatsSection)
-
-### Správně funguje:
-| Komponenta | Status | Poznámka |
-|------------|--------|----------|
-| ClientHealthDashboard | ✅ OK | Aktivní, retence, LTV, rizikoví klienti |
-| ClientHeroKPI | ✅ OK | 4 karty - aktivní, retence, délka spolupráce, pocit těla |
-| ClientLTVRankingCard | ✅ OK | Top 5 klientů podle LTV |
-| CohortRetentionCard | ✅ OK | Kohortová tabulka retence |
-| ChurnRiskCard | ✅ OK | Rizikoví klienti s doporučeními |
-| ClientTenureCard | ✅ OK | Délka spolupráce - distribuce |
-| ClientFeedbackCard | ✅ OK | Průměrný pocit těla a session fit |
-
-### Problémy:
-| Komponenta | Problém | Doporučení |
-|------------|---------|------------|
-| InsightsBar | Obsahuje **evaluativní** texty ("Výborná retence") | Přeformulovat |
-| ClientHealthDashboard vs ClientHeroKPI | **Částečná duplicita** - oba ukazují aktivní klienty a retenci | Sloučit do jednoho |
-| GaugeCard pro retenci | Používá barvy (zelená/červená) = evaluativní | Změnit na neutrální barvy |
-
-### Chybí:
-| Funkce | Popis | Priorita |
-|--------|-------|----------|
-| Trend nových vs odešlých klientů | Graf přírůstku/úbytku přes čas | Střední |
-| Segmentace klientů | Podle tagu, frekvence, hodnoty | Nízká |
-
----
-
-## SOUHRNNÁ TABULKA AKCÍ
-
-### Odstranit (duplicity):
-| Komponenta | Z | Důvod |
-|------------|---|-------|
-| `PeriodComparisonCard` | CareerStatsSection | Duplicita s TrainingStatsSection |
-| `RevenueBreakdownCard` | FinanceStatsSection | Duplicita s FinanceChartsSection (Pie chart) |
-| Podmíněná Produkty karta | FinanceStatsSection | Nelogická podmínka zobrazení |
-
-### Upravit:
-| Komponenta | Změna |
-|------------|-------|
-| `InsightsBar` + generátory | Odstranit evaluativní slova ("Výborné", "Nízká") - nahradit fakty |
-| `ClientHeroKPI` + `ClientHealthDashboard` | Sloučit do jedné komponenty |
-| `HeatmapSummary` | Přesunout do headeru `InteractiveHeatmapCard` |
-| `GaugeCard` v ClientHeroKPI | Změnit varianty na neutrální |
-| Trend výpočet v TrainingStatsSection | Použít skutečná data z předchozího období |
-
-### Přidat:
-| Komponenta | Sekce | Priorita |
-|------------|-------|----------|
-| `CapacityUtilizationCard` | Tréninky | Vysoká - existuje hook, jen chybí komponenta |
-| `OperatingExpensesCard` | Finance | Střední - komponenta existuje, není integrována |
-| `CashflowForecastCard` | Finance | Střední - predikce příjmu |
-| Graf tréninků po týdnech | Tréninky | Střední |
-| Graf nových vs odešlých klientů | Klienti | Střední |
-
----
-
-## DOPORUČENÉ PRIORITY
-
-### Fáze 1 - Čistka (Quick wins):
-1. Odstranit `PeriodComparisonCard` z Kariéry
-2. Odstranit `RevenueBreakdownCard` z Finance (duplicita)
-3. Odstranit podmíněnou Produkty kartu
-
-### Fáze 2 - Non-evaluativní UI:
-1. Přepsat `InsightsBar` generátory - fakta místo hodnocení
-2. Změnit barvy v `GaugeCard` na neutrální
-3. Sloučit `HeatmapSummary` do `InteractiveHeatmapCard`
-
-### Fáze 3 - Nové funkce:
-1. Přidat `CapacityUtilizationCard` do Tréninků
-2. Přidat `OperatingExpensesCard` do Finance
-3. Sloučit `ClientHeroKPI` + `ClientHealthDashboard`
-
----
-
-## KONKRÉTNÍ PŘÍKLAD: Evaluativní vs Faktický text
-
-**Před (evaluativní):**
-```
-"Výborná retence: 85%"
-"Nízká retence: 45%"
-"Příjem +15% vs minulý měsíc" (s zelenou barvou)
-```
-
-**Po (faktický):**
-```
-"Retence: 85% (60 dní)"
-"Retence: 45% (60 dní)"
-"Příjem: +15% vs min. období" (neutrální barva)
+Odstraním řádky 370-374:
+```tsx
+// ODSTRANIT:
+{isExhausted && actualBalance < 0 && (
+  <p className="text-xs text-muted-foreground mt-1">
+    (skutečný stav: {actualBalance.toLocaleString('cs-CZ')} Kč)
+  </p>
+)}
 ```
 
 ---
 
-## VIZUÁLNÍ ZMĚNY
+### 2. Přesunutí financí do samostatné záložky
 
+**Soubor:** `src/components/clients/ClientDetailTabs.tsx`
+
+| Před | Po |
+|------|-----|
+| Tréninky obsahují finance | Finance mají vlastní záložku |
+
+Nová záložka "Finance" (ikona Wallet) mezi "Tréninky" a "Výkon":
+- ClientFinanceLedger přesunut sem
+- Záložka "Tréninky" zůstane pouze s periodizací a self-workouts
+
+---
+
+### 3. Přidání textového exportu
+
+**Soubor:** `src/lib/clientLedgerExport.ts`
+
+Nová funkce `exportLedgerToTXT`:
+```text
+════════════════════════════════════════════════════════
+FINANČNÍ PŘEHLED: Jana Nováková
+Období: 1.1.2024 - 2.2.2025
+════════════════════════════════════════════════════════
+
+SOUHRN
+------
+Aktuální zůstatek:    7 700 Kč
+Celkem dobito:       45 000 Kč
+Celkem čerpáno:      37 300 Kč
+Počet transakcí:          89
+
+════════════════════════════════════════════════════════
+DETAILNÍ VÝPIS
+════════════════════════════════════════════════════════
+
+LEDEN 2025
+----------
+15.01. 10:30  Solo trénink         -800 Kč  →  7 700 Kč
+12.01. 14:00  Dobití (hotově)    +5 000 Kč  →  8 500 Kč
+08.01. 09:15  Solo trénink         -800 Kč  →  3 500 Kč
+
+PROSINEC 2024
+-------------
+28.12. 11:00  Duo trénink          -600 Kč  →  4 300 Kč
+...
+
+════════════════════════════════════════════════════════
+Vygenerováno: 2.2.2025 14:32
+════════════════════════════════════════════════════════
 ```
-KARIÉRA (po změnách):
-┌──────────────────────────────────────────┐
-│ 📊 Kariérní přehled                       │
-│ Od 15. března 2023                        │
-└──────────────────────────────────────────┘
-┌────────┬────────┬────────┬────────┐
-│Tréninky│ Hodiny │ Klienti│ Kč/hod │
-│  847   │  847h  │   52   │ 1165   │
-└────────┴────────┴────────┴────────┘
-┌──────────────────────────────────────────┐
-│ 🏆 Kariérní milníky                       │
-│ [Další cíl: 1000 tréninků ████████ 85%] │
-│ ✓ 500 tréninků - 12.5.2024               │
-│ ✓ 50 klientů - 8.3.2024                  │
-└──────────────────────────────────────────┘
-┌──────────────────────────────────────────┐
-│ 💪 Rozdělení podle typu (celkem)          │
-│ [523] Silové  [156] Kardio  [100] Kond.  │
-└──────────────────────────────────────────┘
 
-FINANCE (po změnách):
-┌────────┬────────┬────────┬────────┐
-│Kredit  │Odtrén. │Průměr  │Nezapl. │  (HERO)
-└────────┴────────┴────────┴────────┘
-┌──────────────────────────────────────────┐
-│ 📈 Výnosnost podle typu tréninku         │  (zachovat)
-└──────────────────────────────────────────┘
-┌──────────────────────────────────────────┐
-│ 📊 Trend příjmů         📈 Rozložení     │  (zachovat)
-└──────────────────────────────────────────┘
-┌───────────────────┬──────────────────────┐
-│ 📅 Měsíční přehled│ ❌ Zrušené tréninky  │  (zachovat)
-└───────────────────┴──────────────────────┘
-┌──────────────────────────────────────────┐
-│ 🧾 Provozní náklady (NOVÉ)               │
-└──────────────────────────────────────────┘
+---
+
+### 4. Vylepšení UI finančního ledgeru
+
+**Soubor:** `src/components/clients/ClientFinanceLedger.tsx`
+
+| Změna | Popis |
+|-------|-------|
+| Dropdown export | Dva tlačítka: "Excel (XLSX)" a "Text (TXT)" |
+| Audit banner | Kontrola: "Vypočtený zůstatek souhlasí s evidencí" nebo varování při nesouladu |
+| Filtr období | Možnost vybrat časové období (posledních 30 dní, 3 měsíce, rok, vše) |
+| Lepší popisky | "Solo trénink" → "Solo trénink (z kreditu)" |
+
+---
+
+## Vizuální náhled
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│ 💰 Finanční přehled                    [▼ Export]       │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│ ┌──────────┬──────────┬──────────┬──────────┐          │
+│ │ Zůstatek │ Čerpáno  │  Dobito  │  Nákupy  │          │
+│ │ 7 700 Kč │ 37 300 Kč│ 45 000 Kč│   12 ks  │          │
+│ └──────────┴──────────┴──────────┴──────────┘          │
+│                                                         │
+│ ✓ Zůstatek souhlasí s evidencí                         │
+│                                                         │
+│ [Vše] [Tréninky] [Dobití] [Produkty] [Korekce]         │
+│ [Období: Vše ▼]                                         │
+│                                                         │
+│ ─────── LEDEN 2025 ───────                              │
+│ 🏋️ 15.1. 10:30  Solo trénink      -800 Kč   → 7 700 Kč │
+│ 💳 12.1. 14:00  Dobití           +5 000 Kč   → 8 500 Kč │
+│ ...                                                     │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Soubory k úpravě
+
+| Soubor | Akce |
+|--------|------|
+| `src/components/clients/ClientBudgetGroupCard.tsx` | Odstranit "osobní dluh" |
+| `src/components/clients/ClientDetailTabs.tsx` | Přidat záložku "Finance" |
+| `src/components/clients/ClientFinanceLedger.tsx` | Přidat TXT export, audit banner, filtr období |
+| `src/lib/clientLedgerExport.ts` | Nová funkce `exportLedgerToTXT` |
+
+---
+
+## Technické detaily
+
+### Funkce exportLedgerToTXT
+
+```typescript
+export function exportLedgerToTXT(
+  entries: LedgerEntry[],
+  clientName: string,
+  currentBalance: number,
+  stats: { totalTopUp: number; totalSpent: number; productCount: number },
+  isGroup: boolean = false
+): void {
+  // Generuje formátovaný textový soubor
+  // Stahuje jako .txt
+}
+```
+
+### Audit kontrola
+
+```typescript
+// V ClientFinanceLedger:
+const calculatedBalance = ledgerEntries.reduce((sum, e) => sum + e.amount, 0);
+const balanceMatches = Math.abs(calculatedBalance - currentBalance) < 1;
+```
+
+Pokud `!balanceMatches`, zobrazí varování:
+```
+⚠️ Pozor: Vypočtený zůstatek (7 650 Kč) nesouhlasí s evidencí (7 700 Kč)
 ```
