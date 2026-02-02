@@ -305,7 +305,7 @@ export function CompleteTrainingDialog({
                 onChange={handleParticipantPaymentChange}
                 onPriceChange={handleParticipantPriceChange}
                 disabled={isLoading}
-                allowPriceEdit={participantPayments.length > 1}
+                allowPriceEdit={true}
               />
             ))}
           </div>
