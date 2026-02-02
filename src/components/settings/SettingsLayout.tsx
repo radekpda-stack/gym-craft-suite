@@ -87,16 +87,16 @@ export function SettingsLayout({
                 onCategoryChange(category.id);
                 setShowMobileContent(true);
               }}
-              className="w-full flex items-center gap-3 p-4 glass rounded-xl hover:bg-secondary/50 transition-colors text-left"
+              className="w-full flex items-center gap-3 p-4 rounded-2xl bg-card/60 backdrop-blur-sm border border-border/30 hover:bg-secondary/50 hover:shadow-md hover:-translate-y-0.5 transition-all text-left"
             >
-              <div className={cn('p-2.5 rounded-lg bg-secondary/50', category.iconColor)}>
+              <div className={cn('p-3 rounded-xl bg-secondary/50 shadow-sm', category.iconColor)}>
                 <category.icon className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-foreground">{category.title}</p>
                   {category.badge && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-medium">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
                       {category.badge}
                     </span>
                   )}
@@ -125,7 +125,7 @@ export function SettingsLayout({
           </div>
 
           <ScrollArea className="h-[calc(100vh-12rem)]">
-            <nav className="space-y-1 pr-4">
+            <nav className="space-y-1.5 pr-4">
               {visibleCategories.map((category) => {
                 const isActive = activeCategory === category.id;
                 return (
@@ -133,16 +133,21 @@ export function SettingsLayout({
                     key={category.id}
                     onClick={() => onCategoryChange(category.id)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left",
+                      "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-left",
                       isActive
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-primary/10 text-primary ring-1 ring-primary/30 shadow-sm"
                         : "hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    <category.icon className={cn(
-                      "w-5 h-5",
-                      isActive ? "text-primary" : category.iconColor
-                    )} />
+                    <div className={cn(
+                      "p-2 rounded-lg transition-colors",
+                      isActive ? "bg-primary/20" : "bg-secondary/50"
+                    )}>
+                      <category.icon className={cn(
+                        "w-4 h-4",
+                        isActive ? "text-primary" : category.iconColor
+                      )} />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className={cn(
@@ -152,7 +157,7 @@ export function SettingsLayout({
                           {category.title}
                         </span>
                         {category.badge && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-medium">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
                             {category.badge}
                           </span>
                         )}
@@ -171,11 +176,11 @@ export function SettingsLayout({
         {activeItem && (
           <div className="mb-6">
             <div className="flex items-center gap-3">
-              <div className={cn('p-3 rounded-xl bg-secondary/50', activeItem.iconColor)}>
+              <div className={cn('p-3.5 rounded-2xl bg-secondary/50 shadow-sm', activeItem.iconColor)}>
                 <activeItem.icon className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-foreground">{activeItem.title}</h2>
+                <h2 className="text-xl font-bold text-foreground">{activeItem.title}</h2>
                 <p className="text-sm text-muted-foreground">{activeItem.description}</p>
               </div>
             </div>

@@ -90,16 +90,16 @@ export function AgendaItem({
   };
 
   return (
-    <div className="relative overflow-hidden rounded-xl mb-2">
-      {/* Swipe action backgrounds */}
+    <div className="relative overflow-hidden rounded-2xl mb-2">
+      {/* Swipe action backgrounds with gradient */}
       <motion.div 
-        className="absolute inset-y-0 left-0 w-24 bg-success flex items-center justify-start pl-4 rounded-l-xl"
+        className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-success to-success/70 flex items-center justify-start pl-4 rounded-l-2xl"
         style={{ opacity: rightBgOpacity }}
       >
         <Check className="w-6 h-6 text-white" />
       </motion.div>
       <motion.div 
-        className="absolute inset-y-0 right-0 w-24 bg-muted flex items-center justify-end pr-4 rounded-r-xl"
+        className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-muted to-muted/70 flex items-center justify-end pr-4 rounded-r-2xl"
         style={{ opacity: leftBgOpacity }}
       >
         <MoreHorizontal className="w-6 h-6 text-muted-foreground" />
@@ -117,29 +117,32 @@ export function AgendaItem({
             className="relative"
             onTouchStart={handlePrefetch}
             onMouseEnter={handlePrefetch}
+            whileTap={{ scale: 0.99 }}
           >
             <Link
               to={isDragging ? '#' : `/trainings/${session.id}`}
               onClick={(e) => isDragging && e.preventDefault()}
               className={cn(
-                'block glass-subtle rounded-xl p-4 transition-all active:scale-[0.98]',
+                'block rounded-2xl p-4 transition-all',
+                'bg-card/80 backdrop-blur-sm border border-border/40 shadow-sm',
+                'hover:shadow-md hover:-translate-y-0.5',
                 isCanceled && 'opacity-50'
               )}
             >
               {/* Main content row */}
               <div className="flex items-start gap-3">
-                {/* Time column */}
+                {/* Time column - monospace for alignment */}
                 <div className="flex-shrink-0 text-center min-w-[60px]">
-                  <p className="text-lg font-bold text-foreground">
+                  <p className="text-lg font-bold text-foreground font-mono tracking-tight">
                     {format(sessionDate, 'HH:mm')}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground font-mono">
                     –{format(endTime, 'HH:mm')}
                   </p>
                 </div>
 
-                {/* Divider */}
-                <div className="w-px h-12 bg-border/50 flex-shrink-0" />
+                {/* Divider with gradient */}
+                <div className="w-px h-12 bg-gradient-to-b from-border/80 via-border/40 to-transparent flex-shrink-0" />
 
                 {/* Info column */}
                 <div className="flex-1 min-w-0">
@@ -154,10 +157,10 @@ export function AgendaItem({
                       </div>
                     )}
                   </div>
-                  {/* Status badge - jediný indikátor stavu */}
-                  <div className="mt-1.5">
+                  {/* Status badge - larger and more prominent */}
+                  <div className="mt-2">
                     <span className={cn(
-                      'inline-flex px-2 py-0.5 rounded-full text-xs font-medium',
+                      'inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold',
                       getStatusColor()
                     )}>
                       {getStatusLabel()}

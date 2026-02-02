@@ -29,22 +29,29 @@ export default function Sales() {
         </p>
       </div>
 
-      {/* Tabs */}
+      {/* Premium Floating Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full h-auto p-1 bg-secondary/30 rounded-xl mb-4 sm:mb-6">
+        <TabsList className="w-full h-auto p-1.5 card-floating rounded-2xl mb-4 sm:mb-6 backdrop-blur-md">
           {TABS.map((tab) => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.value;
             return (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
                 className={cn(
-                  "flex-1 gap-2 py-2.5 px-3 sm:px-4 text-foreground/70",
-                  "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm rounded-lg"
+                  "relative flex-1 gap-2 py-3 px-3 sm:px-4 rounded-xl transition-all",
+                  "text-muted-foreground hover:text-foreground/80",
+                  isActive && "text-primary-foreground bg-primary shadow-md"
                 )}
               >
-                <Icon className="w-4 h-4" />
-                <span className="hidden xs:inline uppercase">{tab.label}</span>
+                <div className={cn(
+                  "p-1.5 rounded-lg transition-colors",
+                  isActive ? "bg-primary-foreground/20" : "bg-transparent"
+                )}>
+                  <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <span className="hidden xs:inline text-sm font-medium">{tab.label}</span>
               </TabsTrigger>
             );
           })}
