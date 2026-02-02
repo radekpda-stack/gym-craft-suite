@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ChevronRight,
@@ -16,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { DashboardViewModel, PriorityTask, dismissTask } from '@/hooks/useDashboardViewModel';
 import { useQueryClient } from '@tanstack/react-query';
 import { STATUS_CONFIG, Status } from '@/lib/statusUtils';
+import { UnpaidTrainingsDialog } from './UnpaidTrainingsDialog';
 
 interface PriorityTasksSectionProps {
   data: DashboardViewModel | undefined;
@@ -134,10 +136,28 @@ function SuccessState({ messages }: { messages: string[] }) {
 export function PriorityTasksSection({ data, isLoading }: PriorityTasksSectionProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [showUnpaidDialog, setShowUnpaidDialog] = useState(false);
   
   const handleDismiss = (taskId: string) => {
     dismissTask(taskId);
     queryClient.invalidateQueries({ queryKey: ['dashboard-view-model'] });
+  };
+
+  const handleTaskClick = (task: PriorityTask) => {
+    if (task.type === 'unpaid') {
+      // Count all unpaid tasks
+      const unpaidTasks = data?.priorityTasks.filter(t => t.type === 'unpaid') || [];
+      
+      if (unpaidTasks.length === 1 && task.meta?.trainingId) {
+        // Single unpaid training -> navigate directly
+        navigate(`/trainings/${task.meta.trainingId}`);
+      } else {
+        // Multiple unpaid trainings -> open dialog
+        setShowUnpaidDialog(true);
+      }
+    } else if (task.clientId) {
+      navigate(`/clients/${task.clientId}`);
+    }
   };
   
   if (isLoading) {
@@ -203,16 +223,17 @@ export function PriorityTasksSection({ data, isLoading }: PriorityTasksSectionPr
                 key={task.id}
                 task={task}
                 onDismiss={() => handleDismiss(task.id)}
-                onClick={() => {
-                  if (task.clientId) {
-                    navigate(`/clients/${task.clientId}`);
-                  }
-                }}
+                onClick={() => handleTaskClick(task)}
               />
             ))}
           </div>
         )}
       </CardContent>
+
+      <UnpaidTrainingsDialog 
+        open={showUnpaidDialog} 
+        onOpenChange={setShowUnpaidDialog} 
+      />
     </Card>
   );
 }

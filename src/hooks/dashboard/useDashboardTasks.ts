@@ -189,9 +189,9 @@ export function useDashboardTasks() {
             title: t.clients?.name || 'Neznámý',
             subtitle: 'Nezaplaceno',
             detail: `${t.final_price || 0} Kč • ${daysOld} dní`,
-            actionUrl: `/clients/${t.client_id}`,
+            actionUrl: `/trainings/${t.id}`,
             actionLabel: 'Vyúčtování',
-            meta: { amount: t.final_price, daysOld },
+            meta: { amount: t.final_price, daysOld, trainingId: t.id },
           });
         }
       }
