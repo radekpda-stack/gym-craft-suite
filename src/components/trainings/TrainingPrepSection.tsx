@@ -111,15 +111,15 @@ export function TrainingPrepSection({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="training-section">
+      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm">
         {/* Header */}
         <CollapsibleTrigger asChild>
-          <button className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors">
+          <button className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors rounded-t-2xl">
             <div className="flex items-center gap-2">
               <span className="training-section-title">Příprava na trénink</span>
               {hasAlerts && (
-                <Badge variant="destructive" className="text-[10px] px-1.5">
-                  {hasAlerts ? '!' : ''}
+                <Badge variant="destructive" className="text-[10px] px-1.5 animate-pulse">
+                  !
                 </Badge>
               )}
               {hasFollowups && (
@@ -140,11 +140,13 @@ export function TrainingPrepSection({
           <div className="px-4 pb-4 space-y-3">
             {/* Training Alert - most important */}
             {trainingAlert && (
-              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 ring-1 ring-destructive/20 backdrop-blur-sm">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+                  <div className="p-1.5 rounded-lg bg-destructive/20">
+                    <AlertTriangle className="w-4 h-4 text-destructive" />
+                  </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-destructive uppercase tracking-wide">Upozornění</p>
+                    <p className="text-[10px] font-semibold text-destructive uppercase tracking-widest">Upozornění</p>
                     <p className="text-sm text-foreground mt-1">{trainingAlert}</p>
                   </div>
                 </div>
@@ -153,14 +155,16 @@ export function TrainingPrepSection({
 
             {/* Current Pain */}
             {hasPain && painAreas && painAreas.length > 0 && (
-              <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
+              <div className="p-3 rounded-xl bg-warning/10 border border-warning/30 ring-1 ring-warning/20 backdrop-blur-sm">
                 <div className="flex items-start gap-2">
-                  <Heart className="w-4 h-4 text-warning mt-0.5 shrink-0" />
+                  <div className="p-1.5 rounded-lg bg-warning/20">
+                    <Heart className="w-4 h-4 text-warning" />
+                  </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-warning uppercase tracking-wide">Aktuální bolest</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
+                    <p className="text-[10px] font-semibold text-warning uppercase tracking-widest">Aktuální bolest</p>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
                       {painAreas.map((area) => (
-                        <Badge key={area} variant="outline" className="text-xs border-warning/50 text-warning">
+                        <Badge key={area} variant="outline" className="text-xs border-warning/50 text-warning bg-warning/5">
                           {area}
                         </Badge>
                       ))}

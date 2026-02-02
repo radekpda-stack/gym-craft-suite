@@ -6,6 +6,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -284,18 +285,30 @@ export function CompleteTrainingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Dokončit trénink</DialogTitle>
-          <DialogDescription>
-            Zkontrolujte účastníky a způsob platby.
-          </DialogDescription>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-card/95 backdrop-blur-xl border-border/50">
+        <DialogHeader className="relative pb-4">
+          {/* Success gradient header */}
+          <div className="absolute -top-6 -left-6 -right-6 h-24 bg-gradient-to-br from-success/20 via-success/10 to-transparent rounded-t-2xl pointer-events-none" />
+          <div className="relative flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-success/20 ring-1 ring-success/30">
+              <Loader2 className={cn("w-5 h-5 text-success", isLoading ? "animate-spin" : "hidden")} />
+              <svg className={cn("w-5 h-5 text-success", isLoading && "hidden")} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-bold">Dokončit trénink</DialogTitle>
+              <DialogDescription className="text-sm">
+                Zkontrolujte účastníky a způsob platby.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-2">
           {/* Participant payment cards */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">
+            <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
               Účastníci ({participantPayments.length})
             </Label>
             {participantPayments.map((participant) => (
@@ -310,9 +323,9 @@ export function CompleteTrainingDialog({
             ))}
           </div>
 
-          {/* Payment summary */}
+          {/* Payment summary - premium glass */}
           {paymentSummary.length > 0 && (
-            <div className="p-3 rounded-lg bg-secondary/50 border space-y-1">
+            <div className="p-4 rounded-xl bg-secondary/40 backdrop-blur-sm border border-border/30 space-y-2">
               {paymentSummary.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -321,14 +334,14 @@ export function CompleteTrainingDialog({
                       <Icon className="w-4 h-4" />
                       {item.label}:
                     </span>
-                    <span className="font-medium">
-                      {item.total} Kč ({item.count} os.)
+                    <span className="font-semibold tabular-nums">
+                      {item.total} Kč <span className="text-muted-foreground font-normal">({item.count} os.)</span>
                     </span>
                   </div>
                 );
               })}
-              <div className="border-t pt-2 mt-2 flex items-center justify-between">
-                <span className="font-medium">Celkem:</span>
+              <div className="border-t border-border/50 pt-3 mt-3 flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Celkem:</span>
                 <div className="flex items-center gap-1">
                   <Input
                     type="number"
@@ -337,7 +350,7 @@ export function CompleteTrainingDialog({
                       const newTotal = Math.max(0, parseInt(e.target.value) || 0);
                       handleTotalPriceChange(newTotal);
                     }}
-                    className="w-24 h-9 text-right text-lg font-bold"
+                    className="w-28 h-10 text-right text-xl font-bold tabular-nums bg-card/80"
                     min={0}
                     step={100}
                     disabled={isLoading}
@@ -348,26 +361,30 @@ export function CompleteTrainingDialog({
             </div>
           )}
 
-          {/* Notes */}
+          {/* Notes - subtle */}
           <div className="space-y-2">
-            <Label>Poznámky (volitelné)</Label>
+            <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+              Poznámky (volitelné)
+            </Label>
             <Textarea
               value={completeNotes}
               onChange={(e) => setCompleteNotes(e.target.value)}
               placeholder="Poznámky k tréninku..."
               rows={2}
+              className="bg-secondary/30 border-border/30"
             />
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+        <DialogFooter className="gap-2 pt-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading} className="flex-1 sm:flex-none">
             Zrušit
           </Button>
           <Button
             onClick={handleComplete}
             disabled={isLoading || participantPayments.length === 0}
-            className="bg-success hover:bg-success/90"
+            className="flex-1 sm:flex-none bg-success hover:bg-success/90 text-success-foreground font-semibold shadow-lg shadow-success/25"
+            size="lg"
           >
             {isLoading ? (
               <>
@@ -375,7 +392,12 @@ export function CompleteTrainingDialog({
                 Dokončuji...
               </>
             ) : (
-              'Dokončit trénink'
+              <>
+                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Dokončit trénink
+              </>
             )}
           </Button>
         </DialogFooter>

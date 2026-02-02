@@ -61,14 +61,19 @@ export function TrainingCloseSection({
   onShowNoteChange,
 }: TrainingCloseSectionProps) {
   return (
-    <div className="training-section p-4 space-y-4">
+    <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4 space-y-4">
+      {/* Subtle success gradient for completed */}
+      <div className="absolute inset-0 bg-gradient-to-br from-success/5 via-transparent to-transparent pointer-events-none" />
+      
       {/* Section Header */}
-      <h3 className="training-section-title">Uzavření tréninku</h3>
+      <h3 className="relative training-section-title">Uzavření tréninku</h3>
 
       {/* Payment */}
-      <div className="flex items-center justify-between py-2 border-b border-border/30">
+      <div className="relative flex items-center justify-between py-3 px-3 -mx-3 rounded-xl bg-secondary/30 border border-border/20">
         <div className="flex items-center gap-3">
-          <CreditCard className="w-4 h-4 text-muted-foreground" />
+          <div className="p-2 rounded-lg bg-primary/10">
+            <CreditCard className="w-4 h-4 text-primary" />
+          </div>
           <div>
             <div className="flex items-center gap-2">
               <TrainingStatusBadge 
@@ -76,7 +81,7 @@ export function TrainingCloseSection({
                 paymentStatus={training.payment_status} 
               />
               {training.final_price && (
-                <span className="text-sm font-medium">
+                <span className="text-sm font-bold tabular-nums">
                   {formatCurrency(training.final_price)}
                 </span>
               )}

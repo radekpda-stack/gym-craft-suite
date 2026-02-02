@@ -267,8 +267,10 @@ export function TrainingDetailView({
       {/* EDIT MODE FORM */}
       {isEditMode && (
         <Form {...form}>
-          <div className="training-section p-4 space-y-4 border-2 border-primary/30">
-            <div className="flex items-center justify-between">
+          <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border-2 border-primary/30 shadow-md p-4 space-y-4">
+            {/* Edit mode highlight gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none rounded-2xl" />
+            <div className="relative flex items-center justify-between">
               <h3 className="font-semibold text-foreground">Upravit trénink</h3>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={handleCancel} disabled={isLoading}>
@@ -378,7 +380,7 @@ export function TrainingDetailView({
       )}
 
       {/* TAGS - Compact Grid Selector */}
-      <div className="training-section p-4">
+      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4">
         <CompactTagGridSelector
           trainingType={training.training_type}
           onTrainingTypeChange={async (type) => {
@@ -431,7 +433,7 @@ export function TrainingDetailView({
       </div>
 
       {/* EXERCISES - main content */}
-      <div className="training-section p-4">
+      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4">
         <WorkoutExerciseManager
           trainingSessionId={training.id}
           clientId={training.client_id}
