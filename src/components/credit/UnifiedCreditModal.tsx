@@ -98,12 +98,7 @@ export function UnifiedCreditModal({
     return selectedClient.credit_balance || 0;
   }, [selectedClient, sharedBudgetInfo]);
   
-  // Personal debt that would need to be transferred (only for shared budget clients)
-  const personalDebt = useMemo(() => {
-    if (!selectedClient || !sharedBudgetInfo?.isShared) return 0;
-    const personalBalance = selectedClient.credit_balance || 0;
-    return personalBalance < 0 ? Math.abs(personalBalance) : 0;
-  }, [selectedClient, sharedBudgetInfo]);
+  // Personal debt logic removed - shared budget handles all transactions directly
   
   const totalUnpaid = useMemo(() => {
     return unpaidTrainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
@@ -226,9 +221,6 @@ export function UnifiedCreditModal({
         ? `Přičteno ${formatCurrency(Math.abs(finalAmount))}`
         : `${operationType === 'add' ? 'Přičteno' : 'Odečteno'} ${formatCurrency(Math.abs(finalAmount))}`;
       
-      if (activeTab === 'add' && personalDebt > 0) {
-        successMessage += ` (vyrovnán dluh ${formatCurrency(personalDebt)})`;
-      }
       
       if (selectedUnpaidIds.length > 0) {
         successMessage += ` a uhrazeno ${selectedUnpaidIds.length} tréninků`;
@@ -321,18 +313,13 @@ export function UnifiedCreditModal({
     
     let newBalance = effectiveCreditBalance + change;
     
-    // If there's personal debt in shared budget, it will be transferred
-    if (activeTab === 'add' && personalDebt > 0) {
-      newBalance -= personalDebt;
-    }
-    
     // Subtract unpaid trainings that will be paid
     if (activeTab === 'add') {
       newBalance -= selectedUnpaidTotal;
     }
     
     return newBalance;
-  }, [effectiveCreditBalance, amount, personalDebt, selectedUnpaidTotal, activeTab, operationType]);
+  }, [effectiveCreditBalance, amount, selectedUnpaidTotal, activeTab, operationType]);
 
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
@@ -437,17 +424,6 @@ export function UnifiedCreditModal({
                   </span>
                 </div>
                 
-                {personalDebt > 0 && activeTab === 'add' && (
-                  <div className="flex items-center justify-between text-sm p-2 rounded-lg bg-warning/10 border border-warning/20">
-                    <span className="text-muted-foreground flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3 text-warning" />
-                      Osobní dluh:
-                    </span>
-                    <span className="font-semibold text-warning">
-                      -{formatCurrency(personalDebt, false)}
-                    </span>
-                  </div>
-                )}
                 
                 {unpaidTrainings.length > 0 && (
                   <div className="flex items-center justify-between text-sm">
@@ -657,12 +633,6 @@ export function UnifiedCreditModal({
                 <span className="text-muted-foreground">Přidávaný kredit:</span>
                 <span className="font-semibold text-success">+{formatCurrency(parseFloat(amount) || 0)}</span>
               </div>
-              {personalDebt > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Vyrovnání dluhu:</span>
-                  <span className="font-semibold text-warning">-{formatCurrency(personalDebt)}</span>
-                </div>
-              )}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Úhrada tréninků:</span>
                 <span className="font-semibold text-warning">
