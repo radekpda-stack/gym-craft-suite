@@ -1,392 +1,298 @@
 
-# Vylepšení UI/UX - Inspirace Whoop, Garmin, Apple
+# Fáze 3 & 4: Pokračování grafických úprav UI/UX
 
-## Shrnutí současného stavu
-
-Aplikace má dobrý základ:
-- ✅ Dark-first design s více tématy (Arctic Pro, Nike, Pulse, Noir Luxe)
-- ✅ Glassmorphism efekty (backdrop-blur, transparence)
-- ✅ Framer Motion animace
-- ✅ Responsivní design s mobile-first přístupem
-
-Ale chybí několik klíčových prvků prémiových fitness aplikací:
+## Shrnutí předchozích změn (Fáze 1 & 2)
+✅ Nové CSS utility třídy (`.metric-hero`, `.label-caps`, `.card-floating`, `.skeleton-glow`)
+✅ Activity Ring komponenta (Apple-style progress kruhy)
+✅ Gauge Meter komponenta (Garmin-style indikátory)
+✅ Vylepšená Card komponenta s `floating` a `instrument` variantami
+✅ Animation presets library (`src/lib/animations.ts`)
 
 ---
 
-## Principy designu Whoop/Garmin/Apple
+## Fáze 3: Integrace do existujících komponent
 
-| Prvek | Whoop | Garmin | Apple Fitness |
-|-------|-------|--------|---------------|
-| Vizuální jazyk | Data-first, tmavý, minimal | Přístrojový, robustní | Čistý, barevné kruhy |
-| Typografie | Mono-space pro čísla | Condensed, technický | SF Pro, velké nadpisy |
-| Barvy | Zelená/červená jako signály | Oranžová/modrá akcenty | Duha aktivit |
-| Metriky | Kruhy (strain, recovery) | Gauge meters | Activity rings |
-| Animace | Plynulé, data-driven | Minimální | Oslavné, achievement |
+### 3.1 Dashboard Header - Hero metriky
 
----
+**Soubor:** `src/components/dashboard/DashboardHeader.tsx`
 
-## Navrhované změny
+Současně: Malé badge s metrikami (text-xs, bg-secondary/50)
+Nově: Premium "Instrument Panel" s většími čísly a Activity Rings
 
-### 1. TYPOGRAFIE - Větší kontrast a hierarchy
-
-**Problém:** Současná typografie je příliš uniformní, chybí dramatický kontrast.
-
-**Řešení:**
-```
-Metriky/čísla: 
-- Současně: text-[28px] font-semibold
-- Nově: text-[48px] font-bold tracking-tighter (Whoop style)
-
-Sekundární:
-- Současně: text-sm text-muted-foreground
-- Nově: text-[11px] uppercase tracking-widest text-muted-foreground
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  ● Dobré ráno                                               │
+│    Pondělí, 3. února                    [🏋️ Trénink] [📊]  │
+│                                                             │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐           │
+│  │ ○○○3/5  │ │   3     │ │  4.2k   │ │   ↑     │           │
+│  │ Tréninky│ │ Klienti │ │ Příjem  │ │ Trend   │           │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────┘           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Soubory:**
-- `src/index.css` - nové utility třídy `.metric-hero`, `.label-caps`
-- `src/components/dashboard/KPICard.tsx` - aplikovat novou typografii
+Změny:
+- Status dot větší (w-3 h-3) s subtle glow
+- Metriky jako mini-karty s `.card-floating` efektem
+- Ikony menší a monochromatické
+- Micro Activity Ring pro kapacitu (completed/total)
 
 ---
 
-### 2. METRIKY - Instrumenty místo plain text
+### 3.2 Today Timeline - Premium Timeline design
 
-**Problém:** Data zobrazena jako text, ne jako vizuální "instrumenty".
+**Soubor:** `src/components/dashboard/TodayTimelineCompact.tsx`
 
-**Řešení:** Přidat komponenty:
+Současně: Rounded-xl karty s bg-secondary/30
+Nově: Floating glass karty s timeline connector
 
-**A) Activity Rings (Apple style)**
+```text
+    ○──── 09:00 ───────────────────────────
+    │   ┌─────────────────────────────────┐
+    │   │ 🔵 Jan Novák • Solo             │
+    │   │ Další trénink                   │
+    │   └─────────────────────────────────┘
+    │
+    ●──── 10:30 ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ← NYNÍ
+    │   ┌─────────────────────────────────┐
+    │   │ 🟢 Eva Svobodová • Done         │
+    │   └─────────────────────────────────┘
+    │
+    ○──── 12:00 ───────────────────────────
+```
+
+Změny:
+- Timeline čára vlevo místo pouze tečky
+- "NOW" indikátor jako červená horizontální čára
+- Floating glass effect na položkách (bg-card/60, backdrop-blur)
+- Jemnější přechody (opacity 0.8 pro dokončené)
+- Hover efekt: slight lift (y: -2px)
+
+---
+
+### 3.3 Business Yield Score - Activity Ring integrace
+
+**Soubor:** `src/components/dashboard/BusinessYieldScoreCard.tsx`
+
+Současně: Velké číslo (text-3xl) v boxu
+Nově: Activity Ring s score uprostřed
+
+```text
+    ┌────────────────────────────────────────────────┐
+    │       ╭────────╮                               │
+    │      ╱ ╭────╮  ╲   Business Yield    ⓘ        │
+    │     │  │ 78 │   │  ✓ Stabilní  +2/týden       │
+    │      ╲ ╰────╯  ╱                               │
+    │       ╰────────╯                               │
+    │                                                │
+    │  [████ Efekt] [███░ Využití] [██░░ Klienti]   │
+    └────────────────────────────────────────────────┘
+```
+
+Změny:
+- Nahradit box 20x20 Activity Ringem
+- Score uvnitř kruhu
+- Pillar bars pod ringem
+- Gradient background subtilnější
+
+---
+
+### 3.4 Quick Stats - Instrument Cards
+
+**Soubor:** `src/components/dashboard/QuickStats.tsx`
+
+Současně: Grid 2x3 s p-4 kartami
+Nově: Instrument-style karty s micro-gauge
+
+Změny:
+- Card variant="instrument" pro každou stat kartu
+- Micro gauge pro trendy (LinearGauge komponenta)
+- Ikony menší (w-3.5) s subtle color
+- Čísla větší (text-2xl font-bold tracking-tighter)
+- Labels jako `.label-caps` (uppercase, letter-spacing)
+
+---
+
+### 3.5 Sidebar - Collapsed jako default
+
+**Soubor:** `src/components/layout/Sidebar.tsx`
+
+Současně: `const [collapsed, setCollapsed] = useState(false);`
+Nově: `const [collapsed, setCollapsed] = useState(true);`
+
++ Hover expand behavior:
 ```tsx
-<ActivityRing 
-  progress={75} 
-  color="primary" 
-  size="lg" 
-  label="Kapacita" 
-/>
+onMouseEnter={() => !collapsed && setHovered(true)}
+onMouseLeave={() => setHovered(false)}
 ```
 
-**B) Gauge Meters (Garmin style)**
-```tsx
-<GaugeMeter 
-  value={85} 
-  min={0} 
-  max={100}
-  zones={[
-    { from: 0, to: 40, color: 'red' },
-    { from: 40, to: 70, color: 'yellow' },
-    { from: 70, to: 100, color: 'green' }
-  ]}
-/>
-```
-
-**C) Strain Score (Whoop style)**
-```tsx
-<StrainIndicator 
-  score={14.2} 
-  maxScore={21}
-  pulse // animovaný glow efekt
-/>
-```
-
-**Nové soubory:**
-- `src/components/ui/activity-ring.tsx`
-- `src/components/ui/gauge-meter.tsx`
-- `src/components/ui/strain-indicator.tsx`
+Změny:
+- Default collapsed (w-16)
+- Hover na desktop → expand animace
+- Tooltip pro navigaci při collapsed stavu již funguje
+- Jemnější border (border-border/20)
 
 ---
 
-### 3. NAVIGACE - Simplifikace a Focus
+### 3.6 Mobile Nav - Větší touch targets
 
-**Problém:** Sidebar má 15+ položek, cognitive overload.
+**Soubor:** `src/components/layout/MobileNav.tsx`
 
-**Řešení:**
+Současně: Touch targets w-10 h-10
+Nově: Touch targets w-12 h-12 s premium glass
 
-**A) Desktop Sidebar - Ikony jako default**
-```
-Současně: Rozbalený sidebar (224px) jako default
-Nově: Collapsed (64px) jako default, hover expand
-```
-
-**B) Mobile Bottom Bar - Přidat haptic feedback styling**
-```tsx
-// Větší touch targets, glow on active
-<NavItem className="w-16 h-16 rounded-2xl" />
-```
-
-**C) Quick Actions - Floating radial menu**
-Inspirace Apple Watch:
-```tsx
-<RadialActionMenu 
-  trigger={<Plus />}
-  actions={[
-    { icon: Dumbbell, label: 'Trénink' },
-    { icon: CreditCard, label: 'Platba' },
-    { icon: User, label: 'Klient' },
-  ]}
-/>
-```
-
-**Soubory:**
-- `src/components/layout/Sidebar.tsx` - collapsed default
-- `src/components/layout/MobileNav.tsx` - větší touch targets
-- `src/components/ui/radial-action-menu.tsx` (nový)
+Změny:
+- Větší ikony (w-6 h-6)
+- Aktivní stav: subtle glow efekt
+- Tap feedback: scale(0.95) transition
+- Label text-[10px] místo text-[9px]
 
 ---
 
-### 4. KARTY - Floating glass layers
+### 3.7 Empty State - Animované ilustrace
 
-**Problém:** Karty mají border a shadow, ale chybí depth.
+**Soubor:** `src/components/ui/empty-state.tsx`
 
-**Řešení:**
-
-```css
-/* Současně */
-.card {
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--card));
-}
-
-/* Nově - více vrstev */
-.card-floating {
-  background: linear-gradient(
-    135deg,
-    hsl(var(--card) / 0.8) 0%,
-    hsl(var(--card) / 0.6) 100%
-  );
-  backdrop-filter: blur(20px);
-  border: 1px solid hsl(var(--border) / 0.3);
-  box-shadow: 
-    0 4px 24px -8px hsl(0 0% 0% / 0.4),
-    inset 0 1px 0 hsl(255 255 255 / 0.05);
-}
-```
-
-**Soubory:**
-- `src/index.css` - nové card utility třídy
-- `src/components/ui/card.tsx` - variant `floating`
-
----
-
-### 5. SCHEDULE PAGE - Timeline view
-
-**Problém:** Grid-based schedule, chybí flow.
-
-**Řešení:** Vertical timeline s time indicators:
-
-```
-┌─────────────────────────────────────┐
-│  ○ 08:00 ─────────────────────────  │
-│                                      │
-│  ● 09:00  ┌──────────────────────┐  │
-│           │ 🏋️ Jan Novák         │  │
-│           │ Solo trénink • 60min │  │
-│           └──────────────────────┘  │
-│                                      │
-│  ○ 10:00 ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  │ ← volný slot (dashed)
-│                                      │
-│  ● 11:00  ┌──────────────────────┐  │
-│           │ 🏃 Eva Svobodová     │  │
-│           └──────────────────────┘  │
-└─────────────────────────────────────┘
-```
-
-**Features:**
-- Current time indicator (červená čára)
-- Swipe left/right pro dny
-- Tap na volný slot = rychle přidat
-
-**Soubory:**
-- `src/pages/SchedulePage.tsx` - nový timeline layout
-- `src/components/calendar/VerticalTimeline.tsx` (nový)
-
----
-
-### 6. ANIMACE - Jemnější, purposeful
-
-**Problém:** Některé animace jsou příliš výrazné.
-
-**Řešení:**
+Současně: Statická ikona v kruhu
+Nově: Animated icon s breathing effect
 
 ```tsx
-// Současně - příliš dramatické
-initial={{ opacity: 0, y: 20 }}
-animate={{ opacity: 1, y: 0 }}
-
-// Nově - subtilní
-initial={{ opacity: 0, y: 4 }}
-animate={{ opacity: 1, y: 0 }}
-transition={{ duration: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
+<motion.div
+  className="rounded-full bg-muted/30 flex items-center justify-center"
+  animate={{ 
+    scale: [1, 1.02, 1],
+    opacity: [0.8, 1, 0.8] 
+  }}
+  transition={{ duration: 3, repeat: Infinity }}
+>
+  <Icon />
+</motion.div>
 ```
 
-**Nové efekty:**
-- Pulse glow pro live data
-- Stagger animations pro seznamy
-- Scale feedback pro touch
-
-**Soubory:**
-- `src/lib/animations.ts` (nový) - centrální animation presets
+Změny:
+- Breathing animation na ikonu
+- Gradient background (from-muted/40 to-muted/20)
+- Akční tlačítko s hover glow
 
 ---
 
-### 7. BAREVNÁ PALETA - Signální, ne dekorativní
+### 3.8 Alerts Summary Card - Premium Alert styling
 
-**Problém:** Barvy jsou použity pro estetiku, ne pro signalizaci.
+**Soubor:** `src/components/dashboard/AlertsSummaryCard.tsx`
 
-**Řešení (Whoop approach):**
-```
-✅ Zelená = Dobrý stav (recovery, zisk)
-⚠️ Žlutá = Pozor (nízký kredit, blížící se deadline)
-🔴 Červená = Akce nutná (dluh, neuhrazeno)
-⚪ Šedá = Neutrální data
-🔵 Modrá = Informativní (aktivní, probíhající)
-```
+Současně: Flat colored backgrounds (bg-warning/10)
+Nově: Glass morphism s colored border glow
 
-**Aplikace:**
-- Credit badge: Zelená >1000 Kč, Žlutá 0-1000, Červená <0
-- Training status: Šedá=scheduled, Modrá=in_progress, Zelená=completed
-- Odstranit dekorativní gradienty z datových komponent
+Změny:
+- Alert items jako floating cards
+- Border glow pro severity (ring-1 ring-warning/40)
+- Icon container s subtle pulse pro critical
+- ChevronRight s hover animation
 
 ---
 
-### 8. EMPTY STATES - Více engaging
+## Fáze 4: Polish & Micro-interactions
 
-**Problém:** Prázdné stavy jsou nudné.
+### 4.1 Globální Touch Feedback
 
-**Řešení:**
-```tsx
-<EmptyState 
-  illustration="workout" // animovaná SVG ilustrace
-  title="Žádné tréninky dnes"
-  description="Přidejte první trénink a začněte sledovat pokrok"
-  action={<Button>Přidat trénink</Button>}
-/>
+**Soubor:** `src/lib/animations.ts` (už existuje)
+
+Přidat nové presets:
+```typescript
+export const touchFeedback = {
+  whileTap: { scale: 0.97 },
+  transition: { duration: 0.1 }
+};
+
+export const hoverLift = {
+  whileHover: { y: -2 },
+  transition: { duration: 0.2, ease: appleEase }
+};
+
+export const buttonPress = {
+  whileTap: { scale: 0.98, opacity: 0.9 },
+  transition: { duration: 0.1 }
+};
 ```
 
-**Soubory:**
-- `src/components/ui/empty-state.tsx` - vylepšit
-- `src/assets/illustrations/` - nové minimalistické ilustrace
+### 4.2 Loading Skeleton Enhancement
+
+**Soubor:** `src/components/ui/skeleton.tsx`
+
+Změny:
+- Přidat `.skeleton-shimmer` třídu jako default
+- Gradient shimmer animace
+- Subtle rounded corners (rounded-xl)
+
+### 4.3 Success Celebrations
+
+**Využití existujícího:** `src/lib/confetti.ts`
+
+Přidat volání při:
+- Dokončení tréninku
+- Dosažení PR
+- Uhrazení platby
 
 ---
 
-### 9. LOADING STATES - Skeleton s glow
+## Soubory k úpravě
 
-**Problém:** Skeleton je statický, působí jako chyba.
-
-**Řešení:**
-```css
-.skeleton-glow {
-  background: linear-gradient(
-    90deg,
-    hsl(var(--muted) / 0.3) 0%,
-    hsl(var(--muted) / 0.5) 50%,
-    hsl(var(--muted) / 0.3) 100%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s ease-in-out infinite;
-}
-```
+| Soubor | Změna | Priorita |
+|--------|-------|----------|
+| `src/components/dashboard/DashboardHeader.tsx` | Hero metriky + Activity Ring | Vysoká |
+| `src/components/dashboard/TodayTimelineCompact.tsx` | Premium timeline design | Vysoká |
+| `src/components/dashboard/BusinessYieldScoreCard.tsx` | Activity Ring score | Vysoká |
+| `src/components/dashboard/QuickStats.tsx` | Instrument cards | Střední |
+| `src/components/layout/Sidebar.tsx` | Collapsed default | Střední |
+| `src/components/layout/MobileNav.tsx` | Větší touch targets | Střední |
+| `src/components/ui/empty-state.tsx` | Animated icons | Střední |
+| `src/components/dashboard/AlertsSummaryCard.tsx` | Premium alerts | Střední |
+| `src/components/ui/skeleton.tsx` | Shimmer effect | Nízká |
+| `src/lib/animations.ts` | Nové presets | Nízká |
 
 ---
 
-### 10. MICRO-INTERACTIONS
-
-**A) Button press feedback:**
-```tsx
-whileTap={{ scale: 0.97 }}
-transition={{ duration: 0.1 }}
-```
-
-**B) Success celebration:**
-```tsx
-// Po dokončení tréninku
-<ConfettiExplosion colors={['#00d9ff', '#22c55e']} />
-```
-
-**C) Pull-to-refresh (mobile):**
-```tsx
-<PullToRefresh onRefresh={refetch}>
-  <ContentList />
-</PullToRefresh>
-```
-
----
-
-## Implementační fáze
-
-### Fáze 1 - Foundation (1-2 dny)
-1. Nové typography utility třídy
-2. Vylepšené card varianty (floating)
-3. Animation presets library
-4. Skeleton glow
-
-### Fáze 2 - Components (2-3 dny)
-1. Activity Ring component
-2. Gauge Meter component
-3. Vertical Timeline
-4. Radial Action Menu
-
-### Fáze 3 - Integration (2-3 dny)
-1. Dashboard - nové metric displays
-2. Schedule - timeline view
-3. Client cards - instrument metrics
-4. Navigation - collapsed default
-
-### Fáze 4 - Polish (1-2 dny)
-1. Micro-interactions všude
-2. Empty states ilustrace
-3. Loading states
-4. A/B testování
-
----
-
-## Vizuální ukázka změn
+## Vizuální srovnání
 
 ### Dashboard PŘED:
-```
-┌─────────────────────────────────────┐
-│ Tréninky: 847                       │
-│ Klienti: 52                         │
-│ Příjem: 450,000 Kč                  │
-└─────────────────────────────────────┘
-```
-
-### Dashboard PO (Whoop/Apple style):
-```
-┌─────────────────────────────────────┐
-│                                     │
-│    ╭────╮  ╭────╮  ╭────╮          │
-│   ( ⬤75%)( ⬤92%)( ⬤68%)          │
-│    ╰────╯  ╰────╯  ╰────╯          │
-│   Kapacita Recovery  Streak        │
-│                                     │
-│   847        52      450k          │
-│  TRÉNINKŮ   KLIENTŮ   PŘÍJEM       │
-│   +12%      +3        +8%          │
-│                                     │
-└─────────────────────────────────────┘
+```text
+┌─────────────────────────────────┐
+│ ● Dobré ráno, pondělí           │
+│ [3/5] [3] [4.2k Kč] [↑12%]     │  ← malé badge
+└─────────────────────────────────┘
 ```
 
----
-
-## Soubory k úpravě/vytvoření
-
-| Soubor | Akce | Priorita |
-|--------|------|----------|
-| `src/index.css` | Nové utility třídy | Vysoká |
-| `src/components/ui/activity-ring.tsx` | Nový | Vysoká |
-| `src/components/ui/gauge-meter.tsx` | Nový | Vysoká |
-| `src/components/ui/card.tsx` | Přidat floating variant | Vysoká |
-| `src/lib/animations.ts` | Nový - animation presets | Vysoká |
-| `src/components/layout/Sidebar.tsx` | Collapsed default | Střední |
-| `src/components/calendar/VerticalTimeline.tsx` | Nový | Střední |
-| `src/components/ui/radial-action-menu.tsx` | Nový | Nízká |
-| `src/components/ui/empty-state.tsx` | Vylepšit | Nízká |
+### Dashboard PO:
+```text
+┌─────────────────────────────────┐
+│ ●○ Dobré ráno                   │  ← větší status dot
+│    Pondělí, 3. února            │
+│                                 │
+│ ┌──────┐┌──────┐┌──────┐┌──────┐│
+│ │(○60%)││  3   ││ 4.2k ││  ↑   ││  ← instrument cards
+│ │Kapac.││Klient││Příjem││Trend ││
+│ └──────┘└──────┘└──────┘└──────┘│
+└─────────────────────────────────┘
+```
 
 ---
 
 ## Technické poznámky
 
-- Všechny nové komponenty budou mít Framer Motion animace
-- Activity Ring použije SVG `stroke-dasharray` pro progress
-- Gauge Meter použije SVG arc path
-- Vertical Timeline bude virtualizovaný pro performance
-- Animace budou respektovat `prefers-reduced-motion`
+1. **Activity Ring v DashboardHeader:**
+   - Použije `import { ActivityRing } from '@/components/ui/activity-ring'`
+   - Progress = (completed / total) * 100
+   - Size "sm" pro kompaktní zobrazení
+
+2. **Timeline NOW indicator:**
+   - Spočítat pozici podle aktuálního času
+   - Absolutní pozicování s červenou čárou
+   - Pulse animace pro viditelnost
+
+3. **Sidebar collapsed:**
+   - localStorage persist pro user preference
+   - Keyboard shortcut (Cmd+B) pro toggle
+
+4. **Touch feedback:**
+   - Aplikovat `touchFeedback` na všechny interaktivní elementy
+   - Kombinovat s `haptic.light()` z existujícího systému
