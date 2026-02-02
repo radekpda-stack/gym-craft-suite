@@ -1,206 +1,142 @@
 
-# Návrhy vylepšení aplikace JustMove Asistent
+# Plán: Automatické párování tagů partie těla podle cviků
 
-Po důkladné analýze kódu navrhuji následující vylepšení rozdělená do kategorií podle priority a složitosti.
+## Přehled
 
----
+Při přidání cviku do tréninku se automaticky přiřadí odpovídající tagy partie těla na základě svalových skupin cviku.
 
-## 1. UX/Flow vylepšení (Quick wins)
-
-### 1.1 Rychlejší dokončení tréninku z rozvrhu
-**Aktuální stav**: Po kliknutí na trénink v rozvrhu je nutné otevřít kartu tréninku a pak teprve kliknout "Dokončit".
-
-**Návrh**: Přidat swipe gesture na kartě tréninku v rozvrhu:
-- Swipe doleva = Rychlé dokončení (otevře CompletTrainingDialog)
-- Swipe doprava = Zrušit/Přesunout
-
-**Soubory**: `AgendaItem.tsx`
+**Příklad:**
+- Přidám "Dřep (Back Squat)" → automaticky se přidá tag **"Dolní část"** + **"Core"**
+- Přidám "Bench Press" → automaticky se přidá tag **"Horní část"** + **"Hrudník"**
 
 ---
 
-### 1.2 Bulk akce pro neuhrazené tréninky
-**Aktuální stav**: V novém `UnpaidTrainingsDialog` lze uhradit jednotlivě.
+## Jak to funguje
 
-**Návrh**: Přidat tlačítko "Uhradit vše" pro hromadnou úhradu všech neuhrazených tréninků najednou.
-
-**Soubory**: `UnpaidTrainingsDialog.tsx`
-
----
-
-### 1.3 Klávesové zkratky pro power-users
-**Aktuální stav**: Aplikace má `Cmd+K` pro vyhledávání cviků.
-
-**Návrh**: Rozšířit na globální příkazovou paletu:
-- `Cmd+K` = Hledej klienta/cvik/trénink
-- `Cmd+N` = Nový trénink
-- `Cmd+Shift+N` = Nový klient
-- `Cmd+D` = Dashboard
-
-**Soubory**: Nová komponenta `GlobalCommandPalette.tsx`
-
----
-
-## 2. Dashboard vylepšení
-
-### 2.1 Personalizované ranní briefing
-**Aktuální stav**: Dashboard zobrazuje statické karty.
-
-**Návrh**: Ráno (6-10h) zobrazit speciální "Dnešní briefing" kartu:
-- Kolik tréninků je dnes
-- Očekávaný příjem
-- Klienti s nízkým kreditem, kteří dnes trénují
-- Připomínky a follow-upy
-
-**Soubory**: Nová komponenta `MorningBriefingCard.tsx`
-
----
-
-### 2.2 Widget pro rychlé poznámky
-**Aktuální stav**: Poznámky jsou na samostatné stránce `/notes`.
-
-**Návrh**: Přidat na dashboard rychlý vstup pro poznámku (jako "Quick note" input) - napíšete, odešlete, hotovo. Bez nutnosti navigovat jinam.
-
-**Soubory**: Rozšíření `Index.tsx` + nová komponenta `QuickNoteWidget.tsx`
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  Přidání cviku                                                  │
+│  "Dřep (Back Squat)"                                            │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  1. Zjistit svalové skupiny cviku                               │
+│     quadriceps, gluteus_maximus, hamstrings, erector_spinae     │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  2. Přeložit na body_part_categories (view v databázi)          │
+│     → "lower" (Dolní část), "core" (Core)                       │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  3. Najít odpovídající tagy typu "body_part"                    │
+│     → "Dolní část" (id: d5f602c0-...)                           │
+│     → "Střed těla" (id: 72d6af4d-...)                           │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  4. Přidat tagy k tréninku (pokud ještě nejsou)                 │
+│     training_session_tags.insert(...)                           │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 3. Klientský portál
+## Změny
 
-### 3.1 Streak/série tréninků
-**Aktuální stav**: Portál zobrazuje počet tréninků, ale nesleduje kontinuitu.
+### 1. Nový hook `useAutoTagFromExercise`
 
-**Návrh**: Přidat "Streak" mechaniku:
-- "5 týdnů v řadě bez vynechaného tréninku!"
-- Vizuální flame/fire ikona
-- Notifikace při hrozbě přerušení série
+**Soubor:** `src/hooks/useAutoTagFromExercise.ts`
 
-**Soubory**: Nová komponenta `ClientPortalStreak.tsx`, nový hook `useClientStreak.ts`
+Hook bude:
+- Přijímat `trainingSessionId` a `exerciseId`
+- Používat existující `useExerciseBodyPartCategories` pro získání body_part kategorií cviku
+- Mapovat body_part kategorie na tagy pomocí jednoduché lookup tabulky
+- Automaticky přidávat chybějící tagy pomocí `useUpdateTrainingSessionTags`
 
----
+```typescript
+// Mapování body_part_key → tag ID
+const BODY_PART_TO_TAG: Record<string, string> = {
+  'upper': 'd5f602c0-...', // "Horní část"
+  'lower': '05427be9-...', // "Dolní část" 
+  'core': '72d6af4d-...',  // "Střed těla"
+};
+```
 
-### 3.2 Cíle a progress tracking
-**Aktuální stav**: Portál ukazuje statistiky, ale nemá jasné cíle.
+### 2. Integrace do WorkoutExerciseManager
 
-**Návrh**: Umožnit trenérovi nastavit měsíční cíle pro klienta:
-- "4 tréninky týdně"
-- "Zhubnout 2 kg"
-- "Bench press 100 kg"
+**Soubor:** `src/components/trainings/WorkoutExerciseManager.tsx`
 
-Portál pak zobrazuje progress bar směrem k cíli.
+Po úspěšném přidání cviku (`handleAddExercise`):
+1. Zavolat nový hook pro získání body_part kategorií cviku
+2. Sloučit s existujícími tagy tréninku
+3. Aktualizovat tagy tréninku
 
-**Soubory**: Nový hook `useClientGoals.ts`, komponenta `GoalProgressCard.tsx`
+```typescript
+// V handleAddExercise po úspěšném uložení:
+if (data.exercise_id) {
+  await autoTagFromExercise(trainingSessionId, data.exercise_id);
+}
+```
 
----
+### 3. Notifikace uživateli
 
-## 4. Finance a reporting
-
-### 4.1 Export měsíčního přehledu
-**Aktuální stav**: Statistiky jsou dostupné v aplikaci, ale nelze je exportovat.
-
-**Návrh**: Přidat tlačítko "Exportovat měsíc" na stránce Statistiky:
-- PDF report s přehledem tréninků, příjmů, klientů
-- Možnost poslat emailem nebo stáhnout
-
-**Soubory**: Rozšíření `Statistics.tsx`, nová utilita `generateMonthlyReport.ts`
-
----
-
-### 4.2 Predikce příjmu
-**Aktuální stav**: `CashflowForecastCard` existuje, ale mohlo by být chytřejší.
-
-**Návrh**: Vylepšit predikci o:
-- Opakující se tréninky v kalendáři
-- Historický trend (pokud klient chodí pravidelně, předpokládat pokračování)
-- Zobrazit "optimistický" vs "konzervativní" scénář
-
-**Soubory**: Rozšíření `useCashflowForecast.ts`
+Při automatickém přidání tagu zobrazit toast:
+```
+✓ Automaticky přidáno: Dolní část, Core
+```
 
 ---
 
-## 5. Kalendář a rozvrh
+## Mapování kategorií na tagy
 
-### 5.1 Drag & Drop přesun tréninku
-**Aktuální stav**: Pro přesun tréninku je nutné otevřít detail a upravit datum.
-
-**Návrh**: V týdenním pohledu umožnit drag & drop přesun karty tréninku mezi dny.
-
-**Soubory**: Rozšíření `SchedulePage.tsx` s využitím již nainstalovaného `@dnd-kit`
-
----
-
-### 5.2 Šablony rozvrhu
-**Aktuální stav**: Trenér musí vytvářet tréninky manuálně.
-
-**Návrh**: Přidat "Týdenní šablonu":
-- Definovat vzor (Pondělí 9:00 Klient A, Středa 14:00 Klient B...)
-- Jedním kliknutím aplikovat šablonu na další týden
-
-**Soubory**: Nový hook `useScheduleTemplates.ts`, komponenta `ScheduleTemplateDialog.tsx`
+| Body Part Key | Tag ID | Tag Name |
+|---------------|--------|----------|
+| `upper` | `05427be9-cf51-4d10-a5be-749626fdbec2` | Horní část |
+| `lower` | `d5f602c0-1711-435e-84d7-6c2863a753a7` | Dolní část |
+| `core` | `72d6af4d-345b-46d2-8a22-c456bbdbaa8f` | Střed těla |
 
 ---
 
-## 6. Tréninkový režim
+## Edge cases
 
-### 6.1 Offline sync indikátor
-**Aktuální stav**: Tréninkový režim má prefetch, ale není jasné, co je offline dostupné.
-
-**Návrh**: Přidat vizuální indikátor:
-- Zelená tečka = Data jsou offline ready
-- Oranžová = Částečně načteno
-- Šedá = Online only
-
-**Soubory**: Rozšíření `TrainingModeLayout.tsx`
+| Situace | Řešení |
+|---------|--------|
+| Cvik nemá svalové skupiny | Nic se neděje, tagy se nepřidávají |
+| Tag už je přidán | Přeskočí se (žádné duplicity) |
+| Cvik bez exercise_id | Přeskočí se (custom cviky) |
+| Trenér ručně odebere tag | Zůstane odebraný (nevrací se) |
 
 ---
 
-### 6.2 Rychlý zápis setu
-**Aktuální stav**: Zápis probíhá přes formulář.
+## Budoucí rozšíření
 
-**Návrh**: Přidat "Quick input" režim:
-- Numerická klávesnice pro váhu
-- Swipe pro počet opakování
-- Jeden tap = uložit a další set
-
-**Soubory**: Nová komponenta `QuickSetInput.tsx`
+Funkce bude připravena na:
+- Přidávání specifičtějších tagů (např. "Hýždě" místo jen "Dolní část")
+- Konfigurovatelnost v nastavení (zapnout/vypnout auto-tagging)
+- Sugesce místo automatického přidání (dialog "Chcete přidat tag?")
 
 ---
 
-## 7. Technické optimalizace
+## Soubory k vytvoření/úpravě
 
-### 7.1 Virtualizace dlouhých seznamů
-**Aktuální stav**: Seznam klientů renderuje všechny najednou.
-
-**Návrh**: Pro seznamy delší než 50 položek použít virtualizaci (`@tanstack/react-virtual`).
-
-**Soubory**: `Clients.tsx`, `ExerciseListView.tsx`
+| Soubor | Akce |
+|--------|------|
+| `src/hooks/useAutoTagFromExercise.ts` | **NOVÝ** - hook pro auto-tagging |
+| `src/components/trainings/WorkoutExerciseManager.tsx` | Integrace hooku |
 
 ---
 
-### 7.2 Prefetch nejčastějších stránek
-**Aktuální stav**: Data se načítají až po navigaci.
+## Očekávaný výsledek
 
-**Návrh**: Na dashboardu prefetchovat data pro:
-- Rozvrh (dnešní + zítřejší tréninky)
-- Nejčastější klienti (top 5)
-
-**Soubory**: Rozšíření `Index.tsx` s `queryClient.prefetchQuery`
-
----
-
-## Prioritizace implementace
-
-| Priorita | Funkce | Složitost | Dopad |
-|----------|--------|-----------|-------|
-| 1 | Bulk uhrazení tréninků | Nízká | Vysoký |
-| 2 | Ranní briefing | Střední | Vysoký |
-| 3 | Streak v portálu | Střední | Střední |
-| 4 | Klávesové zkratky | Střední | Střední |
-| 5 | Drag & Drop rozvrh | Vysoká | Vysoký |
-| 6 | Export měsíčního reportu | Střední | Střední |
-| 7 | Quick set input | Vysoká | Vysoký |
-
----
-
-## Doporučený další krok
-
-Začít s **Bulk uhrazením tréninků** - je to rychlá úprava existujícího `UnpaidTrainingsDialog.tsx`, která výrazně zrychlí denní workflow.
+| Akce | Před | Po |
+|------|------|-----|
+| Přidám dřep | Musím ručně kliknout "Dolní část" | Automaticky se přidá |
+| Přidám bench press | Musím ručně kliknout "Horní část" | Automaticky se přidá |
+| Přidám plank | Musím ručně kliknout "Core" | Automaticky se přidá |
+| Smíšený trénink | Zaklikávám vše po jednom | Tagy se přidávají průběžně |
