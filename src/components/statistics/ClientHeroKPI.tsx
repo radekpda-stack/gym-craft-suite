@@ -39,7 +39,7 @@ export function ClientHeroKPI({
         showProgressValue
       />
       
-      {/* Retention rate */}
+      {/* Retention rate - neutral color */}
       <GaugeCard
         title="Retence (60d)"
         value={retentionRate}
@@ -47,7 +47,7 @@ export function ClientHeroKPI({
         displayValue={`${retentionRate}%`}
         sublabel="aktivních"
         description="Min. 1 trénink / 60 dní"
-        variant={retentionRate >= 80 ? 'success' : retentionRate >= 60 ? 'warning' : 'destructive'}
+        variant="primary"
         size="md"
         onClick={() => onCardClick?.('retention')}
       />
@@ -63,7 +63,7 @@ export function ClientHeroKPI({
         onClick={() => onCardClick?.('tenure')}
       />
 
-      {/* Body feel score - scale is 1-10 */}
+      {/* Body feel score - scale is 1-10, neutral color */}
       {avgFeedbackScore !== undefined && avgFeedbackScore > 0 ? (
         <GaugeCard
           title="Ø Pocit těla"
@@ -72,7 +72,7 @@ export function ClientHeroKPI({
           displayValue={avgFeedbackScore.toFixed(1)}
           sublabel="/10"
           description={`Z ${totalFeedback} odpovědí`}
-          variant={avgFeedbackScore >= 8 ? 'success' : avgFeedbackScore >= 6 ? 'warning' : 'destructive'}
+          variant="primary"
           size="md"
           onClick={() => onCardClick?.('feedback')}
         />

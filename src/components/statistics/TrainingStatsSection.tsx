@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useGlobalTrainingTagStats, GlobalDateRange } from '@/hooks/useGlobalTrainingTagStats';
-import { useTrainingHeatmap } from '@/hooks/useTrainingHeatmap';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 import { TrainingHeroKPI } from './TrainingHeroKPI';
@@ -8,7 +7,6 @@ import { TrainingTypeDistributionCard } from './TrainingTypeDistributionCard';
 import { TrainingDurationCard } from './TrainingDurationCard';
 import { GlobalTagDistributionCard } from './GlobalTagDistributionCard';
 import { InteractiveHeatmapCard } from './InteractiveHeatmapCard';
-import { HeatmapSummary } from './HeatmapSummary';
 import { PeriodComparisonCard } from './PeriodComparisonCard';
 import { FeedbackTagCorrelation } from '@/components/feedback/FeedbackTagCorrelation';
 import type { StatsPeriodRange } from './StatsPeriodSelector';
@@ -29,19 +27,7 @@ export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps)
     return days as GlobalDateRange;
   }, [periodRange]);
 
-  // Convert to heatmap period type
-  const heatmapPeriod = useMemo(() => {
-    if (!periodRange) return '3months';
-    if (periodRange.type === 'all') return 'all';
-    if (periodRange.type === '1m') return 'month';
-    if (periodRange.type === '3m') return '3months';
-    return 'year';
-  }, [periodRange]);
-  
   const stats = useGlobalTrainingTagStats(dateRange);
-  
-  // Get heatmap data for summary - now uses global period
-  const { data: heatmapData } = useTrainingHeatmap(heatmapPeriod as any);
 
   // Calculate trend vs previous period (simplified: vs previous month)
   const trendVsPrevious = useMemo(() => {
@@ -94,15 +80,7 @@ export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps)
         <TrainingDurationCard periodRange={periodRange} />
       </div>
 
-      {/* Heatmap Summary - extracted insights */}
-      {heatmapData && (
-        <HeatmapSummary 
-          busiestSlot={heatmapData.busiestSlot} 
-          totalTrainings={heatmapData.totalTrainings} 
-        />
-      )}
-
-      {/* Interactive Heatmap - now uses global periodRange */}
+      {/* Interactive Heatmap - includes summary */}
       <InteractiveHeatmapCard periodRange={periodRange} />
 
       {/* Tag Distribution */}

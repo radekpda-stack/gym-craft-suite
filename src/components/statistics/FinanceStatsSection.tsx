@@ -3,19 +3,13 @@ import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { useMonthlyIncomeGoal } from '@/hooks/useAppSettings';
 import { InsightsBar, generateFinanceInsights } from './InsightsBar';
-import { RevenueBreakdownCard } from './RevenueBreakdownCard';
 import { CancellationStatsCard } from './CancellationStatsCard';
 import { FinanceHeroKPI } from './FinanceHeroKPI';
 import { MonthlyIncomeCard } from './MonthlyIncomeCard';
 import { FinanceChartsSection } from './FinanceChartsSection';
 import { RevenueByTrainingTypeCard } from './RevenueByTrainingTypeCard';
-import { PeriodComparisonCard } from './PeriodComparisonCard';
-import { formatCurrency } from '@/lib/formatters';
-import { MetricCard } from '@/components/charts';
-import { 
-  ShoppingBag,
-  Loader2,
-} from 'lucide-react';
+import { OperatingExpensesCard } from './OperatingExpensesCard';
+import { Loader2 } from 'lucide-react';
 import { QuickFinancialReportButton } from '@/components/finance/QuickFinancialReportButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TotalIncomeModal } from './modals/TotalIncomeModal';
@@ -25,9 +19,7 @@ import { ProductIncomeModal } from './modals/ProductIncomeModal';
 import { PendingPaymentsModal } from './modals/PendingPaymentsModal';
 import { CancellationDetailModal } from './modals/CancellationDetailModal';
 import { MonthlyIncomeDetailModal } from './modals/MonthlyIncomeDetailModal';
-import {
-  TooltipProvider,
-} from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StatsPeriodRange } from './StatsPeriodSelector';
 
 type FinanceModal = 'income' | 'monthly' | 'training' | 'products' | 'pending' | 'cancellation' | 'monthly-history' | null;
@@ -118,32 +110,14 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
         {/* Revenue by Training Type - KEY NEW CHART */}
         <RevenueByTrainingTypeCard periodRange={periodRange} />
 
-        {/* Show products card if pending payments shown in KPI */}
-        {hasPendingPayments && stats?.productIncome && stats.productIncome > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <MetricCard
-              title="Produkty"
-              value={formatCurrency(stats?.productIncome || 0)}
-              subtitle={`${stats?.topProducts?.length || 0} produktů`}
-              progress={stats?.totalIncome ? (stats.productIncome / stats.totalIncome) * 100 : 0}
-              variant="warning"
-              orientation="horizontal"
-              icon={<ShoppingBag className="h-4 w-4" />}
-              onClick={() => setActiveModal('products')}
-            />
-          </div>
-        )}
-
         {/* Trend and Distribution Charts - now uses global periodRange */}
         <FinanceChartsSection periodRange={periodRange} />
 
-        {/* Stats Grid - Payment Structure */}
-        <RevenueBreakdownCard periodRange={periodRange} />
-
-        {/* Monthly Income History and Cancellations */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        {/* Monthly Income History, Cancellations, and Expenses */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           <MonthlyIncomeCard onClick={() => setActiveModal('monthly-history')} />
           <CancellationStatsCard periodRange={periodRange} onClick={() => setActiveModal('cancellation')} />
+          <OperatingExpensesCard />
         </div>
 
         {/* Modals */}

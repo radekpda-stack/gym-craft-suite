@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useTrainingHeatmap } from '@/hooks/useTrainingHeatmap';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, Clock, TrendingUp } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -14,6 +15,7 @@ import type { StatsPeriodRange } from './StatsPeriodSelector';
 type HeatmapPeriod = 'month' | '3months' | 'year' | 'all';
 
 const DAYS = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
+const DAYS_FULL = ['Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota', 'Neděle'];
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 6); // 6:00 - 19:00
 
 interface InteractiveHeatmapCardProps {
@@ -48,7 +50,14 @@ export function InteractiveHeatmapCard({ periodRange }: InteractiveHeatmapCardPr
     return <Skeleton className="h-80 rounded-xl" />;
   }
 
-  const { cells, maxCount, totalTrainings } = data;
+  const { cells, maxCount, totalTrainings, busiestSlot } = data;
+
+  // Calculate busiest slot info for summary
+  const busiestDayName = busiestSlot ? DAYS_FULL[busiestSlot.day] || '' : '';
+  const busiestHour = busiestSlot ? `${busiestSlot.hour}:00` : '';
+  const busiestPercentage = busiestSlot && totalTrainings > 0 
+    ? Math.round((busiestSlot.count / totalTrainings) * 100) 
+    : 0;
 
   return (
     <Card>
@@ -64,6 +73,31 @@ export function InteractiveHeatmapCard({ periodRange }: InteractiveHeatmapCardPr
             </span>
           )}
         </div>
+        
+        {/* Integrated summary from HeatmapSummary */}
+        {busiestSlot && totalTrainings > 0 && (
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-2">
+            <div className="flex items-center gap-1.5">
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span>Nejčastěji:</span>
+              <Badge variant="secondary" className="font-medium">
+                {busiestDayName}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" />
+              <Badge variant="secondary" className="font-medium">
+                {busiestHour}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span className="text-foreground font-medium">{busiestPercentage}%</span>
+              <span>tréninků</span>
+            </div>
+          </div>
+        )}
+        
         <p className="text-xs text-muted-foreground mt-1">
           {totalTrainings} tréninků za vybrané období
         </p>

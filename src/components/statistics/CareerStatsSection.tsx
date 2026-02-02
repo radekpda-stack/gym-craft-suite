@@ -8,7 +8,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLifetimeStats } from "@/hooks/useLifetimeStats";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { StatInfoTooltip } from "./StatInfoTooltip";
-import { PeriodComparisonCard } from "./PeriodComparisonCard";
 import { CareerMilestonesTimeline } from "./CareerMilestonesTimeline";
 import { 
   Trophy, 
@@ -118,9 +117,6 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
           </div>
         </CardContent>
       </Card>
-
-      {/* Period Comparison - respects global periodRange */}
-      <PeriodComparisonCard periodRange={periodRange} />
 
       {/* Lifetime KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

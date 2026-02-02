@@ -73,51 +73,44 @@ export function generateFinanceInsights(
 
   const insights: Insight[] = [];
 
-  // Revenue trend
-  if (vsLastMonth?.revenue !== undefined) {
-    if (vsLastMonth.revenue > 10) {
-      insights.push({
-        type: 'positive',
-        message: `Příjem +${vsLastMonth.revenue}% vs minulý měsíc`,
-      });
-    } else if (vsLastMonth.revenue < -10) {
-      insights.push({
-        type: 'negative',
-        message: `Příjem ${vsLastMonth.revenue}% vs minulý měsíc`,
-      });
-    }
-  }
-
-  // Training trend vs revenue
-  if (vsLastMonth?.revenue !== undefined && vsLastMonth?.trainings !== undefined) {
-    if (vsLastMonth.revenue > 5 && vsLastMonth.trainings < -5) {
-      insights.push({
-        type: 'warning',
-        message: 'Příjem roste, ale počet tréninků klesá',
-      });
-    } else if (vsLastMonth.revenue < -5 && vsLastMonth.trainings > 5) {
-      insights.push({
-        type: 'warning',
-        message: 'Více tréninků, ale nižší příjem',
-      });
-    }
-  }
-
-  // Pending payments
-  if (stats.pendingPayments && stats.pendingPayments.count > 0) {
+  // Revenue trend - factual, no evaluation
+  if (vsLastMonth?.revenue !== undefined && vsLastMonth.revenue !== 0) {
     insights.push({
-      type: 'warning',
-      message: `${stats.pendingPayments.count} klientů má nezaplacenou lekci`,
+      type: 'neutral',
+      message: `Příjem: ${vsLastMonth.revenue > 0 ? '+' : ''}${vsLastMonth.revenue}% vs min. období`,
     });
   }
 
-  // Product vs training income balance
+  // Training trend vs revenue - factual observation
+  if (vsLastMonth?.revenue !== undefined && vsLastMonth?.trainings !== undefined) {
+    if (vsLastMonth.revenue > 5 && vsLastMonth.trainings < -5) {
+      insights.push({
+        type: 'neutral',
+        message: 'Méně tréninků, vyšší příjem',
+      });
+    } else if (vsLastMonth.revenue < -5 && vsLastMonth.trainings > 5) {
+      insights.push({
+        type: 'neutral',
+        message: 'Více tréninků, nižší příjem',
+      });
+    }
+  }
+
+  // Pending payments - factual
+  if (stats.pendingPayments && stats.pendingPayments.count > 0) {
+    insights.push({
+      type: 'warning',
+      message: `${stats.pendingPayments.count} nezaplacených lekcí`,
+    });
+  }
+
+  // Product vs training income balance - factual
   const productShare = stats.totalIncome > 0 
     ? (stats.productIncome / stats.totalIncome) * 100 
     : 0;
   if (productShare > 30) {
     insights.push({
-      type: 'positive',
+      type: 'neutral',
       message: `${Math.round(productShare)}% příjmu z produktů`,
     });
   }
@@ -136,28 +129,23 @@ export function generateExerciseInsights(
 
   const insights: Insight[] = [];
 
-  // PR rate
+  // PR rate - factual
   const prRate = stats.totalExerciseEntries > 0 
     ? (stats.totalPRs / stats.totalExerciseEntries) * 100 
     : 0;
 
-  if (prRate > 5) {
-    insights.push({
-      type: 'positive',
-      message: `${prRate.toFixed(1)}% záznamů jsou PR`,
-    });
-  } else if (stats.totalExerciseEntries > 100 && prRate < 1) {
+  if (prRate > 0) {
     insights.push({
       type: 'neutral',
-      message: 'Málo nových rekordů - klienti stagnují?',
+      message: `${prRate.toFixed(1)}% záznamů jsou PR`,
     });
   }
 
-  // Exercise variety
+  // Exercise variety - factual
   if (stats.uniqueExercises > 50) {
     insights.push({
-      type: 'positive',
-      message: `Vysoká variabilita: ${stats.uniqueExercises} různých cviků`,
+      type: 'neutral',
+      message: `${stats.uniqueExercises} různých cviků`,
     });
   }
 
@@ -176,33 +164,26 @@ export function generateClientInsights(
 
   const insights: Insight[] = [];
 
-  // Retention
+  // Retention - factual without evaluation
   if (retentionRate !== undefined) {
-    if (retentionRate >= 85) {
-      insights.push({
-        type: 'positive',
-        message: `Výborná retence: ${retentionRate}%`,
-      });
-    } else if (retentionRate < 60) {
-      insights.push({
-        type: 'negative',
-        message: `Nízká retence: ${retentionRate}%`,
-      });
-    }
-  }
-
-  // Churn warning
-  if (stats.churnedClients && stats.churnedClients > 3) {
     insights.push({
-      type: 'warning',
-      message: `${stats.churnedClients} klientů odešlo (60+ dní neaktivní)`,
+      type: 'neutral',
+      message: `Retence: ${retentionRate}% (60 dní)`,
     });
   }
 
-  // New clients
+  // Churn info - factual
+  if (stats.churnedClients && stats.churnedClients > 0) {
+    insights.push({
+      type: 'neutral',
+      message: `${stats.churnedClients} klientů 60+ dní neaktivních`,
+    });
+  }
+
+  // New clients - factual
   if (stats.newClients && stats.newClients > 0) {
     insights.push({
-      type: 'positive',
+      type: 'neutral',
       message: `${stats.newClients} nových klientů (≤30 dní)`,
     });
   }
