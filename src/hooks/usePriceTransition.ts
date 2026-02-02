@@ -134,11 +134,12 @@ export function useClientTrainingPrice(clientId: string | undefined) {
   const currentPrices = settings?.training_prices as TrainingPrices | undefined;
 
   // Determine if client should use legacy pricing
+  // Use the use_legacy_pricing flag directly - trainer controls when to disable it
+  // Don't check credit_balance > 0 as client might have negative balance but still be on fixation
   const usesLegacyPricing = Boolean(
     isTransitionEnabled &&
     client?.use_legacy_pricing &&
-    client?.grandfathered_credit !== null &&
-    client?.credit_balance > 0
+    client?.grandfathered_credit !== null
   );
 
   // Get effective prices

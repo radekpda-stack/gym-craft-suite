@@ -24,7 +24,8 @@ import {
 import { useCompleteTrainingAtomic } from '@/hooks/useCompleteTrainingAtomic';
 
 import { useTrainingSessionTags, useUpdateTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
-import { useTrainingPrices, getTrainingPrice } from '@/hooks/useAppSettings';
+import { useTrainingPrices, getTrainingPrice, useAppSettings, TrainingPrices } from '@/hooks/useAppSettings';
+import { getEffectiveTrainingPrice } from '@/hooks/usePriceTransition';
 import { useClient, useClients } from '@/hooks/useClients';
 import { useTags } from '@/hooks/useTags';
 import { validateTrainingTags } from '@/hooks/useTrainingTagValidation';
@@ -100,6 +101,7 @@ export default function TrainingDetail() {
   const completeTrainingAtomic = useCompleteTrainingAtomic();
   const updateTrainingTags = useUpdateTrainingSessionTags();
   const trainingPrices = useTrainingPrices();
+  const { data: appSettings } = useAppSettings();
   const { registerTrainingDeleteUndo } = useUndoTrainingDelete();
   
   // Submission state for double-submit protection
@@ -271,9 +273,20 @@ export default function TrainingDetail() {
     // Check for custom pricing (only for single participant)
     const primaryClient = clients.find(c => c.id === training.client_id) || client;
     const hasCustomPrice = participantCount === 1 && primaryClient?.custom_training_price != null;
+    
+    // Check if primary client uses legacy pricing (price fixation)
+    const usesLegacyPricing = Boolean(
+      appSettings?.price_transition_enabled &&
+      primaryClient?.use_legacy_pricing &&
+      primaryClient?.grandfathered_credit !== null
+    );
+    
+    const legacyPrices = appSettings?.legacy_training_prices as TrainingPrices | undefined;
+    const currentPrices = appSettings?.training_prices as TrainingPrices | undefined;
+    
     const totalPrice = hasCustomPrice 
       ? primaryClient.custom_training_price!
-      : getTrainingPrice(participantCount, trainingPrices);
+      : getEffectiveTrainingPrice(participantCount, usesLegacyPricing, legacyPrices, currentPrices);
     
     let payments: ParticipantPayment[];
     
