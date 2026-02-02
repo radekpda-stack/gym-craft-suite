@@ -58,9 +58,9 @@ export function CompleteTrainingDialog({
   const { data: appSettings } = useAppSettings();
   const completeTrainingAtomic = useCompleteTrainingAtomic();
 
-  // Get prices from app settings
-  const currentPrices = (appSettings?.training_prices || { "1": 900, "2": 1100, "3": 1300, "first_training": 1000 }) as TrainingPrices;
-  const legacyPrices = (appSettings?.legacy_training_prices || { "1": 800, "2": 1000, "3": 1200 }) as TrainingPrices;
+  // Get prices from app settings - use undefined if not set so getEffectiveTrainingPrice can apply correct defaults
+  const currentPrices = appSettings?.training_prices as TrainingPrices | undefined;
+  const legacyPrices = appSettings?.legacy_training_prices as TrainingPrices | undefined;
   const isTransitionEnabled = appSettings?.price_transition_enabled;
 
   const [participantPayments, setParticipantPayments] = useState<ParticipantPayment[]>([]);

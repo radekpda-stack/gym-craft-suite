@@ -162,20 +162,26 @@ export function useClientTrainingPrice(clientId: string | undefined) {
 /**
  * Get effective price for a training based on participant count and client's pricing status
  */
+// Default legacy prices (before Feb 2026 price increase)
+const DEFAULT_LEGACY_PRICES: TrainingPrices = { "1": 800, "2": 1000, "3": 1200, "first_training": 1000 };
+
+// Default current prices (Feb 2026+)
+const DEFAULT_CURRENT_PRICES: TrainingPrices = { "1": 900, "2": 1100, "3": 1300, "first_training": 1000 };
+
+/**
+ * Get effective price for a training based on participant count and client's pricing status
+ */
 export function getEffectiveTrainingPrice(
   participantCount: number,
   usesLegacyPricing: boolean,
   legacyPrices: TrainingPrices | undefined,
   currentPrices: TrainingPrices | undefined
 ): number {
-  const prices = usesLegacyPricing && legacyPrices ? legacyPrices : currentPrices;
-  
-  if (!prices) {
-    // Fallback to new default prices
-    if (participantCount >= 3) return 1300;
-    if (participantCount === 2) return 1100;
-    return 900;
-  }
+  // If client uses legacy pricing, use legacy prices (with fallback to hardcoded legacy values)
+  // This ensures clients with price fixation ALWAYS get old prices even if DB setting is missing
+  const prices = usesLegacyPricing 
+    ? (legacyPrices || DEFAULT_LEGACY_PRICES) 
+    : (currentPrices || DEFAULT_CURRENT_PRICES);
 
   if (participantCount >= 3) return prices["3"];
   if (participantCount === 2) return prices["2"];
