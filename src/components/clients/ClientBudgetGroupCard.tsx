@@ -367,11 +367,6 @@ export function ClientBudgetGroupCard({ clientId, clientName }: ClientBudgetGrou
         )}>
           {displayBalance.toLocaleString('cs-CZ')} Kč
         </p>
-        {isExhausted && actualBalance < 0 && (
-          <p className="text-xs text-muted-foreground mt-1">
-            (skutečný stav: {actualBalance.toLocaleString('cs-CZ')} Kč)
-          </p>
-        )}
       </div>
 
       {/* Credit Exhausted Warning */}
