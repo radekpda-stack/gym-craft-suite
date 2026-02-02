@@ -1,237 +1,240 @@
 
-# Fáze 3 & 4: Pokračování grafických úprav UI/UX
+# Fáze 5: Pokračování grafických úprav - Prodej, Klienti, Rozvrh, Karta klienta
 
-## Shrnutí předchozích změn (Fáze 1 & 2)
-✅ Nové CSS utility třídy (`.metric-hero`, `.label-caps`, `.card-floating`, `.skeleton-glow`)
-✅ Activity Ring komponenta (Apple-style progress kruhy)
-✅ Gauge Meter komponenta (Garmin-style indikátory)
-✅ Vylepšená Card komponenta s `floating` a `instrument` variantami
-✅ Animation presets library (`src/lib/animations.ts`)
+## Shrnutí prohlédnutých souborů
+
+Prozkoumal jsem tyto klíčové stránky a komponenty:
+- `Sales.tsx` + `SalesRegister.tsx` - Pokladna a prodej
+- `Clients.tsx` + `CompactClientRow.tsx` - Seznam klientů
+- `SchedulePage.tsx` + `AgendaItem.tsx` - Rozvrh
+- `ClientDetail.tsx` + `ClientSummaryStrip.tsx` + `ClientHeaderCompact.tsx` - Karta klienta
+- `Settings.tsx` - Nastavení
+- `ClientHealthDashboard.tsx` - Zdraví klientely
 
 ---
 
-## Fáze 3: Integrace do existujících komponent
+## Navržené změny
 
-### 3.1 Dashboard Header - Hero metriky
+### 1. SALES PAGE - Premium Pokladna
 
-**Soubor:** `src/components/dashboard/DashboardHeader.tsx`
+**Soubor:** `src/pages/Sales.tsx`
 
-Současně: Malé badge s metrikami (text-xs, bg-secondary/50)
-Nově: Premium "Instrument Panel" s většími čísly a Activity Rings
+Současně: Standard TabsList s bg-secondary/30
+Nově: Floating glass tabs s aktivním indikátorem
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  ● Dobré ráno                                               │
-│    Pondělí, 3. února                    [🏋️ Trénink] [📊]  │
-│                                                             │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐           │
-│  │ ○○○3/5  │ │   3     │ │  4.2k   │ │   ↑     │           │
-│  │ Tréninky│ │ Klienti │ │ Příjem  │ │ Trend   │           │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────┘           │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  PRODEJ                                                 │
+│                                                         │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐       │
+│  │💳       │ │📜       │ │📦       │ │📊       │       │
+│  │Pokladna │ │Historie │ │ Sklad   │ │Statistiky│      │
+│  └────●────┘ └─────────┘ └─────────┘ └─────────┘       │
+│       ▔▔▔▔                                              │
+└─────────────────────────────────────────────────────────┘
 ```
 
 Změny:
-- Status dot větší (w-3 h-3) s subtle glow
-- Metriky jako mini-karty s `.card-floating` efektem
-- Ikony menší a monochromatické
-- Micro Activity Ring pro kapacitu (completed/total)
+- TabsList jako `.card-floating` s backdrop-blur
+- Aktivní tab s animated underline
+- Ikony větší (w-5 h-5) s barevným bg na aktivní
 
 ---
 
-### 3.2 Today Timeline - Premium Timeline design
+### 2. SALES REGISTER - Product Cards jako Instrumenty
 
-**Soubor:** `src/components/dashboard/TodayTimelineCompact.tsx`
+**Soubor:** `src/components/sales/SalesRegister.tsx`
 
-Současně: Rounded-xl karty s bg-secondary/30
-Nově: Floating glass karty s timeline connector
+Současně: Product karty s `.glass` a hover scale
+Nově: Instrument-style cards s progress na stock
+
+Změny:
+- ProductCard dostane `Card variant="instrument"`
+- Stock indicator jako LinearGauge (plný/prázdný)
+- Badge "v košíku" s pulse animací
+- Oddělení typů produktů vizuálněji (ikony větší, barvy výraznější)
+- Cart panel jako `.card-floating` s premium shadow
+
+---
+
+### 3. CLIENTS PAGE - Modernizovaný seznam
+
+**Soubor:** `src/pages/Clients.tsx`
+
+Současně: ViewMode tlačítka jako outline buttons
+Nově: Pill tabs jako v Apple Music
 
 ```text
-    ○──── 09:00 ───────────────────────────
-    │   ┌─────────────────────────────────┐
-    │   │ 🔵 Jan Novák • Solo             │
-    │   │ Další trénink                   │
-    │   └─────────────────────────────────┘
-    │
-    ●──── 10:30 ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ← NYNÍ
-    │   ┌─────────────────────────────────┐
-    │   │ 🟢 Eva Svobodová • Done         │
-    │   └─────────────────────────────────┘
-    │
-    ○──── 12:00 ───────────────────────────
+┌─────────────────────────────────────────────────────────┐
+│  KLIENTI                          52 z 58    [+] [⋯]   │
+│                                                         │
+│  ┌───────────────────────────────────────────┐          │
+│  │ (Dnes) (Tento týden) (●Všichni) (Archiv)  │          │
+│  └───────────────────────────────────────────┘          │
+│                                                         │
+│  🔍 ___________________________  [🏷️ Štítek ▼]          │
+│                                                         │
+│  ┌────────────────────────────────────────────────────┐ │
+│  │ JN │ Jan Novák           ★ │ 7,500 Kč  │ Dnes 9:00 │ │
+│  ├────────────────────────────────────────────────────┤ │
+│  │ ES │ Eva Svobodová          │ 3,200 Kč  │ Zítra    │ │
+│  └────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
 ```
 
 Změny:
-- Timeline čára vlevo místo pouze tečky
-- "NOW" indikátor jako červená horizontální čára
-- Floating glass effect na položkách (bg-card/60, backdrop-blur)
-- Jemnější přechody (opacity 0.8 pro dokončené)
-- Hover efekt: slight lift (y: -2px)
+- ViewMode jako `ToggleGroup` s pill design
+- Search bar s floating glass effect
+- Filter badges kompaktnější (chip design)
 
 ---
 
-### 3.3 Business Yield Score - Activity Ring integrace
+### 4. COMPACT CLIENT ROW - Premium list item
 
-**Soubor:** `src/components/dashboard/BusinessYieldScoreCard.tsx`
+**Soubor:** `src/components/clients/CompactClientRow.tsx`
 
-Současně: Velké číslo (text-3xl) v boxu
-Nově: Activity Ring s score uprostřed
+Současně: Flat card s hover bg-accent/50
+Nově: Glass row s subtle lift on hover
+
+Změny:
+- Row jako `.card-floating` s menším padding
+- Avatar s subtle ring na hover
+- Credit badge integrovaný do row (ne jako overlay)
+- Swipe hints s lepším vizuálem (gradient místo solid)
+- Hover → subtle shadow + y:-1px lift
+
+---
+
+### 5. SCHEDULE PAGE - Timeline vylepšení
+
+**Soubor:** `src/pages/SchedulePage.tsx`
+
+Současně: Week grid s tečkami jako indikátory
+Nově: Week jako horizontal scroll s premium day cards
 
 ```text
-    ┌────────────────────────────────────────────────┐
-    │       ╭────────╮                               │
-    │      ╱ ╭────╮  ╲   Business Yield    ⓘ        │
-    │     │  │ 78 │   │  ✓ Stabilní  +2/týden       │
-    │      ╲ ╰────╯  ╱                               │
-    │       ╰────────╯                               │
-    │                                                │
-    │  [████ Efekt] [███░ Využití] [██░░ Klienti]   │
-    └────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  ROZVRH                         [+ Přidat] [🏋️ Režim]  │
+│  ◀  3. - 9. února 2025  ▶       [Dnes] [📅]            │
+│                                                         │
+│  ┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐     │
+│  │ Po │ │ Út │ │ St │ │●Čt│ │ Pá │ │ So │ │ Ne │     │
+│  │ 3  │ │ 4  │ │ 5  │ │ 6 │ │ 7  │ │ 8  │ │ 9  │     │
+│  │ 3× │ │ 5× │ │ 2× │ │ 4×│ │ — │ │ 1× │ │ — │     │
+│  └────┘ └────┘ └────┘ └────┘ └────┘ └────┘ └────┘     │
+│         ▔▔▔▔                                            │
+└─────────────────────────────────────────────────────────┘
 ```
 
 Změny:
-- Nahradit box 20x20 Activity Ringem
-- Score uvnitř kruhu
-- Pillar bars pod ringem
-- Gradient background subtilnější
+- Week days jako horizontální scroll s snap
+- Selected day s premium ring + shadow
+- Count badge integrovaný do karty (ne jako overlay)
+- Current time indicator viditelný i v week view
 
 ---
 
-### 3.4 Quick Stats - Instrument Cards
+### 6. AGENDA ITEM - Training Card Premium
 
-**Soubor:** `src/components/dashboard/QuickStats.tsx`
+**Soubor:** `src/components/calendar/AgendaItem.tsx`
 
-Současně: Grid 2x3 s p-4 kartami
-Nově: Instrument-style karty s micro-gauge
+Současně: glass-subtle rounded-xl s time column
+Nově: Instrument card s jasným statusem
 
 Změny:
-- Card variant="instrument" pro každou stat kartu
-- Micro gauge pro trendy (LinearGauge komponenta)
-- Ikony menší (w-3.5) s subtle color
-- Čísla větší (text-2xl font-bold tracking-tighter)
-- Labels jako `.label-caps` (uppercase, letter-spacing)
+- Card jako `variant="floating"` pro lepší depth
+- Status badge větší a výraznější
+- Time column s mono-space font pro alignment
+- Action buttons s touchFeedback animací
+- Swipe backgrounds s gradient (fade out)
 
 ---
 
-### 3.5 Sidebar - Collapsed jako default
+### 7. CLIENT DETAIL - Summary Strip jako Instrumenty
 
-**Soubor:** `src/components/layout/Sidebar.tsx`
+**Soubor:** `src/components/clients/ClientSummaryStrip.tsx`
 
-Současně: `const [collapsed, setCollapsed] = useState(false);`
-Nově: `const [collapsed, setCollapsed] = useState(true);`
+Současně: Grid 2x2/4 s rounded-xl kartami
+Nově: Instrument cards s micro-gauges
 
-+ Hover expand behavior:
+Změny:
+- Credit card s ActivityRing pro vizuální indikátor stavu
+- Trainings card s mini-trend sparkline
+- LTV card s LinearGauge
+- Avg/month card s comparison bar
+
+---
+
+### 8. CLIENT HEADER - Glassmorphism upgrade
+
+**Soubor:** `src/components/clients/ClientHeaderCompact.tsx`
+
+Současně: `.glass rounded-2xl` s p-3
+Nově: Premium floating header s depth
+
+Změny:
+- Header jako `.card-floating` s více vrstev
+- Avatar s subtle glow ring
+- Contact icons s hover lift effect
+- Expand/collapse animace jemnější
+- Badges (streak, days since) s premium styling
+
+---
+
+### 9. CLIENT HEALTH DASHBOARD - Visual upgrade
+
+**Soubor:** `src/components/statistics/ClientHealthDashboard.tsx`
+
+Současně: Grid 3x1 s StatCell
+Nově: Instrument dashboard s rings
+
+Změny:
+- Aktivní klienti jako ActivityRing
+- Retence jako GaugeMeter
+- LTV jako MetricCard s progress bar
+- At-risk klienti s pulse border effect
+
+---
+
+### 10. SETTINGS PAGE - Category Cards
+
+**Soubor:** `src/pages/Settings.tsx`
+
+Současně: SettingsLayout s category list
+Nově: Category cards jako floating tiles
+
+Změny:
+- Category cards jako `.card-floating`
+- Active category s primary ring
+- Icons s colored background (matching iconColor)
+- Hover → lift effect + shadow
+
+---
+
+## Nové utility komponenty
+
+### A) PillTabs - Apple-style segmented control
+
 ```tsx
-onMouseEnter={() => !collapsed && setHovered(true)}
-onMouseLeave={() => setHovered(false)}
+<PillTabs value={viewMode} onValueChange={setViewMode}>
+  <PillTab value="today">Dnes</PillTab>
+  <PillTab value="week">Týden</PillTab>
+  <PillTab value="all">Vše</PillTab>
+</PillTabs>
 ```
 
-Změny:
-- Default collapsed (w-16)
-- Hover na desktop → expand animace
-- Tooltip pro navigaci při collapsed stavu již funguje
-- Jemnější border (border-border/20)
-
----
-
-### 3.6 Mobile Nav - Větší touch targets
-
-**Soubor:** `src/components/layout/MobileNav.tsx`
-
-Současně: Touch targets w-10 h-10
-Nově: Touch targets w-12 h-12 s premium glass
-
-Změny:
-- Větší ikony (w-6 h-6)
-- Aktivní stav: subtle glow efekt
-- Tap feedback: scale(0.95) transition
-- Label text-[10px] místo text-[9px]
-
----
-
-### 3.7 Empty State - Animované ilustrace
-
-**Soubor:** `src/components/ui/empty-state.tsx`
-
-Současně: Statická ikona v kruhu
-Nově: Animated icon s breathing effect
+### B) StatInstrument - Kombinace stat + visual
 
 ```tsx
-<motion.div
-  className="rounded-full bg-muted/30 flex items-center justify-center"
-  animate={{ 
-    scale: [1, 1.02, 1],
-    opacity: [0.8, 1, 0.8] 
-  }}
-  transition={{ duration: 3, repeat: Infinity }}
->
-  <Icon />
-</motion.div>
+<StatInstrument
+  label="Kredit"
+  value={7500}
+  format="currency"
+  indicator="ring" // ring | gauge | bar | sparkline
+  progress={75}
+  variant="success"
+/>
 ```
-
-Změny:
-- Breathing animation na ikonu
-- Gradient background (from-muted/40 to-muted/20)
-- Akční tlačítko s hover glow
-
----
-
-### 3.8 Alerts Summary Card - Premium Alert styling
-
-**Soubor:** `src/components/dashboard/AlertsSummaryCard.tsx`
-
-Současně: Flat colored backgrounds (bg-warning/10)
-Nově: Glass morphism s colored border glow
-
-Změny:
-- Alert items jako floating cards
-- Border glow pro severity (ring-1 ring-warning/40)
-- Icon container s subtle pulse pro critical
-- ChevronRight s hover animation
-
----
-
-## Fáze 4: Polish & Micro-interactions
-
-### 4.1 Globální Touch Feedback
-
-**Soubor:** `src/lib/animations.ts` (už existuje)
-
-Přidat nové presets:
-```typescript
-export const touchFeedback = {
-  whileTap: { scale: 0.97 },
-  transition: { duration: 0.1 }
-};
-
-export const hoverLift = {
-  whileHover: { y: -2 },
-  transition: { duration: 0.2, ease: appleEase }
-};
-
-export const buttonPress = {
-  whileTap: { scale: 0.98, opacity: 0.9 },
-  transition: { duration: 0.1 }
-};
-```
-
-### 4.2 Loading Skeleton Enhancement
-
-**Soubor:** `src/components/ui/skeleton.tsx`
-
-Změny:
-- Přidat `.skeleton-shimmer` třídu jako default
-- Gradient shimmer animace
-- Subtle rounded corners (rounded-xl)
-
-### 4.3 Success Celebrations
-
-**Využití existujícího:** `src/lib/confetti.ts`
-
-Přidat volání při:
-- Dokončení tréninku
-- Dosažení PR
-- Uhrazení platby
 
 ---
 
@@ -239,60 +242,77 @@ Přidat volání při:
 
 | Soubor | Změna | Priorita |
 |--------|-------|----------|
-| `src/components/dashboard/DashboardHeader.tsx` | Hero metriky + Activity Ring | Vysoká |
-| `src/components/dashboard/TodayTimelineCompact.tsx` | Premium timeline design | Vysoká |
-| `src/components/dashboard/BusinessYieldScoreCard.tsx` | Activity Ring score | Vysoká |
-| `src/components/dashboard/QuickStats.tsx` | Instrument cards | Střední |
-| `src/components/layout/Sidebar.tsx` | Collapsed default | Střední |
-| `src/components/layout/MobileNav.tsx` | Větší touch targets | Střední |
-| `src/components/ui/empty-state.tsx` | Animated icons | Střední |
-| `src/components/dashboard/AlertsSummaryCard.tsx` | Premium alerts | Střední |
-| `src/components/ui/skeleton.tsx` | Shimmer effect | Nízká |
-| `src/lib/animations.ts` | Nové presets | Nízká |
+| `src/pages/Sales.tsx` | Premium tabs | Vysoká |
+| `src/components/sales/SalesRegister.tsx` | Instrument product cards | Vysoká |
+| `src/pages/Clients.tsx` | Pill tabs, glass search | Vysoká |
+| `src/components/clients/CompactClientRow.tsx` | Premium row styling | Vysoká |
+| `src/pages/SchedulePage.tsx` | Week cards upgrade | Střední |
+| `src/components/calendar/AgendaItem.tsx` | Floating training card | Střední |
+| `src/components/clients/ClientSummaryStrip.tsx` | Instrument cards | Střední |
+| `src/components/clients/ClientHeaderCompact.tsx` | Glassmorphism upgrade | Střední |
+| `src/components/statistics/ClientHealthDashboard.tsx` | Visual instruments | Nízká |
+| `src/pages/Settings.tsx` | Category floating cards | Nízká |
+
+---
+
+## Nové soubory
+
+| Soubor | Popis |
+|--------|-------|
+| `src/components/ui/pill-tabs.tsx` | Apple-style segmented control |
+| `src/components/ui/stat-instrument.tsx` | Combined stat + visual indicator |
 
 ---
 
 ## Vizuální srovnání
 
-### Dashboard PŘED:
+### Sales PŘED:
 ```text
-┌─────────────────────────────────┐
-│ ● Dobré ráno, pondělí           │
-│ [3/5] [3] [4.2k Kč] [↑12%]     │  ← malé badge
-└─────────────────────────────────┘
+[Pokladna] [Historie] [Sklad] [Statistiky]
 ```
 
-### Dashboard PO:
+### Sales PO:
 ```text
-┌─────────────────────────────────┐
-│ ●○ Dobré ráno                   │  ← větší status dot
-│    Pondělí, 3. února            │
-│                                 │
-│ ┌──────┐┌──────┐┌──────┐┌──────┐│
-│ │(○60%)││  3   ││ 4.2k ││  ↑   ││  ← instrument cards
-│ │Kapac.││Klient││Příjem││Trend ││
-│ └──────┘└──────┘└──────┘└──────┘│
-└─────────────────────────────────┘
+┌───────────────────────────────────────────┐
+│ 💳 Pokladna │ Historie │ Sklad │ Stats   │
+│ ────●────                                 │
+└───────────────────────────────────────────┘
+```
+
+### Client Row PŘED:
+```text
+| JN | Jan Novák          | 7,500 Kč | Dnes |
+```
+
+### Client Row PO:
+```text
+┌─────────────────────────────────────────────┐
+│ ╭──╮  Jan Novák        ★    ┌──────┐ Dnes │
+│ │JN│                        │7,500 │ 9:00 │
+│ ╰──╯  🏷️ OCR               └──────┘      │
+└─────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Technické poznámky
 
-1. **Activity Ring v DashboardHeader:**
-   - Použije `import { ActivityRing } from '@/components/ui/activity-ring'`
-   - Progress = (completed / total) * 100
-   - Size "sm" pro kompaktní zobrazení
+1. **PillTabs komponenta:**
+   - Použije Framer Motion pro animated indicator
+   - Background slider follows active tab
+   - Supports keyboard navigation
 
-2. **Timeline NOW indicator:**
-   - Spočítat pozici podle aktuálního času
-   - Absolutní pozicování s červenou čárou
-   - Pulse animace pro viditelnost
+2. **StatInstrument:**
+   - Kombinuje MetricCard logiku s ActivityRing/GaugeMeter
+   - Automaticky vybere vhodný vizuál podle `indicator` prop
+   - Responsive sizing (menší na mobile)
 
-3. **Sidebar collapsed:**
-   - localStorage persist pro user preference
-   - Keyboard shortcut (Cmd+B) pro toggle
+3. **Product Cards v SalesRegister:**
+   - Stock indicator jako LinearGauge
+   - Animovaná "přidáno do košíku" badge
+   - Quick add (double tap) support
 
-4. **Touch feedback:**
-   - Aplikovat `touchFeedback` na všechny interaktivní elementy
-   - Kombinovat s `haptic.light()` z existujícího systému
+4. **ClientRow improvements:**
+   - Swipe backgrounds s gradient fade
+   - Touch feedback na celý row
+   - Prefetch detail na hover (již funguje)
