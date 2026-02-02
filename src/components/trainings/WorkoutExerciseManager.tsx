@@ -6,6 +6,7 @@ import { WorkoutExerciseForm } from './WorkoutExerciseForm';
 import { WorkoutExerciseList } from './WorkoutExerciseList';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAutoTagFromExercise } from '@/hooks/useAutoTagFromExercise';
 
 export interface Participant {
   client_id: string;
@@ -40,6 +41,7 @@ export function WorkoutExerciseManager({
   } = useWorkoutEntries(trainingSessionId);
 
   const syncToClientStats = useSyncToClientStats();
+  const { autoTagFromExercise } = useAutoTagFromExercise();
   
   // Check if this is a group training (more than 1 participant)
   const isGroupTraining = participants.length > 1;
@@ -91,6 +93,11 @@ export function WorkoutExerciseManager({
           // Add assistance bands (same for all sets of this exercise)
           assistance_bands: data.assistance_bands || null,
         });
+      }
+
+      // Auto-tag training session based on exercise body parts
+      if (data.exercise_id) {
+        await autoTagFromExercise(trainingSessionId, data.exercise_id);
       }
 
       toast({
