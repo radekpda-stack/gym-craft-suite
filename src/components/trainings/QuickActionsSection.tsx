@@ -98,16 +98,19 @@ export function QuickActionsSection({
 
   return (
     <>
-      <div className="glass rounded-xl p-4 space-y-3">
-        <div className="flex items-center gap-2 text-muted-foreground mb-1">
-          <CheckCircle className="w-4 h-4" />
-          <span className="text-sm font-medium">Rychlé akce</span>
+      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4 space-y-3">
+        {/* Subtle gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none rounded-2xl" />
+        
+        <div className="relative flex items-center gap-2 text-muted-foreground mb-1">
+          <CheckCircle className="w-4 h-4 text-primary" />
+          <span className="text-[10px] uppercase tracking-widest font-medium">Rychlé akce</span>
         </div>
 
         {/* Primary action - DOKONČIT */}
         <Button 
           size="lg" 
-          className="w-full gap-2 h-12 text-base font-semibold"
+          className="relative w-full gap-2 h-14 text-base font-bold bg-success hover:bg-success/90 text-success-foreground shadow-lg shadow-success/25 transition-all duration-200"
           onClick={onComplete}
           disabled={isCompleting || isCanceling || isRescheduling}
         >
@@ -124,7 +127,7 @@ export function QuickActionsSection({
           {/* Cancel with credit */}
           <Button 
             variant="outline" 
-            className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-all"
             onClick={openCancelCreditDialog}
             disabled={isCompleting || isCanceling || isRescheduling}
           >
@@ -135,7 +138,7 @@ export function QuickActionsSection({
           {/* Cancel without credit */}
           <Button 
             variant="outline" 
-            className="gap-1.5"
+            className="gap-1.5 hover:bg-secondary/80 transition-all"
             onClick={openCancelNoCreditDialog}
             disabled={isCompleting || isCanceling || isRescheduling}
           >
@@ -146,7 +149,7 @@ export function QuickActionsSection({
           {/* Reschedule */}
           <Button 
             variant="outline" 
-            className="gap-1.5"
+            className="gap-1.5 hover:bg-secondary/80 transition-all"
             onClick={() => {
               setNewDate(new Date(trainingDate));
               setShowRescheduleDialog(true);

@@ -1,11 +1,12 @@
 /**
  * ParticipantPaymentCard Component
  * 
- * Compact card for each participant with individual payment method selection.
+ * Premium floating card for each participant with animated payment method selection.
  * Now includes editable price share for custom payment splits.
  * Auto-fills payment method based on client preferences.
  */
 import { Wallet, Banknote, CreditCard, Building2, Clock } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
@@ -49,6 +50,7 @@ export function ParticipantPaymentCard({
 
   const afterBalance = credit_balance - price_share;
   const isDebt = afterBalance < 0;
+  const isLowCredit = afterBalance >= 0 && afterBalance < 1000;
   const showCreditLine = payment_method === 'credit';
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,20 +58,23 @@ export function ParticipantPaymentCard({
     onPriceChange?.(participant.client_id, newPrice);
   };
 
+  // Find active index for pill animation
+  const activeIndex = paymentOptions.findIndex(opt => opt.value === payment_method);
+
   return (
-    <div className="p-3 rounded-xl border bg-card space-y-2">
+    <div className="p-4 rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 space-y-3">
       {/* Header: Avatar, Name, Price */}
       <div className="flex items-center gap-3">
-        <ClientAvatar name={participant.client_name} size="sm" />
+        <ClientAvatar name={participant.client_name} size="sm" className="ring-2 ring-border/30" />
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{participant.client_name}</p>
+          <p className="font-semibold text-sm truncate">{participant.client_name}</p>
           {showCreditLine && (
             <p className={cn(
-              "text-xs",
-              isDebt ? "text-warning" : "text-muted-foreground"
+              "text-xs tabular-nums",
+              isDebt ? "text-destructive" : isLowCredit ? "text-warning" : "text-muted-foreground"
             )}>
               Kredit: {formatCurrency(credit_balance)} → {formatCurrency(afterBalance)}
-              {isDebt ? ` (dluh ${formatCurrency(Math.abs(afterBalance))})` : ''}
+              {isDebt && <span className="font-medium"> (dluh {formatCurrency(Math.abs(afterBalance))})</span>}
             </p>
           )}
         </div>
@@ -80,20 +85,35 @@ export function ParticipantPaymentCard({
                 type="number"
                 value={price_share}
                 onChange={handlePriceChange}
-                className="w-20 h-8 text-right text-sm font-bold"
+                className="w-20 h-9 text-right text-base font-bold tabular-nums bg-secondary/50"
                 min={0}
                 step={100}
               />
               <span className="text-xs text-muted-foreground">Kč</span>
             </div>
           ) : (
-            <span className="font-bold text-primary">{formatCurrency(price_share)}</span>
+            <span className="font-bold text-lg text-primary tabular-nums">{formatCurrency(price_share)}</span>
           )}
         </div>
       </div>
 
-      {/* Payment method buttons - segmented control style */}
-      <div className="flex gap-1">
+      {/* Payment method buttons - animated pill style */}
+      <div className="relative flex gap-1 p-1 rounded-xl bg-secondary/40 border border-border/30">
+        {/* Animated background indicator */}
+        <motion.div
+          className="absolute inset-y-1 bg-primary rounded-lg shadow-sm"
+          initial={false}
+          animate={{
+            left: `calc(${activeIndex * (100 / paymentOptions.length)}% + 4px)`,
+            width: `calc(${100 / paymentOptions.length}% - 8px)`,
+          }}
+          transition={{
+            type: 'spring',
+            stiffness: 350,
+            damping: 30,
+          }}
+        />
+        
         {paymentOptions.map((option) => {
           const Icon = option.icon;
           const isSelected = payment_method === option.value;
@@ -105,10 +125,10 @@ export function ParticipantPaymentCard({
               disabled={disabled}
               onClick={() => onChange(participant.client_id, option.value)}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all",
+                "relative z-10 flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-colors",
                 isSelected
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground",
+                  ? "text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
                 disabled && "opacity-40 cursor-not-allowed"
               )}
               title={option.label}

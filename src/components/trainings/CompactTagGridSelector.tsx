@@ -147,12 +147,12 @@ export function CompactTagGridSelector({
     <div className={cn('space-y-3', className)}>
       {/* Header with "Více" button */}
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">Klasifikace</span>
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Klasifikace</span>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setShowExpandedModal(true)}
-          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80"
         >
           <Settings2 className="h-3.5 w-3.5 mr-1" />
           Více
@@ -257,8 +257,9 @@ export function CompactTagGridSelector({
 
       {/* Validation warning */}
       {trainingStatus === 'completed' && !coachRPE && (
-        <div className="p-2 bg-warning/10 border border-warning/20 rounded-lg text-xs text-warning">
-          ⚠️ RPE je povinné pro dokončené tréninky
+        <div className="p-3 bg-warning/10 border border-warning/30 rounded-xl text-xs text-warning flex items-center gap-2 animate-pulse">
+          <span className="text-base">⚠️</span>
+          <span>RPE je povinné pro dokončené tréninky</span>
         </div>
       )}
 

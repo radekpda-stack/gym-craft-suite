@@ -76,16 +76,26 @@ export function TrainingHeroHeader({
   const trainingDate = new Date(training.date);
   const status = statusConfig[training.status as keyof typeof statusConfig] || statusConfig.scheduled;
 
+  const isInProgress = training.status === 'in_progress';
+
   return (
-    <div className="training-section p-4">
+    <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm transition-all duration-200 hover:shadow-md p-4">
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+      
       {/* Row 1: Avatar + Name + Menu */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="relative flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <ClientAvatar 
-            name={client?.name || 'Trénink'} 
-            size="lg" 
-            className="shrink-0" 
-          />
+          <div className="relative">
+            <ClientAvatar 
+              name={client?.name || 'Trénink'} 
+              size="lg" 
+              className="shrink-0 ring-2 ring-border/30" 
+            />
+            {isInProgress && (
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-warning rounded-full border-2 border-card animate-pulse" />
+            )}
+          </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">
               {client?.name || 'Trénink'}
@@ -120,11 +130,11 @@ export function TrainingHeroHeader({
         {/* Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="shrink-0 -mt-1">
+            <Button variant="ghost" size="icon-sm" className="shrink-0 -mt-1 hover:bg-secondary/80">
               <MoreHorizontal className="w-5 h-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="backdrop-blur-md bg-popover/95">
             <DropdownMenuItem onClick={onEditClick}>
               <Edit2 className="w-4 h-4 mr-2" />
               Upravit detaily
@@ -146,10 +156,11 @@ export function TrainingHeroHeader({
       </div>
 
       {/* Status badge - full width, prominent */}
-      <div className="mt-3">
+      <div className="relative mt-3">
         <div className={cn(
-          'w-full py-2 px-3 rounded-xl text-center text-sm font-semibold border',
-          status.bg, status.text, status.border
+          'w-full py-2.5 px-3 rounded-xl text-center text-sm font-semibold border backdrop-blur-sm transition-all duration-200',
+          status.bg, status.text, status.border,
+          isInProgress && 'animate-pulse'
         )}>
           {status.label}
         </div>

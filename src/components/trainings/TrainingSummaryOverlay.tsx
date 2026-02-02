@@ -87,21 +87,21 @@ export function TrainingSummaryOverlay({ open, onClose, summary, clientName }: T
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
-          onClick={onClose}
-        >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
-            onClick={e => e.stopPropagation()}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-xl"
+            onClick={onClose}
           >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              className="w-full max-w-md bg-card/95 backdrop-blur-md border border-border/50 rounded-2xl shadow-2xl overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
             {/* Header with gradient */}
             <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-6 pb-8">
               <Button
@@ -142,57 +142,57 @@ export function TrainingSummaryOverlay({ open, onClose, summary, clientName }: T
 
             {/* Stats Grid */}
             <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.4 }}
-                  className="p-4 rounded-xl bg-muted/50"
+                  className="p-4 rounded-xl bg-secondary/40 backdrop-blur-sm border border-border/30"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Dumbbell className="w-4 h-4 text-primary" />
-                    <span className="text-xs text-muted-foreground">Objem</span>
+                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Objem</span>
                   </div>
-                  <p className="text-2xl font-bold">{formatVolume(summary.totalVolume)}</p>
+                  <p className="text-2xl font-bold tabular-nums">{formatVolume(summary.totalVolume)}</p>
                 </motion.div>
 
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.5 }}
-                  className="p-4 rounded-xl bg-muted/50"
+                  className="p-4 rounded-xl bg-secondary/40 backdrop-blur-sm border border-border/30"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Target className="w-4 h-4 text-success" />
-                    <span className="text-xs text-muted-foreground">Série</span>
+                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Série</span>
                   </div>
-                  <p className="text-2xl font-bold">{summary.totalSets}</p>
+                  <p className="text-2xl font-bold tabular-nums">{summary.totalSets}</p>
                 </motion.div>
 
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.6 }}
-                  className="p-4 rounded-xl bg-muted/50"
+                  className="p-4 rounded-xl bg-secondary/40 backdrop-blur-sm border border-border/30"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingUp className="w-4 h-4 text-accent" />
-                    <span className="text-xs text-muted-foreground">Cviky</span>
+                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Cviky</span>
                   </div>
-                  <p className="text-2xl font-bold">{summary.exerciseCount}</p>
+                  <p className="text-2xl font-bold tabular-nums">{summary.exerciseCount}</p>
                 </motion.div>
 
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.7 }}
-                  className="p-4 rounded-xl bg-muted/50"
+                  className="p-4 rounded-xl bg-secondary/40 backdrop-blur-sm border border-border/30"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Flame className="w-4 h-4 text-warning" />
-                    <span className="text-xs text-muted-foreground">RPE</span>
+                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground">RPE</span>
                   </div>
-                  <p className="text-2xl font-bold">
+                  <p className="text-2xl font-bold tabular-nums">
                     {summary.averageRPE ? `${summary.averageRPE}/10` : '-'}
                   </p>
                 </motion.div>
@@ -204,14 +204,16 @@ export function TrainingSummaryOverlay({ open, onClose, summary, clientName }: T
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.8 }}
-                  className="p-4 rounded-xl bg-gradient-to-r from-warning/20 to-warning/10 border border-warning/30"
+                  className="p-4 rounded-xl bg-gradient-to-r from-warning/20 to-warning/10 border border-warning/30 backdrop-blur-sm"
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <Award className="w-5 h-5 text-warning" />
+                    <div className="p-1.5 rounded-lg bg-warning/30">
+                      <Award className="w-4 h-4 text-warning" />
+                    </div>
                     <span className="font-semibold text-warning">
                       Nové osobní rekordy!
                     </span>
-                    <Badge className="bg-warning text-warning-foreground ml-auto">
+                    <Badge className="bg-warning text-warning-foreground ml-auto shadow-lg shadow-warning/25">
                       {summary.newPRs.length} PR
                     </Badge>
                   </div>
@@ -226,9 +228,9 @@ export function TrainingSummaryOverlay({ open, onClose, summary, clientName }: T
                       >
                         <span className="text-sm font-medium">{pr.exerciseName}</span>
                         <div className="flex items-center gap-2">
-                          <span className="font-bold">{pr.value} {pr.unit}</span>
+                          <span className="font-bold tabular-nums">{pr.value} {pr.unit}</span>
                           {pr.improvement > 0 && (
-                            <Badge variant="outline" className="text-success border-success/50">
+                            <Badge variant="outline" className="text-success border-success/50 bg-success/10">
                               +{pr.improvement} {pr.unit}
                             </Badge>
                           )}
@@ -245,20 +247,22 @@ export function TrainingSummaryOverlay({ open, onClose, summary, clientName }: T
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 1 }}
-                  className="flex items-center justify-center gap-3 p-3 rounded-xl bg-warning/10 border border-warning/20"
+                  className="flex items-center justify-center gap-3 p-4 rounded-xl bg-gradient-to-r from-warning/20 to-orange-500/20 border border-warning/30 backdrop-blur-sm"
                 >
-                  <Flame className="w-6 h-6 text-warning" />
-                  <span className="font-semibold text-warning">
+                  <div className="p-2 rounded-lg bg-warning/30 animate-pulse">
+                    <Flame className="w-5 h-5 text-warning" />
+                  </div>
+                  <span className="font-bold text-warning text-lg">
                     {summary.streakDays} dní v řadě!
                   </span>
-                  <div className="flex gap-0.5">
+                  <div className="flex gap-1">
                     {Array.from({ length: Math.min(summary.streakDays, 7) }).map((_, i) => (
                       <motion.div
                         key={i}
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 1.1 + i * 0.05 }}
-                        className="w-2 h-2 rounded-full bg-orange-500"
+                        className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-warning to-orange-500 shadow-sm shadow-warning/50"
                       />
                     ))}
                   </div>
