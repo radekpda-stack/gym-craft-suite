@@ -19,7 +19,15 @@ export {
   type ConfettiPreset 
 } from './confetti';
 
-// Common Framer Motion animation variants
+// ================================================
+// PREMIUM ANIMATION PRESETS - Whoop/Apple inspired
+// Subtle, purposeful animations (y: 4px not 20px)
+// ================================================
+
+// Subtle bezier curve - Apple style
+export const appleEase = [0.25, 0.1, 0.25, 1];
+
+// Common Framer Motion animation variants - SUBTLE
 export const fadeIn = {
   initial: { opacity: 0 },
   animate: { opacity: 1 },
@@ -27,36 +35,47 @@ export const fadeIn = {
 };
 
 export const fadeInUp = {
-  initial: { opacity: 0, y: 10 },
+  initial: { opacity: 0, y: 4 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -10 },
+  exit: { opacity: 0, y: -4 },
 };
 
 export const fadeInDown = {
-  initial: { opacity: 0, y: -10 },
+  initial: { opacity: 0, y: -4 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 10 },
+  exit: { opacity: 0, y: 4 },
 };
 
 export const scaleIn = {
-  initial: { opacity: 0, scale: 0.95 },
+  initial: { opacity: 0, scale: 0.97 },
   animate: { opacity: 1, scale: 1 },
-  exit: { opacity: 0, scale: 0.95 },
+  exit: { opacity: 0, scale: 0.97 },
 };
 
 export const slideInRight = {
-  initial: { opacity: 0, x: 20 },
+  initial: { opacity: 0, x: 8 },
   animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -20 },
+  exit: { opacity: 0, x: -8 },
 };
 
 export const slideInLeft = {
-  initial: { opacity: 0, x: -20 },
+  initial: { opacity: 0, x: -8 },
   animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: 20 },
+  exit: { opacity: 0, x: 8 },
 };
 
-// Spring transition presets
+// Micro-scale for touch feedback
+export const tapScale = {
+  whileTap: { scale: 0.97 },
+  transition: { duration: 0.1 },
+};
+
+export const hoverScale = {
+  whileHover: { scale: 1.02 },
+  transition: { duration: 0.15 },
+};
+
+// Spring transition presets - Refined
 export const springTransition = {
   type: 'spring',
   stiffness: 300,
@@ -75,17 +94,75 @@ export const smoothTransition = {
   damping: 30,
 };
 
-// Stagger children animation
+// Premium easing transition (non-spring)
+export const premiumTransition = {
+  duration: 0.15,
+  ease: appleEase,
+};
+
+export const slowPremiumTransition = {
+  duration: 0.3,
+  ease: appleEase,
+};
+
+// Stagger children animation - Faster
 export const staggerContainer = {
   initial: {},
   animate: {
     transition: {
-      staggerChildren: 0.05,
+      staggerChildren: 0.03,
+    },
+  },
+};
+
+export const staggerContainerSlow = {
+  initial: {},
+  animate: {
+    transition: {
+      staggerChildren: 0.06,
     },
   },
 };
 
 export const staggerItem = {
-  initial: { opacity: 0, y: 10 },
+  initial: { opacity: 0, y: 4 },
   animate: { opacity: 1, y: 0 },
+};
+
+// List item animation for performance
+export const listItemVariants = {
+  initial: { opacity: 0, y: 4 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: premiumTransition,
+  },
+  exit: { 
+    opacity: 0, 
+    y: -4,
+    transition: { duration: 0.1 },
+  },
+};
+
+// Card hover effect
+export const cardHover = {
+  initial: {},
+  whileHover: {
+    y: -2,
+    transition: { duration: 0.2, ease: appleEase },
+  },
+};
+
+// Pulse animation for live indicators
+export const pulseVariants = {
+  initial: { scale: 1, opacity: 1 },
+  animate: {
+    scale: [1, 1.05, 1],
+    opacity: [1, 0.8, 1],
+    transition: {
+      duration: 2,
+      repeat: Infinity,
+      ease: 'easeInOut',
+    },
+  },
 };
