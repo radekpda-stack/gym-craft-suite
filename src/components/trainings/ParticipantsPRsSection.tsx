@@ -63,6 +63,9 @@ interface PRItemProps {
 
 function PRItem({ pr, onSelect }: PRItemProps) {
   const colorClasses = getMetricColor(pr.metricType);
+  const dateDisplay = pr.achievedAt 
+    ? format(new Date(pr.achievedAt), 'd.M.', { locale: cs })
+    : null;
   
   return (
     <button 
@@ -74,9 +77,14 @@ function PRItem({ pr, onSelect }: PRItemProps) {
         <MetricIcon type={pr.metricType} />
       </div>
       <span className="flex-1 text-sm truncate">{pr.exerciseName}</span>
-      <Badge variant="secondary" className={cn("font-mono font-semibold text-sm", colorClasses)}>
-        {pr.bestDisplay}
-      </Badge>
+      <div className="flex items-center gap-1.5">
+        <Badge variant="secondary" className={cn("font-mono font-semibold text-sm", colorClasses)}>
+          {pr.bestDisplay}
+        </Badge>
+        {dateDisplay && (
+          <span className="text-xs text-muted-foreground">• {dateDisplay}</span>
+        )}
+      </div>
       <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
     </button>
   );
