@@ -24,14 +24,15 @@ interface CareerStatsSectionProps {
   periodRange?: StatsPeriodRange;
 }
 
-// KPI Card component
+// KPI Card component with floating style
 function KPICard({ 
   icon: Icon, 
   label, 
   value, 
   subValue,
   iconColor = "text-primary",
-  iconBg = "bg-primary/10"
+  iconBg = "bg-primary/10",
+  borderColor = "border-primary/20"
 }: { 
   icon: React.ElementType; 
   label: string; 
@@ -39,19 +40,29 @@ function KPICard({
   subValue?: string;
   iconColor?: string;
   iconBg?: string;
+  borderColor?: string;
 }) {
   return (
-    <Card className="relative overflow-hidden">
-      <CardContent className="p-4">
+    <Card className={cn(
+      "relative overflow-hidden transition-all duration-200",
+      "bg-card/80 backdrop-blur-md",
+      "hover:shadow-md hover:-translate-y-0.5",
+      "border shadow-sm",
+      borderColor
+    )}>
+      {/* Background gradient */}
+      <div className={cn("absolute inset-0 opacity-20 bg-gradient-to-br to-transparent", iconBg)} />
+      
+      <CardContent className="relative p-4">
         <div className="flex items-start gap-3">
-          <div className={cn("p-2.5 rounded-xl shrink-0", iconBg)}>
+          <div className={cn("p-2.5 rounded-xl shrink-0 shadow-sm", iconBg)}>
             <Icon className={cn("h-5 w-5", iconColor)} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted-foreground truncate">{label}</p>
-            <p className="text-xl font-bold text-foreground">{value}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest truncate">{label}</p>
+            <p className="text-xl font-bold text-foreground tabular-nums">{value}</p>
             {subValue && (
-              <p className="text-xs text-muted-foreground">{subValue}</p>
+              <p className="text-[10px] text-muted-foreground">{subValue}</p>
             )}
           </div>
         </div>
@@ -100,11 +111,15 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <Card className="relative overflow-hidden border-primary/20">
+      <Card className={cn(
+        "relative overflow-hidden",
+        "bg-card/80 backdrop-blur-md",
+        "border-primary/20 shadow-lg shadow-primary/5"
+      )}>
         <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
         <CardContent className="relative py-5">
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-primary/20 shadow-lg shadow-primary/10">
+            <div className="p-4 rounded-2xl bg-primary/20 shadow-lg shadow-primary/20 ring-1 ring-primary/30">
               <Trophy className="h-7 w-7 text-primary" />
             </div>
             <div>
@@ -126,6 +141,7 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
           value={stats.totalTrainings.toLocaleString('cs-CZ')}
           iconColor="text-primary"
           iconBg="bg-primary/10"
+          borderColor="border-primary/20"
         />
         <KPICard
           icon={Clock}
@@ -133,6 +149,7 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
           value={`${stats.totalHours.toLocaleString('cs-CZ')} h`}
           iconColor="text-accent"
           iconBg="bg-accent/10"
+          borderColor="border-accent/20"
         />
         <KPICard
           icon={Users}
@@ -141,6 +158,7 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
           subValue="se kterými jste trénoval/a"
           iconColor="text-primary"
           iconBg="bg-primary/10"
+          borderColor="border-primary/20"
         />
         <KPICard
           icon={Banknote}
@@ -149,6 +167,7 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
           subValue="průměrně"
           iconColor="text-emerald-500"
           iconBg="bg-emerald-500/10"
+          borderColor="border-emerald-500/20"
         />
       </div>
 
@@ -156,10 +175,12 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
       <CareerMilestonesTimeline />
 
       {/* Training types breakdown */}
-      <Card>
+      <Card className="bg-card/80 backdrop-blur-md border-border/50">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Dumbbell className="h-4 w-4 text-primary" />
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <Dumbbell className="h-4 w-4 text-primary" />
+            </div>
             Rozdělení podle typu (celkem)
             <StatInfoTooltip
               title="Typy tréninků"
@@ -169,21 +190,21 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-4 gap-2">
-            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/10">
-              <p className="text-lg font-bold">{stats.strengthTrainings}</p>
-              <p className="text-xs text-muted-foreground">Silové</p>
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-warning/15 to-warning/5 border border-warning/20 shadow-sm">
+              <p className="text-lg font-bold tabular-nums">{stats.strengthTrainings}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Silové</p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-destructive/10 to-destructive/5 border border-destructive/10">
-              <p className="text-lg font-bold">{stats.cardioTrainings}</p>
-              <p className="text-xs text-muted-foreground">Kardio</p>
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-destructive/15 to-destructive/5 border border-destructive/20 shadow-sm">
+              <p className="text-lg font-bold tabular-nums">{stats.cardioTrainings}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Kardio</p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/10">
-              <p className="text-lg font-bold">{stats.conditioningTrainings}</p>
-              <p className="text-xs text-muted-foreground">Kondiční</p>
+            <div className="text-center p-3 rounded-xl bg-gradient-to-br from-accent/15 to-accent/5 border border-accent/20 shadow-sm">
+              <p className="text-lg font-bold tabular-nums">{stats.conditioningTrainings}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Kondiční</p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-muted/30 border border-border">
-              <p className="text-lg font-bold">{stats.otherTrainings}</p>
-              <p className="text-xs text-muted-foreground">Ostatní</p>
+            <div className="text-center p-3 rounded-xl bg-muted/30 border border-border shadow-sm">
+              <p className="text-lg font-bold tabular-nums">{stats.otherTrainings}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Ostatní</p>
             </div>
           </div>
         </CardContent>

@@ -20,15 +20,15 @@ const CATEGORY_CONFIG = {
     color: 'text-primary',
     bgColor: 'bg-primary/10',
     borderColor: 'border-primary/20',
-    hoverBg: 'hover:bg-primary/5',
+    glowColor: 'shadow-primary/20',
   },
   cardio: {
     icon: Heart,
     label: 'Kardio',
-    color: 'text-success',
-    bgColor: 'bg-success/10',
-    borderColor: 'border-success/20',
-    hoverBg: 'hover:bg-success/5',
+    color: 'text-emerald-500',
+    bgColor: 'bg-emerald-500/10',
+    borderColor: 'border-emerald-500/20',
+    glowColor: 'shadow-emerald-500/20',
   },
   plyometric: {
     icon: Zap,
@@ -36,7 +36,7 @@ const CATEGORY_CONFIG = {
     color: 'text-warning',
     bgColor: 'bg-warning/10',
     borderColor: 'border-warning/20',
-    hoverBg: 'hover:bg-warning/5',
+    glowColor: 'shadow-warning/20',
   },
 };
 
@@ -46,12 +46,12 @@ export function CategoryCards({ categories, isLoading, onCategoryClick }: Catego
   if (isLoading) {
     return (
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+        <h3 className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest">
           Kategorie cviků
         </h3>
         <div className="grid grid-cols-3 gap-3">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-28 rounded-xl" />
+            <Skeleton key={i} className="h-32 rounded-xl" />
           ))}
         </div>
       </div>
@@ -68,7 +68,7 @@ export function CategoryCards({ categories, isLoading, onCategoryClick }: Catego
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+      <h3 className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest">
         Kategorie cviků
       </h3>
       <div className="grid grid-cols-3 gap-3">
@@ -82,36 +82,42 @@ export function CategoryCards({ categories, isLoading, onCategoryClick }: Catego
                 key={key}
                 onClick={() => handleClick(key)}
                 className={cn(
-                  'relative glass rounded-xl p-4 text-left transition-all',
-                  'border',
+                  'relative overflow-hidden rounded-xl p-4 text-left',
+                  'bg-card/80 backdrop-blur-md',
+                  'border transition-all duration-200',
                   config.borderColor,
-                  config.hoverBg,
-                  'hover:scale-[1.02] active:scale-[0.98]',
-                  'focus:outline-none focus:ring-2 focus:ring-primary/20'
+                  'hover:shadow-lg hover:-translate-y-1',
+                  `hover:${config.glowColor}`,
+                  'focus:outline-none focus:ring-2 focus:ring-primary/30'
                 )}
               >
-                <div className={cn('p-2 rounded-lg w-fit mb-3', config.bgColor)}>
-                  <Icon className={cn('w-5 h-5', config.color)} />
-                </div>
+                {/* Background gradient */}
+                <div className={cn("absolute inset-0 opacity-30 bg-gradient-to-br to-transparent", config.bgColor)} />
                 
-                <p className={cn('text-sm font-bold uppercase tracking-wide', config.color)}>
-                  {config.label}
-                </p>
-                
-                <p className="text-2xl font-bold text-foreground mt-1">
-                  {stats.count}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  cviků
-                </p>
-
-                <div className="mt-2 pt-2 border-t border-border/50">
-                  <p className="text-xs text-muted-foreground">
-                    {stats.entries.toLocaleString('cs-CZ')} záznamů
+                <div className="relative">
+                  <div className={cn('p-2.5 rounded-xl w-fit mb-3 shadow-sm', config.bgColor)}>
+                    <Icon className={cn('w-5 h-5', config.color)} />
+                  </div>
+                  
+                  <p className={cn('text-[10px] font-bold uppercase tracking-widest mb-1', config.color)}>
+                    {config.label}
                   </p>
-                </div>
+                  
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground tabular-nums">
+                    {stats.count}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                    cviků
+                  </p>
 
-                <ChevronRight className="absolute top-4 right-3 w-4 h-4 text-muted-foreground/50" />
+                  <div className="mt-3 pt-2 border-t border-border/50">
+                    <p className="text-xs text-muted-foreground tabular-nums">
+                      {stats.entries.toLocaleString('cs-CZ')} záznamů
+                    </p>
+                  </div>
+
+                  <ChevronRight className="absolute top-3 right-2 w-4 h-4 text-muted-foreground/40" />
+                </div>
               </button>
             );
           }

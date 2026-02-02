@@ -68,8 +68,9 @@ export function SparklineCard({
   return (
     <Card 
       className={cn(
-        'sparkline-card overflow-hidden transition-all duration-300',
-        onClick && 'cursor-pointer hover:scale-[1.02] hover:shadow-lg',
+        'sparkline-card overflow-hidden transition-all duration-200',
+        'bg-card/80 backdrop-blur-md border shadow-sm',
+        onClick && 'cursor-pointer hover:scale-[1.02] hover:shadow-lg hover:-translate-y-0.5',
         className
       )}
       onClick={onClick}
@@ -80,32 +81,32 @@ export function SparklineCard({
             <div className="flex items-center gap-2 mb-1">
               {icon && (
                 <div 
-                  className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: `${colors.fill}20` }}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm"
+                  style={{ backgroundColor: `${colors.fill}15` }}
                 >
                   <div style={{ color: colors.stroke }}>{icon}</div>
                 </div>
               )}
-              <p className="text-sm text-muted-foreground truncate">{title}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest truncate">{title}</p>
             </div>
-            <p className="text-2xl font-bold tracking-tight" style={{ color: colors.stroke }}>
+            <p className="text-2xl font-bold tracking-tight tabular-nums" style={{ color: colors.stroke }}>
               {value}
             </p>
             {(subtitle || hasTrend) && (
               <div className="flex items-center gap-2 mt-1">
                 {hasTrend && (
                   <div className={cn(
-                    'flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded',
-                    isPositive && 'bg-success/10 text-success',
+                    'flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full',
+                    isPositive && 'bg-emerald-500/10 text-emerald-600',
                     isNegative && 'bg-destructive/10 text-destructive',
                     !isPositive && !isNegative && 'bg-muted text-muted-foreground'
                   )}>
-                    <TrendIcon className="h-3 w-3" />
-                    {isPositive && '+'}{trend}%
+                    <TrendIcon className="h-2.5 w-2.5" />
+                    <span className="tabular-nums">{isPositive && '+'}{trend}%</span>
                   </div>
                 )}
                 {subtitle && (
-                  <span className="text-xs text-muted-foreground">{subtitle}</span>
+                  <span className="text-[10px] text-muted-foreground">{subtitle}</span>
                 )}
               </div>
             )}

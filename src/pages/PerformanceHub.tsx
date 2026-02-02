@@ -73,7 +73,7 @@ export default function PerformanceHub() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-primary/10 rounded-xl">
+          <div className="p-3 rounded-2xl bg-primary/15 backdrop-blur-sm shadow-lg shadow-primary/10 ring-1 ring-primary/20">
             <Zap className="w-6 h-6 text-primary" />
           </div>
           <div>

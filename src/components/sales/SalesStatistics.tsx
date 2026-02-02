@@ -414,84 +414,123 @@ export function SalesStatistics() {
           {/* KPI Cards - 4 main metrics */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Tržby */}
-            <div className="glass rounded-xl p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <TrendingUp className="w-4 h-4" />
-                <span className="text-xs">Tržby celkem</span>
-              </div>
-              <p className="text-2xl font-bold text-primary">{formatCurrency(stats.totalRevenue)}</p>
-              <div className="flex items-center gap-2 mt-1">
-                {stats.previousPeriod ? (
-                  <ComparisonBadge 
-                    currentValue={stats.totalRevenue}
-                    previousValue={stats.previousPeriod.totalRevenue}
-                  />
-                ) : (
-                  <span className="text-xs text-muted-foreground">{PERIODS.find(p => p.value === period)?.label}</span>
-                )}
+            <div className={cn(
+              "relative overflow-hidden rounded-xl p-4",
+              "bg-card/80 backdrop-blur-md",
+              "border border-primary/20 shadow-sm",
+              "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+            )}>
+              <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-primary/20 to-transparent" />
+              <div className="relative">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-widest">Tržby celkem</span>
+                </div>
+                <p className="text-2xl font-bold text-primary tabular-nums">{formatCurrency(stats.totalRevenue)}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  {stats.previousPeriod ? (
+                    <ComparisonBadge 
+                      currentValue={stats.totalRevenue}
+                      previousValue={stats.previousPeriod.totalRevenue}
+                    />
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">{PERIODS.find(p => p.value === period)?.label}</span>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Náklady */}
-            <div className="glass rounded-xl p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <TrendingDown className="w-4 h-4" />
-                <span className="text-xs">Náklady</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalCosts)}</p>
-              <div className="flex items-center gap-2 mt-1">
-                {stats.previousPeriod ? (
-                  <ComparisonBadge 
-                    currentValue={stats.totalCosts}
-                    previousValue={stats.previousPeriod.totalCosts}
-                    invert
-                  />
-                ) : (
-                  <span className="text-xs text-muted-foreground">nákupní ceny</span>
-                )}
+            <div className={cn(
+              "relative overflow-hidden rounded-xl p-4",
+              "bg-card/80 backdrop-blur-md",
+              "border border-border/50 shadow-sm",
+              "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+            )}>
+              <div className="relative">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <div className="p-1.5 rounded-lg bg-muted/50">
+                    <TrendingDown className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-widest">Náklady</span>
+                </div>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{formatCurrency(stats.totalCosts)}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  {stats.previousPeriod ? (
+                    <ComparisonBadge 
+                      currentValue={stats.totalCosts}
+                      previousValue={stats.previousPeriod.totalCosts}
+                      invert
+                    />
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">nákupní ceny</span>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Čistý zisk */}
-            <div className="glass rounded-xl p-4 border border-success/30 bg-success/5">
-              <div className="flex items-center gap-2 text-success mb-2">
-                <Banknote className="w-4 h-4" />
-                <span className="text-xs font-medium">Čistý zisk</span>
-              </div>
-              <p className={cn(
-                "text-2xl font-bold",
-                stats.totalProfit >= 0 ? "text-success" : "text-destructive"
-              )}>
-                {formatCurrency(stats.totalProfit)}
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                {stats.previousPeriod ? (
-                  <ComparisonBadge 
-                    currentValue={stats.totalProfit}
-                    previousValue={stats.previousPeriod.totalProfit}
-                  />
-                ) : (
-                  <span className="text-xs text-muted-foreground">marže {stats.profitMargin.toFixed(1)}%</span>
-                )}
+            <div className={cn(
+              "relative overflow-hidden rounded-xl p-4",
+              "bg-card/80 backdrop-blur-md",
+              "border border-emerald-500/30 shadow-sm shadow-emerald-500/10",
+              "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+            )}>
+              <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-emerald-500/20 to-transparent" />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10">
+                    <Banknote className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-widest text-emerald-600 font-medium">Čistý zisk</span>
+                </div>
+                <p className={cn(
+                  "text-2xl font-bold tabular-nums",
+                  stats.totalProfit >= 0 ? "text-emerald-500" : "text-destructive"
+                )}>
+                  {formatCurrency(stats.totalProfit)}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  {stats.previousPeriod ? (
+                    <ComparisonBadge 
+                      currentValue={stats.totalProfit}
+                      previousValue={stats.previousPeriod.totalProfit}
+                    />
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">marže {stats.profitMargin.toFixed(1)}%</span>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Počet prodejů */}
-            <div className="glass rounded-xl p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <ShoppingCart className="w-4 h-4" />
-                <span className="text-xs">Počet prodejů</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{stats.totalOrders}</p>
-              <div className="flex items-center gap-2 mt-1">
-                {stats.previousPeriod ? (
-                  <ComparisonBadge 
-                    currentValue={stats.totalOrders}
-                    previousValue={stats.previousPeriod.totalOrders}
-                  />
-                ) : (
-                  <span className="text-xs text-muted-foreground">transakcí</span>
-                )}
+            <div className={cn(
+              "relative overflow-hidden rounded-xl p-4",
+              "bg-card/80 backdrop-blur-md",
+              "border border-accent/20 shadow-sm",
+              "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+            )}>
+              <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-accent/20 to-transparent" />
+              <div className="relative">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <div className="p-1.5 rounded-lg bg-accent/10">
+                    <ShoppingCart className="w-4 h-4 text-accent" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-widest">Počet prodejů</span>
+                </div>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{stats.totalOrders}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  {stats.previousPeriod ? (
+                    <ComparisonBadge 
+                      currentValue={stats.totalOrders}
+                      previousValue={stats.previousPeriod.totalOrders}
+                    />
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">transakcí</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

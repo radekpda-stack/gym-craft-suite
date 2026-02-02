@@ -30,14 +30,15 @@ export function GaugeCard({
   return (
     <Card 
       className={cn(
-        'gauge-card overflow-hidden transition-all duration-300',
-        onClick && 'cursor-pointer hover:scale-[1.02] hover:shadow-lg',
+        'gauge-card overflow-hidden transition-all duration-200',
+        'bg-card/80 backdrop-blur-md border shadow-sm',
+        onClick && 'cursor-pointer hover:scale-[1.02] hover:shadow-lg hover:-translate-y-0.5',
         className
       )}
       onClick={onClick}
     >
       <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center min-w-0">
-        <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 text-center truncate max-w-full">{title}</p>
+        <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 sm:mb-3 text-center uppercase tracking-widest truncate max-w-full">{title}</p>
         
         <CircularGauge
           value={value}

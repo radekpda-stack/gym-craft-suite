@@ -60,15 +60,17 @@ export function InteractiveHeatmapCard({ periodRange }: InteractiveHeatmapCardPr
     : 0;
 
   return (
-    <Card>
+    <Card className="bg-card/80 backdrop-blur-md border-border/50 shadow-sm">
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
-            <CalendarDays className="h-4 w-4 text-primary" />
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <CalendarDays className="h-4 w-4 text-primary" />
+            </div>
             Heatmapa kapacity
           </CardTitle>
           {periodRange && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
               {periodRange.label}
             </span>
           )}
@@ -80,25 +82,25 @@ export function InteractiveHeatmapCard({ periodRange }: InteractiveHeatmapCardPr
             <div className="flex items-center gap-1.5">
               <CalendarDays className="h-3.5 w-3.5" />
               <span>Nejčastěji:</span>
-              <Badge variant="secondary" className="font-medium">
+              <Badge variant="secondary" className="font-medium text-[10px]">
                 {busiestDayName}
               </Badge>
             </div>
             <div className="flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5" />
-              <Badge variant="secondary" className="font-medium">
+              <Badge variant="secondary" className="font-medium text-[10px]">
                 {busiestHour}
               </Badge>
             </div>
             <div className="flex items-center gap-1.5">
               <TrendingUp className="h-3.5 w-3.5" />
-              <span className="text-foreground font-medium">{busiestPercentage}%</span>
+              <span className="text-foreground font-medium tabular-nums">{busiestPercentage}%</span>
               <span>tréninků</span>
             </div>
           </div>
         )}
         
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wide">
           {totalTrainings} tréninků za vybrané období
         </p>
       </CardHeader>
