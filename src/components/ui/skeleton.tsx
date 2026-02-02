@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Animation type: pulse (default), shimmer, or wave */
+  /** Animation type: pulse, shimmer (default), or wave */
   animation?: 'pulse' | 'shimmer' | 'wave';
 }
 
@@ -14,7 +14,11 @@ function Skeleton({ className, animation = 'shimmer', ...props }: SkeletonProps)
 
   return (
     <div 
-      className={cn("rounded-md bg-muted", animationClass, className)} 
+      className={cn(
+        "rounded-xl bg-muted/40",
+        animationClass,
+        className
+      )} 
       {...props} 
     />
   );

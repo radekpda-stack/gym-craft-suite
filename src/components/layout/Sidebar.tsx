@@ -253,7 +253,7 @@ function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean 
 }
 
 export function Sidebar({ onCollapseChange }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true); // Default collapsed for premium look
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();

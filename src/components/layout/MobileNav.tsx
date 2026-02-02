@@ -36,36 +36,36 @@ export function MobileNav() {
     <>
       {/* Floating Tab Bar - positioned above iOS home indicator */}
       <nav className="fixed bottom-6 left-4 right-4 z-50 lg:hidden">
-        <div className="flex items-center justify-around bg-card/90 backdrop-blur-2xl rounded-[28px] px-2 py-2 border border-border/20 shadow-[0_8px_32px_rgba(0,0,0,0.25)] mx-auto max-w-md">
+        <div className="flex items-center justify-around bg-card/95 backdrop-blur-2xl rounded-[32px] px-2 py-3 border border-border/20 shadow-[0_8px_40px_rgba(0,0,0,0.3)] mx-auto max-w-md">
           
           {/* Notifications button - first position */}
           <NotificationCenter onOpenChange={setNotificationsOpen}>
             <button
               className={cn(
-                'relative flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-200 touch-target',
-                'active:scale-90',
+                'relative flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 touch-target',
+                'active:scale-95',
                 notificationsOpen
                   ? 'text-primary'
                   : 'text-muted-foreground/70 hover:text-foreground'
               )}
             >
-              {/* Icon container */}
+              {/* Icon container - larger touch target */}
               <div className={cn(
-                'relative flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-200',
+                'relative flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-200',
                 notificationsOpen 
-                  ? 'bg-primary/15' 
+                  ? 'bg-primary/15 shadow-[0_0_20px_hsl(var(--primary)/0.3)]' 
                   : 'hover:bg-secondary/50'
               )}>
                 <Bell 
                   className={cn(
-                    'w-[22px] h-[22px] transition-all duration-200',
+                    'w-6 h-6 transition-all duration-200',
                     notificationsOpen && 'scale-110'
                   )} 
                   strokeWidth={notificationsOpen ? 2.5 : 1.8} 
                 />
                 {totalUnread > 0 && (
                   <Badge 
-                    className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center"
+                    className="absolute -top-0.5 -right-0.5 h-5 min-w-[20px] px-1.5 bg-destructive text-destructive-foreground text-[11px] flex items-center justify-center shadow-lg"
                   >
                     {totalUnread > 99 ? "99+" : totalUnread}
                   </Badge>
@@ -74,7 +74,7 @@ export function MobileNav() {
               
               {/* Label */}
               <span className={cn(
-                'text-[9px] mt-0.5 transition-all duration-200 whitespace-nowrap',
+                'text-[10px] mt-1 transition-all duration-200 whitespace-nowrap',
                 notificationsOpen 
                   ? 'font-bold text-primary' 
                   : 'font-medium'
@@ -94,23 +94,23 @@ export function MobileNav() {
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  'relative flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-200 touch-target',
-                  'active:scale-90',
+                  'relative flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 touch-target',
+                  'active:scale-95',
                   isActive
                     ? 'text-primary'
                     : 'text-muted-foreground/70 hover:text-foreground'
                 )}
               >
-                {/* Icon container */}
+                {/* Icon container - larger touch target */}
                 <div className={cn(
-                  'relative flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-200',
+                  'relative flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-200',
                   isActive 
-                    ? 'bg-primary/15' 
+                    ? 'bg-primary/15 shadow-[0_0_20px_hsl(var(--primary)/0.3)]' 
                     : 'hover:bg-secondary/50'
                 )}>
                   <Icon 
                     className={cn(
-                      'w-[22px] h-[22px] transition-all duration-200',
+                      'w-6 h-6 transition-all duration-200',
                       isActive && 'scale-110'
                     )} 
                     strokeWidth={isActive ? 2.5 : 1.8} 
@@ -119,7 +119,7 @@ export function MobileNav() {
                 
                 {/* Label */}
                 <span className={cn(
-                  'text-[9px] mt-0.5 transition-all duration-200 whitespace-nowrap',
+                  'text-[10px] mt-1 transition-all duration-200 whitespace-nowrap',
                   isActive 
                     ? 'font-bold text-primary' 
                     : 'font-medium'
@@ -133,12 +133,12 @@ export function MobileNav() {
           {/* More button */}
           <button
             onClick={() => setMenuOpen(true)}
-            className="relative flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-200 touch-target active:scale-90 text-muted-foreground/70 hover:text-foreground"
+            className="relative flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 touch-target active:scale-95 text-muted-foreground/70 hover:text-foreground"
           >
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-200 hover:bg-secondary/50">
-              <MoreHorizontal className="w-[22px] h-[22px]" strokeWidth={1.8} />
+            <div className="relative flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-200 hover:bg-secondary/50">
+              <MoreHorizontal className="w-6 h-6" strokeWidth={1.8} />
             </div>
-            <span className="text-[9px] mt-0.5 font-medium whitespace-nowrap">Více</span>
+            <span className="text-[10px] mt-1 font-medium whitespace-nowrap">Více</span>
           </button>
         </div>
       </nav>

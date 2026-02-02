@@ -24,8 +24,8 @@ export {
 // Subtle, purposeful animations (y: 4px not 20px)
 // ================================================
 
-// Subtle bezier curve - Apple style
-export const appleEase = [0.25, 0.1, 0.25, 1];
+// Subtle bezier curve - Apple style (typed as tuple)
+export const appleEase: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
 
 // Common Framer Motion animation variants - SUBTLE
 export const fadeIn = {
@@ -73,6 +73,28 @@ export const tapScale = {
 export const hoverScale = {
   whileHover: { scale: 1.02 },
   transition: { duration: 0.15 },
+};
+
+// NEW: Enhanced touch and hover presets
+export const touchFeedback = {
+  whileTap: { scale: 0.97, opacity: 0.9 },
+  transition: { duration: 0.1 },
+};
+
+export const hoverLift = {
+  whileHover: { y: -2 },
+  transition: { duration: 0.2, ease: appleEase },
+};
+
+export const buttonPress = {
+  whileTap: { scale: 0.98, opacity: 0.9 },
+  transition: { duration: 0.1 },
+};
+
+export const cardInteraction = {
+  whileHover: { y: -2, scale: 1.01 },
+  whileTap: { scale: 0.99 },
+  transition: { duration: 0.2, ease: appleEase },
 };
 
 // Spring transition presets - Refined
@@ -159,6 +181,35 @@ export const pulseVariants = {
   animate: {
     scale: [1, 1.05, 1],
     opacity: [1, 0.8, 1],
+    transition: {
+      duration: 2,
+      repeat: Infinity,
+      ease: 'easeInOut',
+    },
+  },
+};
+
+// Breathing animation for icons
+export const breathingVariants = {
+  animate: {
+    scale: [1, 1.03, 1],
+    opacity: [0.7, 0.9, 0.7],
+    transition: {
+      duration: 3,
+      repeat: Infinity,
+      ease: 'easeInOut',
+    },
+  },
+};
+
+// Glow pulse for alerts/notifications
+export const glowPulse = {
+  animate: {
+    boxShadow: [
+      '0 0 0 0 rgba(var(--primary), 0)',
+      '0 0 0 8px rgba(var(--primary), 0.1)',
+      '0 0 0 0 rgba(var(--primary), 0)',
+    ],
     transition: {
       duration: 2,
       repeat: Infinity,
