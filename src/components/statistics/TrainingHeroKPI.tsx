@@ -92,19 +92,22 @@ export function TrainingHeroKPI({
         <Card 
           key={kpi.label} 
           className={cn(
-            "p-4 sm:p-5 flex flex-col gap-3 relative overflow-hidden border",
+            "relative overflow-hidden p-4 sm:p-5 flex flex-col gap-3",
+            "bg-card/80 backdrop-blur-md",
+            "border shadow-sm transition-all duration-200",
+            "hover:shadow-md hover:-translate-y-0.5",
             kpi.borderColor
           )}
         >
           {/* Background gradient */}
-          <div className={cn("absolute inset-0 opacity-30", `bg-gradient-to-br ${kpi.bgColor} to-transparent`)} />
+          <div className={cn("absolute inset-0 opacity-30 bg-gradient-to-br to-transparent", kpi.bgColor)} />
           
           <div className="relative flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className={cn("p-2 rounded-xl shrink-0", kpi.bgColor)}>
+              <div className={cn("p-2 rounded-xl shrink-0 shadow-sm", kpi.bgColor)}>
                 <kpi.icon className={cn("h-4 w-4 sm:h-5 sm:w-5", kpi.color)} />
               </div>
-              <span className="text-xs sm:text-sm text-muted-foreground truncate">
+              <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest truncate">
                 {kpi.label}
               </span>
             </div>
@@ -117,7 +120,7 @@ export function TrainingHeroKPI({
           
           <div className="relative">
             <p className={cn(
-              "text-2xl sm:text-3xl font-bold truncate max-w-full",
+              "text-2xl sm:text-3xl font-bold truncate max-w-full tabular-nums",
               kpi.isText ? 'text-base sm:text-lg' : ''
             )}>
               {kpi.value}
@@ -126,15 +129,15 @@ export function TrainingHeroKPI({
             {/* Trend indicator */}
             {kpi.trend && kpi.trend.value !== 0 && (
               <div className={cn(
-                "flex items-center gap-1 text-xs mt-1",
-                kpi.trend.value > 0 ? "text-success" : "text-destructive"
+                "inline-flex items-center gap-1 text-[10px] font-medium mt-1.5 px-1.5 py-0.5 rounded-full",
+                kpi.trend.value > 0 ? "text-emerald-600 bg-emerald-500/10" : "text-destructive bg-destructive/10"
               )}>
                 {kpi.trend.value > 0 ? (
-                  <TrendingUp className="h-3 w-3" />
+                  <TrendingUp className="h-2.5 w-2.5" />
                 ) : (
-                  <TrendingDown className="h-3 w-3" />
+                  <TrendingDown className="h-2.5 w-2.5" />
                 )}
-                <span>
+                <span className="tabular-nums">
                   {kpi.trend.value > 0 ? '+' : ''}{kpi.trend.value}% {kpi.trend.label}
                 </span>
               </div>

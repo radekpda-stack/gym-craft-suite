@@ -40,7 +40,8 @@ function MetricBox({
   value, 
   change,
   iconColor = "text-primary",
-  iconBg = "bg-primary/10"
+  iconBg = "bg-primary/10",
+  borderColor = "border-primary/20"
 }: { 
   icon: React.ElementType;
   label: string;
@@ -48,15 +49,24 @@ function MetricBox({
   change: number;
   iconColor?: string;
   iconBg?: string;
+  borderColor?: string;
 }) {
   return (
-    <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
-      <div className={cn("p-2 rounded-lg shrink-0", iconBg)}>
+    <div className={cn(
+      "relative overflow-hidden flex items-start gap-3 p-3 rounded-xl",
+      "bg-card/80 backdrop-blur-md border shadow-sm",
+      "transition-all duration-200 hover:shadow-md",
+      borderColor
+    )}>
+      {/* Background gradient */}
+      <div className={cn("absolute inset-0 opacity-20 bg-gradient-to-br to-transparent", iconBg)} />
+      
+      <div className={cn("relative p-2 rounded-lg shrink-0 shadow-sm", iconBg)}>
         <Icon className={cn("h-4 w-4", iconColor)} />
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-muted-foreground truncate">{label}</p>
-        <p className="text-lg font-bold">{value}</p>
+      <div className="relative min-w-0 flex-1">
+        <p className="text-[10px] text-muted-foreground uppercase tracking-widest truncate">{label}</p>
+        <p className="text-lg font-bold tabular-nums">{value}</p>
         <TrendIndicator value={change} label="vs min." />
       </div>
     </div>
@@ -104,6 +114,7 @@ export function PeriodComparisonCard({ periodRange }: PeriodComparisonCardProps)
             change={data.changes.trainings}
             iconColor="text-primary"
             iconBg="bg-primary/10"
+            borderColor="border-primary/20"
           />
           <MetricBox
             icon={Banknote}
@@ -112,6 +123,7 @@ export function PeriodComparisonCard({ periodRange }: PeriodComparisonCardProps)
             change={data.changes.income}
             iconColor="text-emerald-600"
             iconBg="bg-emerald-500/10"
+            borderColor="border-emerald-500/20"
           />
           <MetricBox
             icon={Users}
@@ -120,6 +132,7 @@ export function PeriodComparisonCard({ periodRange }: PeriodComparisonCardProps)
             change={data.changes.activeClients}
             iconColor="text-accent"
             iconBg="bg-accent/10"
+            borderColor="border-accent/20"
           />
         </div>
       </CardContent>
