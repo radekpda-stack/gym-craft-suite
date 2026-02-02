@@ -52,8 +52,10 @@ export function CreateTrainingDialog({
     (selectedClient?.credit_balance || 0) > 0
   );
   
-  const effectivePrices: TrainingPrices = usesLegacyPricing && legacyPrices
-    ? legacyPrices
+  // Use effective prices with proper legacy fallback
+  // When usesLegacyPricing is true, getEffectiveTrainingPrice handles the fallback
+  const effectivePrices: TrainingPrices = usesLegacyPricing
+    ? (legacyPrices || { "1": 800, "2": 1000, "3": 1200, "first_training": 1000 })
     : (currentPrices || { "1": 900, "2": 1100, "3": 1300, "first_training": 1000 });
 
   const defaultValues: Partial<EnhancedTrainingFormValues> = { ...propDefaultValues };
