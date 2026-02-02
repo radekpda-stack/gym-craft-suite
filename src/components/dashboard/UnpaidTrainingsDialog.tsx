@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Clock, ExternalLink, Loader2 } from 'lucide-react';
+import { Clock, ExternalLink, Loader2, CheckCheck } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -122,6 +122,8 @@ export function UnpaidTrainingsDialog({ open, onOpenChange }: UnpaidTrainingsDia
   const { data: trainings, isLoading } = useUnpaidTrainings();
   const payTraining = usePayTraining();
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [isPayingAll, setIsPayingAll] = useState(false);
+  const [bulkPaymentMethod, setBulkPaymentMethod] = useState<PaymentMethod>('credit');
 
   const handlePay = async (trainingId: string, method: PaymentMethod, deductCredit: boolean) => {
     setPayingId(trainingId);
@@ -133,6 +135,24 @@ export function UnpaidTrainingsDialog({ open, onOpenChange }: UnpaidTrainingsDia
       });
     } finally {
       setPayingId(null);
+    }
+  };
+
+  const handlePayAll = async () => {
+    if (!trainings?.length) return;
+    
+    setIsPayingAll(true);
+    try {
+      for (const training of trainings) {
+        await payTraining.mutateAsync({
+          trainingId: training.id,
+          paymentMethod: bulkPaymentMethod,
+          deductCredit: bulkPaymentMethod === 'credit',
+        });
+      }
+      onOpenChange(false);
+    } finally {
+      setIsPayingAll(false);
     }
   };
 
@@ -171,13 +191,45 @@ export function UnpaidTrainingsDialog({ open, onOpenChange }: UnpaidTrainingsDia
               </div>
             </ScrollArea>
 
-            <div className="pt-4 border-t border-border">
+            <div className="pt-4 border-t border-border space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Celkem</span>
                 <span className="text-lg font-semibold">
                   {totalAmount.toLocaleString('cs-CZ')} Kč
                 </span>
               </div>
+              
+              {trainings && trainings.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={bulkPaymentMethod}
+                    onValueChange={(v) => setBulkPaymentMethod(v as PaymentMethod)}
+                  >
+                    <SelectTrigger className="h-9 flex-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="credit">Z kreditu</SelectItem>
+                      <SelectItem value="cash">Hotovost</SelectItem>
+                      <SelectItem value="card">Karta</SelectItem>
+                      <SelectItem value="bank">Převodem</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button
+                    onClick={handlePayAll}
+                    disabled={isPayingAll || payingId !== null}
+                    className="flex-1"
+                  >
+                    {isPayingAll ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCheck className="w-4 h-4 mr-2" />
+                    )}
+                    Uhradit vše
+                  </Button>
+                </div>
+              )}
             </div>
           </>
         )}
