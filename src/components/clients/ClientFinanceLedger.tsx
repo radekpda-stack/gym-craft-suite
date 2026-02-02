@@ -32,17 +32,30 @@ import {
   ArrowUpDown,
   Loader2,
   ShoppingCart,
+  FileSpreadsheet,
+  FileText,
+  CheckCircle,
+  AlertTriangle,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, subDays, subMonths, isAfter } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { 
   LedgerEntry, 
   LedgerEntryType, 
   exportLedgerToXLSX,
+  exportLedgerToTXT,
   formatPaymentMethod 
 } from '@/lib/clientLedgerExport';
 
@@ -74,7 +87,7 @@ interface CreditTransaction {
 }
 
 type FilterType = 'all' | 'training' | 'payment' | 'product' | 'manual';
-
+type PeriodFilter = 30 | 90 | 365 | 'all';
 interface ClientFinanceLedgerProps {
   clientId: string;
   clientName: string;
@@ -94,6 +107,13 @@ const FILTER_OPTIONS: { value: FilterType; label: string; icon: typeof Dumbbell 
   { value: 'payment', label: 'Dobití', icon: CreditCard },
   { value: 'product', label: 'Produkty', icon: Package },
   { value: 'manual', label: 'Korekce', icon: Wrench },
+];
+
+const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
+  { value: 30, label: 'Měsíc' },
+  { value: 90, label: '3 měsíce' },
+  { value: 365, label: 'Rok' },
+  { value: 'all', label: 'Vše' },
 ];
 
 // ==================== Helpers ====================
@@ -157,6 +177,7 @@ export function ClientFinanceLedger({
   isLoading = false,
 }: ClientFinanceLedgerProps) {
   const [filter, setFilter] = useState<FilterType>('all');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
   const [showGroupScope, setShowGroupScope] = useState(true);
 
   // Build unified ledger entries with running balance
@@ -233,11 +254,23 @@ export function ClientFinanceLedger({
     return entries;
   }, [sessions, transactions, currentBalance, clientId, isSharedBudget, showGroupScope]);
 
-  // Filter entries
+  // Filter entries by type and period
   const filteredEntries = useMemo(() => {
-    if (filter === 'all') return ledgerEntries;
-    return ledgerEntries.filter(e => e.type === filter);
-  }, [ledgerEntries, filter]);
+    let filtered = ledgerEntries;
+    
+    // Type filter
+    if (filter !== 'all') {
+      filtered = filtered.filter(e => e.type === filter);
+    }
+    
+    // Period filter
+    if (periodFilter !== 'all') {
+      const cutoffDate = subDays(new Date(), periodFilter);
+      filtered = filtered.filter(e => isAfter(parseISO(e.date), cutoffDate));
+    }
+    
+    return filtered;
+  }, [ledgerEntries, filter, periodFilter]);
 
   // Group by month
   const groupedEntries = useMemo(() => {
@@ -257,6 +290,18 @@ export function ClientFinanceLedger({
     }));
   }, [filteredEntries]);
 
+  // Audit check - compare calculated balance with stored balance
+  const auditResult = useMemo(() => {
+    const calculatedBalance = ledgerEntries.reduce((sum, e) => sum + e.amount, 0);
+    const difference = Math.abs(calculatedBalance - currentBalance);
+    const matches = difference < 1; // Allow 1 CZK tolerance for rounding
+    return {
+      calculatedBalance,
+      matches,
+      difference,
+    };
+  }, [ledgerEntries, currentBalance]);
+
   // Stats
   const stats = useMemo(() => {
     const totalTopUp = ledgerEntries
@@ -272,9 +317,13 @@ export function ClientFinanceLedger({
     return { totalTopUp, totalSpent, productCount };
   }, [ledgerEntries]);
 
-  // Export handler
-  const handleExport = () => {
+  // Export handlers
+  const handleExportXLSX = () => {
     exportLedgerToXLSX(ledgerEntries, clientName, isSharedBudget);
+  };
+  
+  const handleExportTXT = () => {
+    exportLedgerToTXT(ledgerEntries, clientName, currentBalance, stats, isSharedBudget);
   };
 
   if (isLoading) {
@@ -295,15 +344,25 @@ export function ClientFinanceLedger({
             <Wallet className="w-5 h-5 text-primary" />
             Finanční přehled
           </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            className="gap-1.5"
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Export</span>
+                <ChevronDown className="w-3 h-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportXLSX} className="gap-2">
+                <FileSpreadsheet className="w-4 h-4" />
+                Excel (XLSX)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportTXT} className="gap-2">
+                <FileText className="w-4 h-4" />
+                Text (TXT)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardHeader>
       
@@ -341,6 +400,23 @@ export function ClientFinanceLedger({
           </div>
         </div>
 
+        {/* Audit Banner */}
+        {auditResult.matches ? (
+          <Alert className="border-success/30 bg-success/10">
+            <CheckCircle className="h-4 w-4 text-success" />
+            <AlertDescription className="text-success">
+              Zůstatek souhlasí s evidencí
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Vypočtený zůstatek ({formatCurrency(auditResult.calculatedBalance)}) nesouhlasí s evidencí ({formatCurrency(currentBalance)}) — rozdíl {formatCurrency(auditResult.difference)}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Group scope toggle */}
         {isSharedBudget && (
           <div className="flex gap-1.5">
@@ -366,7 +442,7 @@ export function ClientFinanceLedger({
         )}
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 items-center">
           {FILTER_OPTIONS.map(option => {
             const Icon = option.icon;
             return (
@@ -382,6 +458,22 @@ export function ClientFinanceLedger({
               </Button>
             );
           })}
+          
+          {/* Period filter separator */}
+          <div className="w-px h-5 bg-border mx-1" />
+          
+          {/* Period filter */}
+          {PERIOD_OPTIONS.map(option => (
+            <Button
+              key={option.value}
+              variant={periodFilter === option.value ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setPeriodFilter(option.value)}
+            >
+              {option.label}
+            </Button>
+          ))}
         </div>
 
         {/* Timeline */}

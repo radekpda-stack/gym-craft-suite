@@ -20,6 +20,7 @@ import {
   Activity,
   User,
   Image,
+  Wallet,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -126,6 +127,11 @@ export function ClientDetailTabs({
       badge: sessions.filter(s => s.status === 'scheduled').length || undefined,
     },
     { 
+      id: 'finance', 
+      label: 'Finance', 
+      icon: Wallet,
+    },
+    { 
       id: 'performance', 
       label: 'Výkon', 
       icon: Trophy,
@@ -204,8 +210,10 @@ export function ClientDetailTabs({
         
         {/* Client Self-Logged Workouts */}
         <ClientSelfWorkoutsCard clientId={client.id} defaultOpen={true} />
-        
-        {/* Unified Finance Ledger */}
+      </TabsContent>
+
+      {/* Tab: Finance */}
+      <TabsContent value="finance" className="mt-0 space-y-4">
         <ClientFinanceLedger
           clientId={client.id}
           clientName={client.name}
