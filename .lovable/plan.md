@@ -1,142 +1,223 @@
 
-# Plán: Automatické párování tagů partie těla podle cviků
+# Audit Statistik - Kompletní přehled a doporučení
 
-## Přehled
+## Shrnutí současného stavu
 
-Při přidání cviku do tréninku se automaticky přiřadí odpovídající tagy partie těla na základě svalových skupin cviku.
-
-**Příklad:**
-- Přidám "Dřep (Back Squat)" → automaticky se přidá tag **"Dolní část"** + **"Core"**
-- Přidám "Bench Press" → automaticky se přidá tag **"Horní část"** + **"Hrudník"**
+Stránka Statistiky je rozdělena do 4 záložek:
+1. **Kariéra** - celoživotní přehled trenéra
+2. **Finance** - příjmy, platby, ziskovost
+3. **Tréninky** - aktivita, heatmapa, distribuce
+4. **Klienti** - retence, LTV, rizikoví klienti
 
 ---
 
-## Jak to funguje
+## KARIÉRA (CareerStatsSection)
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  Přidání cviku                                                  │
-│  "Dřep (Back Squat)"                                            │
-└─────────────────────┬───────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  1. Zjistit svalové skupiny cviku                               │
-│     quadriceps, gluteus_maximus, hamstrings, erector_spinae     │
-└─────────────────────┬───────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  2. Přeložit na body_part_categories (view v databázi)          │
-│     → "lower" (Dolní část), "core" (Core)                       │
-└─────────────────────┬───────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  3. Najít odpovídající tagy typu "body_part"                    │
-│     → "Dolní část" (id: d5f602c0-...)                           │
-│     → "Střed těla" (id: 72d6af4d-...)                           │
-└─────────────────────┬───────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  4. Přidat tagy k tréninku (pokud ještě nejsou)                 │
-│     training_session_tags.insert(...)                           │
-└─────────────────────────────────────────────────────────────────┘
+### Správně funguje:
+| Komponenta | Status | Poznámka |
+|------------|--------|----------|
+| KPI Grid (tréninky, hodiny, klienti, hodinová sazba) | ✅ OK | Data z `useLifetimeStats` |
+| Rozdělení podle typu (silové, kardio, kondiční, ostatní) | ✅ OK | Správně agreguje |
+| CareerMilestonesTimeline | ✅ OK | Progress k dalšímu cíli + historie |
+
+### Problémy:
+| Komponenta | Problém | Doporučení |
+|------------|---------|------------|
+| PeriodComparisonCard | **Duplicita** - zobrazuje se i v Kariéře i v Trénincích | **Odstranit z Kariéry** - kariéra je celoživotní přehled, porovnání období sem nepatří |
+| Hodinová sazba | Záleží na tom, zda má trénink vyplněnou `duration` | Přidat varování pokud < 50% tréninků má délku |
+
+### Chybí:
+| Funkce | Popis | Priorita |
+|--------|-------|----------|
+| Graf vývoje přes čas | Jak rostl počet tréninků/klientů po rocích | Střední |
+| Top klienti celkově | Kdo přinesl nejvíc peněz za celou kariéru | Nízká |
+
+---
+
+## FINANCE (FinanceStatsSection)
+
+### Správně funguje:
+| Komponenta | Status | Poznámka |
+|------------|--------|----------|
+| FinanceHeroKPI | ✅ OK | Přijatý kredit, odtrénováno, průměr/trénink, nezaplaceno |
+| RevenueByTrainingTypeCard | ✅ OK | Výnosnost podle typu s hodinovou sazbou |
+| FinanceChartsSection (Trend + Pie) | ✅ OK | Správně zobrazuje trend a rozložení |
+| MonthlyIncomeCard | ✅ OK | Roční přehled s trendem vs loni |
+| CancellationStatsCard | ✅ OK | Zrušené tréninky, pozdní zrušení, storno poplatky |
+
+### Problémy:
+| Komponenta | Problém | Doporučení |
+|------------|---------|------------|
+| InsightsBar | Některé insights jsou **evaluativní** ("Výborné", "Ke zlepšení") | Přeformulovat na fakta bez hodnocení |
+| RevenueBreakdownCard | **Duplicitní s Pie chartem** v FinanceChartsSection | **Odstranit** - ukazuje stejná data (tréninky vs produkty) |
+| Produkty karta (podmíněná) | Zobrazuje se jen pokud je nezaplaceno + produkty > 0 - nelogické | Buď zobrazit vždy, nebo smazat |
+
+### Chybí:
+| Funkce | Popis | Priorita |
+|--------|-------|----------|
+| Cash flow predikce | Očekávaný příjem na základě naplánovaných tréninků | Vysoká |
+| Provozní náklady | Karta s náklady chybí ve Finance sekci (existuje komponenta) | Střední |
+
+---
+
+## TRÉNINKY (TrainingStatsSection)
+
+### Správně funguje:
+| Komponenta | Status | Poznámka |
+|------------|--------|----------|
+| TrainingHeroKPI | ✅ OK | Celkem, tento měsíc, průměr/týden, nejčastější typ |
+| TrainingTypeDistributionCard | ✅ OK | Pie + progress bary |
+| TrainingDurationCard | ✅ OK | Průměrná délka, min/max, celkem hodin |
+| InteractiveHeatmapCard | ✅ OK | Heatmapa kapacity |
+| GlobalTagDistributionCard | ✅ OK | Distribuce tagů (zaměření, partie, intenzita) |
+| FeedbackTagCorrelation | ✅ OK | Korelace feedback vs tagy |
+
+### Problémy:
+| Komponenta | Problém | Doporučení |
+|------------|---------|------------|
+| PeriodComparisonCard | **Duplicita** - zobrazuje se i zde | Ponechat zde (patří sem), odstranit z Kariéry |
+| HeatmapSummary | Jen text pod heatmapou | **Sloučit** do InteractiveHeatmapCard jako header |
+| Trend výpočet | `trendVsPrevious` je hrubý odhad z průměru | Použít skutečná data minulého období |
+
+### Chybí:
+| Funkce | Popis | Priorita |
+|--------|-------|----------|
+| Graf tréninků po dnech/týdnech | Area chart s historií | Střední |
+| Obsazenost kapacity | Kolik % slotů je využito (existuje hook) | Vysoká |
+
+---
+
+## KLIENTI (ClientStatsSection)
+
+### Správně funguje:
+| Komponenta | Status | Poznámka |
+|------------|--------|----------|
+| ClientHealthDashboard | ✅ OK | Aktivní, retence, LTV, rizikoví klienti |
+| ClientHeroKPI | ✅ OK | 4 karty - aktivní, retence, délka spolupráce, pocit těla |
+| ClientLTVRankingCard | ✅ OK | Top 5 klientů podle LTV |
+| CohortRetentionCard | ✅ OK | Kohortová tabulka retence |
+| ChurnRiskCard | ✅ OK | Rizikoví klienti s doporučeními |
+| ClientTenureCard | ✅ OK | Délka spolupráce - distribuce |
+| ClientFeedbackCard | ✅ OK | Průměrný pocit těla a session fit |
+
+### Problémy:
+| Komponenta | Problém | Doporučení |
+|------------|---------|------------|
+| InsightsBar | Obsahuje **evaluativní** texty ("Výborná retence") | Přeformulovat |
+| ClientHealthDashboard vs ClientHeroKPI | **Částečná duplicita** - oba ukazují aktivní klienty a retenci | Sloučit do jednoho |
+| GaugeCard pro retenci | Používá barvy (zelená/červená) = evaluativní | Změnit na neutrální barvy |
+
+### Chybí:
+| Funkce | Popis | Priorita |
+|--------|-------|----------|
+| Trend nových vs odešlých klientů | Graf přírůstku/úbytku přes čas | Střední |
+| Segmentace klientů | Podle tagu, frekvence, hodnoty | Nízká |
+
+---
+
+## SOUHRNNÁ TABULKA AKCÍ
+
+### Odstranit (duplicity):
+| Komponenta | Z | Důvod |
+|------------|---|-------|
+| `PeriodComparisonCard` | CareerStatsSection | Duplicita s TrainingStatsSection |
+| `RevenueBreakdownCard` | FinanceStatsSection | Duplicita s FinanceChartsSection (Pie chart) |
+| Podmíněná Produkty karta | FinanceStatsSection | Nelogická podmínka zobrazení |
+
+### Upravit:
+| Komponenta | Změna |
+|------------|-------|
+| `InsightsBar` + generátory | Odstranit evaluativní slova ("Výborné", "Nízká") - nahradit fakty |
+| `ClientHeroKPI` + `ClientHealthDashboard` | Sloučit do jedné komponenty |
+| `HeatmapSummary` | Přesunout do headeru `InteractiveHeatmapCard` |
+| `GaugeCard` v ClientHeroKPI | Změnit varianty na neutrální |
+| Trend výpočet v TrainingStatsSection | Použít skutečná data z předchozího období |
+
+### Přidat:
+| Komponenta | Sekce | Priorita |
+|------------|-------|----------|
+| `CapacityUtilizationCard` | Tréninky | Vysoká - existuje hook, jen chybí komponenta |
+| `OperatingExpensesCard` | Finance | Střední - komponenta existuje, není integrována |
+| `CashflowForecastCard` | Finance | Střední - predikce příjmu |
+| Graf tréninků po týdnech | Tréninky | Střední |
+| Graf nových vs odešlých klientů | Klienti | Střední |
+
+---
+
+## DOPORUČENÉ PRIORITY
+
+### Fáze 1 - Čistka (Quick wins):
+1. Odstranit `PeriodComparisonCard` z Kariéry
+2. Odstranit `RevenueBreakdownCard` z Finance (duplicita)
+3. Odstranit podmíněnou Produkty kartu
+
+### Fáze 2 - Non-evaluativní UI:
+1. Přepsat `InsightsBar` generátory - fakta místo hodnocení
+2. Změnit barvy v `GaugeCard` na neutrální
+3. Sloučit `HeatmapSummary` do `InteractiveHeatmapCard`
+
+### Fáze 3 - Nové funkce:
+1. Přidat `CapacityUtilizationCard` do Tréninků
+2. Přidat `OperatingExpensesCard` do Finance
+3. Sloučit `ClientHeroKPI` + `ClientHealthDashboard`
+
+---
+
+## KONKRÉTNÍ PŘÍKLAD: Evaluativní vs Faktický text
+
+**Před (evaluativní):**
+```
+"Výborná retence: 85%"
+"Nízká retence: 45%"
+"Příjem +15% vs minulý měsíc" (s zelenou barvou)
+```
+
+**Po (faktický):**
+```
+"Retence: 85% (60 dní)"
+"Retence: 45% (60 dní)"
+"Příjem: +15% vs min. období" (neutrální barva)
 ```
 
 ---
 
-## Změny
+## VIZUÁLNÍ ZMĚNY
 
-### 1. Nový hook `useAutoTagFromExercise`
-
-**Soubor:** `src/hooks/useAutoTagFromExercise.ts`
-
-Hook bude:
-- Přijímat `trainingSessionId` a `exerciseId`
-- Používat existující `useExerciseBodyPartCategories` pro získání body_part kategorií cviku
-- Mapovat body_part kategorie na tagy pomocí jednoduché lookup tabulky
-- Automaticky přidávat chybějící tagy pomocí `useUpdateTrainingSessionTags`
-
-```typescript
-// Mapování body_part_key → tag ID
-const BODY_PART_TO_TAG: Record<string, string> = {
-  'upper': 'd5f602c0-...', // "Horní část"
-  'lower': '05427be9-...', // "Dolní část" 
-  'core': '72d6af4d-...',  // "Střed těla"
-};
 ```
+KARIÉRA (po změnách):
+┌──────────────────────────────────────────┐
+│ 📊 Kariérní přehled                       │
+│ Od 15. března 2023                        │
+└──────────────────────────────────────────┘
+┌────────┬────────┬────────┬────────┐
+│Tréninky│ Hodiny │ Klienti│ Kč/hod │
+│  847   │  847h  │   52   │ 1165   │
+└────────┴────────┴────────┴────────┘
+┌──────────────────────────────────────────┐
+│ 🏆 Kariérní milníky                       │
+│ [Další cíl: 1000 tréninků ████████ 85%] │
+│ ✓ 500 tréninků - 12.5.2024               │
+│ ✓ 50 klientů - 8.3.2024                  │
+└──────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ 💪 Rozdělení podle typu (celkem)          │
+│ [523] Silové  [156] Kardio  [100] Kond.  │
+└──────────────────────────────────────────┘
 
-### 2. Integrace do WorkoutExerciseManager
-
-**Soubor:** `src/components/trainings/WorkoutExerciseManager.tsx`
-
-Po úspěšném přidání cviku (`handleAddExercise`):
-1. Zavolat nový hook pro získání body_part kategorií cviku
-2. Sloučit s existujícími tagy tréninku
-3. Aktualizovat tagy tréninku
-
-```typescript
-// V handleAddExercise po úspěšném uložení:
-if (data.exercise_id) {
-  await autoTagFromExercise(trainingSessionId, data.exercise_id);
-}
+FINANCE (po změnách):
+┌────────┬────────┬────────┬────────┐
+│Kredit  │Odtrén. │Průměr  │Nezapl. │  (HERO)
+└────────┴────────┴────────┴────────┘
+┌──────────────────────────────────────────┐
+│ 📈 Výnosnost podle typu tréninku         │  (zachovat)
+└──────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ 📊 Trend příjmů         📈 Rozložení     │  (zachovat)
+└──────────────────────────────────────────┘
+┌───────────────────┬──────────────────────┐
+│ 📅 Měsíční přehled│ ❌ Zrušené tréninky  │  (zachovat)
+└───────────────────┴──────────────────────┘
+┌──────────────────────────────────────────┐
+│ 🧾 Provozní náklady (NOVÉ)               │
+└──────────────────────────────────────────┘
 ```
-
-### 3. Notifikace uživateli
-
-Při automatickém přidání tagu zobrazit toast:
-```
-✓ Automaticky přidáno: Dolní část, Core
-```
-
----
-
-## Mapování kategorií na tagy
-
-| Body Part Key | Tag ID | Tag Name |
-|---------------|--------|----------|
-| `upper` | `05427be9-cf51-4d10-a5be-749626fdbec2` | Horní část |
-| `lower` | `d5f602c0-1711-435e-84d7-6c2863a753a7` | Dolní část |
-| `core` | `72d6af4d-345b-46d2-8a22-c456bbdbaa8f` | Střed těla |
-
----
-
-## Edge cases
-
-| Situace | Řešení |
-|---------|--------|
-| Cvik nemá svalové skupiny | Nic se neděje, tagy se nepřidávají |
-| Tag už je přidán | Přeskočí se (žádné duplicity) |
-| Cvik bez exercise_id | Přeskočí se (custom cviky) |
-| Trenér ručně odebere tag | Zůstane odebraný (nevrací se) |
-
----
-
-## Budoucí rozšíření
-
-Funkce bude připravena na:
-- Přidávání specifičtějších tagů (např. "Hýždě" místo jen "Dolní část")
-- Konfigurovatelnost v nastavení (zapnout/vypnout auto-tagging)
-- Sugesce místo automatického přidání (dialog "Chcete přidat tag?")
-
----
-
-## Soubory k vytvoření/úpravě
-
-| Soubor | Akce |
-|--------|------|
-| `src/hooks/useAutoTagFromExercise.ts` | **NOVÝ** - hook pro auto-tagging |
-| `src/components/trainings/WorkoutExerciseManager.tsx` | Integrace hooku |
-
----
-
-## Očekávaný výsledek
-
-| Akce | Před | Po |
-|------|------|-----|
-| Přidám dřep | Musím ručně kliknout "Dolní část" | Automaticky se přidá |
-| Přidám bench press | Musím ručně kliknout "Horní část" | Automaticky se přidá |
-| Přidám plank | Musím ručně kliknout "Core" | Automaticky se přidá |
-| Smíšený trénink | Zaklikávám vše po jednom | Tagy se přidávají průběžně |
