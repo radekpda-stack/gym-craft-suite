@@ -859,9 +859,24 @@ export function useCompleteTrainingSession() {
         });
 
       if (transactionError) throw transactionError;
-
-      // Apply credit delta (shared budget or individual)
-      const { balance: newBalance } = await applyCreditDelta(client_id, -price);
+      // Trigger 'sync_balance_after_transaction' automatically updates balance
+      // Just fetch the updated value for UI display
+      const { data: updatedClient } = await supabase
+        .from("clients")
+        .select("credit_balance")
+        .eq("id", client_id)
+        .single();
+      
+      // For shared budgets, fetch group balance instead
+      let newBalance = updatedClient?.credit_balance ?? 0;
+      if (groupId) {
+        const { data: group } = await supabase
+          .from("client_budget_groups")
+          .select("shared_balance")
+          .eq("id", groupId)
+          .single();
+        newBalance = group?.shared_balance ?? 0;
+      }
 
       // Auto-sync workout entries to exercise_entries
       await syncWorkoutToExerciseEntries(id, client_id, training.date, user.id);

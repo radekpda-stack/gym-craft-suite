@@ -137,3 +137,6 @@ verify_jwt = false
 
 [functions.ai-workout-calories]
 verify_jwt = false
+
+[functions.daily-financial-audit]
+verify_jwt = false
