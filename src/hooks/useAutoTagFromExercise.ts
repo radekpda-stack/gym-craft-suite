@@ -3,10 +3,13 @@
  * 
  * When an exercise is added to a training session, this hook automatically
  * assigns body part tags based on the exercise's muscle group categories.
+ * 
+ * Smart consolidation: When both "upper" and "lower" body parts are present,
+ * they are consolidated into "Celé tělo" (full body) tag.
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { useAddTrainingSessionTags, useTrainingSessionTags } from "./useTrainingSessionTags";
+import { useAddTrainingSessionTags, useUpdateTrainingSessionTags } from "./useTrainingSessionTags";
 import { toast } from "@/hooks/use-toast";
 
 // Mapping from body_part_category keys to tag IDs
@@ -17,11 +20,15 @@ const BODY_PART_TO_TAG: Record<string, string> = {
   'core': '72d6af4d-345b-46d2-8a22-c456bbdbaa8f',  // "Střed těla"
 };
 
+// Special consolidated tag for full body training
+const FULL_BODY_TAG_ID = '55c8baee-413c-4d6c-9539-77a76225c4fb'; // "Celé tělo"
+
 // Human-readable labels for toast notifications
 const BODY_PART_LABELS: Record<string, string> = {
   'upper': 'Horní část',
   'lower': 'Dolní část',
   'core': 'Střed těla',
+  'full_body': 'Celé tělo',
 };
 
 interface UseAutoTagFromExerciseReturn {
@@ -36,6 +43,7 @@ interface UseAutoTagFromExerciseReturn {
  */
 export function useAutoTagFromExercise(): UseAutoTagFromExerciseReturn {
   const addTags = useAddTrainingSessionTags();
+  const updateTags = useUpdateTrainingSessionTags();
 
   const autoTagFromExercise = async (trainingSessionId: string, exerciseId: string): Promise<void> => {
     if (!trainingSessionId || !exerciseId) return;
@@ -57,17 +65,10 @@ export function useAutoTagFromExercise(): UseAutoTagFromExerciseReturn {
         return;
       }
 
-      // 2. Get unique body part keys
-      const bodyPartKeys = [...new Set(exerciseCategories.map(ec => ec.body_part_key))];
+      // 2. Get unique body part keys from the new exercise
+      const newBodyPartKeys = [...new Set(exerciseCategories.map(ec => ec.body_part_key))];
 
-      // 3. Map to tag IDs
-      const newTagIds = bodyPartKeys
-        .map(key => BODY_PART_TO_TAG[key])
-        .filter(Boolean);
-
-      if (newTagIds.length === 0) return;
-
-      // 4. Fetch existing tags for this training session to avoid duplicates
+      // 3. Fetch existing tags for this training session
       const { data: existingTags, error: existingError } = await supabase
         .from('training_session_tags')
         .select('tag_id')
@@ -80,23 +81,85 @@ export function useAutoTagFromExercise(): UseAutoTagFromExerciseReturn {
 
       const existingTagIds = new Set(existingTags?.map(t => t.tag_id) || []);
 
-      // 5. Filter out tags that already exist
-      const tagsToAdd = newTagIds.filter(id => !existingTagIds.has(id));
+      // 4. Check what body parts are already tagged
+      const hasUpper = existingTagIds.has(BODY_PART_TO_TAG['upper']);
+      const hasLower = existingTagIds.has(BODY_PART_TO_TAG['lower']);
+      const hasFullBody = existingTagIds.has(FULL_BODY_TAG_ID);
+      
+      // New exercise brings these parts
+      const bringsUpper = newBodyPartKeys.includes('upper');
+      const bringsLower = newBodyPartKeys.includes('lower');
+      const bringsCore = newBodyPartKeys.includes('core');
 
-      if (tagsToAdd.length === 0) {
-        // All tags already exist - nothing to do
+      // Will have after adding
+      const willHaveUpper = hasUpper || bringsUpper;
+      const willHaveLower = hasLower || bringsLower;
+      
+      // 5. Check if we need to consolidate to "Celé tělo"
+      const shouldConsolidateToFullBody = willHaveUpper && willHaveLower && !hasFullBody;
+
+      if (shouldConsolidateToFullBody) {
+        // Need to replace upper + lower with full body
+        // Keep all other tags, add core if needed
+        const newTagSet = new Set(existingTagIds);
+        
+        // Remove upper and lower
+        newTagSet.delete(BODY_PART_TO_TAG['upper']);
+        newTagSet.delete(BODY_PART_TO_TAG['lower']);
+        
+        // Add full body
+        newTagSet.add(FULL_BODY_TAG_ID);
+        
+        // Add core if exercise brings it
+        if (bringsCore) {
+          newTagSet.add(BODY_PART_TO_TAG['core']);
+        }
+        
+        await updateTags.mutateAsync({
+          trainingSessionId,
+          tagIds: Array.from(newTagSet),
+        });
+
+        toast({
+          title: "Partie automaticky přidány",
+          description: "Celé tělo" + (bringsCore ? ", Střed těla" : ""),
+        });
         return;
       }
 
-      // 6. Add new tags
+      // 6. If already full body, just add core if needed
+      if (hasFullBody) {
+        if (bringsCore && !existingTagIds.has(BODY_PART_TO_TAG['core'])) {
+          await addTags.mutateAsync({
+            trainingSessionId,
+            tagIds: [BODY_PART_TO_TAG['core']],
+          });
+          toast({
+            title: "Partie automaticky přidány",
+            description: "Střed těla",
+          });
+        }
+        return;
+      }
+
+      // 7. Normal case - add new body part tags
+      const newTagIds = newBodyPartKeys
+        .map(key => BODY_PART_TO_TAG[key])
+        .filter(Boolean)
+        .filter(id => !existingTagIds.has(id));
+
+      if (newTagIds.length === 0) {
+        return;
+      }
+
       await addTags.mutateAsync({
         trainingSessionId,
-        tagIds: tagsToAdd,
+        tagIds: newTagIds,
       });
 
-      // 7. Show toast notification with added tags
-      const addedLabels = bodyPartKeys
-        .filter(key => tagsToAdd.includes(BODY_PART_TO_TAG[key]))
+      // Show toast notification with added tags
+      const addedLabels = newBodyPartKeys
+        .filter(key => newTagIds.includes(BODY_PART_TO_TAG[key]))
         .map(key => BODY_PART_LABELS[key])
         .filter(Boolean);
 
@@ -114,6 +177,6 @@ export function useAutoTagFromExercise(): UseAutoTagFromExerciseReturn {
 
   return {
     autoTagFromExercise,
-    isLoading: addTags.isPending,
+    isLoading: addTags.isPending || updateTags.isPending,
   };
 }
