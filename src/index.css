@@ -604,6 +604,119 @@ input, select, textarea {
   }
 
   /* ========================================
+     PREMIUM TYPOGRAPHY - Whoop/Apple style
+     ======================================== */
+  
+  /* Hero metrics - dramatic large numbers */
+  .metric-hero {
+    @apply text-[40px] sm:text-[48px] md:text-[56px] font-bold tracking-tighter leading-none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .metric-hero-sm {
+    @apply text-[32px] sm:text-[40px] font-bold tracking-tighter leading-none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Caps labels - Apple Watch style */
+  .label-caps {
+    @apply text-[10px] sm:text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground;
+  }
+
+  .label-caps-sm {
+    @apply text-[9px] sm:text-[10px] uppercase tracking-[0.14em] font-medium text-muted-foreground;
+  }
+
+  /* ========================================
+     PREMIUM CARDS - Floating glass layers
+     ======================================== */
+
+  .card-floating {
+    @apply rounded-2xl overflow-hidden;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--card) / 0.85) 0%,
+      hsl(var(--card) / 0.65) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--border) / 0.4);
+    box-shadow: 
+      0 4px 24px -8px hsl(0 0% 0% / 0.35),
+      inset 0 1px 0 hsl(0 0% 100% / 0.04);
+  }
+
+  .card-floating:hover {
+    border-color: hsl(var(--primary) / 0.25);
+    box-shadow: 
+      0 8px 32px -8px hsl(0 0% 0% / 0.45),
+      inset 0 1px 0 hsl(0 0% 100% / 0.06);
+  }
+
+  .card-instrument {
+    @apply card-floating p-4 sm:p-5;
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  .card-instrument:active {
+    transform: scale(0.98);
+  }
+
+  /* ========================================
+     SKELETON GLOW - Premium loading states
+     ======================================== */
+
+  .skeleton-glow {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted) / 0.3) 0%,
+      hsl(var(--muted) / 0.5) 50%,
+      hsl(var(--muted) / 0.3) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: var(--radius);
+  }
+
+  @keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ========================================
+     PULSE GLOW - Live data indicator
+     ======================================== */
+
+  .pulse-glow {
+    animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+    }
+    50% {
+      opacity: 0.85;
+      box-shadow: 0 0 20px 4px hsl(var(--primary) / 0.2);
+    }
+  }
+
+  /* Ring/circle pulse for activity rings */
+  .ring-pulse {
+    animation: ring-pulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes ring-pulse {
+    0%, 100% {
+      filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.3));
+    }
+    50% {
+      filter: drop-shadow(0 0 8px hsl(var(--primary) / 0.5));
+    }
+  }
+
+  /* ========================================
      BUTTONS - Arctic Pro angular style
      ======================================== */
 
