@@ -88,13 +88,13 @@ export const CompactClientRow = memo(function CompactClientRow({
   const firstTag = tags[0];
 
   return (
-    <div className={cn('relative overflow-hidden rounded-lg', className)}>
-      {/* Swipe background - Training (right) */}
+    <div className={cn('relative overflow-hidden rounded-xl', className)}>
+      {/* Swipe background - Training (right) with gradient */}
       {onNewTraining && (
         <div
           className={cn(
             'absolute inset-y-0 left-0 flex items-center justify-start px-4 transition-opacity',
-            'bg-primary',
+            'bg-gradient-to-r from-primary to-primary/70',
             showTrainingHint ? 'opacity-100' : 'opacity-0'
           )}
           style={{ width: Math.abs(offsetX) + 16 }}
@@ -103,12 +103,12 @@ export const CompactClientRow = memo(function CompactClientRow({
         </div>
       )}
 
-      {/* Swipe background - Credit (left) */}
+      {/* Swipe background - Credit (left) with gradient */}
       {onAddCredit && (
         <div
           className={cn(
             'absolute inset-y-0 right-0 flex items-center justify-end px-4 transition-opacity',
-            'bg-success',
+            'bg-gradient-to-l from-success to-success/70',
             showCreditHint ? 'opacity-100' : 'opacity-0'
           )}
           style={{ width: Math.abs(offsetX) + 16 }}
@@ -117,27 +117,27 @@ export const CompactClientRow = memo(function CompactClientRow({
         </div>
       )}
 
-      {/* Main row content */}
+      {/* Main row content - Premium floating card */}
       <div
         {...handlers}
         style={{
           transform: `translateX(${offsetX}px)`,
-          transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)',
         }}
-        className="relative bg-card"
+        className="relative bg-card/80 backdrop-blur-sm border border-border/30 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-px transition-all"
       >
         <div className={cn(
-          'flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors',
-          'min-h-[56px]'
+          'flex items-center gap-3 px-4 py-3.5',
+          'min-h-[60px]'
         )}>
           {/* Clickable area - navigates to client detail */}
           <Link
             to={`/clients/${client.id}`}
-            className="flex items-center gap-3 flex-1 min-w-0"
+            className="flex items-center gap-3 flex-1 min-w-0 group"
           >
-            {/* Avatar */}
-            <Avatar className="h-10 w-10 flex-shrink-0">
-              <AvatarFallback className="bg-muted text-muted-foreground text-sm font-medium">
+            {/* Avatar with hover ring */}
+            <Avatar className="h-10 w-10 flex-shrink-0 ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
+              <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
                 {getInitials(client.name)}
               </AvatarFallback>
             </Avatar>

@@ -79,8 +79,11 @@ export function ClientSummaryStrip({
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {/* Credit/Debt Card */}
-      <div className={cn('rounded-xl p-3 border', getCreditBg())}>
+      {/* Credit/Debt Card - Premium instrument style */}
+      <div className={cn(
+        'rounded-2xl p-3.5 border backdrop-blur-sm transition-all hover:shadow-md',
+        getCreditBg()
+      )}>
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1.5 text-muted-foreground">
             {hasDebt ? (
@@ -137,39 +140,39 @@ export function ClientSummaryStrip({
         )}
       </div>
 
-      {/* Trainings This Month */}
-      <div className="rounded-xl p-3 border border-border bg-card">
-        <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+      {/* Trainings This Month - Instrument card */}
+      <div className="rounded-2xl p-3.5 border border-border/50 bg-card/60 backdrop-blur-sm hover:shadow-md transition-all">
+        <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
           <Calendar className="w-4 h-4" />
-          <span className="text-xs font-medium">Tento měsíc</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider">Tento měsíc</span>
         </div>
-        <div className="text-xl font-bold text-foreground">
+        <div className="text-2xl font-bold text-foreground tracking-tight">
           {sessionsThisMonth}
-          <span className="text-sm font-normal text-muted-foreground ml-1">tréninků</span>
+          <span className="text-sm font-normal text-muted-foreground ml-1.5">tréninků</span>
         </div>
         <Button 
           variant="ghost" 
           size="sm" 
-          className="w-full mt-2 h-7 text-xs gap-1"
+          className="w-full mt-2.5 h-8 text-xs gap-1.5 rounded-lg hover:bg-primary/10 hover:text-primary"
           onClick={onAddTraining}
         >
-          <Plus className="w-3 h-3" />
+          <Plus className="w-3.5 h-3.5" />
           Nový trénink
         </Button>
       </div>
 
-      {/* LTV (Desktop only) */}
-      <div className="hidden md:block rounded-xl p-3 border border-border bg-card">
-        <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+      {/* LTV (Desktop only) - Instrument card */}
+      <div className="hidden md:block rounded-2xl p-3.5 border border-border/50 bg-card/60 backdrop-blur-sm hover:shadow-md transition-all">
+        <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
           <TrendingUp className="w-4 h-4" />
-          <span className="text-xs font-medium">Celková hodnota</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider">Celková hodnota</span>
         </div>
         {ltvData && ltvData.totalRevenue > 0 ? (
           <>
-            <div className="text-xl font-bold text-foreground">
+            <div className="text-2xl font-bold text-foreground tracking-tight">
               {formatCurrency(ltvData.totalRevenue)}
             </div>
-            <div className="text-[10px] text-muted-foreground mt-1">
+            <div className="text-[10px] text-muted-foreground mt-1.5 font-medium">
               {ltvData.totalTrainings} tréninků • {ltvData.monthsActive} měsíců
             </div>
           </>
@@ -178,18 +181,18 @@ export function ClientSummaryStrip({
         )}
       </div>
 
-      {/* Avg per month (Desktop only) */}
-      <div className="hidden md:block rounded-xl p-3 border border-border bg-card">
-        <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+      {/* Avg per month (Desktop only) - Instrument card */}
+      <div className="hidden md:block rounded-2xl p-3.5 border border-border/50 bg-card/60 backdrop-blur-sm hover:shadow-md transition-all">
+        <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
           <Calendar className="w-4 h-4" />
-          <span className="text-xs font-medium">Průměr/měsíc</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider">Průměr/měsíc</span>
         </div>
         {ltvData && ltvData.avgRevenuePerMonth > 0 ? (
           <>
-            <div className="text-xl font-bold text-foreground">
+            <div className="text-2xl font-bold text-foreground tracking-tight">
               {formatCurrency(ltvData.avgRevenuePerMonth)}
             </div>
-            <div className="text-[10px] text-muted-foreground mt-1">
+            <div className="text-[10px] text-muted-foreground mt-1.5 font-medium">
               {(ltvData.totalTrainings / Math.max(ltvData.monthsActive, 1)).toFixed(1)} tréninků/měsíc
             </div>
           </>
