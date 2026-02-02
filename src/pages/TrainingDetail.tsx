@@ -124,13 +124,13 @@ export default function TrainingDetail() {
   const [dialogTagIds, setDialogTagIds] = useState<string[]>([]);
   const [dialogTrainingType, setDialogTrainingType] = useState<string | null>(null);
   
-  // Sync dialog tags when dialog opens
+  // Sync dialog tags when dialog opens or currentTagIds changes while dialog is open
   useEffect(() => {
     if (showCompleteDialog && training) {
       setDialogTagIds(currentTagIds);
       setDialogTrainingType(training.training_type || null);
     }
-  }, [showCompleteDialog, training?.id]);
+  }, [showCompleteDialog, training?.id, currentTagIds]);
   
   // Validation based on dialog-local tags
   const dialogTagValidation = useMemo(() => 
