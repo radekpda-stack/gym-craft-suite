@@ -566,7 +566,7 @@ export default function TrainingDetail() {
                   onChange={handleParticipantPaymentChange}
                   onPriceChange={handleParticipantPriceChange}
                   disabled={isSubmitting || completeTrainingAtomic.isPending}
-                  allowPriceEdit={participantPayments.length > 1}
+                  allowPriceEdit={true}
                 />
               ))}
             </div>
