@@ -51,16 +51,16 @@ export function AnalyticsFiltersBar({
   };
 
   return (
-    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-3 -mx-4 px-4 border-b">
+    <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/60 py-3 -mx-4 px-4 border-b border-border/50 shadow-sm rounded-t-lg">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
         {/* Period Tabs */}
         <Tabs value={String(period)} onValueChange={handlePeriodChange}>
-          <TabsList className="h-8">
+          <TabsList className="h-8 bg-secondary/40 backdrop-blur-sm p-0.5">
             {PERIOD_OPTIONS.map((opt) => (
               <TabsTrigger 
                 key={opt.value} 
                 value={String(opt.value)} 
-                className="text-xs px-3 h-7"
+                className="text-xs px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm"
               >
                 {opt.label}
               </TabsTrigger>

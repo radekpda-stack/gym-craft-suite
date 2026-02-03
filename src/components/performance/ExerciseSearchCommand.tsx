@@ -70,11 +70,11 @@ export function ExerciseSearchCommand({ trigger }: ExerciseSearchCommandProps) {
         <Button
           variant="outline"
           onClick={() => setOpen(true)}
-          className="w-full justify-start text-muted-foreground gap-2 h-11"
+          className="w-full justify-start text-muted-foreground gap-2 h-11 bg-card/60 backdrop-blur-sm border-border/50 hover:bg-background hover:border-primary/30 transition-all"
         >
           <Search className="w-4 h-4" />
           <span className="flex-1 text-left">Rychle hledat cvik...</span>
-          <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+          <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border border-border/50 bg-secondary/50 px-1.5 font-mono text-[10px] font-medium sm:flex">
             <span className="text-xs">⌘</span>K
           </kbd>
         </Button>

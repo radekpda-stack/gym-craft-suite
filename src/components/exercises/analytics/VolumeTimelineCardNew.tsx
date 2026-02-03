@@ -58,10 +58,12 @@ export function VolumeTimelineCardNew({ data, isLoading }: VolumeTimelineCardNew
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--popover))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
+                backgroundColor: 'hsl(var(--popover) / 0.95)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid hsl(var(--border) / 0.5)',
+                borderRadius: '12px',
                 fontSize: '12px',
+                boxShadow: '0 4px 12px hsl(var(--foreground) / 0.1)',
               }}
               formatter={(value: number) => [`${formatVolume(value)} kg`, 'Objem']}
               labelFormatter={(label) => `Týden ${label}`}
