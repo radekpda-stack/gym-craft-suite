@@ -70,23 +70,29 @@ export default function PerformanceHub() {
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6 pb-32">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-primary/15 backdrop-blur-sm shadow-lg shadow-primary/10 ring-1 ring-primary/20">
-            <Zap className="w-6 h-6 text-primary" />
+      {/* Hero Header Section */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-card/80 to-card/60 backdrop-blur-md border border-border/50 shadow-lg p-6">
+        {/* Background glow effect */}
+        <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
+        
+        <div className="relative space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-primary/20 backdrop-blur-sm shadow-lg shadow-primary/30 ring-1 ring-primary/30">
+              <Zap className="w-7 h-7 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Výkonnost</h1>
+              <p className="text-sm text-muted-foreground">
+                Sleduj pokrok svých klientů
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">Výkonnost</h1>
-            <p className="text-sm text-muted-foreground">
-              Cviky, testy a výzvy na jednom místě
-            </p>
-          </div>
+
+          {/* Integrated Quick Search */}
+          <ExerciseSearchCommand />
         </div>
       </div>
-
-      {/* Quick Search */}
-      <ExerciseSearchCommand />
 
       {/* KPI Bar */}
       <PerformanceKPIBar

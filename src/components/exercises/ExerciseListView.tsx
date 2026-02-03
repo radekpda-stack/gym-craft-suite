@@ -308,12 +308,21 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
           )}
         </div>
 
-        {/* Filters Panel */}
+        {/* Filters Panel - Premium Glass */}
         {showFilters && (
-          <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border/50 shadow-sm space-y-3">
+          <div className="p-4 bg-card/80 backdrop-blur-md rounded-xl border border-border/50 shadow-sm space-y-4">
+            {/* Active filters info */}
+            {activeFilterCount > 0 && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground pb-3 border-b border-border/30">
+                <span className="font-medium">{filteredExercises.length} výsledků</span>
+                <span className="text-muted-foreground/50">•</span>
+                <span>{activeFilterCount} aktivních filtrů</span>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background/60 backdrop-blur-sm border-border/50">
                   <SelectValue placeholder="Kategorie" />
                 </SelectTrigger>
                 <SelectContent>
@@ -325,7 +334,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
               </Select>
 
               <Select value={patternFilter} onValueChange={setPatternFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background/60 backdrop-blur-sm border-border/50">
                   <SelectValue placeholder="Pohybový vzorec" />
                 </SelectTrigger>
                 <SelectContent>
@@ -339,7 +348,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
               </Select>
 
               <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background/60 backdrop-blur-sm border-border/50">
                   <SelectValue placeholder="Obtížnost" />
                 </SelectTrigger>
                 <SelectContent>
@@ -354,11 +363,11 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
             </div>
 
             {/* Sort and Only Used toggle */}
-            <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center justify-between gap-4 flex-wrap pt-2 border-t border-border/30">
               <div className="flex items-center gap-2">
                 <SortAsc className="w-4 h-4 text-muted-foreground" />
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-48 bg-background/60 backdrop-blur-sm border-border/50">
                     <SelectValue placeholder="Řazení" />
                   </SelectTrigger>
                   <SelectContent>
@@ -406,31 +415,32 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                 <AccordionItem 
                   key={category} 
                   value={category}
-                  className="border border-border/50 rounded-xl px-4 bg-card/80 backdrop-blur-md shadow-sm"
+                  className="border border-border/50 rounded-xl overflow-hidden bg-card/80 backdrop-blur-md shadow-sm"
                 >
-                  <AccordionTrigger className="hover:no-underline py-3">
+                  <AccordionTrigger className="hover:no-underline py-3.5 px-4 hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-3 flex-1 flex-wrap">
-                      <span className="w-2 h-2 rounded-full bg-primary" />
-                      <span className="font-semibold text-base">{category}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {categoryExercises.length}
+                      {/* Category color indicator */}
+                      <div className="w-1 h-8 rounded-full bg-primary" />
+                      <span className="font-semibold text-base text-foreground">{category}</span>
+                      <Badge variant="secondary" className="text-xs bg-secondary/60">
+                        {categoryExercises.length} cviků
                       </Badge>
                       
                       {/* Category stats */}
                       {stats && stats.totalUsage > 0 && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1 bg-muted/30 px-2 py-0.5 rounded-full">
                           <Activity className="w-3 h-3" />
                           {stats.totalUsage}× použito
                         </span>
                       )}
                       {stats && stats.totalUsage === 0 && (
-                        <Badge variant="outline" className="text-xs text-muted-foreground">
-                          Bez dat
+                        <Badge variant="outline" className="text-xs text-muted-foreground border-border/50">
+                          Bez záznamů
                         </Badge>
                       )}
 
                       {bulkEditMode && selectedInCategory > 0 && (
-                        <Badge variant="default" className="text-xs">
+                        <Badge variant="default" className="text-xs bg-primary">
                           {selectedInCategory} vybráno
                         </Badge>
                       )}
@@ -439,7 +449,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                       <div
                         role="button"
                         tabIndex={0}
-                        className="mr-2 rounded-md px-2 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                        className="mr-2 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           selectCategory(category);
@@ -456,18 +466,21 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                       </div>
                     )}
                   </AccordionTrigger>
-                  <AccordionContent className="pb-3">
-                    <div className="grid gap-2 pt-2">
+                  <AccordionContent className="pb-4 px-4">
+                    <div className="grid gap-2 pt-3">
                       {categoryExercises.map((exercise) => {
                         const isSelected = selectedIds.has(exercise.id);
+                        const maxUsageInCategory = Math.max(...categoryExercises.map(e => e.usageCount), 1);
+                        const usagePercent = (exercise.usageCount / maxUsageInCategory) * 100;
                         
                         return (
                           <Card
                             key={exercise.id}
                             className={cn(
-                              "p-3 bg-background/60 backdrop-blur-sm border-border/30 shadow-sm",
-                              "hover:bg-secondary/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group",
-                              bulkEditMode && isSelected && "bg-primary/10 border-primary ring-1 ring-primary/20"
+                              "p-3.5 bg-background/70 backdrop-blur-sm border-border/40 shadow-sm",
+                              "hover:bg-secondary/50 hover:shadow-md hover:-translate-y-0.5 hover:border-primary/30",
+                              "transition-all duration-200 cursor-pointer group",
+                              bulkEditMode && isSelected && "bg-primary/10 border-primary ring-1 ring-primary/30"
                             )}
                             onClick={() => handleExerciseClick(exercise.id)}
                           >
@@ -482,21 +495,25 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                               )}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <h3 className="font-medium truncate text-sm">
+                                  {/* Favorite star */}
+                                  {isFavorite(exercise.id) && (
+                                    <Star className="w-3.5 h-3.5 text-warning fill-warning shrink-0" />
+                                  )}
+                                  <h3 className="font-medium truncate text-sm text-foreground">
                                     {exercise.name_cs || exercise.name}
                                   </h3>
                                   {exercise.is_time_based && (
                                     <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
                                   )}
                                   {exercise.difficulty && (
-                                    <Badge variant="outline" className="text-xs shrink-0">
+                                    <Badge variant="outline" className="text-[10px] shrink-0 border-border/50">
                                       {DIFFICULTY_LABELS[exercise.difficulty] || exercise.difficulty}
                                     </Badge>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                                <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground">
                                   {exercise.movement_pattern && (
-                                    <span>
+                                    <span className="bg-muted/40 px-1.5 py-0.5 rounded">
                                       {MOVEMENT_PATTERN_LABELS[exercise.movement_pattern] || exercise.movement_pattern}
                                     </span>
                                   )}
@@ -513,13 +530,26 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                                     </span>
                                   )}
                                 </div>
+                                
+                                {/* Usage bar */}
+                                {exercise.usageCount > 0 && (
+                                  <div className="mt-2 h-1 rounded-full bg-muted/30 overflow-hidden">
+                                    <div 
+                                      className="h-full rounded-full bg-primary/50 transition-all duration-500"
+                                      style={{ width: `${usagePercent}%` }}
+                                    />
+                                  </div>
+                                )}
                               </div>
                               {!bulkEditMode && (
                                 <div className="flex items-center gap-1">
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 shrink-0"
+                                    className={cn(
+                                      "h-8 w-8 shrink-0",
+                                      isFavorite(exercise.id) && "text-warning"
+                                    )}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       toggleFavorite.mutate(exercise.id);
@@ -527,10 +557,10 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                                   >
                                     <Star 
                                       className={cn(
-                                        "w-4 h-4 transition-colors",
+                                        "w-4 h-4 transition-all",
                                         isFavorite(exercise.id) 
-                                          ? "text-warning fill-warning" 
-                                          : "text-muted-foreground hover:text-warning"
+                                          ? "text-warning fill-warning scale-110" 
+                                          : "text-muted-foreground hover:text-warning hover:scale-110"
                                       )} 
                                     />
                                   </Button>
@@ -539,7 +569,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                                     onEdit={() => setEditExercise(exercise as any)}
                                     onDuplicate={() => setDuplicateExercise(exercise as any)}
                                   />
-                                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
                                 </div>
                               )}
                             </div>
