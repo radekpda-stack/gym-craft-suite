@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
+import { cn } from '@/lib/utils';
 
 interface HelpContent {
   title: string;
@@ -43,11 +44,19 @@ export function AnalyticsCard({
   } : undefined);
 
   return (
-    <Card className={className}>
+    <Card className={cn(
+      'bg-card/80 backdrop-blur-md border-border/50 shadow-sm',
+      'transition-all duration-200',
+      className
+    )}>
       <CardHeader className="pb-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            {Icon && <Icon className="w-4 h-4 text-primary shrink-0" />}
+            {Icon && (
+              <div className="p-1.5 rounded-lg bg-primary/10 shadow-sm">
+                <Icon className="w-4 h-4 text-primary shrink-0" />
+              </div>
+            )}
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
             {effectiveHelpContent && (
               <StatInfoTooltip

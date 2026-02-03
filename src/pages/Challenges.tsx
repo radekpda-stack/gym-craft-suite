@@ -80,7 +80,7 @@ export default function Challenges() {
     if (isAfter(now, end)) {
       return <Badge variant="secondary">Ukončeno</Badge>;
     }
-    return <Badge className="bg-green-500">Aktivní</Badge>;
+    return <Badge className="bg-success text-success-foreground shadow-sm shadow-success/30">Aktivní</Badge>;
   };
 
   const getMetricLabel = (metric: string) => {
@@ -131,7 +131,7 @@ export default function Challenges() {
   };
 
   const renderChallengeCard = (challenge: Challenge) => (
-    <Card key={challenge.id} className="hover:shadow-md transition-shadow">
+    <Card key={challenge.id} className="bg-card/80 backdrop-blur-md border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
@@ -281,12 +281,14 @@ export default function Challenges() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-amber-500" />
-            Výzvy
-          </h1>
-          <p className="text-muted-foreground">Správa challenge pro klienty v portálu</p>
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-2xl bg-warning/15 backdrop-blur-sm shadow-lg shadow-warning/20 ring-1 ring-warning/20">
+            <Trophy className="h-6 w-6 text-warning" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Výzvy</h1>
+            <p className="text-sm text-muted-foreground">Správa challenge pro klienty v portálu</p>
+          </div>
         </div>
         <div className="flex gap-2 flex-wrap">
           {/* Search */}
@@ -296,7 +298,7 @@ export default function Challenges() {
               placeholder="Hledat výzvu..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-48"
+              className="pl-9 w-48 bg-card/60 backdrop-blur-sm border-border/50 focus:bg-background"
             />
           </div>
           {challenges?.length === 0 && (
@@ -317,20 +319,20 @@ export default function Challenges() {
       </div>
 
       <Tabs defaultValue="published">
-        <TabsList>
-          <TabsTrigger value="published" className="gap-2">
-            <Play className="h-4 w-4" />
+        <TabsList className="bg-secondary/30 backdrop-blur-sm p-1">
+          <TabsTrigger value="published" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Play className="h-4 w-4 text-success" />
             Aktivní ({publishedChallenges.length})
           </TabsTrigger>
-          <TabsTrigger value="draft" className="gap-2">
+          <TabsTrigger value="draft" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Clock className="h-4 w-4" />
             Koncepty ({draftChallenges.length})
           </TabsTrigger>
-          <TabsTrigger value="archived" className="gap-2">
+          <TabsTrigger value="archived" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Archive className="h-4 w-4" />
             Archiv ({archivedChallenges.length})
           </TabsTrigger>
-          <TabsTrigger value="peer" className="gap-2">
+          <TabsTrigger value="peer" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Users className="h-4 w-4" />
             Klientské
           </TabsTrigger>

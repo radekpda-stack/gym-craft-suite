@@ -77,50 +77,63 @@ export function CategoryCards({ categories, isLoading, onCategoryClick }: Catego
             const stats = categories[key];
             const Icon = config.icon;
 
-            return (
-              <button
-                key={key}
-                onClick={() => handleClick(key)}
-                className={cn(
-                  'relative overflow-hidden rounded-xl p-4 text-left',
-                  'bg-card/80 backdrop-blur-md',
-                  'border transition-all duration-200',
-                  config.borderColor,
-                  'hover:shadow-lg hover:-translate-y-1',
-                  `hover:${config.glowColor}`,
-                  'focus:outline-none focus:ring-2 focus:ring-primary/30'
-                )}
-              >
-                {/* Background gradient */}
-                <div className={cn("absolute inset-0 opacity-30 bg-gradient-to-br to-transparent", config.bgColor)} />
-                
-                <div className="relative">
-                  <div className={cn('p-2.5 rounded-xl w-fit mb-3 shadow-sm', config.bgColor)}>
-                    <Icon className={cn('w-5 h-5', config.color)} />
-                  </div>
-                  
-                  <p className={cn('text-[10px] font-bold uppercase tracking-widest mb-1', config.color)}>
-                    {config.label}
-                  </p>
-                  
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground tabular-nums">
-                    {stats.count}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                    cviků
-                  </p>
+              // Calculate usage percentage for gauge
+              const maxEntries = Math.max(categories.strength.entries, categories.cardio.entries, categories.plyometric.entries, 1);
+              const usagePercent = (stats.entries / maxEntries) * 100;
 
-                  <div className="mt-3 pt-2 border-t border-border/50">
-                    <p className="text-xs text-muted-foreground tabular-nums">
-                      {stats.entries.toLocaleString('cs-CZ')} záznamů
+              return (
+                <button
+                  key={key}
+                  onClick={() => handleClick(key)}
+                  className={cn(
+                    'group relative overflow-hidden rounded-xl p-4 text-left',
+                    'bg-card/80 backdrop-blur-md',
+                    'border shadow-sm transition-all duration-200',
+                    config.borderColor,
+                    'hover:shadow-lg hover:-translate-y-1',
+                    'focus:outline-none focus:ring-2 focus:ring-primary/30'
+                  )}
+                  style={{
+                    ['--hover-glow' as string]: key === 'strength' ? 'var(--primary)' : key === 'cardio' ? '142 76% 36%' : '38 92% 50%',
+                  }}
+                >
+                  {/* Background gradient */}
+                  <div className={cn("absolute inset-0 opacity-20 bg-gradient-to-br to-transparent", config.bgColor)} />
+                  
+                  <div className="relative">
+                    <div className={cn('p-2.5 rounded-xl w-fit mb-3 shadow-sm', config.bgColor)}>
+                      <Icon className={cn('w-5 h-5', config.color)} />
+                    </div>
+                    
+                    <p className={cn('text-[10px] font-bold uppercase tracking-widest mb-1', config.color)}>
+                      {config.label}
                     </p>
-                  </div>
+                    
+                    <p className="text-2xl sm:text-3xl font-bold text-foreground tabular-nums">
+                      {stats.count}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                      cviků
+                    </p>
 
-                  <ChevronRight className="absolute top-3 right-2 w-4 h-4 text-muted-foreground/40" />
-                </div>
-              </button>
-            );
-          }
+                    {/* Usage gauge */}
+                    <div className="mt-3 pt-2 border-t border-border/50 space-y-1">
+                      <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                        <div 
+                          className={cn('h-full rounded-full transition-all duration-500', config.bgColor.replace('/10', ''))}
+                          style={{ width: `${usagePercent}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground tabular-nums">
+                        {stats.entries.toLocaleString('cs-CZ')} záznamů
+                      </p>
+                    </div>
+
+                    <ChevronRight className="absolute top-3 right-2 w-4 h-4 text-muted-foreground/40 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                </button>
+              );
+            }
         )}
       </div>
     </div>

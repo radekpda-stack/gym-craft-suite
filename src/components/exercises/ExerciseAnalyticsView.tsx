@@ -14,17 +14,17 @@ export function ExerciseAnalyticsView() {
     <div className="space-y-4">
       {/* Sub-tabs for exercise types */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ExerciseTab)}>
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="strength" className="flex items-center gap-1.5">
-            <Dumbbell className="w-3.5 h-3.5" />
+        <TabsList className="w-full sm:w-auto bg-secondary/30 backdrop-blur-sm p-1 rounded-lg">
+          <TabsTrigger value="strength" className="flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Dumbbell className="w-3.5 h-3.5 text-primary" />
             <span>Síla</span>
           </TabsTrigger>
-          <TabsTrigger value="cardio" className="flex items-center gap-1.5">
-            <Heart className="w-3.5 h-3.5" />
+          <TabsTrigger value="cardio" className="flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Heart className="w-3.5 h-3.5 text-success" />
             <span>Kardio</span>
           </TabsTrigger>
-          <TabsTrigger value="skill" className="flex items-center gap-1.5">
-            <Brain className="w-3.5 h-3.5" />
+          <TabsTrigger value="skill" className="flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Brain className="w-3.5 h-3.5 text-warning" />
             <span>Skill</span>
           </TabsTrigger>
         </TabsList>

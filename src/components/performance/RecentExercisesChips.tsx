@@ -62,21 +62,23 @@ export function RecentExercisesChips({ recentExercises, isLoading }: RecentExerc
         {recentExercises.map((exercise) => {
           const Icon = CATEGORY_ICONS[exercise.category];
           
-          return (
-            <button
-              key={exercise.id}
-              onClick={() => navigate(`/exercises/${exercise.id}`)}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full',
-                'text-sm font-medium border transition-colors',
-                CATEGORY_COLORS[exercise.category],
-                'focus:outline-none focus:ring-2 focus:ring-primary/20'
-              )}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span className="truncate max-w-[120px]">{exercise.name}</span>
-            </button>
-          );
+            return (
+              <button
+                key={exercise.id}
+                onClick={() => navigate(`/exercises/${exercise.id}`)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full',
+                  'text-sm font-medium border backdrop-blur-sm shadow-sm',
+                  'transition-all duration-200',
+                  CATEGORY_COLORS[exercise.category],
+                  'hover:shadow-md hover:-translate-y-0.5',
+                  'focus:outline-none focus:ring-2 focus:ring-primary/20'
+                )}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span className="truncate max-w-[120px]">{exercise.name}</span>
+              </button>
+            );
         })}
       </div>
     </div>

@@ -91,10 +91,12 @@ export function AnalyticsKPICards({ data, isLoading }: AnalyticsKPICardsProps) {
   return (
     <div className="grid grid-cols-3 gap-3">
       {/* Total Volume */}
-      <Card className="p-3 sm:p-4">
+      <Card className="p-3 sm:p-4 bg-card/80 backdrop-blur-md border-border/50 shadow-sm transition-all duration-200 hover:shadow-md">
         <div className="flex items-center gap-1 text-muted-foreground mb-1">
-          <Weight className="w-3.5 h-3.5 shrink-0" />
-          <span className="text-xs truncate">Celkový objem</span>
+          <div className="p-1 rounded-md bg-primary/10">
+            <Weight className="w-3.5 h-3.5 text-primary shrink-0" />
+          </div>
+          <span className="text-xs truncate ml-1">Celkový objem</span>
           <StatInfoTooltip
             title={HELP_CONTENT.totalVolume.title}
             description={HELP_CONTENT.totalVolume.description}
@@ -102,17 +104,19 @@ export function AnalyticsKPICards({ data, isLoading }: AnalyticsKPICardsProps) {
           />
         </div>
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-lg sm:text-xl font-bold">{formatVolume(totalVolume)}</span>
+          <span className="text-lg sm:text-xl font-bold tabular-nums">{formatVolume(totalVolume)}</span>
           <span className="text-xs text-muted-foreground">kg</span>
         </div>
         <TrendBadge value={trendPercent} />
       </Card>
 
       {/* Avg per Week */}
-      <Card className="p-3 sm:p-4">
+      <Card className="p-3 sm:p-4 bg-card/80 backdrop-blur-md border-border/50 shadow-sm transition-all duration-200 hover:shadow-md">
         <div className="flex items-center gap-1 text-muted-foreground mb-1">
-          <Calendar className="w-3.5 h-3.5 shrink-0" />
-          <span className="text-xs truncate">Průměr/týden</span>
+          <div className="p-1 rounded-md bg-success/10">
+            <Calendar className="w-3.5 h-3.5 text-success shrink-0" />
+          </div>
+          <span className="text-xs truncate ml-1">Průměr/týden</span>
           <StatInfoTooltip
             title={HELP_CONTENT.avgPerWeek.title}
             description={HELP_CONTENT.avgPerWeek.description}
@@ -120,16 +124,18 @@ export function AnalyticsKPICards({ data, isLoading }: AnalyticsKPICardsProps) {
           />
         </div>
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-lg sm:text-xl font-bold">{formatVolume(avgPerWeek)}</span>
+          <span className="text-lg sm:text-xl font-bold tabular-nums">{formatVolume(avgPerWeek)}</span>
           <span className="text-xs text-muted-foreground">kg</span>
         </div>
       </Card>
 
       {/* Top Pattern */}
-      <Card className="p-3 sm:p-4">
+      <Card className="p-3 sm:p-4 bg-card/80 backdrop-blur-md border-border/50 shadow-sm transition-all duration-200 hover:shadow-md">
         <div className="flex items-center gap-1 text-muted-foreground mb-1">
-          <Trophy className="w-3.5 h-3.5 shrink-0" />
-          <span className="text-xs truncate">Top vzorec</span>
+          <div className="p-1 rounded-md bg-warning/10">
+            <Trophy className="w-3.5 h-3.5 text-warning shrink-0" />
+          </div>
+          <span className="text-xs truncate ml-1">Top vzorec</span>
           <StatInfoTooltip
             title={HELP_CONTENT.topPattern.title}
             description={HELP_CONTENT.topPattern.description}
@@ -142,7 +148,7 @@ export function AnalyticsKPICards({ data, isLoading }: AnalyticsKPICardsProps) {
           </span>
         </div>
         {topPattern && (
-          <span className="text-xs text-muted-foreground">{topPattern.count}×</span>
+          <span className="text-xs text-muted-foreground tabular-nums">{topPattern.count}×</span>
         )}
       </Card>
     </div>

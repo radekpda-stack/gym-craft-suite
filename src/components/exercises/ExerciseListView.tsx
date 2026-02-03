@@ -310,7 +310,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
 
         {/* Filters Panel */}
         {showFilters && (
-          <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+          <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border/50 shadow-sm space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger>
@@ -406,7 +406,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                 <AccordionItem 
                   key={category} 
                   value={category}
-                  className="border rounded-lg px-4 bg-card"
+                  className="border border-border/50 rounded-xl px-4 bg-card/80 backdrop-blur-md shadow-sm"
                 >
                   <AccordionTrigger className="hover:no-underline py-3">
                     <div className="flex items-center gap-3 flex-1 flex-wrap">
@@ -465,8 +465,9 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                           <Card
                             key={exercise.id}
                             className={cn(
-                              "p-3 hover:bg-muted/50 transition-colors cursor-pointer group border-muted",
-                              bulkEditMode && isSelected && "bg-primary/10 border-primary"
+                              "p-3 bg-background/60 backdrop-blur-sm border-border/30 shadow-sm",
+                              "hover:bg-secondary/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group",
+                              bulkEditMode && isSelected && "bg-primary/10 border-primary ring-1 ring-primary/20"
                             )}
                             onClick={() => handleExerciseClick(exercise.id)}
                           >

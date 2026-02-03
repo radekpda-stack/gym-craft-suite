@@ -98,27 +98,27 @@ export default function PerformanceHub() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full max-w-2xl mx-auto" style={{ gridTemplateColumns: `repeat(${tabCount + 1}, 1fr)` }}>
-          <TabsTrigger value="overview" className="gap-2">
+        <TabsList className="grid w-full max-w-2xl mx-auto bg-secondary/30 backdrop-blur-sm p-1" style={{ gridTemplateColumns: `repeat(${tabCount + 1}, 1fr)` }}>
+          <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Zap className="w-4 h-4" />
             <span className="hidden sm:inline">Přehled</span>
           </TabsTrigger>
-          <TabsTrigger value="library" className="gap-2">
+          <TabsTrigger value="library" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <List className="w-4 h-4" />
             <span className="hidden sm:inline">Knihovna</span>
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-2">
+          <TabsTrigger value="analytics" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <BarChart3 className="w-4 h-4" />
             <span className="hidden sm:inline">Analytika</span>
           </TabsTrigger>
           {testsEnabled && (
-            <TabsTrigger value="tests" className="gap-2">
+            <TabsTrigger value="tests" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <ClipboardCheck className="w-4 h-4" />
               <span className="hidden sm:inline">Testy</span>
             </TabsTrigger>
           )}
           {challengesEnabled && (
-            <TabsTrigger value="challenges" className="gap-2">
+            <TabsTrigger value="challenges" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Trophy className="w-4 h-4" />
               <span className="hidden sm:inline">Výzvy</span>
             </TabsTrigger>

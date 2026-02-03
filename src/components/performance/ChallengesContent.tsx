@@ -92,7 +92,7 @@ export function ChallengesContent() {
     if (isAfter(now, end)) {
       return <Badge variant="secondary">Ukončeno</Badge>;
     }
-    return <Badge className="bg-green-500">Aktivní</Badge>;
+    return <Badge className="bg-success text-success-foreground shadow-sm shadow-success/30">Aktivní</Badge>;
   };
 
   const getMetricLabel = (metric: string) => {
@@ -127,7 +127,7 @@ export function ChallengesContent() {
   };
 
   const renderChallengeCard = (challenge: Challenge) => (
-    <Card key={challenge.id} className="hover:shadow-md transition-shadow">
+    <Card key={challenge.id} className="bg-card/80 backdrop-blur-md border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
