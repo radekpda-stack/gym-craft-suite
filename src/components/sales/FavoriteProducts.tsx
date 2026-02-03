@@ -1,4 +1,4 @@
-import { Star } from 'lucide-react';
+import { Star, Sparkles } from 'lucide-react';
 import { Product } from '@/hooks/useProducts';
 import { formatCurrency } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +27,7 @@ export function FavoriteProducts({
   return (
     <div className="card-floating rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="p-1.5 rounded-lg bg-warning/10">
+        <div className="p-1.5 rounded-lg bg-warning/10 shadow-sm shadow-warning/20">
           <Star className="w-4 h-4 text-warning fill-warning" />
         </div>
         <span className="text-sm font-semibold">Top produkty</span>
@@ -36,7 +36,7 @@ export function FavoriteProducts({
         </span>
       </div>
       
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
         {topProducts.map(product => {
           const inCart = getCartQuantity(product.id);
           
@@ -45,16 +45,16 @@ export function FavoriteProducts({
               key={product.id}
               onClick={() => onAddToCart(product)}
               className={cn(
-                "relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200",
+                "relative flex flex-col items-start gap-1 p-3 rounded-xl text-left transition-all duration-200",
                 "bg-card/60 backdrop-blur-sm border border-border/50 shadow-sm",
                 "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]",
                 inCart && "ring-2 ring-primary bg-primary/10"
               )}
             >
-              <span className="font-medium line-clamp-1 text-left">
+              <span className="font-medium text-sm line-clamp-1 w-full">
                 {product.name}
               </span>
-              <span className="text-primary font-bold whitespace-nowrap tabular-nums">
+              <span className="text-primary font-bold text-base tabular-nums">
                 {formatCurrency(product.price)}
               </span>
               
