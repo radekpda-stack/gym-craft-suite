@@ -20,11 +20,41 @@ interface ClientProgressLeaderboardProps {
 }
 
 const RANK_STYLES = [
-  { color: 'text-yellow-500', glow: 'shadow-yellow-500/30', bg: 'bg-yellow-500/10' }, // 1st
-  { color: 'text-gray-400', glow: 'shadow-gray-400/20', bg: 'bg-gray-400/10' },   // 2nd
-  { color: 'text-amber-600', glow: 'shadow-amber-600/20', bg: 'bg-amber-600/10' },  // 3rd
-  { color: 'text-muted-foreground', glow: '', bg: 'bg-muted/30' },
-  { color: 'text-muted-foreground', glow: '', bg: 'bg-muted/30' },
+  { 
+    color: 'text-yellow-500', 
+    glow: 'shadow-yellow-500/30', 
+    bg: 'bg-yellow-500/10',
+    border: 'border-yellow-500/40',
+    hoverShadow: 'hover:shadow-yellow-500/20',
+  }, // 1st - Gold
+  { 
+    color: 'text-gray-400', 
+    glow: 'shadow-gray-400/20', 
+    bg: 'bg-gray-400/10',
+    border: 'border-gray-400/40',
+    hoverShadow: 'hover:shadow-gray-400/20',
+  }, // 2nd - Silver
+  { 
+    color: 'text-amber-600', 
+    glow: 'shadow-amber-600/20', 
+    bg: 'bg-amber-600/10',
+    border: 'border-amber-600/40',
+    hoverShadow: 'hover:shadow-amber-600/20',
+  }, // 3rd - Bronze
+  { 
+    color: 'text-muted-foreground', 
+    glow: '', 
+    bg: 'bg-muted/30',
+    border: 'border-border/30',
+    hoverShadow: '',
+  },
+  { 
+    color: 'text-muted-foreground', 
+    glow: '', 
+    bg: 'bg-muted/30',
+    border: 'border-border/30',
+    hoverShadow: '',
+  },
 ];
 
 export function ClientProgressLeaderboard({ topClients, isLoading }: ClientProgressLeaderboardProps) {
@@ -42,7 +72,7 @@ export function ClientProgressLeaderboard({ topClients, isLoading }: ClientProgr
         </div>
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-14" />
+            <Skeleton key={i} className="h-16 rounded-xl" />
           ))}
         </div>
       </div>
@@ -53,7 +83,7 @@ export function ClientProgressLeaderboard({ topClients, isLoading }: ClientProgr
     return (
       <div className="bg-card/80 backdrop-blur-md border border-border/50 rounded-xl p-4 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 rounded-lg bg-warning/10">
+          <div className="p-2 rounded-lg bg-warning/10 shadow-lg shadow-warning/20">
             <Trophy className="w-4 h-4 text-warning" />
           </div>
           <h3 className="font-semibold text-foreground">Top aktivní klienti</h3>
@@ -71,11 +101,14 @@ export function ClientProgressLeaderboard({ topClients, isLoading }: ClientProgr
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-warning/10 shadow-sm shadow-warning/20">
-            <Trophy className="w-4 h-4 text-warning" />
+          <div className="p-2.5 rounded-xl bg-warning/15 shadow-lg shadow-warning/25">
+            <Trophy className="w-5 h-5 text-warning" />
           </div>
-          <h3 className="font-semibold text-foreground">Top aktivní klienti</h3>
-          <Badge variant="secondary" className="text-[10px]">30 dní</Badge>
+          <div>
+            <h3 className="font-semibold text-foreground">Top aktivní klienti</h3>
+            <p className="text-[10px] text-muted-foreground">Podle počtu záznamů</p>
+          </div>
+          <Badge variant="secondary" className="text-[10px] ml-1">30 dní</Badge>
         </div>
         <Button
           variant="ghost"
@@ -95,30 +128,34 @@ export function ClientProgressLeaderboard({ topClients, isLoading }: ClientProgr
           const TrendIcon = client.trend > 0 ? TrendingUp : client.trend < 0 ? TrendingDown : Minus;
           const trendColor = client.trend > 0 ? 'text-emerald-500' : client.trend < 0 ? 'text-destructive' : 'text-muted-foreground';
           const rankStyle = RANK_STYLES[index] || RANK_STYLES[4];
+          const isTopThree = index < 3;
 
           return (
             <button
               key={client.id}
               onClick={() => navigate(`/clients/${client.id}`)}
               className={cn(
-                'w-full flex items-center gap-3 p-3 rounded-xl',
+                'w-full flex items-center gap-3 p-3.5 rounded-xl',
                 'bg-background/60 backdrop-blur-sm',
-                'border border-border/30',
-                'hover:bg-muted/50 hover:shadow-md hover:-translate-y-0.5',
+                'border shadow-sm',
+                rankStyle.border,
+                'hover:shadow-lg hover:-translate-y-0.5',
+                rankStyle.hoverShadow,
                 'transition-all duration-200',
                 'focus:outline-none focus:ring-2 focus:ring-primary/20',
-                'text-left'
+                'text-left',
+                isTopThree && rankStyle.glow && `shadow-sm ${rankStyle.glow}`
               )}
             >
-              {/* Rank */}
+              {/* Rank Badge */}
               <div className={cn(
-                'w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm',
+                'w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm',
                 rankStyle.bg,
-                index < 3 && 'shadow-sm',
-                rankStyle.glow
+                isTopThree && 'shadow-sm',
+                isTopThree && rankStyle.glow
               )}>
-                {index < 3 ? (
-                  <Medal className={cn('w-4 h-4', rankStyle.color)} />
+                {isTopThree ? (
+                  <Medal className={cn('w-5 h-5', rankStyle.color)} />
                 ) : (
                   <span className={rankStyle.color}>{index + 1}</span>
                 )}
@@ -126,17 +163,18 @@ export function ClientProgressLeaderboard({ topClients, isLoading }: ClientProgr
 
               {/* Client info */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <p className="font-medium text-foreground truncate">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="font-semibold text-foreground truncate">
                     {client.name}
                   </p>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {client.prCount > 0 && (
-                      <Badge variant="outline" className="text-[10px] text-warning border-warning/30 bg-warning/5">
+                      <Badge variant="outline" className="text-[10px] text-warning border-warning/30 bg-warning/10 shadow-sm">
+                        <Trophy className="w-2.5 h-2.5 mr-0.5" />
                         {client.prCount} PR
                       </Badge>
                     )}
-                    <div className={cn('flex items-center gap-0.5 text-[10px]', trendColor)}>
+                    <div className={cn('flex items-center gap-0.5 text-[10px] font-medium', trendColor)}>
                       <TrendIcon className="w-3 h-3" />
                       {client.trend !== 0 && (
                         <span className="tabular-nums">{client.trend > 0 ? '+' : ''}{Math.min(Math.abs(client.trend), 99)}%</span>
@@ -145,10 +183,18 @@ export function ClientProgressLeaderboard({ topClients, isLoading }: ClientProgr
                   </div>
                 </div>
 
-                {/* Progress bar */}
+                {/* Progress bar with gradient */}
                 <div className="flex items-center gap-2">
-                  <Progress value={progressPercent} className="h-1.5 flex-1" />
-                  <span className="text-[10px] text-muted-foreground w-14 text-right tabular-nums">
+                  <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden">
+                    <div 
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        isTopThree ? "bg-gradient-to-r from-primary/80 to-primary" : "bg-primary/50"
+                      )}
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground w-16 text-right tabular-nums font-medium">
                     {client.entriesCount} zázn.
                   </span>
                 </div>
