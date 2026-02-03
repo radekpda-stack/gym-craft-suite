@@ -1,42 +1,32 @@
 
-# Fáze 12: Premium Upgrade - Stránka Prodej (Sales)
+# Fáze 13: Premium Dashboard Redesign - Příjemnější a akčnější pohled
 
 ## Analýza aktuálního stavu
 
-Po důkladné analýze jsem identifikoval tyto oblasti pro vylepšení:
-
-### Aktuální struktura stránky Prodej
+### Aktuální struktura Dashboardu (Index.tsx)
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│ PRODEJ                                                      │
-│ Pokladna, správa skladu a statistiky                       │
+│ HERO ZONE                                                   │
+│  - DashboardHeader (pozdrav, datum, metriky)                │
 ├─────────────────────────────────────────────────────────────┤
-│ [Pokladna] [Historie] [Sklad] [Statistiky]                  │
+│ TODAY TIMELINE                                              │
+│  - TodayTimelineCompact (dnešní tréninky s timeline)       │
 ├─────────────────────────────────────────────────────────────┤
-│ POKLADNA:                                                   │
-│  - Klient selection                                         │
-│  - Recent Sales                                             │
-│  - Favorite Products                                        │
-│  - Product Search + Filters                                 │
-│  - Product Grid (Services / Products / Credit Topups)       │
-│  |                              |  Cart Panel (sticky)     │
+│ ALERT ZONE                                                  │
+│  - AlertsSummaryCard (neuhrazené, dluhy)                   │
+│  - UnassignedSessionsCard (nepřiřazené tréninky)           │
+│  - FollowupsDashboardWidget (připomenutí)                  │
+│  - PendingPerformancesCard (schválení výkonů)              │
 ├─────────────────────────────────────────────────────────────┤
-│ HISTORIE:                                                   │
-│  - Search bar                                               │
-│  - Orders grouped by date                                   │
+│ INSIGHT ZONE                                                │
+│  - BusinessYieldScoreCard (business health)                │
+│  - DashboardInsightsRefactored (postřehy)                  │
+│  - FinanceSummaryCard (finance týden/měsíc)                │
+│  - CareerMilestoneCard (kariérní statistiky)               │
+│  - CashflowForecastCard (předpověď cashflow)               │
 ├─────────────────────────────────────────────────────────────┤
-│ SKLAD:                                                      │
-│  - Low stock banner                                         │
-│  - Search + Filters bar                                     │
-│  - Actions bar (margin toggle, import, add)                 │
-│  - Products accordion                                       │
-├─────────────────────────────────────────────────────────────┤
-│ STATISTIKY:                                                 │
-│  - Period selector                                          │
-│  - KPI cards (4x)                                           │
-│  - Revenue chart                                            │
-│  - Top products bar chart                                   │
-│  - Payment methods pie chart                                │
+│ DESKTOP BOTTOM BAR                                          │
+│  - DashboardActions (+ nový, hledat, statistiky)           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -44,360 +34,284 @@ Po důkladné analýze jsem identifikoval tyto oblasti pro vylepšení:
 
 ## Identifikované problémy
 
-### 1. Hlavní stránka (Sales.tsx)
-- **Header** - příliš jednoduchý, chybí hero efekt s ikonou a statistikami
-- **Tabs** - mají už glass styl, ale chybí animovaný indikátor
+### 1. Vizuální hierarchie
+- **Header** - metriky jsou malé, status dot je příliš subtilní
+- Příliš mnoho karet pod sebou bez vizuálního odlišení
+- Chybí jasné sekční rozdělení
 
-### 2. Pokladna (SalesRegister.tsx)
-- **Client selection card** - standardní, mohla by mít výraznější credit display
-- **Favorite Products** - kompaktní chips, mohly by být premium karty
-- **Recent Sales** - dobré, ale chybí vizuální oddělení
-- **Product Grid** - karty už mají glass styl, ale grid layout by mohl být hustší
-- **Cart Panel** - už má premium styl, ale checkout button by mohl mít výraznější glow
+### 2. Akčnost a přehlednost
+- **AlertsSummaryCard** - kliknutím se dostanu na kalendář, ale chybí přímá akce
+- **Insights** - vizuálně splývají, chybí výraznější ikony
+- **Timeline** - dobrá, ale "NOW" indikátor je příliš subtilní
 
-### 3. Historie (SalesHistory.tsx)
-- **Date headers** - jednoduché, mohly by mít výraznější sticky efekt
-- **Order cards** - už mají glass styl, ale mohly by mít lepší vizuální hierarchii
+### 3. Uspořádání informací
+- Finance jsou až na konci, přitom denní příjem je důležitý
+- BusinessYieldScore je komplexní, ale není nejdůležitější pro denní práci
+- Chybí "Morning Briefing" - souhrn co mě čeká
 
-### 4. Sklad (StockManagement.tsx)
-- **Actions bar** - roztříštěné, mohlo by být v jednom premium panelu
-- **Product cards** - uniformní, chybí vizuální hierarchie (low stock, most sold)
-- **Filters** - fungují, ale mohly by být více integrované
-
-### 5. Statistiky (SalesStatistics.tsx)
-- **KPI cards** - už mají premium styl, ale mohly by mít lepší vizuální propojení
-- **Charts** - standardní, mohly by mít premium tooltips a legend
+### 4. Mobile experience
+- Horizontální scroll metrik je skrytý
+- Příliš mnoho vertikálního scrollování
 
 ---
 
 ## Navržené řešení
 
-### ČÁST A: HLAVNÍ STRÁNKA - Hero Header
+### ČÁST A: HERO SECTION REDESIGN
 
-#### A1. Premium Hero Section
+#### A1. Premium Morning Briefing Header
 ```text
 ╭───────────────────────────────────────────────────────────────────╮
 │                                                                   │
-│   ┌────────┐                                                      │
-│   │  💰    │  PRODEJ                                              │
-│   │  glow  │  Pokladna, sklad a statistiky na jednom místě       │
-│   └────────┘                                                      │
+│ ┌────────────────────────────────────────────────────────────────┐│
+│ │ 🟢 DOBRÉ RÁNO                                                 ││
+│ │ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓││
+│ │ status gradient bar (zelená/oranžová/červená)                 ││
+│ └────────────────────────────────────────────────────────────────┘│
 │                                                                   │
-│   [📊 Tržby dnes: 5,250 Kč]  [📦 Low stock: 3]  [🛒 Prodejů: 8]  │
-│                                                                   │
-╰───────────────────────────────────────────────────────────────────╯
-```
-
-Změny v `Sales.tsx`:
-- Premium hero section s gradient background a icon glow
-- Mini KPI chips zobrazující dnešní tržby, počet prodejů, low stock items
-- Animovaný tab indikátor
-
----
-
-### ČÁST B: POKLADNA - Enhanced Register
-
-#### B1. Client Selection - Premium Card
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│ 👤 KLIENT                                     [Bez klienta]      │
-├───────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────────────┐  │
-│ │ 🔍 Vyhledat klienta...                                      │  │
-│ └─────────────────────────────────────────────────────────────┘  │
-│                                                                   │
-│ VYBRANÝ: Jan Novák                                               │
-│ ╭─────────────────────────────────────────────────────────────╮  │
-│ │ 💰 Kredit: 2,500 Kč                      ━━━━━━━━━━━━ 85%  │  │
-│ ╰─────────────────────────────────────────────────────────────╯  │
-╰───────────────────────────────────────────────────────────────────╯
-```
-
-Změny:
-- Premium header s icon glow
-- Credit balance jako progress bar (ukazuje % využití)
-- Shared budget group name s ikonou
-- Low credit warning glow
-
----
-
-#### B2. Quick Actions Panel
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│ ⚡ RYCHLÉ AKCE                                                    │
-├───────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│ 🕐 POSLEDNÍ PRODEJE                                              │
-│ ╭─────────────────────────────────────────────────────────────╮  │
-│ │ Jan Novák • 450 Kč • Protein bar (2×), Ionto   🔄         │  │
-│ ╰─────────────────────────────────────────────────────────────╯  │
-│                                                                   │
-│ ⭐ TOP PRODUKTY                                                   │
-│ ╭──────────╮ ╭──────────╮ ╭──────────╮ ╭──────────╮             │
-│ │ Protein  │ │ Ionto    │ │ BCAAs    │ │ Energy   │             │
-│ │ 65 Kč    │ │ 45 Kč    │ │ 55 Kč    │ │ 35 Kč    │             │
-│ ╰──────────╯ ╰──────────╯ ╰──────────╯ ╰──────────╯             │
-╰───────────────────────────────────────────────────────────────────╯
-```
-
-Změny:
-- Sloučit Recent Sales a Favorite Products do jednoho "Quick Actions" panelu
-- Recent sales jako kompaktní karty s hover efektem
-- Top products jako mini floating tiles
-
----
-
-#### B3. Product Grid - Enhanced Cards
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│ 📦 PRODUKTY A SLUŽBY                              [🔧 Řazení]    │
-├───────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────────────┐  │
-│ │ 🔍 Vyhledat produkt...                                      │  │
-│ └─────────────────────────────────────────────────────────────┘  │
-│                                                                   │
-│ [Vše] [Doplňky] [Nápoje] [Svačiny] [Služby]    ○ Jen skladem    │
-│                                                                   │
-│ ─── 🔧 SLUŽBY (4) ────────────────────────────────────────────   │
-│ ╭─────────────╮ ╭─────────────╮ ╭─────────────╮ ╭─────────────╮ │
-│ │ 🔧 Služba   │ │ 🔧 Služba   │ │ 🔧 Služba   │ │ 🔧 Služba   │ │
-│ │             │ │             │ │             │ │             │ │
-│ │ Masáž      │ │ Měření      │ │ Konzultace │ │ Diagnostika │ │
-│ │ 500 Kč     │ │ 300 Kč     │ │ 200 Kč     │ │ 400 Kč     │ │
-│ ╰─────────────╯ ╰─────────────╯ ╰─────────────╯ ╰─────────────╯ │
-│                                                                   │
-│ ─── 📦 PRODUKTY (12) ─────────────────────────────────────────   │
-│ ╭─────────────╮ ╭─────────────╮ ╭─────────────╮ ╭─────────────╮ │
-│ │ ━━━━━━━━━━━ │ │ ━━━━━━━━    │ │ ━━━━━       │ │ ━━━ ⚠️      │ │
-│ │ 📦 Produkt  │ │ 📦 Produkt  │ │ 📦 Produkt  │ │ 📦 Produkt  │ │
-│ │             │ │             │ │             │ │             │ │
-│ │ Protein    │ │ BCAA       │ │ Ionto      │ │ Energy bar │ │
-│ │ 65 Kč      │ │ 55 Kč      │ │ 45 Kč      │ │ 35 Kč      │ │
-│ │ 24 ks      │ │ 18 ks      │ │ 12 ks      │ │ 3 ks ⚠️    │ │
-│ ╰─────────────╯ ╰─────────────╯ ╰─────────────╯ ╰─────────────╯ │
-╰───────────────────────────────────────────────────────────────────╯
-```
-
-Změny:
-- Section dividers s ikonou a počtem
-- Product cards s stock gauge na vrcholu (barevný gradient)
-- Low stock cards s warning border glow
-- In-cart cards s primary ring + quantity badge
-
----
-
-#### B4. Cart Panel - Premium Checkout
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│ 🛒 KOŠÍK (3)                                    [🗑️ Vyčistit]   │
-├───────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│ ┌─────────────────────────────────────────────────────────────┐  │
-│ │ Protein bar          2×      65 Kč      130 Kč     [-][+]  │  │
-│ │ ─────────────────────────────────────────────────────────── │  │
-│ │ BCAA Shot            1×      55 Kč       55 Kč     [-][+]  │  │
-│ │ ─────────────────────────────────────────────────────────── │  │
-│ │ Masáž 30min          1×     500 Kč      500 Kč     [-][+]  │  │
-│ └─────────────────────────────────────────────────────────────┘  │
+│ 📅 Pondělí, 3. února 2026                      [🏋️ Trénink]      │
 │                                                                   │
 │ ─────────────────────────────────────────────────────────────────│
-│ ZPŮSOB PLATBY                                                    │
-│ ╭────────────────────────────────────────────────────────────╮   │
-│ │ [💵 Cash] [💰 Kredit] [💳 Karta] [🏦 Převod]              │   │
-│ │  ▓▓▓▓▓▓▓                                                   │   │
-│ │  animated pill                                             │   │
-│ ╰────────────────────────────────────────────────────────────╯   │
 │                                                                   │
-│ ─────────────────────────────────────────────────────────────────│
-│ Mezisoučet:                                         685 Kč      │
-│ Sleva:                                              -50 Kč      │
-│ ─────────────────────────────────────────────────────────────────│
-│ CELKEM:                                             635 Kč      │
+│ ╭─────────────────╮  ╭─────────────────╮  ╭─────────────────╮    │
+│ │  ◐ 4/6         │  │  👥 3           │  │  💰 2,850 Kč    │    │
+│ │  capacity ring │  │  klienti        │  │  dnešní příjem  │    │
+│ │  tréninků dnes │  │                 │  │  ▲ +12%         │    │
+│ ╰─────────────────╯  ╰─────────────────╯  ╰─────────────────╯    │
 │                                                                   │
-│ ╭─────────────────────────────────────────────────────────────╮  │
-│ │            ✅ DOKONČIT PRODEJ                              │  │
-│ │            ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓                           │  │
-│ │            success glow effect                              │  │
-│ ╰─────────────────────────────────────────────────────────────╯  │
 ╰───────────────────────────────────────────────────────────────────╯
 ```
 
-Změny:
-- Premium cart items s glass background
-- Payment method pills s animated indicator (už existuje)
-- Total s prominent styling
-- Checkout button s výrazným success glow efektem
+Změny v `DashboardHeader.tsx`:
+- Status jako gradient bar pod pozdravem (ne jen tečka)
+- Capacity jako výrazný activity ring s čísly uvnitř
+- Dnešní příjem prominentní s trendem
+- "Tréninkový režim" tlačítko stále viditelné
 
 ---
 
-### ČÁST C: HISTORIE - Enhanced Timeline
+#### A2. Metric Instruments - Větší a výraznější
+```text
+╭──────────────────────╮  ╭──────────────────────╮  ╭──────────────────────╮
+│       ┌───────┐      │  │                      │  │                      │
+│       │  ◐   │      │  │     👥               │  │     💰              │
+│       │ 4/6  │      │  │                      │  │                      │
+│       └───────┘      │  │      3              │  │    2,850             │
+│                      │  │    klienti           │  │      Kč              │
+│   KAPACITA          │  │                      │  │    ▲ +12%            │
+│   67% využito       │  │   dnes               │  │   vs. minulý den     │
+│   ━━━━━━━━━━━━━━━━  │  │                      │  │                      │
+╰──────────────────────╯  ╰──────────────────────╯  ╰──────────────────────╯
+```
 
-#### C1. Premium Order Cards
+- Metriky jako "instrumenty" inspirované Whoop/Apple Watch
+- Activity ring pro kapacitu
+- Trend comparison pod hodnotami
+
+---
+
+### ČÁST B: TODAY TIMELINE - Vylepšení
+
+#### B1. Enhanced Timeline s Quick Actions
 ```text
 ╭───────────────────────────────────────────────────────────────────╮
-│ 🔍 Hledat dle klienta, data, částky...                            │
+│ 📅 DNEŠNÍ TRÉNINKY                              [3/5] dokončeno  │
 ├───────────────────────────────────────────────────────────────────┤
 │                                                                   │
-│ ═══════════════════════════════════════════════════════════════  │
-│ ┃ 📅 PÁTEK 31. LEDNA 2025                            3 prodeje ┃ │
-│ ═══════════════════════════════════════════════════════════════  │
+│ ┃  ✓ 08:00  Jan Novák           [Dokončeno]                     │
+│ ┃  ─────────────────────────────────────────────────────────────│
+│ ┃  ✓ 09:30  Marie Nová          [Dokončeno]                     │
+│ ┃  ─────────────────────────────────────────────────────────────│
+│ ┃🔴10:45  Petr Svoboda  ← NYNÍ  [▶ Dokončit]  [📝 Feedback]    │
+│ ┃  ─────────────────────────────────────────────────────────────│
+│ ┃  ○ 14:00  Lukáš Horák         Další →                        │
+│ ┃  ─────────────────────────────────────────────────────────────│
+│ ┃  ○ 16:30  Eva Malá            Za 5h 45min                    │
+│                                                                   │
+│                               [📅 Zobrazit kalendář →]           │
+╰───────────────────────────────────────────────────────────────────╯
+```
+
+Změny v `TodayTimelineCompact.tsx`:
+- NOW indikátor jako výrazný červený pulsující bod + label "NYNÍ"
+- Quick actions přímo v řádku: "Dokončit", "Feedback"
+- Relativní čas "Za Xh Xmin" u nadcházejících
+- Progress bar v headeru (3/5 dokončeno)
+
+---
+
+### ČÁST C: ALERT ZONE - Konsolidace a akce
+
+#### C1. Unified Action Center
+```text
+╭───────────────────────────────────────────────────────────────────╮
+│ ⚡ VYŽADUJE AKCI                                              (5) │
+├───────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │ ╭─────────────────────────────────────────────────────────────╮  │
-│ │ 💵  Jan Novák           [Cash]      14:32      685 Kč  →  │  │
-│ │     Protein bar (2×), Masáž                                │  │
-│ │     ─────────────────────────────────────────────────────  │  │
-│ │     -50 Kč sleva  •  +25 XP                                │  │
+│ │ 💰 2 neuhrazené tréninky             1,450 Kč   [UHRADIT]  │  │
+│ │    warning glow                                             │  │
 │ ╰─────────────────────────────────────────────────────────────╯  │
 │                                                                   │
 │ ╭─────────────────────────────────────────────────────────────╮  │
-│ │ 💰  Marie Nová          [Kredit]    12:15      120 Kč  →  │  │
-│ │     Energy bar (2×), BCAA Shot                             │  │
+│ │ ⚠️ 1 klient s nízkým kreditem        pod 500 Kč  [DOPLNIT] │  │
+│ │    warning glow                                             │  │
 │ ╰─────────────────────────────────────────────────────────────╯  │
-╰───────────────────────────────────────────────────────────────────╯
-```
-
-Změny:
-- Date headers jako premium glass dividers s počtem prodejů
-- Order cards s výraznějším payment method icon
-- Discount a XP info jako inline badges
-- Items preview s lepším formátováním
-
----
-
-### ČÁST D: SKLAD - Premium Management
-
-#### D1. Enhanced Low Stock Banner
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│ ⚠️ NÍZKÝ STAV ZÁSOB                              [👁️ Zobrazit] ▼│
-│ ─────────────────────────────────────────────────────────────────│
-│ 3 položky pod minimální hranicí                                  │
-├───────────────────────────────────────────────────────────────────┤
-│ ╭───────────────────╮ ╭───────────────────╮ ╭───────────────────╮│
-│ │ Energy bar        │ │ BCAA Shot         │ │ Protein mix       ││
-│ │ 3 ks ← 5 min     │ │ 2 ks ← 5 min     │ │ 4 ks ← 10 min    ││
-│ │ ━━━ ⚠️            │ │ ━━ ⚠️             │ │ ━━━━ ⚠️           ││
-│ ╰───────────────────╯ ╰───────────────────╯ ╰───────────────────╯│
-╰───────────────────────────────────────────────────────────────────╯
-```
-
-Změny:
-- Premium warning banner s glass background
-- Collapsible detail s mini product cards
-- Stock gauges s gradient fill
-- "Objednat" quick action
-
----
-
-#### D2. Premium Filters & Actions Bar
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│ 📦 42 POLOŽEK                                                     │
-├───────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────────────┐  │
-│ │ 🔍 Hledat produkt...                                        │  │
-│ └─────────────────────────────────────────────────────────────┘  │
 │                                                                   │
-│ [Vše] [Nízký stav ⚠️] [Aktivní] [Archivované]                    │
-│                                                                   │
-│ Typ: [▼ Vše]   Řazení: [▼ Název A-Z]                            │
-│                                                                   │
-│ [👁️ Marže]   [📥 Příjem]   [📄 Import]   [+ Přidat]              │
-╰───────────────────────────────────────────────────────────────────╯
-```
-
-Změny:
-- Unified glass filter panel
-- Filter chips s badge počty
-- Actions jako floating buttons
-- Responsive layout
-
----
-
-#### D3. Premium Product Cards
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 85% stock       │
-├───────────────────────────────────────────────────────────────────┤
-│ 📦 PRODUKT                                           [✏️ Edit]  │
-│                                                                   │
-│ Protein Bar - Chocolate                                          │
-│ ───────────────────────────────────────────────────────────────  │
-│                                                                   │
-│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
-│ │ 💰 65 Kč    │ │ 📊 45 Kč   │ │ 📈 31%      │ │ 📦 24 ks    │ │
-│ │ Prodejní   │ │ Nákupní    │ │ Marže       │ │ Skladem     │ │
-│ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
-│                                                                   │
-│ Kategorie: Svačina  •  Min. cena: 55 Kč  •  XP: +5              │
-│                                                           [👁️‍🗨️] │
-╰───────────────────────────────────────────────────────────────────╯
-```
-
-Změny:
-- Stock gauge jako horní bar (gradient dle stavu)
-- 4-column mini KPI grid
-- Margin visualization (ukázat jen pokud toggle zapnut)
-- Archive toggle as eye icon
-
----
-
-### ČÁST E: STATISTIKY - Enhanced Charts
-
-#### E1. Premium KPI Dashboard
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│ 📅 Období: [▼ Tento měsíc]                                        │
-├───────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│ ╭───────────────╮ ╭───────────────╮ ╭───────────────╮ ╭──────────╮
-│ │ 📈 TRŽBY      │ │ 📊 NÁKLADY    │ │ 💰 ZISK       │ │ 🛒 PRODEJŮ│
-│ │               │ │               │ │               │ │          │
-│ │   45,250 Kč   │ │   12,800 Kč   │ │   32,450 Kč   │ │    87    │
-│ │   ▲ +12%      │ │   ▼ -5%       │ │   ▲ +18%      │ │   ▲ +8%  │
-│ │   vs minulý   │ │   vs minulý   │ │   vs minulý   │ │   vs min │
-│ ╰───────────────╯ ╰───────────────╯ ╰───────────────╯ ╰──────────╯
-│                                                                   │
-│ ─────────────────────────────────────────────────────────────────│
-│ 📊 INSIGHTS                                                      │
 │ ╭─────────────────────────────────────────────────────────────╮  │
-│ │ 💡 Nejprodávanější: Protein Bar (+23% vs minulý měsíc)     │  │
-│ │ 📈 Peak: Pondělí 12:00-14:00 (32% všech prodejů)           │  │
-│ │ ⚠️ Low margin: BCAA Shot (pouze 15% marže)                 │  │
+│ │ 📋 2 tréninky k přiřazení                       [PŘIŘADIT] │  │
 │ ╰─────────────────────────────────────────────────────────────╯  │
+│                                                                   │
 ╰───────────────────────────────────────────────────────────────────╯
 ```
 
-Změny:
-- KPI cards spojené vizuálně (glass container)
-- Comparison badges s trend arrows
-- Insights sekce s actionable info
+Nová komponenta `ActionCenterCard.tsx`:
+- Sloučí AlertsSummaryCard, UnassignedSessionsCard, FollowupsDashboardWidget
+- Každý alert má PŘÍMOU akci (dialog/sheet)
+- Click → okamžité řešení, ne navigace jinam
+- Collapsed stav pokud 0 položek
 
 ---
 
-#### E2. Premium Charts
+### ČÁST D: INSIGHT ZONE - Zjednodušení
+
+#### D1. Quick Stats Bar (místo BusinessYieldScore)
 ```text
 ╭───────────────────────────────────────────────────────────────────╮
-│ 📊 VÝVOJ TRŽEB                                                   │
+│  TENTO TÝDEN                           vs. minulý týden          │
 ├───────────────────────────────────────────────────────────────────┤
 │                                                                   │
-│     ╭──────────────────────────────────────────────────────────╮ │
-│  Kč │░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░│ │
-│     │░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│ │
-│     │░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│ │
-│     ╰──────────────────────────────────────────────────────────╯ │
-│       Po   Út   St   Čt   Pá   So   Ne                          │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐      │
+│  │ 📊 8 tréninků  │  │ 💰 12,450 Kč   │  │ 📈 Trend       │      │
+│  │    ▲ +2        │  │    ▲ +18%      │  │    ⬆ Rostoucí  │      │
+│  │    vs. 6       │  │    vs. 10,550  │  │                │      │
+│  └────────────────┘  └────────────────┘  └────────────────┘      │
 │                                                                   │
-│ ─────────────────────────────────────────────────────────────────│
-│ 💰 Tržby: 45,250 Kč  📊 Náklady: 12,800 Kč  📈 Zisk: 32,450 Kč  │
 ╰───────────────────────────────────────────────────────────────────╯
 ```
 
-Změny:
-- Premium tooltips s glass background
-- Enhanced gradient fills
-- Summary row pod grafem
-- Interactive legend
+Nová komponenta `WeeklyQuickStats.tsx`:
+- Nahradí komplexní BusinessYieldScoreCard v daily view
+- 3 klíčové metriky: tréninky, příjem, trend
+- BusinessYieldScore přesunout do Statistiky
+
+---
+
+#### D2. Smart Insights - Výraznější a akčnější
+```text
+╭───────────────────────────────────────────────────────────────────╮
+│ 💡 POSTŘEHY                                        [🔄 Další]    │
+├───────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│ ╭─────────────────────────────────────────────────────────────╮  │
+│ │ ✅ Retence 94%                                   →         │  │
+│ │    Skvělá retence, pouze 1 klient odešel                   │  │
+│ ╰─────────────────────────────────────────────────────────────╯  │
+│                                                                   │
+│ ╭─────────────────────────────────────────────────────────────╮  │
+│ │ 📈 Duo tréninky                                  →         │  │
+│ │    +23% příjem z duo tréninků tento měsíc                  │  │
+│ ╰─────────────────────────────────────────────────────────────╯  │
+│                                                                   │
+│ ╭─────────────────────────────────────────────────────────────╮  │
+│ │ ⚡ Peak hodina                                   →         │  │
+│ │    Nejvíce tréninků v 10:00-12:00                          │  │
+│ ╰─────────────────────────────────────────────────────────────╯  │
+│                                                                   │
+╰───────────────────────────────────────────────────────────────────╯
+```
+
+Změny v `DashboardInsightsRefactored.tsx`:
+- Větší ikony (emoji → icons)
+- Více prostoru mezi položkami
+- Detail jako subtitle (ne jen text)
+- Výraznější barevné kódování
+
+---
+
+#### D3. Finance Summary - Čistší layout
+```text
+╭───────────────────────────────────────────────────────────────────╮
+│ 💰 FINANCE                                                        │
+├───────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │                TENTO TÝDEN              TENTO MĚSÍC         │ │
+│  │  ─────────────────────────────────────────────────────────  │ │
+│  │       12,450 Kč                         45,800 Kč          │ │
+│  │       ▲ +18% vs minulý                  ▲ +12%             │ │
+│  │                                                             │ │
+│  │       8 tréninků                        32 tréninků        │ │
+│  │       ⌀ 1,556 Kč/trénink                ⌀ 1,431 Kč         │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│  ⚠️ 2 neuhrazených (1,450 Kč)   [ŘEŠIT →]                        │
+│                                                                   │
+╰───────────────────────────────────────────────────────────────────╯
+```
+
+Změny v `FinanceSummaryCard.tsx`:
+- Čistší tabulkový layout
+- Alert row pouze pokud jsou problémy
+- Kliknutelná navigace přímo na řešení
+
+---
+
+### ČÁST E: MOBILNÍ OPTIMALIZACE
+
+#### E1. Swipeable Metric Cards
+```text
+Na mobilu:
+╭───────────────────────────────────────╮
+│   [← swipe →]                         │
+│                                       │
+│   ┌─────────────────────────────────┐ │
+│   │      ◐ 4/6                      │ │
+│   │    KAPACITA                     │ │
+│   │    67% využito                  │ │
+│   └─────────────────────────────────┘ │
+│                                       │
+│   ● ○ ○                              │
+╰───────────────────────────────────────╯
+```
+
+- Metriky jako horizontal carousel s pagination dots
+- Swipe pro další metriku
+- Více prostoru pro každou metriku
+
+---
+
+#### E2. Collapsible Sections
+```text
+╭───────────────────────────────────────╮
+│ ▼ DNEŠNÍ TRÉNINKY                (5) │ ← tap to collapse
+├───────────────────────────────────────┤
+│   ... obsah ...                       │
+╰───────────────────────────────────────╯
+
+╭───────────────────────────────────────╮
+│ ▶ FINANCE                  12,450 Kč │ ← collapsed, shows summary
+╰───────────────────────────────────────╯
+```
+
+- Sekce jako collapsible
+- Collapsed stav zobrazuje key metric
+- Pamatuje si stav (localStorage)
+
+---
+
+### ČÁST F: QUICK ACTIONS REDESIGN
+
+#### F1. Floating Action Button (FAB) na mobilu
+```text
+                                    ╭───────╮
+                                    │  ➕   │
+                                    │       │ ← FAB pro nový trénink
+                                    ╰───────╯
+```
+
+- Primární akce jako floating button
+- Tap → menu s akcemi (Trénink, Poznámka, Hledat)
 
 ---
 
@@ -406,248 +320,186 @@ Změny:
 ### Vysoká priorita
 | Soubor | Změny |
 |--------|-------|
-| `src/pages/Sales.tsx` | Hero header, mini KPI chips, animated tabs |
-| `src/components/sales/SalesRegister.tsx` | Premium client card, product grid sections |
-| `src/components/sales/CartPanel.tsx` | Enhanced checkout button glow, cart styling |
+| `src/pages/Index.tsx` | Restrukturalizace sekcí, zjednodušení |
+| `src/components/dashboard/DashboardHeader.tsx` | Premium header, status bar, větší metriky |
+| `src/components/dashboard/TodayTimelineCompact.tsx` | Quick actions, výraznější NOW, relativní čas |
+| `src/components/dashboard/AlertsSummaryCard.tsx` → `ActionCenterCard.tsx` | Konsolidace alertů s přímými akcemi |
 
 ### Střední priorita
 | Soubor | Změny |
 |--------|-------|
-| `src/components/sales/FavoriteProducts.tsx` | Merge into Quick Actions, enhanced tiles |
-| `src/components/sales/RecentSales.tsx` | Merge into Quick Actions, compact cards |
-| `src/components/sales/SalesHistory.tsx` | Premium date headers, order card styling |
-| `src/components/sales/StockManagement.tsx` | Enhanced banner, unified filters, product cards |
+| `src/components/dashboard/DashboardInsightsRefactored.tsx` | Větší ikony, lepší spacing |
+| `src/components/dashboard/FinanceSummaryCard.tsx` | Čistší layout, alert row |
+| `src/components/dashboard/WeeklyQuickStats.tsx` | NOVÁ komponenta - týdenní přehled |
+| `src/components/dashboard/DashboardActions.tsx` | FAB pattern pro mobil |
 
 ### Nižší priorita
 | Soubor | Změny |
 |--------|-------|
-| `src/components/sales/SalesStatistics.tsx` | KPI container styling, insights section |
-| `src/components/sales/LowStockBanner.tsx` | Premium glass banner, mini product cards |
-| `src/components/sales/ProductSearchAndFilters.tsx` | Glass input, enhanced category chips |
+| `src/components/dashboard/CashflowForecastCard.tsx` | Vizuální polish |
+| `src/components/dashboard/UnassignedSessionsCard.tsx` | Sloučit do ActionCenter |
+| `src/components/dashboard/FollowupsDashboardWidget.tsx` | Sloučit do ActionCenter |
 
 ---
 
 ## TECHNICKÉ DETAILY
 
-### Hero Header (Sales.tsx)
+### Premium Status Bar
 ```tsx
-<div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-6 mb-6">
-  {/* Background glow */}
-  <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl" />
-  
-  <div className="relative flex items-start gap-4">
-    {/* Icon with glow */}
-    <div className="p-3 rounded-2xl bg-primary/20 backdrop-blur-sm shadow-lg shadow-primary/20">
-      <ShoppingCart className="w-8 h-8 text-primary" />
+<div className="relative h-1.5 rounded-full overflow-hidden bg-muted/30">
+  <div 
+    className={cn(
+      "h-full rounded-full transition-all duration-500",
+      dayStatus === 'ok' ? "bg-gradient-to-r from-success to-success/70" :
+      dayStatus === 'warning' ? "bg-gradient-to-r from-warning to-warning/70" :
+      "bg-gradient-to-r from-destructive to-destructive/70"
+    )}
+    style={{ width: '100%' }}
+  />
+  <div 
+    className={cn(
+      "absolute inset-0 opacity-50",
+      dayStatus === 'ok' && "animate-pulse bg-success/20"
+    )}
+  />
+</div>
+```
+
+### Capacity Instrument Card
+```tsx
+<motion.div 
+  className="relative p-4 rounded-2xl bg-card/80 backdrop-blur-md border border-border/30"
+  whileHover={{ scale: 1.02 }}
+>
+  <div className="flex flex-col items-center gap-2">
+    {/* Large Activity Ring */}
+    <div className="relative">
+      <ActivityRing 
+        progress={capacityPercent} 
+        size="lg" 
+        color={dayStatus === 'ok' ? 'success' : 'warning'}
+        strokeWidth={8}
+      />
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-bold tabular-nums">
+          {capacity.completed}/{capacity.total}
+        </span>
+      </div>
     </div>
     
-    <div className="flex-1">
-      <h1 className="text-2xl font-bold">Prodej</h1>
-      <p className="text-muted-foreground text-sm">
-        Pokladna, sklad a statistiky na jednom místě
-      </p>
-      
-      {/* Mini KPI chips */}
-      <div className="flex flex-wrap gap-2 mt-3">
-        <Badge variant="outline" className="gap-1 bg-card/60 backdrop-blur-sm">
-          <TrendingUp className="w-3 h-3 text-success" />
-          Dnes: {formatCurrency(todayRevenue)}
-        </Badge>
-        <Badge variant="outline" className="gap-1 bg-card/60 backdrop-blur-sm">
-          <ShoppingCart className="w-3 h-3" />
-          {todaySales} prodejů
-        </Badge>
-        {lowStockCount > 0 && (
-          <Badge variant="outline" className="gap-1 bg-warning/10 text-warning border-warning/30">
-            <AlertTriangle className="w-3 h-3" />
-            {lowStockCount} low stock
-          </Badge>
-        )}
-      </div>
+    <div className="text-center">
+      <p className="text-xs uppercase tracking-wider text-muted-foreground">Kapacita</p>
+      <p className="text-sm font-medium">{capacityPercent}% využito</p>
     </div>
   </div>
-</div>
+</motion.div>
 ```
 
-### Client Card Enhancement
+### Timeline Quick Action Buttons
 ```tsx
-<div className="card-floating rounded-xl p-4">
-  <div className="flex items-center justify-between mb-3">
-    <Label className="flex items-center gap-2 text-sm font-semibold">
-      <div className="p-1.5 rounded-lg bg-primary/10 shadow-sm shadow-primary/20">
-        <User className="w-4 h-4 text-primary" />
-      </div>
-      Klient
-    </Label>
-    <Button variant={noClient ? "default" : "outline"} size="sm" onClick={handleNoClientToggle}>
-      {noClient ? <Check className="w-4 h-4 mr-1" /> : null}
-      Bez klienta
+{isCurrentSlot && !isCompleted && (
+  <div className="flex items-center gap-1 ml-auto">
+    <Button
+      size="sm"
+      variant="default"
+      className="h-7 px-2 text-xs bg-success hover:bg-success/90"
+      onClick={(e) => {
+        e.stopPropagation();
+        handleCompleteTraining(training.id);
+      }}
+    >
+      <Check className="w-3 h-3 mr-1" />
+      Dokončit
     </Button>
   </div>
-  
-  {selectedClientData && (
-    <div className="mt-3 p-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/30">
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-medium">{selectedClientData.name}</span>
-        {sharedBudget?.isShared && (
-          <Badge variant="outline" className="gap-1 text-xs">
-            <Users className="w-3 h-3" />
-            {sharedBudget.groupName}
-          </Badge>
-        )}
-      </div>
-      
-      {/* Credit as progress bar */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Kredit</span>
-          <span className={cn(
-            "font-bold tabular-nums",
-            effectiveBalance < 0 ? "text-destructive" : 
-            effectiveBalance < 500 ? "text-warning" : "text-success"
-          )}>
-            {formatCurrency(effectiveBalance)}
-          </span>
-        </div>
-        <div className="h-1.5 rounded-full bg-secondary/50 overflow-hidden">
-          <div 
-            className={cn(
-              "h-full rounded-full transition-all duration-500",
-              effectiveBalance < 0 ? "bg-destructive" :
-              effectiveBalance < 500 ? "bg-warning" : "bg-success"
-            )}
-            style={{ width: `${Math.min(100, Math.max(0, effectiveBalance / 50))}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  )}
-</div>
+)}
 ```
 
-### Checkout Button Enhancement
+### Action Center Item with Direct Action
 ```tsx
-<Button 
-  onClick={onSale} 
-  disabled={checkoutDisabled} 
+<motion.div
+  whileHover={{ x: 4 }}
   className={cn(
-    "w-full h-12 text-sm gap-2 font-bold",
-    "bg-success hover:bg-success/90 text-success-foreground",
-    "shadow-lg shadow-success/30",
-    "hover:shadow-xl hover:shadow-success/40",
-    "active:scale-[0.98]",
-    "transition-all duration-200",
-    // Pulse animation when ready
-    !checkoutDisabled && "animate-pulse-subtle"
+    'flex items-center gap-3 p-3 rounded-xl transition-all',
+    'bg-card/60 backdrop-blur-sm border',
+    'border-warning/30 hover:border-warning/50'
   )}
-  size="lg"
 >
-  {isProcessing ? (
-    <Loader2 className="w-5 h-5 animate-spin" />
-  ) : (
-    <Check className="w-5 h-5" />
-  )}
-  {isProcessing ? 'Zpracovávám...' : 'Dokončit prodej'}
-</Button>
-```
-
-### Product Section Divider
-```tsx
-<div className="flex items-center gap-3 mb-3">
-  <div className="p-1.5 rounded-lg bg-primary/10">
-    <Package className="w-4 h-4 text-primary" />
-  </div>
-  <span className="text-sm font-semibold">Produkty</span>
-  <span className="text-xs text-muted-foreground">({count})</span>
-  <div className="flex-1 h-px bg-border/50" />
-</div>
-```
-
-### Stock Management Product Card
-```tsx
-<div className={cn(
-  "relative overflow-hidden rounded-xl",
-  "bg-card/80 backdrop-blur-md border shadow-sm",
-  "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5",
-  isLowStock && "border-warning/50",
-  !product.is_active && "opacity-50"
-)}>
-  {/* Stock gauge bar */}
-  <div className="h-1.5 bg-secondary/30">
-    <div 
-      className={cn(
-        "h-full transition-all duration-500",
-        stockPercent < 25 ? "bg-gradient-to-r from-destructive to-destructive/50" :
-        stockPercent < 50 ? "bg-gradient-to-r from-warning to-warning/50" :
-        "bg-gradient-to-r from-success to-success/50"
-      )}
-      style={{ width: `${stockPercent}%` }}
-    />
+  <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center">
+    <CreditCard className="w-5 h-5 text-warning" />
   </div>
   
-  <div className="p-4">
-    {/* Product content */}
+  <div className="flex-1 min-w-0">
+    <p className="font-medium text-sm">2 neuhrazené tréninky</p>
+    <p className="text-xs text-muted-foreground">1,450 Kč</p>
   </div>
-</div>
+  
+  <Button
+    size="sm"
+    variant="outline"
+    className="shrink-0 border-warning/50 text-warning hover:bg-warning/10"
+    onClick={(e) => {
+      e.stopPropagation();
+      setShowUnpaidDialog(true);
+    }}
+  >
+    Uhradit
+  </Button>
+</motion.div>
 ```
 
 ---
 
 ## VIZUÁLNÍ SROVNÁNÍ
 
-### PŘED (Pokladna):
+### PŘED:
 ```text
 ┌───────────────────────────────────────┐
-│ Prodej                                │
-│ Pokladna, správa skladu...           │
+│ 🟢 Dobré ráno                         │
+│ Pondělí, 3. února                     │
+│ [metric] [metric] [metric] [metric]   │ ← malé, scroll
 ├───────────────────────────────────────┤
-│ [Pokladna] [Historie] [Sklad] [Stats] │
+│ Timeline (standard card)              │
 ├───────────────────────────────────────┤
-│ Klient: [dropdown]       [Bez klient] │
-│ Kredit: 2,500 Kč                      │
-│ ─────────────────────────────────────│
-│ Recent: [sale1] [sale2] [sale3]       │
-│ Top: [prod1] [prod2] [prod3]          │
-│ ─────────────────────────────────────│
-│ Produkty: [search...]                 │
-│ [grid of products]                    │
+│ Alerts card                           │
+│ Unassigned card                       │ ← 3 oddělené karty
+│ Followups card                        │
+├───────────────────────────────────────┤
+│ BusinessYieldScore (complex)          │
+│ Insights                              │
+│ Finance                               │ ← hodně scrollování
+│ Career                                │
+│ Cashflow                              │
 └───────────────────────────────────────┘
 ```
 
-### PO (Pokladna):
+### PO:
 ```text
 ╭───────────────────────────────────────╮
-│ ┌────┐  PRODEJ                        │
-│ │ 💰 │  Pokladna, sklad a statistiky │
-│ └────┘  [📈 5,250 Kč] [🛒 8] [⚠️ 3]  │
+│ ┌─ 🟢 DOBRÉ RÁNO ─────────────────┐   │
+│ │ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ status bar ▓▓ │   │ ← výrazný status
+│ └─────────────────────────────────┘   │
+│ Pondělí, 3. února         [🏋️ Trénink]│
 ├───────────────────────────────────────┤
-│ [Pokladna] [Historie] [Sklad] [Stats] │
-│  ▓▓▓▓▓▓▓▓▓                            │
+│ ╭───────╮  ╭───────╮  ╭───────╮       │
+│ │ ◐ 4/6 │  │ 👥 3  │  │ 💰2.8k│       │ ← velké instrumenty
+│ ╰───────╯  ╰───────╯  ╰───────╯       │
 ├───────────────────────────────────────┤
-│ 👤 KLIENT                 [Bez klient]│
-│ ╭─────────────────────────────────╮   │
-│ │ Jan Novák          [👥 Rodina] │   │
-│ │ Kredit: 2,500 Kč   ━━━━━━━━━━━ │   │
-│ ╰─────────────────────────────────╯   │
+│ 📅 DNEŠNÍ TRÉNINKY              [3/5] │
+│ ┃ ✓ 08:00 Jan                         │
+│ ┃🔴10:45 Petr ← NYNÍ  [Dokončit]      │ ← quick actions
+│ ┃ ○ 14:00 Lukáš                       │
 ├───────────────────────────────────────┤
-│ ⚡ RYCHLÉ AKCE                        │
-│ ╭─────────────────────────────────╮   │
-│ │ 🕐 Jan • 450 Kč • Protein (2×)🔄│   │
-│ ╰─────────────────────────────────╯   │
-│ ╭──────╮ ╭──────╮ ╭──────╮ ╭──────╮  │
-│ │Protein│ │Ionto │ │BCAA  │ │Energy│  │
-│ │65 Kč │ │45 Kč │ │55 Kč │ │35 Kč │  │
-│ ╰──────╯ ╰──────╯ ╰──────╯ ╰──────╯  │
+│ ⚡ VYŽADUJE AKCI                  (3)  │
+│ ╭ 💰 2 neuhrazené    1,450 Kč [UHRADIT]│ ← přímé akce
+│ ╭ 📋 1 k přiřazení           [PŘIŘADIT]│
 ├───────────────────────────────────────┤
-│ 📦 PRODUKTY          🔍 [search...]   │
-│ ─── 🔧 Služby (4) ─────────────────   │
-│ ╭─────╮ ╭─────╮ ╭─────╮ ╭─────╮      │
-│ │glass│ │glass│ │glass│ │glass│      │
-│ ╰─────╯ ╰─────╯ ╰─────╯ ╰─────╯      │
-│ ─── 📦 Produkty (12) ──────────────   │
-│ ╭─────╮ ╭─────╮ ╭─────╮ ╭─────╮      │
-│ │gauge│ │gauge│ │gauge│ │gauge│      │
-│ ╰─────╯ ╰─────╯ ╰─────╯ ╰─────╯      │
+│ 📊 TENTO TÝDEN                        │
+│ 8 tréninků ▲+2  |  12,450 Kč ▲+18%   │ ← simple weekly stats
+├───────────────────────────────────────┤
+│ 💡 POSTŘEHY                     [Další]│
+│ ✅ Retence 94% - skvělá                │ ← čitelné insights
+│ 📈 Duo +23%                            │
 ╰───────────────────────────────────────╯
 ```
 
@@ -655,40 +507,40 @@ Změny:
 
 ## ANIMACE A INTERAKCE
 
-1. **Hero Header:**
-   - Background glow s subtle pulse
-   - KPI badges s fade-in animation
+1. **Status Bar:**
+   - Gradient fill animation on load
+   - Subtle pulse pokud status = ok
 
-2. **Client Card:**
-   - Credit bar smooth width transition
-   - Low credit warning pulse
+2. **Metric Instruments:**
+   - Activity ring animation on mount
+   - Hover → scale(1.02) + shadow
+   - Swipe na mobilu
 
-3. **Product Cards:**
+3. **Timeline Items:**
+   - NOW indicator: pulsing red dot + glow
+   - Quick action buttons: scale on hover
+   - Completed items: slide-in checkmark
+
+4. **Action Center:**
+   - Alert items: hover → slide-x
+   - Action buttons: success glow on complete
+   - Count badge: animate on change
+
+5. **Insights:**
+   - Staggered fade-in
    - Hover → lift + shadow
-   - In-cart → ring animation + badge scale-in
-   - Stock gauge → smooth fill on mount
-
-4. **Cart Panel:**
-   - Payment method pills s animated indicator
-   - Checkout button s success glow
-
-5. **History Cards:**
-   - Hover → lift + chevron slide
-   - Date headers → sticky with blur
-
-6. **Stock Cards:**
-   - Stock gauge → gradient animation
-   - Low stock → warning border pulse
+   - Click → sheet open animation
 
 ---
 
 ## KONZISTENCE
 
-Všechny změny dodržují zavedený design systém:
+Změny dodržují zavedený design systém:
 - `.card-floating` / `bg-card/80 backdrop-blur-md`
-- `shadow-sm` → `shadow-md/lg` on hover
+- `shadow-sm` → `shadow-md` on hover
 - `tabular-nums` pro číselné hodnoty
-- Category-specific glow colors
-- Hover lift (`-translate-y-0.5` až `-translate-y-1`)
-- Status-based color coding (success/warning/destructive)
+- Status colors: success/warning/destructive
+- Hover lift (`-translate-y-0.5`)
 - Premium typography (uppercase labels, bold values)
+- Activity rings pro progress
+- Framer Motion pro animations
