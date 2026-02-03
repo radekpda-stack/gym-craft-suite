@@ -6,36 +6,41 @@ import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardActions } from '@/components/dashboard/DashboardActions';
 import { TodayTimelineCompact } from '@/components/dashboard/TodayTimelineCompact';
-import { AlertsSummaryCard } from '@/components/dashboard/AlertsSummaryCard';
+import { ActionCenterCard } from '@/components/dashboard/ActionCenterCard';
 import { PendingPerformancesCard } from '@/components/performance/PendingPerformancesCard';
-import { CareerMilestoneCard } from '@/components/dashboard/CareerMilestoneCard';
+import { WeeklyQuickStats } from '@/components/dashboard/WeeklyQuickStats';
 import { FinanceSummaryCard } from '@/components/dashboard/FinanceSummaryCard';
-import { BusinessYieldScoreCard } from '@/components/dashboard/BusinessYieldScoreCard';
 import { CashflowForecastCard } from '@/components/dashboard/CashflowForecastCard';
 import { DashboardInsightsRefactored } from '@/components/dashboard/DashboardInsightsRefactored';
-import { UnassignedSessionsCard } from '@/components/dashboard/UnassignedSessionsCard';
-import { FollowupsDashboardWidget } from '@/components/dashboard/FollowupsDashboardWidget';
+import { useUnassignedSessions } from '@/hooks/useUnassignedSessions';
+import { useAllUnresolvedFollowups } from '@/hooks/useTrainingFollowups';
 
 export default function Index() {
   usePageTracking('dashboard');
   
   const { data, isLoading } = useDashboardViewModel();
   const layout = useDashboardLayout();
+  
+  // Fetch additional counts for ActionCenter
+  const { data: unassignedSessions } = useUnassignedSessions();
+  const { data: followups } = useAllUnresolvedFollowups();
 
-  // Calculate if there are alerts to show
+  // Calculate alert counts
   const unpaidCount = data?.finance?.unpaidTotal?.count ?? 0;
   const unpaidAmount = data?.finance?.unpaidTotal?.amount ?? 0;
   const debtCount = data?.finance?.creditAtRisk?.count ?? 0;
   const debtAmount = data?.finance?.creditAtRisk?.amount ?? 0;
-  const hasAlerts = unpaidCount > 0 || debtCount > 0;
+  const unassignedCount = unassignedSessions?.length ?? 0;
+  const followupCount = followups?.length ?? 0;
+  
+  const hasAnyActions = unpaidCount > 0 || debtCount > 0 || unassignedCount > 0 || followupCount > 0;
 
   return (
     <div className="min-h-screen animate-fade-in">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4">
         
         {/* ═══════════════════════════════════════════════════════════════════
-            HERO ZONE - Today's overview + Quick Actions
-            Always visible, contains greeting, key metrics, action buttons
+            HERO ZONE - Premium Morning Briefing with Status Bar + Metrics
         ═══════════════════════════════════════════════════════════════════ */}
         <section>
           <SectionErrorBoundary section="Hlavička" compact>
@@ -44,8 +49,7 @@ export default function Index() {
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            TODAY TIMELINE - Visual overview of today's trainings
-            Shows schedule with quick actions for completing and feedback
+            TODAY TIMELINE - Enhanced with NOW indicator and quick actions
         ═══════════════════════════════════════════════════════════════════ */}
         <section>
           <SectionErrorBoundary section="Dnešní tréninky" compact>
@@ -57,52 +61,48 @@ export default function Index() {
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            ALERT ZONE - Critical items requiring attention
-            Consolidated alerts card + individual action items
+            ACTION CENTER - Unified alerts with direct actions
         ═══════════════════════════════════════════════════════════════════ */}
-        <section className="space-y-3">
-          {/* Consolidated Alerts */}
-          {hasAlerts && (
-            <SectionErrorBoundary section="Upozornění" compact>
-              <AlertsSummaryCard
+        {hasAnyActions && (
+          <section>
+            <SectionErrorBoundary section="Vyžaduje akci" compact>
+              <ActionCenterCard
                 unpaidCount={unpaidCount}
                 unpaidAmount={unpaidAmount}
                 debtCount={debtCount}
                 debtAmount={debtAmount}
+                unassignedCount={unassignedCount}
+                followupCount={followupCount}
+                isLoading={isLoading}
+              />
+            </SectionErrorBoundary>
+          </section>
+        )}
+
+        {/* Pending Performance Approvals */}
+        {layout.showPendingApprovals && (
+          <section>
+            <SectionErrorBoundary section="Čekající schválení" compact>
+              <PendingPerformancesCard />
+            </SectionErrorBoundary>
+          </section>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            INSIGHT ZONE - Simplified weekly stats + smart insights
+        ═══════════════════════════════════════════════════════════════════ */}
+        <section className="space-y-3">
+          {/* Weekly Quick Stats - Replaces complex BusinessYieldScore */}
+          {data && (
+            <SectionErrorBoundary section="Týdenní přehled" compact>
+              <WeeklyQuickStats 
+                weeklySummary={data.weeklySummary}
                 isLoading={isLoading}
               />
             </SectionErrorBoundary>
           )}
 
-          {/* Unassigned Calendar Sessions */}
-          <SectionErrorBoundary section="Nepřiřazené tréninky" compact>
-            <UnassignedSessionsCard />
-          </SectionErrorBoundary>
-
-          {/* Follow-ups */}
-          <SectionErrorBoundary section="Připomenutí" compact>
-            <FollowupsDashboardWidget />
-          </SectionErrorBoundary>
-
-          {/* Pending Performance Approvals */}
-          {layout.showPendingApprovals && (
-            <SectionErrorBoundary section="Čekající schválení" compact>
-              <PendingPerformancesCard />
-            </SectionErrorBoundary>
-          )}
-        </section>
-
-        {/* ═══════════════════════════════════════════════════════════════════
-            INSIGHT ZONE - Analytics, trends, business health
-            For understanding business performance at a glance
-        ═══════════════════════════════════════════════════════════════════ */}
-        <section className="space-y-3">
-          {/* Business Health Score */}
-          <SectionErrorBoundary section="Business Health" compact>
-            <BusinessYieldScoreCard />
-          </SectionErrorBoundary>
-
-          {/* Dashboard Insights */}
+          {/* Dashboard Insights - Enhanced styling */}
           {data && (
             <SectionErrorBoundary section="Postřehy" compact>
               <DashboardInsightsRefactored
@@ -125,13 +125,6 @@ export default function Index() {
                 weeklySummary={data.weeklySummary}
                 isLoading={isLoading}
               />
-            </SectionErrorBoundary>
-          )}
-
-          {/* Career Milestone Card */}
-          {layout.showCareerMilestone && (
-            <SectionErrorBoundary section="Kariérní statistiky" compact>
-              <CareerMilestoneCard />
             </SectionErrorBoundary>
           )}
 
