@@ -492,8 +492,10 @@ export function StockManagement() {
           <div
             key={product.id}
             className={cn(
-              "glass rounded-xl p-4",
-              isLowStock(product) && product.is_active && "ring-1 ring-warning/50",
+              "rounded-xl p-4 transition-all duration-200",
+              "bg-card/80 backdrop-blur-md border border-border/50 shadow-sm",
+              "hover:shadow-md",
+              isLowStock(product) && product.is_active && "ring-1 ring-warning/50 border-warning/30",
               !product.is_active && "opacity-60"
             )}
           >
@@ -665,11 +667,13 @@ export function StockManagement() {
         
         {/* Empty state */}
         {filteredProducts.length === 0 && (
-          <div className="glass rounded-xl p-8 text-center">
-            <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+          <div className="card-floating rounded-xl p-8 text-center">
+            <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-3">
+              <Package className="w-6 h-6 text-muted-foreground" />
+            </div>
             {products.length === 0 ? (
               <>
-                <p className="text-muted-foreground">Zatím žádné položky</p>
+                <p className="text-muted-foreground font-medium">Zatím žádné položky</p>
                 <Button 
                   className="mt-4 gap-2"
                   onClick={() => setIsCreateOpen(true)}
@@ -680,7 +684,7 @@ export function StockManagement() {
               </>
             ) : hasActiveFilters ? (
               <>
-                <p className="text-muted-foreground">Žádné položky nevyhovují filtru</p>
+                <p className="text-muted-foreground font-medium">Žádné položky nevyhovují filtru</p>
                 <Button 
                   variant="outline"
                   className="mt-4"
@@ -690,7 +694,7 @@ export function StockManagement() {
                 </Button>
               </>
             ) : (
-              <p className="text-muted-foreground">Žádné položky</p>
+              <p className="text-muted-foreground font-medium">Žádné položky</p>
             )}
           </div>
         )}

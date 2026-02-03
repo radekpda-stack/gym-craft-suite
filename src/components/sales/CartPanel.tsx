@@ -9,16 +9,15 @@ import {
   Check,
   Loader2,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PaymentMethod } from '@/services/saleProcessor';
 import { CartItemRow } from './CartItemRow';
 import { CartSummary } from './CartSummary';
 import { cn } from '@/lib/utils';
-import { useSalesCartWithDiscount, CartValidationError } from '@/hooks/useSalesCartWithDiscount';
+import { useSalesCartWithDiscount } from '@/hooks/useSalesCartWithDiscount';
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: 'cash', label: 'Hotově', icon: Banknote },
@@ -58,29 +57,34 @@ export function CartPanel({
 }: CartPanelProps) {
   if (cart.isEmpty) {
     return (
-      <div className="glass rounded-xl p-6 text-center">
-        <ShoppingCart className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-        <p className="text-muted-foreground text-sm">Košík je prázdný</p>
+      <div className="card-floating rounded-xl p-6 text-center">
+        <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-3">
+          <ShoppingCart className="w-6 h-6 text-muted-foreground" />
+        </div>
+        <p className="text-muted-foreground text-sm font-medium">Košík je prázdný</p>
         <p className="text-xs text-muted-foreground mt-1">Kliknutím na produkt ho přidáte</p>
       </div>
     );
   }
 
   const hasMinPriceIssue = cart.validation.errors.some(e => e.type === 'min_price');
+  const activeIndex = PAYMENT_METHODS.findIndex(m => m.value === paymentMethod);
 
   return (
-    <div className="glass rounded-xl p-4 space-y-4">
+    <div className="card-floating rounded-xl p-4 space-y-4">
       {/* Header with clear button */}
       <div className="flex items-center justify-between">
-        <Label className="flex items-center gap-2 text-sm font-medium">
-          <ShoppingCart className="w-4 h-4" />
+        <Label className="flex items-center gap-2 text-sm font-semibold">
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <ShoppingCart className="w-4 h-4 text-primary" />
+          </div>
           Košík ({cart.totals.itemCount})
         </Label>
         <Button
           variant="ghost"
           size="sm"
           onClick={cart.clear}
-          className="text-destructive hover:text-destructive h-8 px-2"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
         >
           <Trash2 className="w-4 h-4 mr-1" />
           <span className="text-xs">Vyčistit</span>
@@ -89,9 +93,11 @@ export function CartPanel({
 
       {/* Validation Errors */}
       {!cart.validation.isValid && (
-        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+        <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 ring-1 ring-destructive/20">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+            <div className="p-1 rounded-md bg-destructive/20">
+              <AlertTriangle className="w-4 h-4 text-destructive" />
+            </div>
             <div>
               <p className="text-sm font-medium text-destructive">Nelze dokončit prodej</p>
               <ul className="text-xs text-destructive/80 mt-1 space-y-0.5">
@@ -136,52 +142,46 @@ export function CartPanel({
         })}
       </div>
 
-      {/* Payment Method */}
+      {/* Payment Method - Animated Pills */}
       <div>
-        <Label className="mb-2 block text-xs text-muted-foreground">Způsob platby</Label>
-        <RadioGroup 
-          value={paymentMethod} 
-          onValueChange={(v) => onPaymentMethodChange(v as PaymentMethod)}
-          className="grid grid-cols-4 gap-1.5"
-        >
-          {PAYMENT_METHODS.map((method) => {
-            const disabled = method.value === 'credit' && !selectedClient && !noClient;
-            const disabledForTopup = method.value === 'credit' && hasCreditTopup;
+        <Label className="mb-2 block text-xs text-muted-foreground uppercase tracking-wide">Způsob platby</Label>
+        <div className="relative bg-secondary/30 rounded-xl p-1">
+          {/* Animated background indicator */}
+          <motion.div
+            className="absolute inset-y-1 bg-primary rounded-lg shadow-sm"
+            animate={{
+              left: `calc(${activeIndex * 25}% + 4px)`,
+              width: `calc(25% - 8px)`,
+            }}
+            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+          />
+          
+          <div className="relative grid grid-cols-4 gap-1">
+            {PAYMENT_METHODS.map((method) => {
+              const disabled = method.value === 'credit' && !selectedClient && !noClient;
+              const disabledForTopup = method.value === 'credit' && hasCreditTopup;
+              const isActive = paymentMethod === method.value;
 
-            return (
-              <div key={method.value}>
-                <RadioGroupItem
-                  value={method.value}
-                  id={`panel-payment-${method.value}`}
-                  className="peer sr-only"
+              return (
+                <button
+                  key={method.value}
+                  onClick={() => !disabled && !disabledForTopup && onPaymentMethodChange(method.value)}
                   disabled={disabled || disabledForTopup}
-                />
-                <Label
-                  htmlFor={`panel-payment-${method.value}`}
                   className={cn(
-                    "flex flex-col items-center gap-1 p-2 rounded-lg border-2 cursor-pointer transition-all",
-                    "hover:bg-secondary/50",
-                    paymentMethod === method.value 
-                      ? "border-primary bg-primary/10" 
-                      : "border-border",
-                    (disabled || disabledForTopup) && "opacity-50 cursor-not-allowed"
+                    "relative flex flex-col items-center gap-1 p-2 rounded-lg transition-colors z-10",
+                    isActive ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                    (disabled || disabledForTopup) && "opacity-40 cursor-not-allowed"
                   )}
                 >
-                  <method.icon className={cn(
-                    "w-4 h-4",
-                    paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
-                  )} />
-                  <span className={cn(
-                    "text-[10px] font-medium",
-                    paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
-                  )}>
+                  <method.icon className="w-4 h-4" />
+                  <span className="text-[10px] font-medium">
                     {method.label}
                   </span>
-                </Label>
-              </div>
-            );
-          })}
-        </RadioGroup>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Sale Note */}
@@ -194,7 +194,7 @@ export function CartPanel({
           value={saleNote}
           onChange={(e) => onSaleNoteChange(e.target.value)}
           placeholder="Např. sleva za věrnost..."
-          className="mt-1 h-8 text-sm"
+          className="mt-1 h-9 text-sm bg-card/60 backdrop-blur-sm border-border/50"
         />
       </div>
 
@@ -223,13 +223,18 @@ export function CartPanel({
       <Button 
         onClick={onSale} 
         disabled={checkoutDisabled} 
-        className="w-full h-11 text-sm gap-2"
+        className={cn(
+          "w-full h-12 text-sm gap-2 font-bold",
+          "bg-success hover:bg-success/90 text-success-foreground",
+          "shadow-lg shadow-success/25 transition-all",
+          "active:scale-[0.98]"
+        )}
         size="lg"
       >
         {isProcessing ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader2 className="w-5 h-5 animate-spin" />
         ) : (
-          <Check className="w-4 h-4" />
+          <Check className="w-5 h-5" />
         )}
         {isProcessing ? 'Zpracovávám...' : 'Dokončit prodej'}
       </Button>
