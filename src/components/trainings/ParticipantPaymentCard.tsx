@@ -33,10 +33,10 @@ interface ParticipantPaymentCardProps {
 
 const paymentOptions: { value: IndividualPaymentMethod; label: string; shortLabel: string; icon: typeof Wallet }[] = [
   { value: 'credit', label: 'Z kreditu', shortLabel: 'Kredit', icon: Wallet },
-  { value: 'cash', label: 'Hotově', shortLabel: 'Hotově', icon: Banknote },
-  { value: 'card', label: 'Kartou', shortLabel: 'Kartou', icon: CreditCard },
-  { value: 'bank', label: 'Převodem', shortLabel: 'Převodem', icon: Building2 },
-  { value: 'pending', label: 'Později', shortLabel: 'Později', icon: Clock },
+  { value: 'cash', label: 'Hotově', shortLabel: 'Cash', icon: Banknote },
+  { value: 'card', label: 'Kartou', shortLabel: 'Karta', icon: CreditCard },
+  { value: 'bank', label: 'Převodem', shortLabel: 'Banka', icon: Building2 },
+  { value: 'pending', label: 'Později', shortLabel: 'Dluží', icon: Clock },
 ];
 
 export function ParticipantPaymentCard({ 
@@ -125,7 +125,7 @@ export function ParticipantPaymentCard({
               disabled={disabled}
               onClick={() => onChange(participant.client_id, option.value)}
               className={cn(
-                "relative z-10 flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-colors",
+                "relative z-10 flex-1 flex items-center justify-center gap-0.5 py-2 px-0.5 rounded-lg text-[10px] font-medium transition-colors min-w-0",
                 isSelected
                   ? "text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground",
@@ -133,8 +133,8 @@ export function ParticipantPaymentCard({
               )}
               title={option.label}
             >
-              <Icon className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{option.shortLabel}</span>
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline truncate">{option.shortLabel}</span>
             </button>
           );
         })}

@@ -14,7 +14,7 @@ export interface TagOption {
 }
 
 interface TagDropdownSelectProps {
-  label: string;
+  label: React.ReactNode;
   options: TagOption[];
   value: string | null;
   onChange: (value: string | null) => void;
