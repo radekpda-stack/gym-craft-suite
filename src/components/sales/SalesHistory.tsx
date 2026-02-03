@@ -202,9 +202,20 @@ export function SalesHistory() {
         <div className="space-y-6">
           {Object.entries(groupedOrders).map(([date, dayOrders]) => (
             <div key={date}>
-              <h3 className="text-sm font-medium text-muted-foreground mb-3 sticky top-0 bg-background/80 backdrop-blur-md py-2 px-3 rounded-lg z-10 border border-border/30">
-                {format(new Date(date), 'EEEE d. MMMM yyyy', { locale: cs })}
-              </h3>
+              {/* Premium glass date header */}
+              <div className="sticky top-0 z-10 mb-3">
+                <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <h3 className="text-sm font-semibold capitalize">
+                      {format(new Date(date), 'EEEE d. MMMM yyyy', { locale: cs })}
+                    </h3>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] py-0.5 px-2 bg-secondary/50">
+                    {dayOrders.length} {dayOrders.length === 1 ? 'prodej' : dayOrders.length < 5 ? 'prodeje' : 'prodejů'}
+                  </Badge>
+                </div>
+              </div>
               <div className="space-y-2">
                 {dayOrders.map((order) => {
                   const PaymentIcon = PAYMENT_ICONS[order.payment_method] || Banknote;

@@ -219,18 +219,23 @@ export function CartPanel({
         </p>
       )}
 
-      {/* Complete Sale Button */}
+      {/* Complete Sale Button - Premium with glow */}
       <Button 
         onClick={onSale} 
         disabled={checkoutDisabled} 
         className={cn(
-          "w-full h-12 text-sm gap-2 font-bold",
+          "relative w-full h-12 text-sm gap-2 font-bold overflow-hidden",
           "bg-success hover:bg-success/90 text-success-foreground",
-          "shadow-lg shadow-success/25 transition-all",
-          "active:scale-[0.98]"
+          "shadow-lg transition-all duration-200",
+          "active:scale-[0.98]",
+          !checkoutDisabled && "shadow-success/40 hover:shadow-xl hover:shadow-success/50"
         )}
         size="lg"
       >
+        {/* Subtle glow overlay when ready */}
+        {!checkoutDisabled && !isProcessing && (
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer pointer-events-none" />
+        )}
         {isProcessing ? (
           <Loader2 className="w-5 h-5 animate-spin" />
         ) : (

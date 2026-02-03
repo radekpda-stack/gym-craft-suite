@@ -1,11 +1,15 @@
-import { useState } from 'react';
-import { CreditCard, Package, BarChart3, History } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { CreditCard, Package, BarChart3, History, ShoppingCart, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { SalesRegister } from '@/components/sales/SalesRegister';
 import { StockManagement } from '@/components/sales/StockManagement';
 import { SalesStatistics } from '@/components/sales/SalesStatistics';
 import { SalesHistory } from '@/components/sales/SalesHistory';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
+import { useProducts } from '@/hooks/useProducts';
+import { useSalesStats } from '@/hooks/useSalesStats';
+import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
 const TABS = [
@@ -18,15 +22,59 @@ const TABS = [
 export default function Sales() {
   usePageTracking('sales');
   const [activeTab, setActiveTab] = useState('register');
+  
+  // Get stats for hero KPIs
+  const { data: salesStats } = useSalesStats();
+  const { data: products = [] } = useProducts();
+  
+  // Calculate low stock count
+  const lowStockCount = useMemo(() => {
+    return products.filter(p => 
+      p.is_active && 
+      p.kind === 'inventory' && 
+      p.stock_quantity <= p.low_stock_threshold
+    ).length;
+  }, [products]);
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in pb-24 sm:pb-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Prodej</h1>
-        <p className="text-muted-foreground mt-0.5 sm:mt-1 text-xs sm:text-sm">
-          Pokladna, správa skladu a statistiky
-        </p>
+      {/* Premium Hero Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-5 sm:p-6">
+        {/* Background glow effects */}
+        <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-accent/10 rounded-full blur-2xl pointer-events-none" />
+        
+        <div className="relative flex items-start gap-4">
+          {/* Icon with glow */}
+          <div className="p-3 rounded-2xl bg-primary/20 backdrop-blur-sm shadow-lg shadow-primary/20 shrink-0">
+            <ShoppingCart className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Prodej</h1>
+            <p className="text-muted-foreground mt-0.5 text-xs sm:text-sm">
+              Pokladna, sklad a statistiky na jednom místě
+            </p>
+            
+            {/* Mini KPI chips */}
+            <div className="flex flex-wrap gap-2 mt-3">
+              <Badge variant="outline" className="gap-1.5 bg-card/60 backdrop-blur-sm border-border/50 py-1 px-2.5">
+                <TrendingUp className="w-3 h-3 text-success" />
+                <span className="text-xs font-medium">Měsíc: {formatCurrency(salesStats?.totalRevenue || 0)}</span>
+              </Badge>
+              <Badge variant="outline" className="gap-1.5 bg-card/60 backdrop-blur-sm border-border/50 py-1 px-2.5">
+                <ShoppingCart className="w-3 h-3 text-primary" />
+                <span className="text-xs font-medium">{salesStats?.totalSales || 0} prodejů</span>
+              </Badge>
+              {lowStockCount > 0 && (
+                <Badge variant="outline" className="gap-1.5 bg-warning/10 text-warning border-warning/30 py-1 px-2.5">
+                  <AlertTriangle className="w-3 h-3" />
+                  <span className="text-xs font-medium">{lowStockCount} low stock</span>
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Premium Floating Tabs */}

@@ -407,11 +407,13 @@ export function SalesRegister() {
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 lg:gap-6">
       {/* Left Column - Client, Search, Products */}
       <div className="space-y-4">
-        {/* Client Selection */}
+        {/* Premium Client Selection Card */}
         <div className="card-floating rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
-            <Label className="flex items-center gap-2 text-sm font-medium">
-              <User className="w-4 h-4" />
+            <Label className="flex items-center gap-2 text-sm font-semibold">
+              <div className="p-1.5 rounded-lg bg-primary/10 shadow-sm shadow-primary/20">
+                <User className="w-4 h-4 text-primary" />
+              </div>
               Klient
             </Label>
             <Button
@@ -436,7 +438,7 @@ export function SalesRegister() {
               filterArchived={false}
             />
           ) : (
-            <div className="p-3 rounded-lg bg-secondary/50 text-sm text-muted-foreground">
+            <div className="p-3 rounded-xl bg-secondary/50 backdrop-blur-sm text-sm text-muted-foreground border border-border/30">
               Prodej bude zaznamenán bez přiřazení klientovi
               {creditTopupNeedsClient && (
                 <p className="text-destructive mt-1 font-medium">
@@ -446,28 +448,46 @@ export function SalesRegister() {
             </div>
           )}
 
+          {/* Premium client info with credit progress bar */}
           {selectedClientData && (
-            <div className="mt-3 p-3 rounded-lg bg-secondary/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm text-muted-foreground">Kredit:</span>
-                  {sharedBudget?.isShared && (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      {sharedBudget.groupName}
+            <div className="mt-3 p-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-sm">{selectedClientData.name}</span>
+                {sharedBudget?.isShared && (
+                  <Badge variant="outline" className="gap-1 text-[10px] py-0.5 px-1.5 bg-secondary/50">
+                    <Users className="w-3 h-3" />
+                    {sharedBudget.groupName}
+                  </Badge>
+                )}
+              </div>
+              
+              {/* Credit as progress bar */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground text-xs">Kredit</span>
+                  {isBudgetLoading || effectiveBalance === null ? (
+                    <span className="text-xs text-muted-foreground animate-pulse">Načítám...</span>
+                  ) : (
+                    <span className={cn(
+                      "font-bold tabular-nums",
+                      effectiveBalance < 0 ? "text-destructive" : 
+                      effectiveBalance < 500 ? "text-warning" : "text-success"
+                    )}>
+                      {formatCurrency(effectiveBalance)}
                     </span>
                   )}
                 </div>
-                {isBudgetLoading || effectiveBalance === null ? (
-                  <span className="text-sm text-muted-foreground animate-pulse">Načítám...</span>
-                ) : (
-                  <span className={cn(
-                    "font-semibold",
-                    effectiveBalance < 0 ? "text-destructive" : 
-                    effectiveBalance < 500 ? "text-warning" : "text-success"
-                  )}>
-                    {formatCurrency(effectiveBalance)}
-                  </span>
+                {effectiveBalance !== null && !isBudgetLoading && (
+                  <div className="h-1.5 rounded-full bg-secondary/50 overflow-hidden">
+                    <div 
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        effectiveBalance < 0 ? "bg-destructive" :
+                        effectiveBalance < 500 ? "bg-warning" : "bg-success"
+                      )}
+                      style={{ width: `${Math.min(100, Math.max(0, (effectiveBalance) / 50))}%` }}
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -557,10 +577,14 @@ export function SalesRegister() {
             {/* Services Section */}
             {groupedProducts.services.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Wrench className="w-4 h-4 text-accent" />
-                  <span className="text-sm font-medium text-muted-foreground">Služby</span>
+                {/* Premium section divider */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-1.5 rounded-lg bg-accent/10">
+                    <Wrench className="w-4 h-4 text-accent" />
+                  </div>
+                  <span className="text-sm font-semibold">Služby</span>
                   <span className="text-xs text-muted-foreground">({groupedProducts.services.length})</span>
+                  <div className="flex-1 h-px bg-border/50" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
                   {groupedProducts.services.map((product) => (
@@ -580,10 +604,14 @@ export function SalesRegister() {
             {/* Products/Inventory Section */}
             {groupedProducts.inventory.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Package className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium text-muted-foreground">Produkty</span>
+                {/* Premium section divider */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <Package className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-sm font-semibold">Produkty</span>
                   <span className="text-xs text-muted-foreground">({groupedProducts.inventory.length})</span>
+                  <div className="flex-1 h-px bg-border/50" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
                   {groupedProducts.inventory.map((product) => (
@@ -603,10 +631,14 @@ export function SalesRegister() {
             {/* Credit Topups Section */}
             {groupedProducts.creditTopups.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Coins className="w-4 h-4 text-warning" />
-                  <span className="text-sm font-medium text-muted-foreground">Dobití kreditu</span>
+                {/* Premium section divider */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-1.5 rounded-lg bg-warning/10">
+                    <Coins className="w-4 h-4 text-warning" />
+                  </div>
+                  <span className="text-sm font-semibold">Dobití kreditu</span>
                   <span className="text-xs text-muted-foreground">({groupedProducts.creditTopups.length})</span>
+                  <div className="flex-1 h-px bg-border/50" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
                   {groupedProducts.creditTopups.map((product) => (
