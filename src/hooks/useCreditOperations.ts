@@ -226,7 +226,7 @@ export async function clearPersonalDebtToSharedBudget(
 export function useCreditTransactions(clientId?: string) {
   return useQuery({
     queryKey: ["credit_transactions", clientId],
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 30, // 30 seconds - shorter to ensure fresh data after training completion
     queryFn: async () => {
       let query = supabase
         .from("credit_transactions")

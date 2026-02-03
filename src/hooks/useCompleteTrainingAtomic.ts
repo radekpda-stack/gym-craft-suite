@@ -274,24 +274,41 @@ export function useCompleteTrainingAtomic() {
       return result;
     },
     onSuccess: (result, params) => {
-      // Invalidate all relevant queries atomically
-      queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
-      queryClient.invalidateQueries({ queryKey: ["training_session"] });
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
-      queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
-      queryClient.invalidateQueries({ queryKey: ["training_participants"] });
-      queryClient.invalidateQueries({ queryKey: ["shared_budget"] });
-      queryClient.invalidateQueries({ queryKey: ["unpaid-trainings"] });
-      queryClient.invalidateQueries({ queryKey: ["today-alerts"] });
-      queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
-      queryClient.invalidateQueries({ queryKey: ["credit-signal-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["clients_price_status"] });
+      // CRITICAL: Granulární invalidace pro každého účastníka tréninku
+      // Toto zajistí okamžitou aktualizaci zůstatků v UI
+      for (const participant of params.participants) {
+        queryClient.invalidateQueries({ 
+          queryKey: ["clients", participant.client_id],
+          refetchType: 'all',
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ["credit_transactions", participant.client_id],
+          refetchType: 'all',
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ["shared_budget_balance", participant.client_id],
+          refetchType: 'all',
+        });
+      }
+      
+      // Invalidate all relevant queries atomically with refetchType
+      queryClient.invalidateQueries({ queryKey: ["training_sessions"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["training_session"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["clients"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["credit_transactions"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["budget_groups"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["training_participants"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["shared_budget"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["unpaid-trainings"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["today-alerts"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["credit-signal-stats"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["clients_price_status"], refetchType: 'all' });
       
       // Invalidate credit lots queries
-      queryClient.invalidateQueries({ queryKey: ["credit_lots"] });
-      queryClient.invalidateQueries({ queryKey: ["credit_consumptions"] });
-      queryClient.invalidateQueries({ queryKey: ["credit_summary"] });
+      queryClient.invalidateQueries({ queryKey: ["credit_lots"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["credit_consumptions"], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ["credit_summary"], refetchType: 'all' });
 
       // Notify about clients switched to new pricing
       const switchedClients = (result as any).clientsSwitchedToNewPricing as string[] | undefined;

@@ -64,7 +64,7 @@ export function useClients() {
   
   return useQuery({
     queryKey: ["clients", isDemo],
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 30, // 30 seconds - shorter to ensure fresh data after training completion
     queryFn: async () => {
       // In demo mode, return demo client data
       if (isDemo && demoClient) {
