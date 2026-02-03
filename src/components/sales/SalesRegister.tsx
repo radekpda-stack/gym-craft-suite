@@ -61,64 +61,93 @@ function ProductCard({ product, cart, isLowStock, getProductIcon, getProductKind
   const inCart = !!cartItem;
   const lowStock = isLowStock(product);
   const outOfStock = product.kind === 'inventory' && (product.stock_quantity || 0) <= 0;
+  
+  // Calculate stock percentage for gauge
+  const maxStock = product.low_stock_threshold ? product.low_stock_threshold * 4 : 20;
+  const stockPercent = product.kind === 'inventory' 
+    ? Math.min(100, ((product.stock_quantity || 0) / maxStock) * 100) 
+    : 100;
 
   return (
     <button
       onClick={() => !outOfStock && cart.addItem(product)}
       disabled={outOfStock}
       className={cn(
-        "relative p-3 sm:p-4 rounded-xl text-left transition-all",
-        "hover:scale-[1.02] active:scale-[0.98]",
+        "relative overflow-hidden rounded-xl text-left transition-all duration-200",
+        "bg-card/80 backdrop-blur-md border border-border/50 shadow-sm",
+        "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]",
         outOfStock && "opacity-50 cursor-not-allowed",
-        inCart 
-          ? "bg-primary/20 ring-2 ring-primary" 
-          : "glass hover:bg-secondary/50",
-        lowStock && !outOfStock && "ring-1 ring-warning/50"
+        inCart && "ring-2 ring-primary bg-primary/10",
+        lowStock && !outOfStock && !inCart && "border-warning/50"
       )}
     >
-      {/* Product type badge */}
-      <div className="flex items-center gap-1.5 mb-2">
-        {getProductIcon(product)}
-        <span className="text-[10px] text-muted-foreground uppercase">
-          {getProductKindLabel(product)}
-        </span>
-      </div>
-
-      {/* Name & Price */}
-      <p className="font-medium text-sm sm:text-base line-clamp-2 min-h-[2.5em]">{product.name}</p>
-      <p className="text-lg sm:text-xl font-bold text-primary mt-1">
-        {formatCurrency(product.price)}
-      </p>
-
-      {/* Credit delta for topups */}
-      {product.kind === 'credit_topup' && product.credit_delta > 0 && (
-        <p className="text-xs text-warning mt-1">
-          +{formatCurrency(product.credit_delta)} kredit
-        </p>
-      )}
-
-      {/* Stock info for inventory */}
+      {/* Stock gauge bar for inventory items */}
       {product.kind === 'inventory' && (
-        <div className="flex items-center gap-1 mt-2">
-          {outOfStock ? (
-            <span className="text-xs text-destructive font-medium">Vyprodáno</span>
-          ) : (
-            <>
-              {lowStock && <AlertTriangle className="w-3 h-3 text-warning" />}
-              <span className={cn(
-                "text-xs",
-                lowStock ? "text-warning font-medium" : "text-muted-foreground"
-              )}>
-                {product.stock_quantity || 0} ks
-              </span>
-            </>
-          )}
+        <div className="h-1 bg-secondary/30">
+          <div 
+            className={cn(
+              "h-full transition-all duration-300",
+              outOfStock ? "bg-destructive/50" :
+              lowStock ? "bg-gradient-to-r from-warning to-warning/50" :
+              "bg-gradient-to-r from-success to-success/50"
+            )}
+            style={{ width: `${stockPercent}%` }}
+          />
         </div>
       )}
+      
+      <div className="p-3 sm:p-4">
+        {/* Product type badge */}
+        <div className="flex items-center gap-1.5 mb-2">
+          <div className={cn(
+            "p-1 rounded-md",
+            product.kind === 'service' ? "bg-accent/10" :
+            product.kind === 'credit_topup' ? "bg-warning/10" :
+            "bg-primary/10"
+          )}>
+            {getProductIcon(product)}
+          </div>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
+            {getProductKindLabel(product)}
+          </span>
+        </div>
+
+        {/* Name & Price */}
+        <p className="font-medium text-sm sm:text-base line-clamp-2 min-h-[2.5em]">{product.name}</p>
+        <p className="text-lg sm:text-xl font-bold text-primary mt-1 tabular-nums">
+          {formatCurrency(product.price)}
+        </p>
+
+        {/* Credit delta for topups */}
+        {product.kind === 'credit_topup' && product.credit_delta > 0 && (
+          <p className="text-xs text-warning mt-1 font-medium">
+            +{formatCurrency(product.credit_delta)} kredit
+          </p>
+        )}
+
+        {/* Stock info for inventory */}
+        {product.kind === 'inventory' && (
+          <div className="flex items-center gap-1 mt-2">
+            {outOfStock ? (
+              <span className="text-xs text-destructive font-medium">Vyprodáno</span>
+            ) : (
+              <>
+                {lowStock && <AlertTriangle className="w-3 h-3 text-warning" />}
+                <span className={cn(
+                  "text-xs tabular-nums",
+                  lowStock ? "text-warning font-medium" : "text-muted-foreground"
+                )}>
+                  {product.stock_quantity || 0} ks
+                </span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* In cart indicator with count */}
       {inCart && (
-        <Badge className="absolute -top-2 -right-2 bg-primary min-w-6 h-6 flex items-center justify-center text-sm font-bold shadow-lg">
+        <Badge className="absolute -top-1.5 -right-1.5 bg-primary min-w-6 h-6 flex items-center justify-center text-sm font-bold shadow-lg animate-scale-in">
           {cartItem.quantity}
         </Badge>
       )}
@@ -379,7 +408,7 @@ export function SalesRegister() {
       {/* Left Column - Client, Search, Products */}
       <div className="space-y-4">
         {/* Client Selection */}
-        <div className="glass rounded-xl p-4">
+        <div className="card-floating rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <Label className="flex items-center gap-2 text-sm font-medium">
               <User className="w-4 h-4" />
@@ -456,7 +485,7 @@ export function SalesRegister() {
         />
 
         {/* Search and Filters */}
-        <div className="glass rounded-xl p-4">
+        <div className="card-floating rounded-xl p-4">
           <div className="flex items-center justify-between mb-3 gap-2">
             <Label className="text-sm font-medium">Produkty a služby</Label>
             
@@ -511,7 +540,7 @@ export function SalesRegister() {
 
         {/* Products Grid */}
         {totalProducts === 0 ? (
-          <div className="glass rounded-xl p-8 text-center">
+          <div className="card-floating rounded-xl p-8 text-center">
             <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">
               {searchQuery || selectedCategory ? 'Žádné výsledky' : 'Žádné produkty'}

@@ -110,10 +110,12 @@ export function QuickActionsSection({
         {/* Primary action - DOKONČIT */}
         <Button 
           size="lg" 
-          className="relative w-full gap-2 h-14 text-base font-bold bg-success hover:bg-success/90 text-success-foreground shadow-lg shadow-success/25 transition-all duration-200"
+          className="relative w-full gap-2 h-14 text-base font-bold bg-success hover:bg-success/90 text-success-foreground shadow-lg shadow-success/30 transition-all duration-200 active:scale-[0.98] overflow-hidden group"
           onClick={onComplete}
           disabled={isCompleting || isCanceling || isRescheduling}
         >
+          {/* Subtle glow pulse */}
+          <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
           {isCompleting ? (
             <Loader2 className="w-5 h-5 animate-spin" />
           ) : (

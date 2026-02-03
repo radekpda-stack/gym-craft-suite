@@ -16,10 +16,12 @@ export function RecentSales({ onRepeatSale, className }: RecentSalesProps) {
 
   if (isLoading) {
     return (
-      <div className={cn("glass rounded-xl p-4", className)}>
+      <div className={cn("card-floating rounded-xl p-4", className)}>
         <div className="flex items-center gap-2 mb-3">
-          <Clock className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Poslední prodeje</span>
+          <div className="p-1.5 rounded-lg bg-secondary/50">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+          </div>
+          <span className="text-sm font-semibold">Poslední prodeje</span>
         </div>
         <div className="flex items-center justify-center py-4">
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -33,10 +35,12 @@ export function RecentSales({ onRepeatSale, className }: RecentSalesProps) {
   }
 
   return (
-    <div className={cn("glass rounded-xl p-4", className)}>
+    <div className={cn("card-floating rounded-xl p-4", className)}>
       <div className="flex items-center gap-2 mb-3">
-        <Clock className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm font-medium">Poslední prodeje</span>
+        <div className="p-1.5 rounded-lg bg-secondary/50">
+          <Clock className="w-4 h-4 text-muted-foreground" />
+        </div>
+        <span className="text-sm font-semibold">Poslední prodeje</span>
         <span className="text-xs text-muted-foreground">
           (klikněte pro zopakování)
         </span>
@@ -54,7 +58,11 @@ export function RecentSales({ onRepeatSale, className }: RecentSalesProps) {
             <button
               key={sale.id}
               onClick={() => onRepeatSale(sale)}
-              className="w-full flex items-center gap-3 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors text-left group"
+              className={cn(
+                "w-full flex items-center gap-3 p-3 rounded-xl text-left group transition-all duration-200",
+                "bg-card/60 backdrop-blur-sm border border-border/50 shadow-sm",
+                "hover:shadow-md hover:-translate-y-0.5"
+              )}
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 text-sm">
@@ -67,7 +75,7 @@ export function RecentSales({ onRepeatSale, className }: RecentSalesProps) {
                     <span className="text-muted-foreground italic">Bez klienta</span>
                   )}
                   <span className="text-muted-foreground">•</span>
-                  <span className="font-semibold text-primary whitespace-nowrap">
+                  <span className="font-bold text-primary whitespace-nowrap tabular-nums">
                     {formatCurrency(sale.total_amount)}
                   </span>
                 </div>
@@ -82,7 +90,7 @@ export function RecentSales({ onRepeatSale, className }: RecentSalesProps) {
                 </div>
               </div>
               
-              <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:rotate-180">
                 <RefreshCw className="w-4 h-4 text-primary" />
               </div>
             </button>

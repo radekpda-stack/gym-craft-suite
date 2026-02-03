@@ -79,21 +79,38 @@ export function TrainingHeroHeader({
   const isInProgress = training.status === 'in_progress';
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm transition-all duration-200 hover:shadow-md p-4">
+    <div className={cn(
+      "relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border shadow-sm transition-all duration-200 hover:shadow-md p-4",
+      training.status === 'scheduled' && "border-primary/30",
+      training.status === 'in_progress' && "border-warning/40 ring-1 ring-warning/20",
+      training.status === 'completed' && "border-success/30",
+      training.status === 'canceled' && "border-destructive/30",
+      !['scheduled', 'in_progress', 'completed', 'canceled'].includes(training.status) && "border-border/50"
+    )}>
       {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+      <div className={cn(
+        "absolute inset-0 pointer-events-none",
+        training.status === 'in_progress' 
+          ? "bg-gradient-to-br from-warning/10 via-transparent to-transparent" 
+          : "bg-gradient-to-br from-primary/5 via-transparent to-transparent"
+      )} />
       
       {/* Row 1: Avatar + Name + Menu */}
       <div className="relative flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="relative">
+          <div className="relative group">
             <ClientAvatar 
               name={client?.name || 'Trénink'} 
               size="lg" 
-              className="shrink-0 ring-2 ring-border/30" 
+              className={cn(
+                "shrink-0 ring-2 transition-all duration-200",
+                isInProgress ? "ring-warning/50 group-hover:ring-warning" : "ring-border/30 group-hover:ring-primary/50"
+              )} 
             />
             {isInProgress && (
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-warning rounded-full border-2 border-card animate-pulse" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-warning rounded-full border-2 border-card shadow-lg shadow-warning/30">
+                <span className="absolute inset-0 rounded-full bg-warning animate-ping opacity-75" />
+              </span>
             )}
           </div>
           <div className="min-w-0 flex-1">

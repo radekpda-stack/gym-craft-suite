@@ -142,9 +142,11 @@ export function SalesHistory() {
 
   if (!orders || orders.length === 0) {
     return (
-      <Card className="glass">
+      <Card className="card-floating">
         <CardContent className="py-12 text-center">
-          <History className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <div className="w-14 h-14 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-4">
+            <History className="w-7 h-7 text-muted-foreground" />
+          </div>
           <h3 className="text-lg font-semibold mb-1">Zatím žádné prodeje</h3>
           <p className="text-muted-foreground text-sm">
             Zde se zobrazí historie vašich prodejů
@@ -164,7 +166,11 @@ export function SalesHistory() {
           placeholder="Hledat dle klienta, data, částky..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 pr-9"
+          className={cn(
+            "pl-9 pr-9 bg-card/60 backdrop-blur-sm border-border/50",
+            "focus:ring-2 focus:ring-primary/30 focus:border-primary/50",
+            "transition-all duration-200"
+          )}
         />
         {searchQuery && (
           <Button
@@ -180,9 +186,11 @@ export function SalesHistory() {
 
       {/* No results message */}
       {filteredOrders.length === 0 && searchQuery && (
-        <Card className="glass">
+        <Card className="card-floating">
           <CardContent className="py-8 text-center">
-            <Search className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+            <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-3">
+              <Search className="w-6 h-6 text-muted-foreground" />
+            </div>
             <p className="text-muted-foreground">
               Žádné výsledky pro "{searchQuery}"
             </p>
@@ -194,7 +202,7 @@ export function SalesHistory() {
         <div className="space-y-6">
           {Object.entries(groupedOrders).map(([date, dayOrders]) => (
             <div key={date}>
-              <h3 className="text-sm font-medium text-muted-foreground mb-3 sticky top-0 bg-background/80 backdrop-blur-sm py-1 z-10">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3 sticky top-0 bg-background/80 backdrop-blur-md py-2 px-3 rounded-lg z-10 border border-border/30">
                 {format(new Date(date), 'EEEE d. MMMM yyyy', { locale: cs })}
               </h3>
               <div className="space-y-2">
@@ -208,13 +216,14 @@ export function SalesHistory() {
                       key={order.id}
                       onClick={() => setSelectedOrderId(order.id)}
                       className={cn(
-                        "w-full p-4 rounded-xl text-left transition-all",
-                        "glass hover:bg-secondary/50",
+                        "w-full p-4 rounded-xl text-left transition-all duration-200",
+                        "bg-card/80 backdrop-blur-md border border-border/50 shadow-sm",
+                        "hover:shadow-md hover:-translate-y-0.5",
                         "flex items-center gap-4"
                       )}
                     >
                       {/* Payment icon */}
-                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                         <PaymentIcon className="w-5 h-5 text-primary" />
                       </div>
 
@@ -224,22 +233,22 @@ export function SalesHistory() {
                           {order.clients ? (
                             <span className="font-medium truncate">{order.clients.name}</span>
                           ) : (
-                            <span className="text-muted-foreground">Bez klienta</span>
+                            <span className="text-muted-foreground italic">Bez klienta</span>
                           )}
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-secondary/50">
                             {PAYMENT_LABELS[order.payment_method] || order.payment_method}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <span>{format(new Date(order.created_at), 'HH:mm')}</span>
                           {hasDiscount && (
-                            <span className="flex items-center gap-1 text-destructive">
+                            <span className="flex items-center gap-1 text-destructive font-medium">
                               <Tag className="w-3 h-3" />
                               -{formatCurrency(order.total_discount)}
                             </span>
                           )}
                           {hasXP && (
-                            <span className="flex items-center gap-1 text-warning">
+                            <span className="flex items-center gap-1 text-warning font-medium">
                               <Sparkles className="w-3 h-3" />
                               +{order.xp_earned} XP
                             </span>
@@ -249,7 +258,7 @@ export function SalesHistory() {
 
                       {/* Amount */}
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-lg">
+                        <span className="font-bold text-lg tabular-nums">
                           {formatCurrency(order.total_amount)}
                         </span>
                         <ChevronRight className="w-4 h-4 text-muted-foreground" />

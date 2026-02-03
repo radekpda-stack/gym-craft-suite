@@ -25,10 +25,12 @@ export function FavoriteProducts({
   if (topProducts.length === 0) return null;
 
   return (
-    <div className="glass rounded-xl p-4">
+    <div className="card-floating rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
-        <Star className="w-4 h-4 text-warning fill-warning" />
-        <span className="text-sm font-medium">Top produkty</span>
+        <div className="p-1.5 rounded-lg bg-warning/10">
+          <Star className="w-4 h-4 text-warning fill-warning" />
+        </div>
+        <span className="text-sm font-semibold">Top produkty</span>
         <span className="text-xs text-muted-foreground">
           ({topProducts.length})
         </span>
@@ -43,22 +45,21 @@ export function FavoriteProducts({
               key={product.id}
               onClick={() => onAddToCart(product)}
               className={cn(
-                "relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all",
-                "hover:scale-[1.02] active:scale-[0.98]",
-                inCart 
-                  ? "bg-primary/20 ring-2 ring-primary" 
-                  : "bg-secondary/50 hover:bg-secondary"
+                "relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200",
+                "bg-card/60 backdrop-blur-sm border border-border/50 shadow-sm",
+                "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]",
+                inCart && "ring-2 ring-primary bg-primary/10"
               )}
             >
-              <span className="font-medium line-clamp-2 text-left">
+              <span className="font-medium line-clamp-1 text-left">
                 {product.name}
               </span>
-              <span className="text-primary font-semibold whitespace-nowrap">
+              <span className="text-primary font-bold whitespace-nowrap tabular-nums">
                 {formatCurrency(product.price)}
               </span>
               
               {inCart > 0 && (
-                <Badge className="absolute -top-1.5 -right-1.5 bg-primary min-w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg">
+                <Badge className="absolute -top-1.5 -right-1.5 bg-primary min-w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg animate-scale-in">
                   {inCart}
                 </Badge>
               )}

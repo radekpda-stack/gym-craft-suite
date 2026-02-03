@@ -62,7 +62,11 @@ export function StockSearchAndFilters({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Hledat položku..."
-          className="pl-9 pr-9"
+          className={cn(
+            "pl-9 pr-9 bg-card/60 backdrop-blur-sm border-border/50",
+            "focus:ring-2 focus:ring-primary/30 focus:border-primary/50",
+            "transition-all duration-200"
+          )}
         />
         {searchQuery && (
           <Button
