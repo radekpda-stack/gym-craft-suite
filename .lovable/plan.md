@@ -1,457 +1,535 @@
 
-# Fáze 10: Premium Upgrade - Výkonnost, Analytika, Výzvy & Knihovna cviků
+# Fáze 11: Premium UI Upgrade - Výkonnost (Přehled & Knihovna cviků)
 
-## Přehled
+## Analýza aktuálního stavu
 
-Tato fáze aplikuje konzistentní premium glassmorphism styl na zbývající sekce:
-1. **PerformanceHub** - hlavní stránka Výkonnost s přehledem
-2. **Analytika** - záložka s grafy a KPI kartami
-3. **Výzvy (Challenges)** - správa výzev pro klienty
-4. **Knihovna cviků** - seznam a filtrování cviků
+Po důkladné analýze jsem identifikoval několik oblastí ke zlepšení:
 
----
-
-## ČÁST 1: PERFORMANCE HUB - Přehled
-
-### 1.1 PerformanceHub.tsx - Premium Header & Layout
-
-**Soubor:** `src/pages/PerformanceHub.tsx`
-
-Aktuální: `p-3 rounded-2xl bg-primary/15 backdrop-blur-sm`
-Nové: Premium floating header s enhanced icon glow
-
-Změny:
-- Header icon container s `shadow-lg shadow-primary/20`
-- TabsList jako glass container s `backdrop-blur-sm bg-secondary/30`
-- Consistent spacing a typography
-
----
-
-### 1.2 PerformanceKPIBar.tsx - Instrument Cards
-
-**Soubor:** `src/components/performance/PerformanceKPIBar.tsx`
-
-Aktuální: Má `bg-card/80 backdrop-blur-md` - již částečně upraven
-Nové: Zesílit hover efekty a glow
-
-Změny:
-- Přidat `shadow-sm` default + `shadow-md` on hover
-- Zesílit border glow podle kategorie
-- Trend badge s refined styling
+### Aktuální struktura stránky Výkonnost
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ ⚡ VÝKONNOST                                                │
+│    Cviky, testy a výzvy na jednom místě                    │
+├─────────────────────────────────────────────────────────────┤
+│ [🔍 Rychle hledat cvik...                       ⌘K]        │
+├─────────────────────────────────────────────────────────────┤
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐                        │
+│ │ 💪 218  │ │ 📊 45   │ │ 🏆 12   │  <- KPI Bar           │
+│ │ cviků   │ │ záznamů │ │ PR      │                        │
+│ └─────────┘ └─────────┘ └─────────┘                        │
+├─────────────────────────────────────────────────────────────┤
+│ [Přehled] [Knihovna] [Analytika] [Testy] [Výzvy]           │
+├─────────────────────────────────────────────────────────────┤
+│ PŘEHLED:                                                   │
+│  - CategoryCards (3 dlaždice)                              │
+│  - ClientProgressLeaderboard (Top 5 klientů)               │
+│  - RecentExercisesChips (Nedávno použité)                  │
+├─────────────────────────────────────────────────────────────┤
+│ KNIHOVNA:                                                  │
+│  - Search + Filters                                        │
+│  - Accordion s kategoriemi                                 │
+│  - Exercise Cards                                          │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-### 1.3 CategoryCards.tsx - Premium Category Tiles
+## Identifikované problémy
 
-**Soubor:** `src/components/performance/CategoryCards.tsx`
+### 1. Layout Přehledu
+- **CategoryCards** - chybí vizuální hierarchie, kategorie jsou si příliš podobné
+- **Leaderboard** - standard styl, chybí "trophy cabinet" efekt
+- **RecentChips** - málo výrazné, splývají s pozadím
 
-Aktuální: `bg-card/80 backdrop-blur-md` s basic hover
-Nové: Enhanced floating tiles s category glow
+### 2. Knihovna cviků
+- **Filtry** - collapsible panel působí ploše
+- **Accordion** - kategorie nemají dostatek vizuálního odlišení
+- **Exercise Cards** - uniformní vzhled bez indikace důležitosti (PR, oblíbené)
 
-Změny:
-- Přidat `shadow-sm` + `hover:shadow-lg`
-- Category-specific glow on hover (`shadow-primary/30`, `shadow-emerald-500/30`, `shadow-warning/30`)
-- Stock gauge pro entries jako horizontální bar
-- ChevronRight s hover animation
+### 3. Obecné
+- **Header** - mohl by mít výraznější "hero" efekt
+- **Navigace** - tab navigation bez animovaného indicatoru
 
 ---
 
-### 1.4 ClientProgressLeaderboard.tsx - Premium Leaderboard
+## Navržená řešení
 
-**Soubor:** `src/components/performance/ClientProgressLeaderboard.tsx`
+### ČÁST A: PŘEHLED (Overview Tab)
 
-Aktuální: `bg-card/80 backdrop-blur-md` container s basic rows
-Nové: Floating container s premium client rows
+#### A1. Hero Section s vylepšeným headerem
+```text
+╭─────────────────────────────────────────────────────────────╮
+│                                                             │
+│   ┌────────┐                                                │
+│   │   ⚡   │  VÝKONNOST                                     │
+│   │  glow  │  Sleduj pokrok svých klientů                  │
+│   └────────┘                                                │
+│                                                             │
+│   ┌─────────────────────────────────────────────────────┐  │
+│   │ 🔍 Rychle hledat cvik...                      ⌘K   │  │
+│   └─────────────────────────────────────────────────────┘  │
+│                                                             │
+╰─────────────────────────────────────────────────────────────╯
+```
 
 Změny:
-- Container jako `.card-floating`
-- Client rows s enhanced hover lift
-- Rank badges s category-specific glow (gold/silver/bronze)
+- Header icon s výraznějším glow efektem
+- Search bar integrovaný do hero sekce
+- Subtilní gradient background
+
+---
+
+#### A2. Premium KPI Dashboard
+```text
+╭───────────────────────────────────────────────────────────────────╮
+│ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐      │
+│ │   ╭────────╮    │ │   ╭────────╮    │ │   ╭────────╮    │      │
+│ │   │  💪   │    │ │   │  📊   │    │ │   │  🏆   │    │      │
+│ │   │ glow  │    │ │   │ glow  │    │ │   │ glow  │    │      │
+│ │   ╰────────╯    │ │   ╰────────╯    │ │   ╰────────╯    │      │
+│ │                 │ │                 │ │                 │      │
+│ │     218         │ │      45         │ │      12         │      │
+│ │   CVIKŮ         │ │   ZÁZNAMŮ       │ │   PR            │      │
+│ │   v knihovně    │ │   tento měsíc   │ │   tento měsíc   │      │
+│ │                 │ │                 │ │                 │      │
+│ │ ━━━━━━━━━━━━    │ │ ━━━━━━━━        │ │ ━━━━━           │      │
+│ │ progress ring   │ │ vs. minulý měs. │ │ 📈 +8%          │      │
+│ └─────────────────┘ └─────────────────┘ └─────────────────┘      │
+╰───────────────────────────────────────────────────────────────────╯
+```
+
+Změny v `PerformanceKPIBar.tsx`:
+- Přidat progress ring/gauge pod hodnotu
+- Zesílit icon glow efekt
+- Přidat mini-sparkline nebo porovnání s minulým obdobím
+
+---
+
+#### A3. Kategorie jako "Dashboard Tiles"
+```text
+╭───────────────────────────────────────────────────────────────────╮
+│  KATEGORIE CVIKŮ                                                 │
+├───────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐      │
+│ │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│ │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│ │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│      │
+│ │ gradient overlay │ │ gradient overlay │ │ gradient overlay │      │
+│ │                 │ │                 │ │                 │      │
+│ │  💪 SÍLA        │ │  ❤️ KARDIO      │ │  ⚡ PLYOMETRIE  │      │
+│ │                 │ │                 │ │                 │      │
+│ │     152         │ │      48         │ │      18         │      │
+│ │    cviků        │ │    cviků        │ │    cviků        │      │
+│ │                 │ │                 │ │                 │      │
+│ │ ━━━━━━━━━━━━━━  │ │ ━━━━━━━         │ │ ━━━━            │      │
+│ │ 2,847 záznamů   │ │ 423 záznamů     │ │ 156 záznamů     │      │
+│ │                →│ │                →│ │                →│      │
+│ └─────────────────┘ └─────────────────┘ └─────────────────┘      │
+╰───────────────────────────────────────────────────────────────────╯
+```
+
+Změny v `CategoryCards.tsx`:
+- Přidat subtle gradient overlay v barvě kategorie
+- Zvětšit číslo cvíků (prominence)
+- Usage gauge jako horizontální progress bar
+- Hover efekt s category-specific glow
+
+---
+
+#### A4. Leaderboard "Trophy Cabinet" styl
+```text
+╭───────────────────────────────────────────────────────────────────╮
+│  🏆 TOP AKTIVNÍ KLIENTI                           [30 dní]       │
+├───────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ 🥇  Jan Novák                   📈+15%  ━━━━━━━━━━━━ 45    │ │
+│  │     ────────────────────────────────────────────────────── │ │
+│  │     gold border glow                                       │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ 🥈  Petr Svoboda                📈+8%   ━━━━━━━━━   38     │ │
+│  │     silver border glow                                      │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ 🥉  Marie Veselá                📈+3%   ━━━━━━━     32     │ │
+│  │     bronze border glow                                      │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ 4   Lukáš Horák                 ─       ━━━━━━      28     │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│                                    [Zobrazit více →]             │
+╰───────────────────────────────────────────────────────────────────╯
+```
+
+Změny v `ClientProgressLeaderboard.tsx`:
+- Top 3 s barevným border glow (gold/silver/bronze)
+- PR badge výraznější s trophy ikonou
 - Progress bar s gradient fill
-- Trophy icon s warning glow
+- Oddělení top 3 od zbytku vizuálně
 
 ---
 
-### 1.5 ExerciseSearchCommand.tsx - Glass Command Palette
+#### A5. "Quick Access" chips pro nedávné cviky
+```text
+╭───────────────────────────────────────────────────────────────────╮
+│  🕐 NEDÁVNO POUŽITÉ                                              │
+├───────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ╭───────────────╮ ╭───────────────╮ ╭───────────────╮           │
+│  │ 💪 Bench Press│ │ 💪 Deadlift   │ │ ❤️ Rowing     │           │
+│  ╰───────────────╯ ╰───────────────╯ ╰───────────────╯           │
+│                                                                   │
+│  ╭───────────────╮ ╭───────────────╮ ╭───────────────╮           │
+│  │ ⚡ Box Jumps  │ │ 💪 Squats     │ │ 💪 Pull-ups   │           │
+│  ╰───────────────╯ ╰───────────────╯ ╰───────────────╯           │
+│                                                                   │
+╰───────────────────────────────────────────────────────────────────╯
+```
 
-**Soubor:** `src/components/performance/ExerciseSearchCommand.tsx`
-
-Aktuální: Standard Command dialog
-Nové: Premium glass command s enhanced items
-
-Změny:
-- Search button s glass background + focus glow
-- Command items s hover lift
-- Category badges s colored backgrounds
-- Star icon s warning fill glow
-- Keyboard shortcut badge refined
-
----
-
-### 1.6 RecentExercisesChips.tsx - Premium Pills
-
-**Soubor:** `src/components/performance/RecentExercisesChips.tsx`
-
-Aktuální: Basic colored pills
-Nové: Floating glass pills s hover effects
-
-Změny:
-- Pills s `backdrop-blur-sm` + `shadow-sm`
+Změny v `RecentExercisesChips.tsx`:
+- Sekce header s ikonou a popiskem
+- Floating glass pills s category-specific border
 - Hover → lift + shadow-md
-- Category icon s colored glow background
-- Active/focus states refined
+- Tooltip s časem posledního použití
 
 ---
 
-## ČÁST 2: ANALYTIKA - Charts & KPIs
+### ČÁST B: KNIHOVNA CVIKŮ (Library Tab)
 
-### 2.1 ExerciseAnalyticsView.tsx - Premium Tab Navigation
+#### B1. Premium Filter Panel
+```text
+╭───────────────────────────────────────────────────────────────────╮
+│  218 aktivních cviků                           [+ Nový cvik]     │
+├───────────────────────────────────────────────────────────────────┤
+│ ┌───────────────────────────────────────────────┐ ┌───┐ ┌───┐   │
+│ │ 🔍 Hledat cvik...                             │ │🎛️│ │✏️│   │
+│ └───────────────────────────────────────────────┘ └───┘ └───┘   │
+├───────────────────────────────────────────────────────────────────┤
+│  FILTRY (zobrazeno pokud aktivní)                                │
+│ ╭──────────────────────────────────────────────────────────────╮ │
+│ │ Kategorie    Pohyb. vzorec     Obtížnost      Řazení        │ │
+│ │ [▼ Vše]      [▼ Vše]           [▼ Vše]       [▼ Abecedně]   │ │
+│ │                                                              │ │
+│ │ ○ Pouze použité                                              │ │
+│ ╰──────────────────────────────────────────────────────────────╯ │
+╰───────────────────────────────────────────────────────────────────╯
+```
 
-**Soubor:** `src/components/exercises/ExerciseAnalyticsView.tsx`
-
-Aktuální: Standard TabsList
-Nové: Glass tabs s animated indicator
-
-Změny:
-- TabsList jako `bg-secondary/30 backdrop-blur-sm rounded-lg p-1`
-- Tab icons s category-specific colors
-- Active state s enhanced styling
-
----
-
-### 2.2 StrengthAnalyticsView.tsx - Layout Polish
-
-**Soubor:** `src/components/exercises/analytics/StrengthAnalyticsView.tsx`
-
-Aktuální: Standard grid layout
-Nové: Consistent card spacing + floating style
-
-Změny:
-- Ensure all child cards use consistent `.card-floating` pattern
-- Add subtle section dividers
-- Loading states s consistent skeleton styling
+Změny v `ExerciseListView.tsx`:
+- Filter panel jako floating glass card
+- Active filters zobrazeny jako dismissible chips
+- Počet filtrovaných výsledků live update
 
 ---
 
-### 2.3 AnalyticsCard.tsx - Premium Card Wrapper
-
-**Soubor:** `src/components/exercises/analytics/AnalyticsCard.tsx`
-
-Aktuální: Standard Card component
-Nové: Floating glass card s premium header
+#### B2. Category Accordion Premium
+```text
+╭───────────────────────────────────────────────────────────────────╮
+│ HORNÍ TĚLO                                        45 cviků   ▼  │
+│ ─────────────────────────────────────────────────────────────────│
+│ ✦ 847× použito                                                   │
+├───────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ ★ Bench Press                    Tlak horiz.    125× → │ │
+│  │   ━━━━━━━━━━━━━━━━━━━━━━━━ usage bar                      │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │   Pull-ups                       Tah vertik.     89× → │ │
+│  │   ━━━━━━━━━━━━━━━━━━ usage bar                             │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │   Shoulder Press                 Tlak vertik.    67× → │ │
+│  │   ━━━━━━━━━━━━━━ usage bar                                 │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+╰───────────────────────────────────────────────────────────────────╯
+```
 
 Změny:
-- Card jako `.card-floating` s `bg-card/80 backdrop-blur-md`
-- Header icon s colored glow background
-- Loading spinner refined
-- Empty state s premium illustration
+- Category header s usage statistikou
+- Barevný indikátor kategorie (levý border)
+- Usage bar pod názvem cviku
+- Favorite star výraznější (gold fill)
 
 ---
 
-### 2.4 AnalyticsKPICards.tsx - Instrument KPIs
+#### B3. Exercise Card Premium
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ ★ Bench Press                                                    │
+│ ─────────────────────────────────────────────────────────────── │
+│ Tlak horizontální  •  Pokročilý                                 │
+│                                                                  │
+│ ┌───────────┐ ┌───────────┐ ┌───────────┐                       │
+│ │ 📊 125×   │ │ 👥 8      │ │ 🏆 3 PR   │                       │
+│ │ použití   │ │ klientů   │ │ tento měs │                       │
+│ └───────────┘ └───────────┘ └───────────┘                       │
+│                                                                  │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  usage gauge (80%)     │
+│                                                          →      │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-**Soubor:** `src/components/exercises/analytics/AnalyticsKPICards.tsx`
-
-Aktuální: Standard Card s basic styling
-Nové: Premium floating KPI cards
-
-Změny:
-- Cards jako floating mini-instruments
-- Icon containers s category glow
-- Values s `tabular-nums`
-- Trend badges s refined colors
-
----
-
-### 2.5 VolumeTimelineCardNew.tsx - Chart Polish
-
-**Soubor:** `src/components/exercises/analytics/VolumeTimelineCardNew.tsx`
-
-Aktuální: AnalyticsCard wrapper s AreaChart
-Nové: Enhanced tooltip + gradient styling
-
-Změny:
-- Tooltip s glass background (`backdrop-blur-md`)
-- Gradient fill zesílený
-- Total summary s prominent styling
+Změny v exercise card:
+- Přidat mini-stats row (použití, klienti, PR)
+- Usage gauge pod kartou
+- Favorite star s glow efektem
+- PR badge s trophy ikonou pokud existují
 
 ---
 
-### 2.6 AnalyticsFiltersBar.tsx - Glass Filters
+### ČÁST C: OBECNÁ VYLEPŠENÍ
 
-**Soubor:** `src/components/exercises/analytics/AnalyticsFiltersBar.tsx`
-
-Aktuální: Standard filter controls
-Nové: Premium glass filter bar
+#### C1. Animated Tab Indicator
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  ╭─────────────────────────────────────────────────────────────╮│
+│  │ [⚡Přehled] [📋Knihovna] [📊Analytika] [📝Testy] [🏆Výzvy] ││
+│  │  ▓▓▓▓▓▓▓▓▓                                                 ││
+│  │  animated pill indicator                                    ││
+│  ╰─────────────────────────────────────────────────────────────╯│
+└─────────────────────────────────────────────────────────────────┘
+```
 
 Změny:
-- Bar jako floating glass container
-- Period pills s animated selection
-- Client select s glass styling
-- Toggle switch refined
+- Tabs s glass background
+- Active tab má animated background pill
+- Icons barevně odlišené
 
 ---
 
-## ČÁST 3: VÝZVY (CHALLENGES)
-
-### 3.1 ChallengesContent.tsx - Premium Challenge Cards
-
-**Soubor:** `src/components/performance/ChallengesContent.tsx`
-
-Aktuální: Standard Card s `hover:shadow-md`
-Nové: Premium floating challenge cards
-
-Změny:
-- Challenge cards jako `.card-floating`
-- Status badges s glow effects (active = success glow)
-- Public badge s emerald glow
-- Date/metric info s refined typography
-- Video badge s play icon glow
-
----
-
-### 3.2 Challenges.tsx (page) - Premium Layout
-
-**Soubor:** `src/pages/Challenges.tsx`
-
-Aktuální: Standard page layout
-Nové: Premium header + glass search
-
-Změny:
-- Trophy icon s `shadow-lg shadow-warning/20`
-- Search input s glass background + focus glow
-- TabsList jako glass container
-- Empty states s premium illustrations
-
----
-
-## ČÁST 4: KNIHOVNA CVIKŮ
-
-### 4.1 ExerciseListView.tsx - Premium List
-
-**Soubor:** `src/components/exercises/ExerciseListView.tsx`
-
-Aktuální: Standard accordion s basic exercise rows
-Nové: Premium floating categories + exercise items
+#### C2. ExerciseSearchCommand Enhancement
+```text
+╭───────────────────────────────────────────────────────────────────╮
+│ 🔍 Hledat cvik...                                         ⌘K    │
+╰───────────────────────────────────────────────────────────────────╯
+                           ↓ (open)
+╭───────────────────────────────────────────────────────────────────╮
+│ │ Hledej cvik...                                                │ │
+├───────────────────────────────────────────────────────────────────┤
+│ NEDÁVNO POUŽITÉ                                                  │
+│ ┌────────────────────────────────────────────────────────────┐   │
+│ │ 💪 Bench Press           před 2h                [Síla]    │   │
+│ └────────────────────────────────────────────────────────────┘   │
+│ ┌────────────────────────────────────────────────────────────┐   │
+│ │ 💪 Deadlift              před 1d                [Síla]    │   │
+│ └────────────────────────────────────────────────────────────┘   │
+├───────────────────────────────────────────────────────────────────┤
+│ OBLÍBENÉ ★                                                       │
+│ ┌────────────────────────────────────────────────────────────┐   │
+│ │ ⚡ Box Jumps  ★           45× použito          [Plyo]     │   │
+│ └────────────────────────────────────────────────────────────┘   │
+├───────────────────────────────────────────────────────────────────┤
+│ VŠECHNY CVIKY                                                    │
+│ ...                                                              │
+╰───────────────────────────────────────────────────────────────────╯
+```
 
 Změny:
-- Accordion items jako floating containers
-- Exercise rows s hover lift + glass background
-- Category headers s premium styling
-- Bulk edit mode s refined selection states
-- Filter panel s glass background
-- Sort/toggle controls s refined styling
-- Star (favorite) icon s warning glow
+- Command items s category badge
+- Favorite star výraznější
+- Usage count zobrazeno
+- Glass background na items
 
 ---
 
 ## SOUBORY K ÚPRAVĚ
 
-### Vysoká priorita - Performance Hub
-| Soubor | Změna |
+### Vysoká priorita
+| Soubor | Změny |
 |--------|-------|
-| `src/pages/PerformanceHub.tsx` | Premium header + tabs |
-| `src/components/performance/CategoryCards.tsx` | Enhanced floating tiles |
-| `src/components/performance/ClientProgressLeaderboard.tsx` | Premium leaderboard |
-| `src/components/performance/PerformanceKPIBar.tsx` | Enhanced instrument cards |
+| `src/pages/PerformanceHub.tsx` | Hero header, animated tabs, layout polish |
+| `src/components/performance/PerformanceKPIBar.tsx` | Progress rings, enhanced glow, mini-trends |
+| `src/components/performance/CategoryCards.tsx` | Gradient overlays, prominent numbers, enhanced gauges |
+| `src/components/performance/ClientProgressLeaderboard.tsx` | Trophy cabinet, rank-based glow, visual separation |
+| `src/components/performance/RecentExercisesChips.tsx` | Section header, glass pills, tooltips |
 
-### Vysoká priorita - Analytika
-| Soubor | Změna |
+### Střední priorita
+| Soubor | Změny |
 |--------|-------|
-| `src/components/exercises/analytics/AnalyticsCard.tsx` | Floating glass wrapper |
-| `src/components/exercises/analytics/AnalyticsKPICards.tsx` | Premium KPI cards |
-| `src/components/exercises/ExerciseAnalyticsView.tsx` | Glass tab navigation |
-| `src/components/exercises/analytics/AnalyticsFiltersBar.tsx` | Glass filter bar |
-
-### Střední priorita - Výzvy
-| Soubor | Změna |
-|--------|-------|
-| `src/components/performance/ChallengesContent.tsx` | Premium challenge cards |
-| `src/pages/Challenges.tsx` | Premium page layout |
-
-### Střední priorita - Knihovna
-| Soubor | Změna |
-|--------|-------|
-| `src/components/exercises/ExerciseListView.tsx` | Premium list + filters |
-| `src/components/performance/ExerciseSearchCommand.tsx` | Glass command palette |
-| `src/components/performance/RecentExercisesChips.tsx` | Premium pills |
+| `src/components/exercises/ExerciseListView.tsx` | Filter panel glass, accordion polish, usage bars |
+| `src/components/performance/ExerciseSearchCommand.tsx` | Enhanced command items, category badges |
 
 ---
 
 ## TECHNICKÉ DETAILY
 
-### Category Card Enhanced
+### KPI Card s Progress Ring
 ```tsx
-<button className={cn(
-  'relative overflow-hidden rounded-xl p-4 text-left',
-  'bg-card/80 backdrop-blur-md',
-  'border shadow-sm transition-all duration-200',
-  config.borderColor,
-  'hover:shadow-lg hover:-translate-y-1',
-  `hover:shadow-${config.glowColor}`,
-  'focus:outline-none focus:ring-2 focus:ring-primary/30'
+<div className={cn(
+  "relative overflow-hidden rounded-xl p-4",
+  "bg-card/80 backdrop-blur-md",
+  "border shadow-sm",
+  kpi.borderColor,
+  "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
 )}>
-  {/* Category glow effect */}
-  <div className={cn(
-    "absolute inset-0 opacity-20 bg-gradient-to-br to-transparent",
-    config.bgColor
-  )} />
-  ...
-</button>
+  {/* Background gradient */}
+  <div className={cn("absolute inset-0 opacity-20 bg-gradient-to-br to-transparent", kpi.bgColor)} />
+  
+  <div className="relative">
+    {/* Icon with enhanced glow */}
+    <div className={cn(
+      'p-3 rounded-xl w-fit mb-3',
+      kpi.bgColor,
+      'shadow-lg',
+      `shadow-${kpi.glowColor}`
+    )}>
+      <kpi.icon className={cn('w-6 h-6', kpi.color)} />
+    </div>
+    
+    {/* Value */}
+    <p className="text-3xl font-bold text-foreground tabular-nums">
+      {kpi.value.toLocaleString('cs-CZ')}
+    </p>
+    
+    {/* Label */}
+    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
+      {kpi.label}
+    </p>
+    
+    {/* Progress ring or comparison */}
+    <div className="mt-3 pt-3 border-t border-border/50">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">vs. minulý měsíc</span>
+        <TrendIndicator value={kpi.trend} />
+      </div>
+    </div>
+  </div>
+</div>
 ```
 
-### Leaderboard Client Row
+### Leaderboard Row s Rank Glow
 ```tsx
 <button className={cn(
-  'w-full flex items-center gap-3 p-3 rounded-xl',
+  'w-full flex items-center gap-3 p-3.5 rounded-xl',
   'bg-card/60 backdrop-blur-sm',
-  'border border-border/30 shadow-sm',
-  'hover:bg-secondary/50 hover:shadow-md hover:-translate-y-0.5',
-  'transition-all duration-200'
-)}>
-```
-
-### Analytics Card Floating
-```tsx
-<Card className={cn(
-  'bg-card/80 backdrop-blur-md',
-  'border border-border/50 shadow-sm',
-  'transition-all duration-200'
-)}>
-```
-
-### Challenge Card Premium
-```tsx
-<Card className={cn(
-  'bg-card/80 backdrop-blur-md',
-  'border border-border/50 shadow-sm',
+  'border shadow-sm',
   'hover:shadow-md hover:-translate-y-0.5',
-  'transition-all duration-200'
+  'transition-all duration-200',
+  // Rank-specific styling
+  index === 0 && 'border-yellow-500/40 shadow-yellow-500/20',
+  index === 1 && 'border-gray-400/40 shadow-gray-400/20',
+  index === 2 && 'border-amber-600/40 shadow-amber-600/20',
+  index > 2 && 'border-border/30'
 )}>
 ```
 
-### Exercise Row Premium
+### Exercise Card s Usage Bar
 ```tsx
-<button className={cn(
-  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg',
-  'bg-card/60 backdrop-blur-sm',
-  'hover:bg-secondary/50 hover:shadow-sm hover:-translate-y-0.5',
-  'transition-all duration-200',
-  selected && 'ring-2 ring-primary bg-primary/10'
+<Card className={cn(
+  "p-3 bg-background/60 backdrop-blur-sm border-border/30 shadow-sm",
+  "hover:bg-secondary/50 hover:shadow-md hover:-translate-y-0.5",
+  "transition-all duration-200 cursor-pointer group"
 )}>
+  <div className="flex items-center justify-between mb-2">
+    {/* Name + badges */}
+  </div>
+  
+  {/* Usage bar */}
+  <div className="h-1 rounded-full bg-muted/50 overflow-hidden">
+    <div 
+      className="h-full rounded-full bg-primary/60 transition-all duration-500"
+      style={{ width: `${usagePercent}%` }}
+    />
+  </div>
+</Card>
 ```
 
 ---
 
-## VIZUÁLNÍ SROVNÁNÍ
+## OČEKÁVANÝ VÝSLEDEK
 
-### Category Cards PŘED:
+### Vizuální srovnání
+
+#### PŘED (Přehled):
 ```text
-┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│ 💪 SÍLA     │ │ ❤️ KARDIO   │ │ ⚡ PLYO     │
-│    52       │ │    18       │ │    24       │
-│ 1,234 zázn. │ │   456 zázn. │ │   890 zázn. │
-└─────────────┘ └─────────────┘ └─────────────┘
+┌───────────────────────────────────────┐
+│ ⚡ Výkonnost                          │
+│ [Search...]                           │
+│ ┌───┐ ┌───┐ ┌───┐  <- flat KPIs      │
+│ ┌───┐ ┌───┐ ┌───┐  <- flat categories │
+│ Leaderboard (basic list)              │
+│ Recent: [chip] [chip] [chip]          │
+└───────────────────────────────────────┘
 ```
 
-### Category Cards PO:
+#### PO (Přehled):
 ```text
-╭─────────────╮ ╭─────────────╮ ╭─────────────╮
-│ 💪 SÍLA     │ │ ❤️ KARDIO   │ │ ⚡ PLYO     │  ← glass blur
-│    52       │ │    18       │ │    24       │
-│ ━━━━━━━━    │ │ ━━━━        │ │ ━━━━━━      │  ← usage gauge
-│ 1,234 zázn. │ │   456 zázn. │ │   890 zázn. │
-╰─────────────╯ ╰─────────────╯ ╰─────────────╯
-      ↑ category-specific glow on hover
-```
-
-### Leaderboard PŘED:
-```text
-[1] 🏅 Jan Novák      📈+15%  45 zázn.
-[2] 🥈 Petr Svoboda   📈+8%   38 zázn.
-[3] 🥉 Marie Veselá   📈+3%   32 zázn.
-```
-
-### Leaderboard PO:
-```text
-╭───────────────────────────────────────────╮
-│ 🏆 Top aktivní klienti          [30 dní] │
-├───────────────────────────────────────────┤
-│ ┌───────────────────────────────────────┐ │
-│ │ 🥇 Jan Novák    📈+15%    ━━━━━━ 45  │ │  ← gold glow
-│ └───────────────────────────────────────┘ │
-│ ┌───────────────────────────────────────┐ │
-│ │ 🥈 Petr Svoboda 📈+8%     ━━━━━  38  │ │  ← silver glow
-│ └───────────────────────────────────────┘ │
-│ ┌───────────────────────────────────────┐ │
-│ │ 🥉 Marie Veselá 📈+3%     ━━━━   32  │ │  ← bronze glow
-│ └───────────────────────────────────────┘ │
-╰───────────────────────────────────────────╯
-```
-
-### Challenge Card PŘED:
-```text
-┌───────────────────────────────────┐
-│ 100 Burpees        [Aktivní]     │
-│ Kdo dá nejrychleji 100 burpees?  │
-│ Metrika: Čas  │  Hodnocení: Nižší│
-│ Od: 1.1.2025  │  Do: 31.1.2025   │
-└───────────────────────────────────┘
-```
-
-### Challenge Card PO:
-```text
-╭───────────────────────────────────╮
-│ 100 Burpees    🌍  ┃ 🟢 Aktivní ┃│  ← status glow
-│ ────────────────────────────────  │
-│ Kdo dá nejrychleji 100 burpees?  │
-├───────────────────────────────────┤
-│ Metrika: Čas     Hodnocení: Nižší │
-│ ┌──────────┐    ┌───────────────┐ │
-│ │📅 1.1.25 │    │📅 31.1.25    │ │
-│ └──────────┘    └───────────────┘ │
-╰───────────────────────────────────╯
-      ↑ floating glass + hover lift
+╭───────────────────────────────────────╮
+│ ⚡ VÝKONNOST         hero section     │
+│ ────────────────────────────────────  │
+│ [🔍 Rychle hledat...]    glass input │
+├───────────────────────────────────────┤
+│ ╭─────╮ ╭─────╮ ╭─────╮              │
+│ │ 218 │ │  45 │ │  12 │  ← floating  │
+│ │glow │ │glow │ │glow │    KPI cards │
+│ ╰─────╯ ╰─────╯ ╰─────╯              │
+├───────────────────────────────────────┤
+│ KATEGORIE CVIKŮ                       │
+│ ╭─────────╮ ╭─────────╮ ╭─────────╮  │
+│ │gradient │ │gradient │ │gradient │  │
+│ │  152    │ │   48    │ │   18    │  │
+│ │ ━━━━━━  │ │ ━━━     │ │ ━━      │  │
+│ ╰─────────╯ ╰─────────╯ ╰─────────╯  │
+├───────────────────────────────────────┤
+│ 🏆 TOP AKTIVNÍ KLIENTI                │
+│ ╭─────────────────────────────────╮   │
+│ │ 🥇 Jan Novák      gold glow    │   │
+│ ╰─────────────────────────────────╯   │
+│ ╭─────────────────────────────────╮   │
+│ │ 🥈 Petr Svoboda   silver glow  │   │
+│ ╰─────────────────────────────────╯   │
+├───────────────────────────────────────┤
+│ 🕐 NEDÁVNO POUŽITÉ                    │
+│ ╭──────╮ ╭──────╮ ╭──────╮           │
+│ │glass │ │glass │ │glass │           │
+│ ╰──────╯ ╰──────╯ ╰──────╯           │
+╰───────────────────────────────────────╯
 ```
 
 ---
 
 ## ANIMACE A INTERAKCE
 
-1. **Category Cards:**
-   - Hover: `-translate-y-1`, `shadow-lg`, category glow
-   - Usage gauge: gradient fill animation
-   - ChevronRight: `translateX(2px)` on hover
+1. **KPI Cards:**
+   - Icon pulse na hover
+   - Shadow-md + lift na hover
+   - Trend badge s micro-animation
 
-2. **Leaderboard:**
-   - Client rows: hover lift + shadow
-   - Rank badges: subtle pulse for top 3
-   - Progress bar: smooth width transition
+2. **Category Cards:**
+   - Gradient intensify na hover
+   - Usage gauge smooth fill
+   - ChevronRight translate
 
-3. **Challenge Cards:**
-   - Hover: `-translate-y-0.5`, `shadow-md`
-   - Active status: success glow pulse
-   - Public badge: emerald glow
+3. **Leaderboard:**
+   - Top 3 s subtle glow pulse
+   - Row hover → lift + shadow
+   - Progress bar smooth transition
 
-4. **Analytics Cards:**
-   - Loading: refined spinner
-   - Charts: smooth fade-in
-   - Tooltips: glass background
+4. **Recent Chips:**
+   - Hover → lift + category glow
+   - Focus ring na keyboard nav
 
-5. **Exercise List:**
-   - Accordion: smooth expand/collapse
-   - Exercise rows: hover lift
-   - Favorite star: scale + glow on click
+5. **Exercise Cards:**
+   - Usage bar animate on mount
+   - Star scale + glow on toggle
+   - Card lift + shadow on hover
 
 ---
 
-## KONZISTENCE S PŘEDCHOZÍMI FÁZEMI
+## KONZISTENCE
 
-Všechny změny následují zavedený design systém:
-- `.card-floating` / `bg-card/80 backdrop-blur-md` pro glass cards
-- `shadow-sm` default + `shadow-md/lg` on hover
+Všechny změny dodržují zavedený design systém:
+- `.card-floating` / `bg-card/80 backdrop-blur-md`
+- `shadow-sm` → `shadow-md` on hover
 - `tabular-nums` pro číselné hodnoty
-- Category-specific glow colors (primary, emerald, warning)
-- Hover lift effects (`-translate-y-0.5` až `-translate-y-1`)
-- Status-based color coding (success/warning/destructive)
-- Premium typography (uppercase labels, bold values, `tracking-widest`)
+- Category-specific glow colors
+- Hover lift (`-translate-y-0.5` až `-translate-y-1`)
+- Status-based color coding
+- Premium typography (uppercase labels, bold values)
