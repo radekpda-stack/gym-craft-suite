@@ -193,7 +193,11 @@ export function useAddCreditLot() {
       queryClient.invalidateQueries({ queryKey: ['credit_lots', variables.clientId] });
       queryClient.invalidateQueries({ queryKey: ['credit_summary', variables.clientId] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['credit_transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['credit_transactions', variables.clientId] });
       queryClient.invalidateQueries({ queryKey: ['shared_budget_balance'] });
+      queryClient.invalidateQueries({ queryKey: ['shared_budget_balance', variables.clientId] });
     },
     onError: (error) => {
       // Do not toast here – UnifiedCreditModal already shows a toast.
@@ -244,6 +248,10 @@ export function useDeductCreditFifo() {
       queryClient.invalidateQueries({ queryKey: ['credit_summary', variables.clientId] });
       queryClient.invalidateQueries({ queryKey: ['credit_consumptions', variables.clientId] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['credit_transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['credit_transactions', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['shared_budget_balance', variables.clientId] });
     },
   });
 }
