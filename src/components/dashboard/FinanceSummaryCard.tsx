@@ -1,9 +1,12 @@
-import { memo } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { memo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp, TrendingDown, Minus, Banknote, AlertCircle, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { TrendingUp, TrendingDown, Minus, Banknote, AlertCircle, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FinanceMetrics, WeeklySummary } from '@/types/dashboard';
+import { UnpaidTrainingsDialog } from './UnpaidTrainingsDialog';
 
 interface FinanceSummaryCardProps {
   finance: FinanceMetrics;
@@ -21,9 +24,9 @@ const formatCurrency = (value: number) => {
 };
 
 const TrendIcon = ({ trend }: { trend: 'up' | 'down' | 'stable' }) => {
-  if (trend === 'up') return <TrendingUp className="w-3.5 h-3.5 text-success" />;
-  if (trend === 'down') return <TrendingDown className="w-3.5 h-3.5 text-destructive" />;
-  return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
+  if (trend === 'up') return <TrendingUp className="w-4 h-4 text-success" />;
+  if (trend === 'down') return <TrendingDown className="w-4 h-4 text-destructive" />;
+  return <Minus className="w-4 h-4 text-muted-foreground" />;
 };
 
 export const FinanceSummaryCard = memo(function FinanceSummaryCard({
@@ -31,13 +34,18 @@ export const FinanceSummaryCard = memo(function FinanceSummaryCard({
   weeklySummary,
   isLoading
 }: FinanceSummaryCardProps) {
+  const [showUnpaidDialog, setShowUnpaidDialog] = useState(false);
+
   if (isLoading) {
     return (
-      <Card className="glass">
-        <CardContent className="p-4">
+      <Card variant="floating" className="overflow-hidden">
+        <CardHeader className="pb-3">
+          <Skeleton className="h-5 w-24" />
+        </CardHeader>
+        <CardContent>
           <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
           </div>
         </CardContent>
       </Card>
@@ -52,86 +60,128 @@ export const FinanceSummaryCard = memo(function FinanceSummaryCard({
   const hasCreditRisk = finance.creditAtRisk.count > 0;
 
   return (
-    <Card className="glass overflow-hidden">
-      <CardContent className="p-0">
-        <div className="grid grid-cols-2 divide-x divide-border/50">
-          {/* Weekly Income */}
-          <div className="p-3 sm:p-4">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Tento týden
-              </span>
+    <>
+      <Card variant="floating" className="overflow-hidden">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <div className="p-1.5 rounded-lg bg-success/10">
+              <Banknote className="w-4 h-4 text-success" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg sm:text-xl font-bold text-foreground">
-                {formatCurrency(weeklySummary.incomeThisWeek)}
-              </span>
-              <div className="flex items-center gap-0.5">
+            Finance
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Two column layout for week/month */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Weekly Income */}
+            <motion.div 
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="p-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/30"
+            >
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">
+                Tento týden
+              </p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold tabular-nums text-foreground">
+                  {formatCurrency(weeklySummary.incomeThisWeek)}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 mt-1">
                 <TrendIcon trend={weeklySummary.weekTrend} />
                 <span className={cn(
-                  'text-[10px] sm:text-xs font-medium',
+                  'text-xs font-medium',
                   weeklySummary.weekTrend === 'up' ? 'text-success' : 
                   weeklySummary.weekTrend === 'down' ? 'text-destructive' : 'text-muted-foreground'
                 )}>
                   {weeklyChange > 0 ? '+' : ''}{weeklyChange}%
                 </span>
               </div>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              vs. {formatCurrency(weeklySummary.incomeLastWeek)} minulý týden
-            </p>
-          </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                vs. {formatCurrency(weeklySummary.incomeLastWeek)}
+              </p>
+            </motion.div>
 
-          {/* Monthly Income */}
-          <div className="p-3 sm:p-4">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Banknote className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            {/* Monthly Income */}
+            <motion.div 
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: 0.05 }}
+              className="p-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/30"
+            >
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">
                 Tento měsíc
-              </span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg sm:text-xl font-bold text-foreground">
-                {formatCurrency(finance.monthlyIncome)}
-              </span>
+              </p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold tabular-nums text-foreground">
+                  {formatCurrency(finance.monthlyIncome)}
+                </span>
+              </div>
               {finance.incomeChange !== 0 && (
-                <span className={cn(
-                  'text-[10px] sm:text-xs font-medium',
-                  finance.incomeChange > 0 ? 'text-success' : 'text-destructive'
-                )}>
-                  {finance.incomeChange > 0 ? '+' : ''}{finance.incomeChange}%
-                </span>
+                <div className="flex items-center gap-1 mt-1">
+                  {finance.incomeChange > 0 ? (
+                    <TrendingUp className="w-4 h-4 text-success" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4 text-destructive" />
+                  )}
+                  <span className={cn(
+                    'text-xs font-medium',
+                    finance.incomeChange > 0 ? 'text-success' : 'text-destructive'
+                  )}>
+                    {finance.incomeChange > 0 ? '+' : ''}{finance.incomeChange}%
+                  </span>
+                </div>
               )}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              ⌀ {formatCurrency(finance.avgPerTraining)} / trénink
-            </p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                ⌀ {formatCurrency(finance.avgPerTraining)} / trénink
+              </p>
+            </motion.div>
           </div>
-        </div>
 
-        {/* Alerts row */}
-        {(hasUnpaid || hasCreditRisk) && (
-          <div className="border-t border-border/50 px-3 sm:px-4 py-2 flex flex-wrap gap-3 sm:gap-4 bg-destructive/5">
-            {hasUnpaid && (
-              <div className="flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 text-destructive" />
-                <span className="text-xs text-destructive font-medium">
-                  {finance.unpaidTotal.count} neuhrazených ({formatCurrency(finance.unpaidTotal.amount)})
-                </span>
+          {/* Alerts row - only if issues exist */}
+          {(hasUnpaid || hasCreditRisk) && (
+            <motion.div 
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: 0.1 }}
+              className="p-3 rounded-xl bg-destructive/5 border border-destructive/20"
+            >
+              <div className="flex flex-wrap gap-3">
+                {hasUnpaid && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 hover:bg-transparent"
+                    onClick={() => setShowUnpaidDialog(true)}
+                  >
+                    <div className="flex items-center gap-2 text-destructive">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="text-xs font-medium">
+                        {finance.unpaidTotal.count} neuhrazených ({formatCurrency(finance.unpaidTotal.amount)})
+                      </span>
+                      <ChevronRight className="w-3 h-3" />
+                    </div>
+                  </Button>
+                )}
+                {hasCreditRisk && (
+                  <div className="flex items-center gap-2 text-warning">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-xs font-medium">
+                      {finance.creditAtRisk.count} v ohrožení ({formatCurrency(finance.creditAtRisk.amount)})
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
-            {hasCreditRisk && (
-              <div className="flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 text-warning" />
-                <span className="text-xs text-warning font-medium">
-                  {finance.creditAtRisk.count} v ohrožení ({formatCurrency(finance.creditAtRisk.amount)})
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+
+      <UnpaidTrainingsDialog
+        open={showUnpaidDialog}
+        onOpenChange={setShowUnpaidDialog}
+      />
+    </>
   );
 });

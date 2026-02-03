@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { 
@@ -11,6 +11,8 @@ import {
   ChevronRight,
   CalendarCheck,
   Users,
+  Check,
+  Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,15 +28,42 @@ interface TodayTimelineCompactProps {
   onOpenFeedback?: (id: string) => void;
 }
 
-const StatusIcon = ({ status }: { status: string }) => {
+const StatusIcon = ({ status, isNow }: { status: string; isNow?: boolean }) => {
   switch (status) {
     case 'completed':
       return <CheckCircle2 className="w-4 h-4 text-success" />;
     case 'in_progress':
       return <Clock className="w-4 h-4 text-warning animate-pulse" />;
     default:
-      return <Circle className="w-4 h-4 text-muted-foreground" />;
+      return isNow 
+        ? <Zap className="w-4 h-4 text-primary animate-pulse" />
+        : <Circle className="w-4 h-4 text-muted-foreground" />;
   }
+};
+
+const getRelativeTime = (timeString: string) => {
+  const now = new Date();
+  const [hours, minutes] = timeString.split(':').map(Number);
+  const targetDate = new Date();
+  targetDate.setHours(hours, minutes, 0, 0);
+  
+  if (targetDate < now) return null;
+  
+  const diffMs = targetDate.getTime() - now.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  
+  if (diffMins < 60) {
+    return `Za ${diffMins} min`;
+  }
+  
+  const diffHours = Math.floor(diffMins / 60);
+  const remainingMins = diffMins % 60;
+  
+  if (remainingMins === 0) {
+    return `Za ${diffHours}h`;
+  }
+  
+  return `Za ${diffHours}h ${remainingMins}min`;
 };
 
 export const TodayTimelineCompact = memo(function TodayTimelineCompact({
@@ -72,6 +101,7 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
 
   const completed = sortedTrainings.filter(t => t.status === 'completed').length;
   const total = sortedTrainings.length;
+  const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   if (total === 0) {
     return (
@@ -117,10 +147,20 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
         <CardTitle className="flex items-center gap-2 text-lg">
           <CalendarCheck className="w-5 h-5 text-primary" />
           Dnešní tréninky
-          <Badge variant="secondary" className="ml-auto bg-primary/10 text-primary border-0">
+          <Badge variant="secondary" className="ml-auto bg-primary/10 text-primary border-0 gap-1">
+            <Check className="w-3 h-3" />
             {completed}/{total}
           </Badge>
         </CardTitle>
+        {/* Progress bar */}
+        <div className="h-1 rounded-full bg-muted/30 overflow-hidden mt-2">
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${progressPercent}%` }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="h-full rounded-full bg-gradient-to-r from-success to-success/70"
+          />
+        </div>
       </CardHeader>
       <CardContent className="relative">
         {/* Timeline line */}
@@ -145,6 +185,8 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
                  return currentTimeMinutes < nh * 60 + nm;
                })());
 
+            const relativeTime = !isCompleted && !isCancelled ? getRelativeTime(trainingTime) : null;
+
             return (
               <motion.div
                 key={training.id}
@@ -153,11 +195,20 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
                 transition={{ duration: 0.15, delay: index * 0.03 }}
                 className="relative"
               >
-                {/* NOW indicator */}
+                {/* NOW indicator - Enhanced */}
                 {isCurrentSlot && !isCompleted && (
                   <div className="absolute -left-1 right-0 top-1/2 -translate-y-1/2 flex items-center z-10 pointer-events-none">
-                    <div className="w-2 h-2 rounded-full bg-destructive animate-pulse shadow-[0_0_8px_hsl(0_84%_60%/0.6)]" />
-                    <div className="flex-1 h-px bg-destructive/40" />
+                    <div className="relative">
+                      <div className="w-3 h-3 rounded-full bg-destructive animate-pulse shadow-[0_0_12px_hsl(0_84%_60%/0.8)]" />
+                      <div className="absolute inset-0 w-3 h-3 rounded-full bg-destructive/50 animate-ping" />
+                    </div>
+                    <div className="flex-1 h-px bg-destructive/50" />
+                    <Badge 
+                      variant="destructive" 
+                      className="text-[10px] h-5 px-1.5 mr-2 animate-pulse"
+                    >
+                      NYNÍ
+                    </Badge>
                   </div>
                 )}
                 
@@ -169,7 +220,8 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
                     'bg-card/60 backdrop-blur-sm border border-border/30',
                     isCompleted && 'opacity-60',
                     isCancelled && 'opacity-40 line-through',
-                    isNext && 'ring-1 ring-primary/40 bg-primary/5'
+                    isNext && 'ring-1 ring-primary/40 bg-primary/5',
+                    isCurrentSlot && !isCompleted && 'ring-2 ring-destructive/50 bg-destructive/5'
                   )}
                 >
                   {/* Timeline dot */}
@@ -177,6 +229,7 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
                     'absolute -left-[22px] w-3 h-3 rounded-full border-2 bg-background',
                     isCompleted ? 'border-success bg-success' : 
                     isCancelled ? 'border-muted-foreground' :
+                    isCurrentSlot ? 'border-destructive bg-destructive' :
                     isNext ? 'border-primary bg-primary' : 'border-border'
                   )} />
 
@@ -185,9 +238,10 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
                     'shrink-0 w-9 h-9 rounded-xl flex items-center justify-center',
                     isCompleted ? 'bg-success/10' : 
                     isCancelled ? 'bg-muted/30' :
+                    isCurrentSlot ? 'bg-destructive/10' :
                     isNext ? 'bg-primary/10' : 'bg-muted/20'
                   )}>
-                    <StatusIcon status={training.status} />
+                    <StatusIcon status={training.status} isNow={isCurrentSlot && !isCompleted} />
                   </div>
 
                   {/* Content */}
@@ -212,15 +266,35 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
                         </Badge>
                       )}
                     </div>
-                    {isNext && (
+                    {isNext && !isCurrentSlot && relativeTime && (
                       <span className="text-xs text-primary font-medium">
-                        Další trénink
+                        {relativeTime}
+                      </span>
+                    )}
+                    {isCurrentSlot && !isCompleted && (
+                      <span className="text-xs text-destructive font-medium">
+                        Probíhá právě teď
                       </span>
                     )}
                   </button>
 
-                  {/* Actions */}
+                  {/* Quick Actions */}
                   <div className="flex items-center gap-1 shrink-0">
+                    {/* Complete button for current/next training */}
+                    {isCurrentSlot && !isCompleted && !isCancelled && (
+                      <Button
+                        size="sm"
+                        className="h-7 px-2 text-xs bg-success hover:bg-success/90 text-success-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/trainings/${training.id}?action=complete`);
+                        }}
+                      >
+                        <Check className="w-3 h-3 mr-1" />
+                        Dokončit
+                      </Button>
+                    )}
+                    
                     {isCompleted && onOpenFeedback && (
                       <Button
                         size="icon"
@@ -234,6 +308,7 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
                         <MessageSquare className="w-4 h-4" />
                       </Button>
                     )}
+                    
                     <motion.button
                       onClick={() => navigate(`/trainings/${training.id}`)}
                       className="p-1.5 rounded-lg hover:bg-secondary/80 transition-colors"

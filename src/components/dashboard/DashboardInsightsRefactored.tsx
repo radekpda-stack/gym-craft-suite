@@ -1,12 +1,15 @@
 import { useState, useMemo, useCallback, memo } from 'react';
-import { Lightbulb, ChevronRight, RefreshCw } from 'lucide-react';
+import { Lightbulb, ChevronRight, RefreshCw, TrendingUp, TrendingDown, Users, Clock, Target, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useLanguage } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InsightDetailSheet } from './InsightDetailSheet';
 import { generateDisplayedInsights } from './insights/insightGenerators';
 import type { Insight, InsightGeneratorContext } from './insights/insightTypes';
 import type { TrendData, FinanceMetrics, WeeklySummary, CapacityInfo } from '@/hooks/dashboard/types';
 import type { ScheduleItem } from '@/types/training';
+import { cn } from '@/lib/utils';
 
 interface DashboardInsightsProps {
   trends: TrendData;
@@ -21,13 +24,39 @@ interface DashboardInsightsProps {
 const getTypeStyles = (type: Insight['type']) => {
   switch (type) {
     case 'success':
-      return 'bg-success/10 text-success border-success/20 hover:bg-success/15';
+      return {
+        bg: 'bg-success/10 hover:bg-success/15',
+        border: 'border-success/20',
+        text: 'text-success',
+        icon: 'bg-success/20',
+      };
     case 'warning':
-      return 'bg-warning/10 text-warning border-warning/20 hover:bg-warning/15';
+      return {
+        bg: 'bg-warning/10 hover:bg-warning/15',
+        border: 'border-warning/20',
+        text: 'text-warning',
+        icon: 'bg-warning/20',
+      };
     case 'info':
     default:
-      return 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/15';
+      return {
+        bg: 'bg-primary/10 hover:bg-primary/15',
+        border: 'border-primary/20',
+        text: 'text-primary',
+        icon: 'bg-primary/20',
+      };
   }
+};
+
+const getInsightIcon = (iconEmoji: string, type: Insight['type']) => {
+  // Map common emoji to Lucide icons
+  if (iconEmoji.includes('📈') || iconEmoji.includes('⬆')) return TrendingUp;
+  if (iconEmoji.includes('📉') || iconEmoji.includes('⬇')) return TrendingDown;
+  if (iconEmoji.includes('👥') || iconEmoji.includes('🧑')) return Users;
+  if (iconEmoji.includes('⏰') || iconEmoji.includes('🕐')) return Clock;
+  if (iconEmoji.includes('🎯')) return Target;
+  if (iconEmoji.includes('⚡') || iconEmoji.includes('💪')) return Zap;
+  return Lightbulb;
 };
 
 export const DashboardInsightsRefactored = memo(function DashboardInsightsRefactored({
@@ -100,20 +129,24 @@ export const DashboardInsightsRefactored = memo(function DashboardInsightsRefact
 
   // Generate insights using refactored generators
   const displayedInsights = useMemo(() => 
-    generateDisplayedInsights(context, shuffleSeed, 6),
+    generateDisplayedInsights(context, shuffleSeed, 4),
     [context, shuffleSeed]
   );
 
   if (isLoading) {
     return (
-      <div className="glass rounded-xl p-4 animate-pulse">
-        <div className="h-5 bg-muted rounded w-24 mb-3" />
-        <div className="space-y-2">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-10 bg-muted/50 rounded-lg" />
-          ))}
-        </div>
-      </div>
+      <Card variant="floating" className="overflow-hidden">
+        <CardHeader className="pb-3">
+          <div className="h-5 bg-muted rounded w-24 animate-pulse" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-14 bg-muted/50 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -123,39 +156,66 @@ export const DashboardInsightsRefactored = memo(function DashboardInsightsRefact
 
   return (
     <>
-      <div className="glass rounded-xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Lightbulb className="w-4 h-4 text-warning" />
-            <h3 className="font-medium text-sm">
-              {language === 'cs' ? 'Postřehy' : 'Insights'}
-            </h3>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRefresh}
-            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <RefreshCw className="w-3.5 h-3.5 mr-1" />
-            {language === 'cs' ? 'Další' : 'More'}
-          </Button>
-        </div>
-        
-        <div className="grid gap-2">
-          {displayedInsights.map(insight => (
-            <button 
-              key={insight.id}
-              onClick={() => setSelectedInsight(insight)}
-              className={`flex items-center gap-3 p-2.5 rounded-lg border w-full text-left transition-all cursor-pointer ${getTypeStyles(insight.type)}`}
+      <Card variant="floating" className="overflow-hidden">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center justify-between text-base">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-warning/10">
+                <Lightbulb className="w-4 h-4 text-warning" />
+              </div>
+              <span>{language === 'cs' ? 'Postřehy' : 'Insights'}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefresh}
+              className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground rounded-lg"
             >
-              <span className="shrink-0">{insight.icon}</span>
-              <span className="text-sm flex-1">{insight.text}</span>
-              <ChevronRight className="w-4 h-4 opacity-50 shrink-0" />
-            </button>
-          ))}
-        </div>
-      </div>
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              {language === 'cs' ? 'Další' : 'More'}
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {displayedInsights.map((insight, index) => {
+              const styles = getTypeStyles(insight.type);
+              const IconComponent = getInsightIcon(String(insight.icon), insight.type);
+              
+              return (
+                <motion.button 
+                  key={insight.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15, delay: index * 0.05 }}
+                  whileHover={{ x: 4 }}
+                  onClick={() => setSelectedInsight(insight)}
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-xl border w-full text-left transition-all',
+                    styles.bg,
+                    styles.border
+                  )}
+                >
+                  <div className={cn(
+                    'shrink-0 w-10 h-10 rounded-xl flex items-center justify-center',
+                    styles.icon
+                  )}>
+                    <IconComponent className={cn('w-5 h-5', styles.text)} />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <p className={cn('text-sm font-medium', styles.text)}>
+                      {insight.text}
+                    </p>
+                  </div>
+                  
+                  <ChevronRight className={cn('w-4 h-4 shrink-0 opacity-60', styles.text)} />
+                </motion.button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       <InsightDetailSheet
         insight={selectedInsight}
