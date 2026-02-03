@@ -1,535 +1,323 @@
 
-# Fáze 11: Premium UI Upgrade - Výkonnost (Přehled & Knihovna cviků)
-
-## Analýza aktuálního stavu
-
-Po důkladné analýze jsem identifikoval několik oblastí ke zlepšení:
-
-### Aktuální struktura stránky Výkonnost
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ ⚡ VÝKONNOST                                                │
-│    Cviky, testy a výzvy na jednom místě                    │
-├─────────────────────────────────────────────────────────────┤
-│ [🔍 Rychle hledat cvik...                       ⌘K]        │
-├─────────────────────────────────────────────────────────────┤
-│ ┌─────────┐ ┌─────────┐ ┌─────────┐                        │
-│ │ 💪 218  │ │ 📊 45   │ │ 🏆 12   │  <- KPI Bar           │
-│ │ cviků   │ │ záznamů │ │ PR      │                        │
-│ └─────────┘ └─────────┘ └─────────┘                        │
-├─────────────────────────────────────────────────────────────┤
-│ [Přehled] [Knihovna] [Analytika] [Testy] [Výzvy]           │
-├─────────────────────────────────────────────────────────────┤
-│ PŘEHLED:                                                   │
-│  - CategoryCards (3 dlaždice)                              │
-│  - ClientProgressLeaderboard (Top 5 klientů)               │
-│  - RecentExercisesChips (Nedávno použité)                  │
-├─────────────────────────────────────────────────────────────┤
-│ KNIHOVNA:                                                  │
-│  - Search + Filters                                        │
-│  - Accordion s kategoriemi                                 │
-│  - Exercise Cards                                          │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
+# Vylepšení dialogu "Dokončit trénink" - Tagy a platební metody
 
 ## Identifikované problémy
 
-### 1. Layout Přehledu
-- **CategoryCards** - chybí vizuální hierarchie, kategorie jsou si příliš podobné
-- **Leaderboard** - standard styl, chybí "trophy cabinet" efekt
-- **RecentChips** - málo výrazné, splývají s pozadím
+### 1. Sekce tagů ("Doplňte povinné tagy")
+**Aktuální stav:**
+- Collapsible layout s expandovanými kategoriemi
+- Presets jako horizontální scroll (špatně viditelné)
+- Složité na mobilní orientaci
+- Uživatel musí klikat na jednotlivé kategorie
 
-### 2. Knihovna cviků
-- **Filtry** - collapsible panel působí ploše
-- **Accordion** - kategorie nemají dostatek vizuálního odlišení
-- **Exercise Cards** - uniformní vzhled bez indikace důležitosti (PR, oblíbené)
-
-### 3. Obecné
-- **Header** - mohl by mít výraznější "hero" efekt
-- **Navigace** - tab navigation bez animovaného indicatoru
+### 2. Platební metody v ParticipantPaymentCard
+**Aktuální stav:**
+- 5 tlačítek v jednom řádku s pill-style selector
+- Text "Později" přetéká na malých obrazovkách
+- Použitý `shortLabel` ale stále moc dlouhý
 
 ---
 
-## Navržená řešení
+## Navržené řešení
 
-### ČÁST A: PŘEHLED (Overview Tab)
+### A. Přepracování sekce tagů - "Quick Tag Grid"
 
-#### A1. Hero Section s vylepšeným headerem
+Nahradit `CompactTagSelector` za jednodušší **grid layout s přímým výběrem**:
+
 ```text
-╭─────────────────────────────────────────────────────────────╮
-│                                                             │
-│   ┌────────┐                                                │
-│   │   ⚡   │  VÝKONNOST                                     │
-│   │  glow  │  Sleduj pokrok svých klientů                  │
-│   └────────┘                                                │
-│                                                             │
-│   ┌─────────────────────────────────────────────────────┐  │
-│   │ 🔍 Rychle hledat cvik...                      ⌘K   │  │
-│   └─────────────────────────────────────────────────────┘  │
-│                                                             │
-╰─────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────╮
+│ ⚠️ Doplňte povinné tagy                                  │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│ RYCHLÁ VOLBA (preset chips)                              │
+│ ╭─────────╮ ╭─────────╮ ╭─────────╮ ╭─────────╮         │
+│ │💪Silový │ │🌿Regene │ │❤️Kondice│ │⚡Horní │         │
+│ ╰─────────╯ ╰─────────╯ ╰─────────╯ ╰─────────╯         │
+│                                                          │
+│ ─────── nebo vyberte jednotlivě ───────                  │
+│                                                          │
+│ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐   │
+│ │  ZAMĚŘENÍ  ⚠️ │ │  INTENZITA ⚠️ │ │   PARTIE   ⚠️ │   │
+│ │ [▼ Vybrat...] │ │ [▼ Vybrat...] │ │ [▼ Vybrat...] │   │
+│ └───────────────┘ └───────────────┘ └───────────────┘   │
+│                                                          │
+│ Vybrané: [Síla ×] [Těžký ×] [Horní část ×]              │
+╰──────────────────────────────────────────────────────────╯
 ```
 
-Změny:
-- Header icon s výraznějším glow efektem
-- Search bar integrovaný do hero sekce
-- Subtilní gradient background
+**Klíčové změny:**
+1. **Prominent presets** - velké chips místo malých scrollovaných tlačítek
+2. **3-column grid** s dropdowny pro jednotlivé typy tagů
+3. **Visual indicator** (⚠️) u chybějících tagů
+4. **Removable chips** pro vybrané tagy
+5. Odstranění collapsible sekcí - vše viditelné najednou
 
 ---
 
-#### A2. Premium KPI Dashboard
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐      │
-│ │   ╭────────╮    │ │   ╭────────╮    │ │   ╭────────╮    │      │
-│ │   │  💪   │    │ │   │  📊   │    │ │   │  🏆   │    │      │
-│ │   │ glow  │    │ │   │ glow  │    │ │   │ glow  │    │      │
-│ │   ╰────────╯    │ │   ╰────────╯    │ │   ╰────────╯    │      │
-│ │                 │ │                 │ │                 │      │
-│ │     218         │ │      45         │ │      12         │      │
-│ │   CVIKŮ         │ │   ZÁZNAMŮ       │ │   PR            │      │
-│ │   v knihovně    │ │   tento měsíc   │ │   tento měsíc   │      │
-│ │                 │ │                 │ │                 │      │
-│ │ ━━━━━━━━━━━━    │ │ ━━━━━━━━        │ │ ━━━━━           │      │
-│ │ progress ring   │ │ vs. minulý měs. │ │ 📈 +8%          │      │
-│ └─────────────────┘ └─────────────────┘ └─────────────────┘      │
-╰───────────────────────────────────────────────────────────────────╯
-```
+### B. Oprava přetékání "Později" v platebních metodách
 
-Změny v `PerformanceKPIBar.tsx`:
-- Přidat progress ring/gauge pod hodnotu
-- Zesílit icon glow efekt
-- Přidat mini-sparkline nebo porovnání s minulým obdobím
+**Změny v `ParticipantPaymentCard.tsx`:**
 
----
+1. **Zkrátit labels:**
+   ```typescript
+   const paymentOptions = [
+     { value: 'credit', shortLabel: 'Kredit', icon: Wallet },
+     { value: 'cash', shortLabel: 'Cash', icon: Banknote },     // "Hotově" → "Cash"
+     { value: 'card', shortLabel: 'Karta', icon: CreditCard },  // "Kartou" → "Karta"
+     { value: 'bank', shortLabel: 'Banka', icon: Building2 },   // "Převodem" → "Banka"
+     { value: 'pending', shortLabel: 'Dluží', icon: Clock },    // "Později" → "Dluží"
+   ];
+   ```
 
-#### A3. Kategorie jako "Dashboard Tiles"
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│  KATEGORIE CVIKŮ                                                 │
-├───────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐      │
-│ │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│ │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│ │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│      │
-│ │ gradient overlay │ │ gradient overlay │ │ gradient overlay │      │
-│ │                 │ │                 │ │                 │      │
-│ │  💪 SÍLA        │ │  ❤️ KARDIO      │ │  ⚡ PLYOMETRIE  │      │
-│ │                 │ │                 │ │                 │      │
-│ │     152         │ │      48         │ │      18         │      │
-│ │    cviků        │ │    cviků        │ │    cviků        │      │
-│ │                 │ │                 │ │                 │      │
-│ │ ━━━━━━━━━━━━━━  │ │ ━━━━━━━         │ │ ━━━━            │      │
-│ │ 2,847 záznamů   │ │ 423 záznamů     │ │ 156 záznamů     │      │
-│ │                →│ │                →│ │                →│      │
-│ └─────────────────┘ └─────────────────┘ └─────────────────┘      │
-╰───────────────────────────────────────────────────────────────────╯
-```
+2. **Responsive text visibility:**
+   - Na mobilu: pouze ikony
+   - Na tabletu/desktopu: ikony + text
 
-Změny v `CategoryCards.tsx`:
-- Přidat subtle gradient overlay v barvě kategorie
-- Zvětšit číslo cvíků (prominence)
-- Usage gauge jako horizontální progress bar
-- Hover efekt s category-specific glow
+3. **Flexbox fix:**
+   ```tsx
+   // Zajistit min-width a text-overflow
+   <span className="hidden xs:inline text-[10px] truncate max-w-[40px]">
+     {option.shortLabel}
+   </span>
+   ```
 
 ---
 
-#### A4. Leaderboard "Trophy Cabinet" styl
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│  🏆 TOP AKTIVNÍ KLIENTI                           [30 dní]       │
-├───────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │ 🥇  Jan Novák                   📈+15%  ━━━━━━━━━━━━ 45    │ │
-│  │     ────────────────────────────────────────────────────── │ │
-│  │     gold border glow                                       │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-│                                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │ 🥈  Petr Svoboda                📈+8%   ━━━━━━━━━   38     │ │
-│  │     silver border glow                                      │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-│                                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │ 🥉  Marie Veselá                📈+3%   ━━━━━━━     32     │ │
-│  │     bronze border glow                                      │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-│                                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │ 4   Lukáš Horák                 ─       ━━━━━━      28     │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-│                                                                   │
-│                                    [Zobrazit více →]             │
-╰───────────────────────────────────────────────────────────────────╯
-```
+### C. Celkové grafické vylepšení dialogu
 
-Změny v `ClientProgressLeaderboard.tsx`:
-- Top 3 s barevným border glow (gold/silver/bronze)
-- PR badge výraznější s trophy ikonou
-- Progress bar s gradient fill
-- Oddělení top 3 od zbytku vizuálně
+**Změny v `TrainingDetail.tsx` (dialog sekce):**
+
+1. **Premium glassmorphism styl:**
+   ```tsx
+   <DialogContent className="max-w-md p-0 gap-0 max-h-[85vh] flex flex-col bg-card/95 backdrop-blur-xl border-border/50">
+   ```
+
+2. **Success header gradient** (už existuje v `CompleteTrainingDialog`, přenést sem)
+
+3. **Strukturovanější layout:**
+   - Header s checkmark ikonou
+   - Sekce tagů jako "card-floating"
+   - Sekce účastníků s vlastním headerem
+   - Fixed footer s tlačítky
 
 ---
 
-#### A5. "Quick Access" chips pro nedávné cviky
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│  🕐 NEDÁVNO POUŽITÉ                                              │
-├───────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  ╭───────────────╮ ╭───────────────╮ ╭───────────────╮           │
-│  │ 💪 Bench Press│ │ 💪 Deadlift   │ │ ❤️ Rowing     │           │
-│  ╰───────────────╯ ╰───────────────╯ ╰───────────────╯           │
-│                                                                   │
-│  ╭───────────────╮ ╭───────────────╮ ╭───────────────╮           │
-│  │ ⚡ Box Jumps  │ │ 💪 Squats     │ │ 💪 Pull-ups   │           │
-│  ╰───────────────╯ ╰───────────────╯ ╰───────────────╯           │
-│                                                                   │
-╰───────────────────────────────────────────────────────────────────╯
-```
+## Detailní technické změny
 
-Změny v `RecentExercisesChips.tsx`:
-- Sekce header s ikonou a popiskem
-- Floating glass pills s category-specific border
-- Hover → lift + shadow-md
-- Tooltip s časem posledního použití
+### Soubor 1: `src/components/trainings/CompactTagSelector.tsx`
 
----
+**Kompletní redesign:**
 
-### ČÁST B: KNIHOVNA CVIKŮ (Library Tab)
-
-#### B1. Premium Filter Panel
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│  218 aktivních cviků                           [+ Nový cvik]     │
-├───────────────────────────────────────────────────────────────────┤
-│ ┌───────────────────────────────────────────────┐ ┌───┐ ┌───┐   │
-│ │ 🔍 Hledat cvik...                             │ │🎛️│ │✏️│   │
-│ └───────────────────────────────────────────────┘ └───┘ └───┘   │
-├───────────────────────────────────────────────────────────────────┤
-│  FILTRY (zobrazeno pokud aktivní)                                │
-│ ╭──────────────────────────────────────────────────────────────╮ │
-│ │ Kategorie    Pohyb. vzorec     Obtížnost      Řazení        │ │
-│ │ [▼ Vše]      [▼ Vše]           [▼ Vše]       [▼ Abecedně]   │ │
-│ │                                                              │ │
-│ │ ○ Pouze použité                                              │ │
-│ ╰──────────────────────────────────────────────────────────────╯ │
-╰───────────────────────────────────────────────────────────────────╯
-```
-
-Změny v `ExerciseListView.tsx`:
-- Filter panel jako floating glass card
-- Active filters zobrazeny jako dismissible chips
-- Počet filtrovaných výsledků live update
-
----
-
-#### B2. Category Accordion Premium
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│ HORNÍ TĚLO                                        45 cviků   ▼  │
-│ ─────────────────────────────────────────────────────────────────│
-│ ✦ 847× použito                                                   │
-├───────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │ ★ Bench Press                    Tlak horiz.    125× → │ │
-│  │   ━━━━━━━━━━━━━━━━━━━━━━━━ usage bar                      │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-│                                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │   Pull-ups                       Tah vertik.     89× → │ │
-│  │   ━━━━━━━━━━━━━━━━━━ usage bar                             │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-│                                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │   Shoulder Press                 Tlak vertik.    67× → │ │
-│  │   ━━━━━━━━━━━━━━ usage bar                                 │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-│                                                                   │
-╰───────────────────────────────────────────────────────────────────╯
-```
-
-Změny:
-- Category header s usage statistikou
-- Barevný indikátor kategorie (levý border)
-- Usage bar pod názvem cviku
-- Favorite star výraznější (gold fill)
-
----
-
-#### B3. Exercise Card Premium
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ ★ Bench Press                                                    │
-│ ─────────────────────────────────────────────────────────────── │
-│ Tlak horizontální  •  Pokročilý                                 │
-│                                                                  │
-│ ┌───────────┐ ┌───────────┐ ┌───────────┐                       │
-│ │ 📊 125×   │ │ 👥 8      │ │ 🏆 3 PR   │                       │
-│ │ použití   │ │ klientů   │ │ tento měs │                       │
-│ └───────────┘ └───────────┘ └───────────┘                       │
-│                                                                  │
-│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  usage gauge (80%)     │
-│                                                          →      │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-Změny v exercise card:
-- Přidat mini-stats row (použití, klienti, PR)
-- Usage gauge pod kartou
-- Favorite star s glow efektem
-- PR badge s trophy ikonou pokud existují
-
----
-
-### ČÁST C: OBECNÁ VYLEPŠENÍ
-
-#### C1. Animated Tab Indicator
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  ╭─────────────────────────────────────────────────────────────╮│
-│  │ [⚡Přehled] [📋Knihovna] [📊Analytika] [📝Testy] [🏆Výzvy] ││
-│  │  ▓▓▓▓▓▓▓▓▓                                                 ││
-│  │  animated pill indicator                                    ││
-│  ╰─────────────────────────────────────────────────────────────╯│
-└─────────────────────────────────────────────────────────────────┘
-```
-
-Změny:
-- Tabs s glass background
-- Active tab má animated background pill
-- Icons barevně odlišené
-
----
-
-#### C2. ExerciseSearchCommand Enhancement
-```text
-╭───────────────────────────────────────────────────────────────────╮
-│ 🔍 Hledat cvik...                                         ⌘K    │
-╰───────────────────────────────────────────────────────────────────╯
-                           ↓ (open)
-╭───────────────────────────────────────────────────────────────────╮
-│ │ Hledej cvik...                                                │ │
-├───────────────────────────────────────────────────────────────────┤
-│ NEDÁVNO POUŽITÉ                                                  │
-│ ┌────────────────────────────────────────────────────────────┐   │
-│ │ 💪 Bench Press           před 2h                [Síla]    │   │
-│ └────────────────────────────────────────────────────────────┘   │
-│ ┌────────────────────────────────────────────────────────────┐   │
-│ │ 💪 Deadlift              před 1d                [Síla]    │   │
-│ └────────────────────────────────────────────────────────────┘   │
-├───────────────────────────────────────────────────────────────────┤
-│ OBLÍBENÉ ★                                                       │
-│ ┌────────────────────────────────────────────────────────────┐   │
-│ │ ⚡ Box Jumps  ★           45× použito          [Plyo]     │   │
-│ └────────────────────────────────────────────────────────────┘   │
-├───────────────────────────────────────────────────────────────────┤
-│ VŠECHNY CVIKY                                                    │
-│ ...                                                              │
-╰───────────────────────────────────────────────────────────────────╯
-```
-
-Změny:
-- Command items s category badge
-- Favorite star výraznější
-- Usage count zobrazeno
-- Glass background na items
-
----
-
-## SOUBORY K ÚPRAVĚ
-
-### Vysoká priorita
-| Soubor | Změny |
-|--------|-------|
-| `src/pages/PerformanceHub.tsx` | Hero header, animated tabs, layout polish |
-| `src/components/performance/PerformanceKPIBar.tsx` | Progress rings, enhanced glow, mini-trends |
-| `src/components/performance/CategoryCards.tsx` | Gradient overlays, prominent numbers, enhanced gauges |
-| `src/components/performance/ClientProgressLeaderboard.tsx` | Trophy cabinet, rank-based glow, visual separation |
-| `src/components/performance/RecentExercisesChips.tsx` | Section header, glass pills, tooltips |
-
-### Střední priorita
-| Soubor | Změny |
-|--------|-------|
-| `src/components/exercises/ExerciseListView.tsx` | Filter panel glass, accordion polish, usage bars |
-| `src/components/performance/ExerciseSearchCommand.tsx` | Enhanced command items, category badges |
-
----
-
-## TECHNICKÉ DETAILY
-
-### KPI Card s Progress Ring
 ```tsx
-<div className={cn(
-  "relative overflow-hidden rounded-xl p-4",
-  "bg-card/80 backdrop-blur-md",
-  "border shadow-sm",
-  kpi.borderColor,
-  "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-)}>
-  {/* Background gradient */}
-  <div className={cn("absolute inset-0 opacity-20 bg-gradient-to-br to-transparent", kpi.bgColor)} />
+export function CompactTagSelector({
+  selectedTagIds,
+  onChange,
+  trainingType,
+  missingTypes = [],
+}: CompactTagSelectorProps) {
+  const { data: tags = [] } = useTags();
   
-  <div className="relative">
-    {/* Icon with enhanced glow */}
-    <div className={cn(
-      'p-3 rounded-xl w-fit mb-3',
-      kpi.bgColor,
-      'shadow-lg',
-      `shadow-${kpi.glowColor}`
-    )}>
-      <kpi.icon className={cn('w-6 h-6', kpi.color)} />
-    </div>
-    
-    {/* Value */}
-    <p className="text-3xl font-bold text-foreground tabular-nums">
-      {kpi.value.toLocaleString('cs-CZ')}
-    </p>
-    
-    {/* Label */}
-    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
-      {kpi.label}
-    </p>
-    
-    {/* Progress ring or comparison */}
-    <div className="mt-3 pt-3 border-t border-border/50">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">vs. minulý měsíc</span>
-        <TrendIndicator value={kpi.trend} />
+  // Group tags by essential types only
+  const focusTags = tags.filter(t => t.tag_type === 'focus');
+  const intensityTags = tags.filter(t => t.tag_type === 'intensity');
+  const bodyPartTags = tags.filter(t => t.tag_type === 'body_part' && CATEGORY_NAMES.includes(t.name));
+  
+  return (
+    <div className="space-y-4">
+      {/* Presets - prominent 2x2 grid */}
+      <div className="grid grid-cols-2 gap-2">
+        {TAG_PRESETS.map(preset => (
+          <button
+            key={preset.name}
+            onClick={() => handleApplyPreset(preset)}
+            className={cn(
+              "flex items-center gap-2 p-3 rounded-xl border text-left transition-all",
+              "bg-card/60 hover:bg-card hover:shadow-md hover:-translate-y-0.5",
+              "border-border/50"
+            )}
+          >
+            <div className="p-1.5 rounded-lg" style={{ backgroundColor: `${preset.color}20` }}>
+              {preset.icon}
+            </div>
+            <span className="text-sm font-medium">{preset.name}</span>
+          </button>
+        ))}
       </div>
+      
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border/50" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-background px-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+            nebo vyberte
+          </span>
+        </div>
+      </div>
+      
+      {/* 3-column dropdown grid */}
+      <div className="grid grid-cols-3 gap-2">
+        <TagDropdownSelect
+          label={missingTypes.includes('focus') ? "Zaměření ⚠️" : "Zaměření"}
+          options={focusTags.map(t => ({ id: t.id, label: t.name }))}
+          value={selectedTagIds.find(id => focusTags.some(t => t.id === id)) || null}
+          onChange={(id) => handleTagTypeSelect('focus', id)}
+          className={missingTypes.includes('focus') ? "ring-1 ring-warning" : ""}
+        />
+        {/* ... similar for intensity and body_part */}
+      </div>
+      
+      {/* Selected tags as removable chips */}
+      {selectedTags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedTags.map(tag => (
+            <Badge key={tag.id} className="gap-1 pr-1">
+              {tag.name}
+              <button onClick={() => removeTag(tag.id)}>
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
     </div>
-  </div>
-</div>
+  );
+}
 ```
 
-### Leaderboard Row s Rank Glow
+### Soubor 2: `src/components/trainings/ParticipantPaymentCard.tsx`
+
+**Změny pro přetékání:**
+
 ```tsx
-<button className={cn(
-  'w-full flex items-center gap-3 p-3.5 rounded-xl',
-  'bg-card/60 backdrop-blur-sm',
-  'border shadow-sm',
-  'hover:shadow-md hover:-translate-y-0.5',
-  'transition-all duration-200',
-  // Rank-specific styling
-  index === 0 && 'border-yellow-500/40 shadow-yellow-500/20',
-  index === 1 && 'border-gray-400/40 shadow-gray-400/20',
-  index === 2 && 'border-amber-600/40 shadow-amber-600/20',
-  index > 2 && 'border-border/30'
-)}>
+const paymentOptions = [
+  { value: 'credit', label: 'Z kreditu', shortLabel: 'Kredit', mobileLabel: '', icon: Wallet },
+  { value: 'cash', label: 'Hotově', shortLabel: 'Cash', mobileLabel: '', icon: Banknote },
+  { value: 'card', label: 'Kartou', shortLabel: 'Karta', mobileLabel: '', icon: CreditCard },
+  { value: 'bank', label: 'Převodem', shortLabel: 'Banka', mobileLabel: '', icon: Building2 },
+  { value: 'pending', label: 'Později', shortLabel: 'Dluží', mobileLabel: '', icon: Clock },
+];
+
+// V render:
+<button className="relative z-10 flex-1 flex items-center justify-center gap-0.5 py-2 px-0.5 rounded-lg text-[10px] font-medium min-w-0">
+  <Icon className="w-4 h-4 shrink-0" />
+  <span className="hidden sm:block truncate">{option.shortLabel}</span>
+</button>
 ```
 
-### Exercise Card s Usage Bar
+### Soubor 3: `src/pages/TrainingDetail.tsx` (dialog sekce)
+
+**Layout vylepšení:**
+
 ```tsx
-<Card className={cn(
-  "p-3 bg-background/60 backdrop-blur-sm border-border/30 shadow-sm",
-  "hover:bg-secondary/50 hover:shadow-md hover:-translate-y-0.5",
-  "transition-all duration-200 cursor-pointer group"
-)}>
-  <div className="flex items-center justify-between mb-2">
-    {/* Name + badges */}
-  </div>
-  
-  {/* Usage bar */}
-  <div className="h-1 rounded-full bg-muted/50 overflow-hidden">
-    <div 
-      className="h-full rounded-full bg-primary/60 transition-all duration-500"
-      style={{ width: `${usagePercent}%` }}
-    />
-  </div>
-</Card>
+<Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+  <DialogContent className="max-w-md p-0 gap-0 max-h-[85vh] flex flex-col bg-card/95 backdrop-blur-xl border-border/50 shadow-2xl">
+    {/* Premium header with gradient */}
+    <DialogHeader className="relative px-4 pt-4 pb-3 shrink-0">
+      <div className="absolute inset-0 bg-gradient-to-br from-success/15 via-success/5 to-transparent rounded-t-2xl pointer-events-none" />
+      <div className="relative flex items-center gap-3">
+        <div className="p-2 rounded-xl bg-success/20 ring-1 ring-success/30">
+          <CheckCircle className="w-5 h-5 text-success" />
+        </div>
+        <div>
+          <DialogTitle className="text-base font-semibold">Dokončit trénink</DialogTitle>
+          <DialogDescription className="text-xs">
+            Zkontrolujte účastníky a platby
+          </DialogDescription>
+        </div>
+      </div>
+    </DialogHeader>
+    
+    {/* Scrollable content */}
+    <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
+      {/* Tags section - with floating card styling */}
+      {!dialogTagValidation.isValid && (
+        <div className="p-3 bg-warning/5 backdrop-blur-sm rounded-xl border border-warning/30 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-warning" />
+            <span className="text-xs font-medium text-warning">Doplňte povinné tagy</span>
+          </div>
+          <CompactTagSelector
+            selectedTagIds={dialogTagIds}
+            onChange={setDialogTagIds}
+            trainingType={dialogTrainingType}
+            missingTypes={dialogTagValidation.missingTypes}
+          />
+        </div>
+      )}
+      
+      {/* ... rest of content */}
+    </div>
+    
+    {/* Fixed footer */}
+    <div className="shrink-0 border-t border-border/50 bg-card/80 backdrop-blur-sm px-4 py-3 flex gap-2">
+      {/* buttons */}
+    </div>
+  </DialogContent>
+</Dialog>
 ```
 
 ---
 
-## OČEKÁVANÝ VÝSLEDEK
+## Soubory k úpravě
 
-### Vizuální srovnání
+| Soubor | Změna |
+|--------|-------|
+| `src/components/trainings/CompactTagSelector.tsx` | Kompletní redesign - grid layout, prominent presets, dropdowny |
+| `src/components/trainings/ParticipantPaymentCard.tsx` | Zkrátit labels, responsive text, opravit přetékání |
+| `src/pages/TrainingDetail.tsx` | Premium dialog styling, lepší layout sekcí |
 
-#### PŘED (Přehled):
+---
+
+## Vizuální srovnání
+
+### PŘED - Tag selector:
 ```text
-┌───────────────────────────────────────┐
-│ ⚡ Výkonnost                          │
-│ [Search...]                           │
-│ ┌───┐ ┌───┐ ┌───┐  <- flat KPIs      │
-│ ┌───┐ ┌───┐ ┌───┐  <- flat categories │
-│ Leaderboard (basic list)              │
-│ Recent: [chip] [chip] [chip]          │
-└───────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│ ← [Silový] [Regene] [Kondice] [H →   │ ← scroll
+│                                      │
+│ ▼ Zaměření (collapsible)             │
+│   [Síla] [Mobilita] [Kardio] ...     │
+│                                      │
+│ ▼ Intenzita (collapsible)            │
+│   [Lehký] [Střední] [Těžký]          │
+│                                      │
+│ ▼ Partie (collapsible)               │
+│   [Horní] [Dolní] [Core] ...         │
+└──────────────────────────────────────┘
 ```
 
-#### PO (Přehled):
+### PO - Tag selector:
 ```text
-╭───────────────────────────────────────╮
-│ ⚡ VÝKONNOST         hero section     │
-│ ────────────────────────────────────  │
-│ [🔍 Rychle hledat...]    glass input │
-├───────────────────────────────────────┤
-│ ╭─────╮ ╭─────╮ ╭─────╮              │
-│ │ 218 │ │  45 │ │  12 │  ← floating  │
-│ │glow │ │glow │ │glow │    KPI cards │
-│ ╰─────╯ ╰─────╯ ╰─────╯              │
-├───────────────────────────────────────┤
-│ KATEGORIE CVIKŮ                       │
-│ ╭─────────╮ ╭─────────╮ ╭─────────╮  │
-│ │gradient │ │gradient │ │gradient │  │
-│ │  152    │ │   48    │ │   18    │  │
-│ │ ━━━━━━  │ │ ━━━     │ │ ━━      │  │
-│ ╰─────────╯ ╰─────────╯ ╰─────────╯  │
-├───────────────────────────────────────┤
-│ 🏆 TOP AKTIVNÍ KLIENTI                │
-│ ╭─────────────────────────────────╮   │
-│ │ 🥇 Jan Novák      gold glow    │   │
-│ ╰─────────────────────────────────╯   │
-│ ╭─────────────────────────────────╮   │
-│ │ 🥈 Petr Svoboda   silver glow  │   │
-│ ╰─────────────────────────────────╯   │
-├───────────────────────────────────────┤
-│ 🕐 NEDÁVNO POUŽITÉ                    │
-│ ╭──────╮ ╭──────╮ ╭──────╮           │
-│ │glass │ │glass │ │glass │           │
-│ ╰──────╯ ╰──────╯ ╰──────╯           │
-╰───────────────────────────────────────╯
+╭──────────────────────────────────────╮
+│ ╭─────────╮  ╭─────────╮             │
+│ │💪Silový │  │🌿Regene │             │ ← 2x2 grid
+│ ╰─────────╯  ╰─────────╯             │
+│ ╭─────────╮  ╭─────────╮             │
+│ │❤️Kondice│  │⚡Horní │             │
+│ ╰─────────╯  ╰─────────╯             │
+│                                      │
+│ ─────── nebo vyberte ────────        │
+│                                      │
+│ [Zaměření⚠️▼] [Intenzita⚠️▼] [Partie▼]│ ← 3 dropdowns
+│                                      │
+│ [Síla ×] [Těžký ×] [Horní ×]         │ ← removable
+╰──────────────────────────────────────╯
 ```
 
----
+### PŘED - Platební metody:
+```text
+┌─────────────────────────────────────────────────────────┐
+│ [Kredit] [Hotově] [Kartou] [Převodem] [Později←overflow]│
+└─────────────────────────────────────────────────────────┘
+```
 
-## ANIMACE A INTERAKCE
-
-1. **KPI Cards:**
-   - Icon pulse na hover
-   - Shadow-md + lift na hover
-   - Trend badge s micro-animation
-
-2. **Category Cards:**
-   - Gradient intensify na hover
-   - Usage gauge smooth fill
-   - ChevronRight translate
-
-3. **Leaderboard:**
-   - Top 3 s subtle glow pulse
-   - Row hover → lift + shadow
-   - Progress bar smooth transition
-
-4. **Recent Chips:**
-   - Hover → lift + category glow
-   - Focus ring na keyboard nav
-
-5. **Exercise Cards:**
-   - Usage bar animate on mount
-   - Star scale + glow on toggle
-   - Card lift + shadow on hover
-
----
-
-## KONZISTENCE
-
-Všechny změny dodržují zavedený design systém:
-- `.card-floating` / `bg-card/80 backdrop-blur-md`
-- `shadow-sm` → `shadow-md` on hover
-- `tabular-nums` pro číselné hodnoty
-- Category-specific glow colors
-- Hover lift (`-translate-y-0.5` až `-translate-y-1`)
-- Status-based color coding
-- Premium typography (uppercase labels, bold values)
+### PO - Platební metody:
+```text
+╭─────────────────────────────────────────────────────────╮
+│ [💰Kredit] [💵Cash] [💳Karta] [🏦Banka] [⏰Dluží]       │ ← desktop
+├─────────────────────────────────────────────────────────┤
+│ [💰] [💵] [💳] [🏦] [⏰]                                │ ← mobile (icons only)
+╰─────────────────────────────────────────────────────────╯
+```
