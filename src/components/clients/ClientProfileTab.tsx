@@ -275,14 +275,16 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
   return (
     <div className="space-y-4">
       {/* Basic Info Card */}
-      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5">
+      <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl p-4 sm:p-5 shadow-sm">
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-semibold flex items-center gap-2 text-base">
-            <User className="w-5 h-5 text-primary" />
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <User className="w-4 h-4 text-primary" />
+            </div>
             Základní informace
           </h3>
           {onUpdateClient && !isEditing && (
-            <Button variant="outline" size="sm" onClick={handleStartEdit} className="gap-1.5">
+            <Button variant="outline" size="sm" onClick={handleStartEdit} className="gap-1.5 shadow-sm">
               <Edit2 className="w-3.5 h-3.5" />
               Upravit
             </Button>
@@ -292,7 +294,7 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
               <Button variant="ghost" size="sm" onClick={handleCancel}>
                 <X className="w-4 h-4" />
               </Button>
-              <Button size="sm" onClick={handleSave}>
+              <Button size="sm" onClick={handleSave} className="shadow-sm">
                 <Check className="w-4 h-4 mr-1" />
                 Uložit
               </Button>
@@ -465,9 +467,11 @@ export function ClientProfileTab({ client, onUpdateClient }: ClientProfileTabPro
       </div>
 
       {/* Lifestyle Card */}
-      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5">
+      <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl p-4 sm:p-5 shadow-sm">
         <h3 className="font-semibold flex items-center gap-2 mb-5 text-base">
-          <Activity className="w-5 h-5 text-primary" />
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Activity className="w-4 h-4 text-primary" />
+          </div>
           Životní styl
         </h3>
 

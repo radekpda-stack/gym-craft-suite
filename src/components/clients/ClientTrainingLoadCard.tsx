@@ -76,10 +76,12 @@ export function ClientTrainingLoadCard({ clientId, className }: ClientTrainingLo
       : 'Stabilní';
 
   return (
-    <Card className={className}>
+    <Card className={cn("bg-card/80 backdrop-blur-sm border-border/50 shadow-sm", className)}>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Activity className="h-5 w-5 text-primary" />
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Activity className="h-4 w-4 text-primary" />
+          </div>
           Zátěž a náročnost
         </CardTitle>
       </CardHeader>
@@ -87,46 +89,58 @@ export function ClientTrainingLoadCard({ clientId, className }: ClientTrainingLo
         {/* Hlavní metriky */}
         <div className="grid grid-cols-3 gap-3">
           {/* Coach RPE */}
-          <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-            <div className="text-2xl font-bold text-blue-700">
+          <div className={cn(
+            "p-3 rounded-xl transition-all duration-200",
+            "bg-blue-500/10 border border-blue-500/20 shadow-sm",
+            "hover:shadow-md hover:-translate-y-0.5"
+          )}>
+            <div className="text-2xl font-bold text-blue-700 tabular-nums">
               {stats.avgCoachRPE28d ?? '-'}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground font-medium">
               Coach RPE (28d)
             </div>
             {stats.avgCoachRPE7d && (
-              <div className="text-xs text-blue-600 mt-1">
+              <div className="text-xs text-blue-600 mt-1 font-medium">
                 7d: {stats.avgCoachRPE7d}
               </div>
             )}
           </div>
 
           {/* Client RPE */}
-          <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-            <div className="text-2xl font-bold text-purple-700">
+          <div className={cn(
+            "p-3 rounded-xl transition-all duration-200",
+            "bg-purple-500/10 border border-purple-500/20 shadow-sm",
+            "hover:shadow-md hover:-translate-y-0.5"
+          )}>
+            <div className="text-2xl font-bold text-purple-700 tabular-nums">
               {stats.avgClientRPE28d ?? '-'}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground font-medium">
               Client RPE (28d)
             </div>
             {stats.avgClientRPE7d && (
-              <div className="text-xs text-purple-600 mt-1">
+              <div className="text-xs text-purple-600 mt-1 font-medium">
                 7d: {stats.avgClientRPE7d}
               </div>
             )}
           </div>
 
           {/* Training Load */}
-          <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-            <div className="text-2xl font-bold text-green-700">
+          <div className={cn(
+            "p-3 rounded-xl transition-all duration-200",
+            "bg-green-500/10 border border-green-500/20 shadow-sm",
+            "hover:shadow-md hover:-translate-y-0.5"
+          )}>
+            <div className="text-2xl font-bold text-green-700 tabular-nums">
               {stats.totalLoad7d.toLocaleString()}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground font-medium">
               Load (7d)
             </div>
             <div className="flex items-center gap-1 mt-1">
               <TrendIcon className={cn('h-3 w-3', trendColor)} />
-              <span className={cn('text-xs', trendColor)}>{trendLabel}</span>
+              <span className={cn('text-xs font-medium', trendColor)}>{trendLabel}</span>
             </div>
           </div>
         </div>
@@ -134,15 +148,15 @@ export function ClientTrainingLoadCard({ clientId, className }: ClientTrainingLo
         {/* Rozdíl RPE varování */}
         {stats.rpeDiscrepancy !== null && Math.abs(stats.rpeDiscrepancy) >= 1 && (
           <div className={cn(
-            'flex items-center gap-2 p-2 rounded-lg text-sm',
+            'flex items-center gap-2 p-3 rounded-xl text-sm transition-all',
             Math.abs(stats.rpeDiscrepancy) >= 2
-              ? 'bg-amber-500/10 border border-amber-500/20 text-amber-700'
-              : 'bg-muted text-muted-foreground'
+              ? 'bg-amber-500/10 border border-amber-500/30 text-amber-700 shadow-sm shadow-amber-500/10'
+              : 'bg-muted border border-border/50 text-muted-foreground'
           )}>
             {Math.abs(stats.rpeDiscrepancy) >= 2 && (
-              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <AlertTriangle className="h-4 w-4 flex-shrink-0 animate-pulse" />
             )}
-            <span>
+            <span className="font-medium">
               Rozdíl RPE: Trenér hodnotí o {Math.abs(stats.rpeDiscrepancy).toFixed(1)}{' '}
               {stats.rpeDiscrepancy > 0 ? 'výš' : 'níž'} než klient
             </span>

@@ -337,16 +337,18 @@ export function ClientFinanceLedger({
   }
 
   return (
-    <Card>
+    <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Wallet className="w-5 h-5 text-primary" />
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <Wallet className="w-4 h-4 text-primary" />
+            </div>
             Finanční přehled
           </CardTitle>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5">
+              <Button variant="outline" size="sm" className="gap-1.5 shadow-sm">
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Export</span>
                 <ChevronDown className="w-3 h-3" />
@@ -369,32 +371,32 @@ export function ClientFinanceLedger({
       <CardContent className="space-y-4">
         {/* Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <div className="bg-secondary/50 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">Zůstatek</p>
+          <div className="bg-card/60 backdrop-blur-sm border border-border/30 rounded-xl p-3 text-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+            <p className="text-[10px] text-muted-foreground mb-1 font-semibold uppercase tracking-wider">Zůstatek</p>
             <p className={cn(
-              "font-bold",
+              "font-bold tabular-nums",
               currentBalance >= 0 ? "text-success" : "text-destructive"
             )}>
               {formatCurrency(currentBalance)}
             </p>
           </div>
-          <div className="bg-secondary/50 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">Čerpáno</p>
-            <p className="font-bold text-foreground flex items-center justify-center gap-1">
+          <div className="bg-card/60 backdrop-blur-sm border border-border/30 rounded-xl p-3 text-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+            <p className="text-[10px] text-muted-foreground mb-1 font-semibold uppercase tracking-wider">Čerpáno</p>
+            <p className="font-bold text-foreground flex items-center justify-center gap-1 tabular-nums">
               <TrendingDown className="w-3 h-3 text-destructive" />
               {formatCurrency(stats.totalSpent)}
             </p>
           </div>
-          <div className="bg-secondary/50 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">Dobito</p>
-            <p className="font-bold text-foreground flex items-center justify-center gap-1">
+          <div className="bg-card/60 backdrop-blur-sm border border-border/30 rounded-xl p-3 text-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+            <p className="text-[10px] text-muted-foreground mb-1 font-semibold uppercase tracking-wider">Dobito</p>
+            <p className="font-bold text-foreground flex items-center justify-center gap-1 tabular-nums">
               <TrendingUp className="w-3 h-3 text-success" />
               {formatCurrency(stats.totalTopUp)}
             </p>
           </div>
-          <div className="bg-secondary/50 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">Nákupy</p>
-            <p className="font-bold text-foreground">
+          <div className="bg-card/60 backdrop-blur-sm border border-border/30 rounded-xl p-3 text-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+            <p className="text-[10px] text-muted-foreground mb-1 font-semibold uppercase tracking-wider">Nákupy</p>
+            <p className="font-bold text-foreground tabular-nums">
               {stats.productCount} ks
             </p>
           </div>
@@ -402,16 +404,16 @@ export function ClientFinanceLedger({
 
         {/* Audit Banner */}
         {auditResult.matches ? (
-          <Alert className="border-success/30 bg-success/10">
+          <Alert className="border-success/30 bg-success/10 shadow-sm shadow-success/10">
             <CheckCircle className="h-4 w-4 text-success" />
-            <AlertDescription className="text-success">
+            <AlertDescription className="text-success font-medium">
               Zůstatek souhlasí s evidencí
             </AlertDescription>
           </Alert>
         ) : (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
+          <Alert variant="destructive" className="shadow-sm shadow-destructive/10">
+            <AlertTriangle className="h-4 w-4 animate-pulse" />
+            <AlertDescription className="font-medium">
               Vypočtený zůstatek ({formatCurrency(auditResult.calculatedBalance)}) nesouhlasí s evidencí ({formatCurrency(currentBalance)}) — rozdíl {formatCurrency(auditResult.difference)}
             </AlertDescription>
           </Alert>
@@ -486,7 +488,7 @@ export function ClientFinanceLedger({
             {groupedEntries.map(group => (
               <div key={group.monthKey}>
                 {/* Month header */}
-                <div className="sticky top-0 bg-card z-10 py-2 border-b border-border mb-2">
+                <div className="sticky top-0 bg-card/90 backdrop-blur-sm z-10 py-2 border-b border-border/50 mb-2">
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     {group.label}
                   </h4>
@@ -520,15 +522,16 @@ function LedgerRow({ entry, showMember }: LedgerRowProps) {
   
   const content = (
     <div className={cn(
-      "flex items-center gap-3 p-2.5 rounded-lg transition-colors",
-      isClickable && "hover:bg-secondary/50 cursor-pointer group"
+      "flex items-center gap-3 p-3 rounded-xl transition-all duration-200",
+      "bg-card/60 backdrop-blur-sm border border-border/30 shadow-sm",
+      isClickable && "hover:bg-secondary/50 hover:-translate-y-0.5 hover:shadow-md cursor-pointer group"
     )}>
       {/* Icon */}
       <div className={cn(
-        "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+        "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm",
         entry.amount > 0 
-          ? "bg-success/10 text-success" 
-          : "bg-destructive/10 text-destructive"
+          ? "bg-success/10 text-success shadow-success/10" 
+          : "bg-destructive/10 text-destructive shadow-destructive/10"
       )}>
         {getTypeIcon(entry.type)}
       </div>
@@ -557,12 +560,12 @@ function LedgerRow({ entry, showMember }: LedgerRowProps) {
       {/* Amount */}
       <div className="text-right shrink-0">
         <p className={cn(
-          "text-sm font-bold",
+          "text-sm font-bold tabular-nums",
           entry.amount > 0 ? "text-success" : "text-destructive"
         )}>
           {entry.amount > 0 ? '+' : ''}{formatCurrency(entry.amount)}
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground tabular-nums">
           {formatCurrency(entry.balance)}
         </p>
       </div>

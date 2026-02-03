@@ -45,27 +45,32 @@ export function ClientFeedbackAnalysisSection({
   
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card>
+      <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-sm">
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-all duration-200">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <Activity className="h-4 w-4 text-primary" />
+                </div>
                 Trénink → Reakce
               </div>
               <div className="flex items-center gap-3">
                 {totalFeedbacks > 0 && (
                   <div className="flex items-center gap-2 text-sm font-normal">
                     {redFlags > 0 && (
-                      <span className="text-destructive">{redFlags} red flag</span>
+                      <span className="text-destructive font-medium flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
+                        {redFlags} red flag
+                      </span>
                     )}
                     {warnings > 0 && (
-                      <span className="text-warning">{warnings} varování</span>
+                      <span className="text-warning font-medium">{warnings} varování</span>
                     )}
                     <span className="text-muted-foreground">{totalFeedbacks} feedbacků</span>
                   </div>
                 )}
-                {isOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                {isOpen ? <ChevronUp className="h-5 w-5 transition-transform" /> : <ChevronDown className="h-5 w-5 transition-transform" />}
               </div>
             </CardTitle>
           </CardHeader>
@@ -74,20 +79,20 @@ export function ClientFeedbackAnalysisSection({
         <CollapsibleContent>
           <CardContent className="pt-0">
             <Tabs defaultValue="table" className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="table" className="gap-1.5">
+              <TabsList className="mb-4 bg-secondary/30 backdrop-blur-sm p-1 rounded-lg">
+                <TabsTrigger value="table" className="gap-1.5 data-[state=active]:shadow-sm transition-all">
                   <TableIcon className="h-4 w-4" />
                   Tabulka
                 </TabsTrigger>
-                <TabsTrigger value="chart" className="gap-1.5">
+                <TabsTrigger value="chart" className="gap-1.5 data-[state=active]:shadow-sm transition-all">
                   <TrendingUp className="h-4 w-4" />
                   Graf
                 </TabsTrigger>
-                <TabsTrigger value="tags" className="gap-1.5">
+                <TabsTrigger value="tags" className="gap-1.5 data-[state=active]:shadow-sm transition-all">
                   <BarChart3 className="h-4 w-4" />
                   Podle tagů
                 </TabsTrigger>
-                <TabsTrigger value="recovery" className="gap-1.5">
+                <TabsTrigger value="recovery" className="gap-1.5 data-[state=active]:shadow-sm transition-all">
                   <Battery className="h-4 w-4" />
                   Regenerace
                 </TabsTrigger>

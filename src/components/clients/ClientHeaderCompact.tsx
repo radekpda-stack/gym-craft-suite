@@ -282,7 +282,7 @@ export function ClientHeaderCompact({
   };
 
   return (
-    <div className="glass rounded-2xl p-3 sm:p-4 sticky top-0 z-30 backdrop-blur-lg">
+    <div className="bg-card/80 backdrop-blur-lg border border-border/50 rounded-2xl p-3 sm:p-4 sticky top-0 z-30 shadow-sm transition-all duration-200">
       {/* Row 1: Back + Avatar + Name + Year/Age */}
       <div className="flex items-center gap-2 sm:gap-3">
         <Link 
@@ -292,7 +292,7 @@ export function ClientHeaderCompact({
           <ChevronLeft className="w-5 h-5" />
         </Link>
         
-        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
+        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
           <AvatarFallback className="bg-primary/10 text-primary text-base sm:text-lg font-semibold">
             {[(client.first_name || '')[0], (client.last_name || '')[0]].filter(Boolean).join('').slice(0, 2) || client.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
           </AvatarFallback>
@@ -378,7 +378,7 @@ export function ClientHeaderCompact({
           {redFlagCount > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="p-2 rounded-full bg-destructive/10">
+                <div className="p-2 rounded-full bg-destructive/10 shadow-sm shadow-destructive/20 animate-pulse">
                   <AlertTriangle className="w-4 h-4 text-destructive" />
                 </div>
               </TooltipTrigger>
@@ -391,7 +391,7 @@ export function ClientHeaderCompact({
           {lastPortalLogin && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="p-2 rounded-full hover:bg-secondary/50 transition-colors">
+                <div className="p-2 rounded-full bg-success/10 shadow-sm shadow-success/20 hover:bg-success/20 transition-colors">
                   <Globe className="w-4 h-4 text-success" />
                 </div>
               </TooltipTrigger>
@@ -405,7 +405,7 @@ export function ClientHeaderCompact({
             <>
               <a 
                 href={`tel:${client.phone}`}
-                className="p-2 rounded-full hover:bg-secondary/50 transition-colors"
+                className="p-2 rounded-full bg-secondary/50 hover:bg-secondary transition-colors shadow-sm"
                 title="Zavolat"
               >
                 <Phone className="w-4 h-4 text-muted-foreground" />
@@ -414,7 +414,7 @@ export function ClientHeaderCompact({
                 href={`https://wa.me/${client.phone.replace(/\s/g, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 rounded-full hover:bg-secondary/50 transition-colors"
+                className="p-2 rounded-full bg-secondary/50 hover:bg-secondary transition-colors shadow-sm"
                 title="WhatsApp"
               >
                 <MessageCircle className="w-4 h-4 text-muted-foreground" />
@@ -424,7 +424,7 @@ export function ClientHeaderCompact({
           {client.email && (
             <a 
               href={`mailto:${client.email}`}
-              className="p-2 rounded-full hover:bg-secondary/50 transition-colors"
+              className="p-2 rounded-full bg-secondary/50 hover:bg-secondary transition-colors shadow-sm"
               title="Email"
             >
               <Mail className="w-4 h-4 text-muted-foreground" />

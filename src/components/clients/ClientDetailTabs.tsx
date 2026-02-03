@@ -163,16 +163,16 @@ export function ClientDetailTabs({
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       {/* Tab Navigation - horizontal scroll on mobile */}
       <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 mb-4">
-        <TabsList className="w-max sm:w-full h-auto flex justify-start gap-1 bg-transparent p-0">
+        <TabsList className="w-max sm:w-full h-auto flex justify-start gap-1 bg-secondary/30 backdrop-blur-sm p-1 rounded-xl border border-border/30">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}
               value={tab.id}
               className={cn(
-                "flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all shrink-0",
-                "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground",
-                "data-[state=inactive]:bg-secondary/50 data-[state=inactive]:text-muted-foreground",
-                "data-[state=inactive]:hover:bg-secondary"
+                "flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 shrink-0",
+                "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+                "data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground",
+                "data-[state=inactive]:hover:bg-secondary/80 data-[state=inactive]:hover:text-foreground"
               )}
             >
               <tab.icon className="w-4 h-4" />
@@ -181,8 +181,9 @@ export function ClientDetailTabs({
                 <Badge 
                   variant={tab.badgeVariant === 'destructive' ? 'destructive' : 'secondary'}
                   className={cn(
-                    "h-5 min-w-5 px-1 text-[10px]",
-                    tab.badgeVariant === 'warning' && "bg-warning/20 text-warning border-warning/30"
+                    "h-5 min-w-5 px-1 text-[10px] shadow-sm",
+                    tab.badgeVariant === 'warning' && "bg-warning/20 text-warning border-warning/30",
+                    tab.badgeVariant === 'destructive' && "animate-pulse"
                   )}
                 >
                   {tab.badge}

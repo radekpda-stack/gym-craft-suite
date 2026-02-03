@@ -30,18 +30,20 @@ export function ClientHealthAlert({ clientId, healthRestrictions }: ClientHealth
 
   return (
     <div className={cn(
-      'rounded-xl p-3 border',
+      'rounded-xl p-3 border backdrop-blur-sm transition-all duration-200',
       hasActivePain 
-        ? 'bg-destructive/10 border-destructive/30' 
-        : 'bg-warning/10 border-warning/30'
+        ? 'bg-destructive/10 border-destructive/30 ring-1 ring-destructive/20 shadow-sm shadow-destructive/10' 
+        : 'bg-warning/10 border-warning/30 ring-1 ring-warning/20 shadow-sm shadow-warning/10'
     )}>
       <div className="flex items-start gap-3">
         <div className={cn(
-          'p-2 rounded-lg shrink-0',
-          hasActivePain ? 'bg-destructive/20' : 'bg-warning/20'
+          'p-2 rounded-lg shrink-0 transition-all',
+          hasActivePain 
+            ? 'bg-destructive/20 shadow-sm shadow-destructive/20' 
+            : 'bg-warning/20 shadow-sm shadow-warning/20'
         )}>
           {hasActivePain ? (
-            <ShieldAlert className={cn('w-4 h-4', hasActivePain ? 'text-destructive' : 'text-warning')} />
+            <ShieldAlert className="w-4 h-4 text-destructive animate-pulse" />
           ) : (
             <AlertTriangle className="w-4 h-4 text-warning" />
           )}
@@ -61,7 +63,7 @@ export function ClientHealthAlert({ clientId, healthRestrictions }: ClientHealth
               {activePainAreas.slice(0, 3).map((area, i) => (
                 <span 
                   key={i}
-                  className="text-xs px-2 py-0.5 rounded bg-destructive/20 text-destructive"
+                  className="text-xs px-2 py-0.5 rounded-full bg-destructive/20 text-destructive font-medium border border-destructive/20 shadow-sm"
                 >
                   {area}
                 </span>
