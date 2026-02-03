@@ -1,20 +1,16 @@
 /**
  * Compact Tag Selector for Complete Training Dialog
  * 
- * A simplified, inline tag selector designed for mobile-friendly dialogs.
- * Uses collapsible sections instead of popovers to work well with scrolling.
+ * Redesigned with 2x2 preset grid, 3-column dropdown selectors,
+ * and removable tag chips for better mobile UX.
  */
 
-import { useState, useMemo } from "react";
-import { X, Check, ChevronDown, Dumbbell, Heart, Wind, Zap } from "lucide-react";
+import { useMemo } from "react";
+import { X, Dumbbell, Heart, Wind, Zap, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { useTags, useCreateTag, Tag, TagType, TAG_TYPE_LABELS, TAG_TYPE_COLORS } from "@/hooks/useTags";
+import { useTags, useCreateTag, Tag, TagType, TAG_TYPE_COLORS } from "@/hooks/useTags";
 import { cn } from "@/lib/utils";
+import { TagDropdownSelect } from "./TagDropdownSelect";
 
 interface CompactTagSelectorProps {
   selectedTagIds: string[];
@@ -33,7 +29,7 @@ interface TagPreset {
 const TAG_PRESETS: TagPreset[] = [
   {
     name: "Silový",
-    icon: <Dumbbell className="w-3.5 h-3.5" />,
+    icon: <Dumbbell className="w-4 h-4" />,
     color: "#ef4444",
     tagNames: [
       { type: "focus", name: "Síla" },
@@ -43,7 +39,7 @@ const TAG_PRESETS: TagPreset[] = [
   },
   {
     name: "Regenerace",
-    icon: <Heart className="w-3.5 h-3.5" />,
+    icon: <Heart className="w-4 h-4" />,
     color: "#22c55e",
     tagNames: [
       { type: "focus", name: "Mobilita" },
@@ -53,7 +49,7 @@ const TAG_PRESETS: TagPreset[] = [
   },
   {
     name: "Kondice",
-    icon: <Wind className="w-3.5 h-3.5" />,
+    icon: <Wind className="w-4 h-4" />,
     color: "#0ea5e9",
     tagNames: [
       { type: "focus", name: "Kardio" },
@@ -63,7 +59,7 @@ const TAG_PRESETS: TagPreset[] = [
   },
   {
     name: "Horní síla",
-    icon: <Zap className="w-3.5 h-3.5" />,
+    icon: <Zap className="w-4 h-4" />,
     color: "#8b5cf6",
     tagNames: [
       { type: "focus", name: "Síla" },
@@ -73,8 +69,8 @@ const TAG_PRESETS: TagPreset[] = [
   },
 ];
 
-// Only show essential tag types in the compact view
-const ESSENTIAL_TAG_TYPES: TagType[] = ["focus", "intensity", "body_part"];
+// Main body part categories for dropdown
+const BODY_PART_CATEGORIES = ["Celé tělo", "Horní část", "Dolní část", "Core"];
 
 export function CompactTagSelector({
   selectedTagIds,
@@ -84,29 +80,21 @@ export function CompactTagSelector({
 }: CompactTagSelectorProps) {
   const { data: tags = [], isLoading } = useTags();
   const createTag = useCreateTag();
-  
-  // Start with missing types expanded
-  const [expandedTypes, setExpandedTypes] = useState<Set<TagType>>(
-    new Set(missingTypes.length > 0 ? missingTypes : ["focus"])
-  );
 
   const selectedTags = tags.filter(tag => selectedTagIds.includes(tag.id));
 
   // Group tags by type
-  const tagsByType = useMemo(() => {
-    return ESSENTIAL_TAG_TYPES.reduce((acc, type) => {
-      acc[type] = tags.filter(t => t.tag_type === type);
-      return acc;
-    }, {} as Record<TagType, Tag[]>);
-  }, [tags]);
+  const focusTags = useMemo(() => tags.filter(t => t.tag_type === 'focus'), [tags]);
+  const intensityTags = useMemo(() => tags.filter(t => t.tag_type === 'intensity'), [tags]);
+  const bodyPartTags = useMemo(() => 
+    tags.filter(t => t.tag_type === 'body_part' && BODY_PART_CATEGORIES.includes(t.name)), 
+    [tags]
+  );
 
-  const handleToggleTag = (tagId: string) => {
-    if (selectedTagIds.includes(tagId)) {
-      onChange(selectedTagIds.filter(id => id !== tagId));
-    } else {
-      onChange([...selectedTagIds, tagId]);
-    }
-  };
+  // Get currently selected tag for each type
+  const selectedFocusId = selectedTagIds.find(id => focusTags.some(t => t.id === id)) || null;
+  const selectedIntensityId = selectedTagIds.find(id => intensityTags.some(t => t.id === id)) || null;
+  const selectedBodyPartId = selectedTagIds.find(id => bodyPartTags.some(t => t.id === id)) || null;
 
   const handleApplyPreset = async (preset: TagPreset) => {
     const newTagIds: string[] = [];
@@ -133,19 +121,22 @@ export function CompactTagSelector({
     onChange(newTagIds);
   };
 
-  const toggleTypeExpanded = (type: TagType) => {
-    const newExpanded = new Set(expandedTypes);
-    if (newExpanded.has(type)) {
-      newExpanded.delete(type);
+  const handleTagTypeSelect = (type: TagType, newTagId: string | null) => {
+    // Remove any existing tag of this type
+    const otherTags = selectedTagIds.filter(id => {
+      const tag = tags.find(t => t.id === id);
+      return tag?.tag_type !== type;
+    });
+    
+    if (newTagId) {
+      onChange([...otherTags, newTagId]);
     } else {
-      newExpanded.add(type);
+      onChange(otherTags);
     }
-    setExpandedTypes(newExpanded);
   };
 
-  // Check if a type is fulfilled
-  const isTypeFulfilled = (type: TagType) => {
-    return selectedTags.some(t => t.tag_type === type);
+  const removeTag = (tagId: string) => {
+    onChange(selectedTagIds.filter(id => id !== tagId));
   };
 
   if (isLoading) {
@@ -154,28 +145,97 @@ export function CompactTagSelector({
 
   return (
     <div className="space-y-3">
-      {/* Quick presets - horizontal scroll */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+      {/* 2x2 Preset Grid */}
+      <div className="grid grid-cols-2 gap-2">
         {TAG_PRESETS.map((preset) => (
           <button
             key={preset.name}
             type="button"
             onClick={() => handleApplyPreset(preset)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border shrink-0 text-xs font-medium transition-colors hover:bg-muted/50"
-            style={{ 
-              borderColor: `${preset.color}50`,
-              color: preset.color 
-            }}
+            className={cn(
+              "flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all",
+              "bg-card/60 backdrop-blur-sm hover:bg-card hover:shadow-md hover:-translate-y-0.5",
+              "border-border/50"
+            )}
           >
-            {preset.icon}
-            {preset.name}
+            <div 
+              className="p-1.5 rounded-lg shrink-0"
+              style={{ backgroundColor: `${preset.color}20`, color: preset.color }}
+            >
+              {preset.icon}
+            </div>
+            <span className="text-sm font-medium truncate">{preset.name}</span>
           </button>
         ))}
       </div>
 
-      {/* Selected tags */}
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border/50" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-card px-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+            nebo vyberte
+          </span>
+        </div>
+      </div>
+
+      {/* 3-Column Dropdown Grid */}
+      <div className="grid grid-cols-3 gap-1.5">
+        <TagDropdownSelect
+          label={
+            <span className="flex items-center gap-1">
+              Zaměření
+              {missingTypes.includes('focus') && (
+                <AlertCircle className="w-3 h-3 text-warning" />
+              )}
+            </span>
+          }
+          options={focusTags.map(t => ({ id: t.id, label: t.name }))}
+          value={selectedFocusId}
+          onChange={(id) => handleTagTypeSelect('focus', id)}
+          placeholder="Vybrat"
+          className={missingTypes.includes('focus') ? "ring-1 ring-warning/50 rounded-lg" : ""}
+          allowClear
+        />
+        <TagDropdownSelect
+          label={
+            <span className="flex items-center gap-1">
+              Intenzita
+              {missingTypes.includes('intensity') && (
+                <AlertCircle className="w-3 h-3 text-warning" />
+              )}
+            </span>
+          }
+          options={intensityTags.map(t => ({ id: t.id, label: t.name }))}
+          value={selectedIntensityId}
+          onChange={(id) => handleTagTypeSelect('intensity', id)}
+          placeholder="Vybrat"
+          className={missingTypes.includes('intensity') ? "ring-1 ring-warning/50 rounded-lg" : ""}
+          allowClear
+        />
+        <TagDropdownSelect
+          label={
+            <span className="flex items-center gap-1">
+              Partie
+              {missingTypes.includes('body_part') && (
+                <AlertCircle className="w-3 h-3 text-warning" />
+              )}
+            </span>
+          }
+          options={bodyPartTags.map(t => ({ id: t.id, label: t.name }))}
+          value={selectedBodyPartId}
+          onChange={(id) => handleTagTypeSelect('body_part', id)}
+          placeholder="Vybrat"
+          className={missingTypes.includes('body_part') ? "ring-1 ring-warning/50 rounded-lg" : ""}
+          allowClear
+        />
+      </div>
+
+      {/* Selected Tags as Removable Chips */}
       {selectedTags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 pt-1">
           {selectedTags.map(tag => (
             <Badge
               key={tag.id}
@@ -190,7 +250,7 @@ export function CompactTagSelector({
               {tag.name}
               <button
                 type="button"
-                onClick={() => handleToggleTag(tag.id)}
+                onClick={() => removeTag(tag.id)}
                 className="ml-0.5 p-0.5 rounded-full hover:bg-background/50 transition-colors"
               >
                 <X className="w-2.5 h-2.5" />
@@ -199,78 +259,6 @@ export function CompactTagSelector({
           ))}
         </div>
       )}
-
-      {/* Tag categories - collapsible */}
-      <div className="space-y-1">
-        {ESSENTIAL_TAG_TYPES.map((type) => {
-          const typeTags = tagsByType[type] || [];
-          const isMissing = missingTypes.includes(type);
-          const isFulfilled = isTypeFulfilled(type);
-          
-          return (
-            <Collapsible
-              key={type}
-              open={expandedTypes.has(type)}
-              onOpenChange={() => toggleTypeExpanded(type)}
-            >
-              <CollapsibleTrigger className={cn(
-                "flex items-center justify-between w-full text-left py-1.5 px-2 rounded-lg transition-colors",
-                isMissing && !isFulfilled && "bg-warning/10",
-                isFulfilled && "bg-success/10"
-              )}>
-                <div className="flex items-center gap-2">
-                  <div 
-                    className={cn(
-                      "w-2 h-2 rounded-full",
-                      isFulfilled && "ring-2 ring-success ring-offset-1 ring-offset-background"
-                    )}
-                    style={{ backgroundColor: TAG_TYPE_COLORS[type] }} 
-                  />
-                  <span className="text-xs font-medium">{TAG_TYPE_LABELS[type]}</span>
-                  {isMissing && !isFulfilled && (
-                    <span className="text-[10px] text-warning font-medium">povinné</span>
-                  )}
-                  {isFulfilled && (
-                    <Check className="w-3 h-3 text-success" />
-                  )}
-                </div>
-                <ChevronDown className={cn(
-                  "w-3.5 h-3.5 text-muted-foreground transition-transform",
-                  expandedTypes.has(type) && "rotate-180"
-                )} />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-1.5 pb-1">
-                <div className="flex flex-wrap gap-1 pl-4">
-                  {typeTags.map(tag => {
-                    const isSelected = selectedTagIds.includes(tag.id);
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        onClick={() => handleToggleTag(tag.id)}
-                        className={cn(
-                          "flex items-center gap-0.5 px-2 py-0.5 text-[11px] rounded-full border transition-all",
-                          isSelected && "ring-1 ring-offset-1 ring-offset-background"
-                        )}
-                        style={{ 
-                          backgroundColor: isSelected ? `${tag.color}30` : `${tag.color}10`,
-                          borderColor: tag.color,
-                          color: tag.color,
-                          // @ts-ignore
-                          "--tw-ring-color": tag.color,
-                        }}
-                      >
-                        {isSelected && <Check className="w-2.5 h-2.5" />}
-                        {tag.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          );
-        })}
-      </div>
     </div>
   );
 }
