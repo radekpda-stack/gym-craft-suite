@@ -1,398 +1,410 @@
 
-# Fáze 8: Grafické úpravy - Prodej (Premium) & Karta tréninku (Scheduled → Complete flow)
+# Fáze 9: Grafické úpravy - Karta klienta (Premium Upgrade)
 
-## Přehled
+## Přehled prozkoumaných komponent
 
-Tato fáze se zaměřuje na dvě klíčové oblasti:
-1. **Sekce Prodej** - Premium upgrade všech komponent (Pokladna, Historie, Sklad)
-2. **Karta tréninku** - Optimalizace flow od naplánovaného tréninku k dokončení
+Analyzoval jsem kompletní architekturu karty klienta:
+
+**Hlavní stránka:** `ClientDetail.tsx`
+- **ClientHeaderCompact** - sticky header s avatarem, kontakty, badges
+- **ClientHealthAlert** - varování o zdravotních omezeních
+- **ClientSummaryStrip** - 4 KPI karty (kredit, tréninky měsíc, LTV, průměr)
+- **ClientDetailTabs** - 8 záložek (Profil, Média, Tréninky, Finance, Výkon, Zdraví, Zprávy, Nastavení)
+
+**Komponenty v záložkách:**
+- **ClientProfileTab** - základní info, lifestyle, zdraví, cíle
+- **ClientFinanceLedger** - finanční timeline s auditem
+- **ClientPRsCard** - osobní rekordy
+- **ClientTrainingLoadCard** - zátěž a RPE grafy
+- **ClientFeedbackAnalysisSection** - analýza feedbacků
+- **ClientAdminBlock** - nastavení a archivace
+- **ClientNotesSection** - poznámky trenéra
+- **ClientActionsSheet** - mobilní FAB s akcemi
 
 ---
 
-## ČÁST 1: PRODEJ - Premium Upgrade
+## Navržené změny
 
-### 1.1 SalesRegister - ProductCard Premium
+### 1. CLIENT HEADER COMPACT - Premium Floating Header
 
-**Soubor:** `src/components/sales/SalesRegister.tsx`
+**Soubor:** `src/components/clients/ClientHeaderCompact.tsx`
 
-Aktuální: `glass hover:bg-secondary/50` karty produktů
-Nové: Premium floating karty s instrument indicators
+Aktuální: `glass rounded-2xl p-3 sm:p-4 sticky top-0`
+Nové: Premium floating header s enhanced visuals
+
+Změny:
+- Header jako `.card-floating` s `backdrop-blur-lg`
+- Avatar s hover ring/glow effect
+- Contact icons s glass background containers
+- Badge indicators (red flags, portal) s glow effects
+- Expandable profile section s smooth spring animation
+- Edit mode s premium input styling
+
+```text
+╭─────────────────────────────────────────────────────────────╮
+│ ◀  ╭──╮  Jan Novák              🔴 ⚡ 📞 💬 ✉️  ⋮          │
+│    │JN│  1985 (39 let) • Feedback ◉                        │
+│    ╰──╯                                                     │
+│    ──────────────────────────────────────────────────────── │
+│    [ 🗓 Od 3.5.2023 ] [ ⏱ 18 měsíců ] [ 🔥 5d streak ]     │
+╰─────────────────────────────────────────────────────────────╯
+```
+
+---
+
+### 2. CLIENT SUMMARY STRIP - Instrument Dashboard
+
+**Soubor:** `src/components/clients/ClientSummaryStrip.tsx`
+
+Aktuální: `rounded-2xl p-3.5 border` základní karty
+Nové: Premium floating instrument cards s gauges
+
+Změny:
+- Karty jako `.card-floating` s backdrop-blur
+- Credit card s progress ring (% z běžné částky)
+- Training count s mini sparkline trend
+- LTV karta s gradient fill background
+- Buttons s hover lift effects
+- Color-coded borders podle stavu
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────┐
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
-│  │ 📦 PRODUKT   │  │ 🔧 SLUŽBA    │  │ 💳 DOBITÍ   │              │
-│  │              │  │              │  │              │              │
-│  │ Protein Bar  │  │ Masáž 30min  │  │ Kredit 5000 │              │
-│  │ ━━━━━━━━━    │  │              │  │              │              │
-│  │ 12/20 ks     │  │              │  │ +5500 Kč    │              │
-│  │              │  │              │  │              │              │
-│  │   65 Kč      │  │   450 Kč     │  │  5000 Kč    │              │
-│  └──────────────┘  └──────────────┘  └──────────────┘              │
+│ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐ ┌───────────┐│
+│ │ 💳 KREDIT     │ │ 📅 TENTO MĚS. │ │ 📈 CELK.HODN. │ │ 📊 PRŮMĚR ││
+│ │   ╭────╮      │ │               │ │               │ │           ││
+│ │  ( 7500 )     │ │     12        │ │   125 450     │ │  8 750 Kč ││
+│ │   ╰────╯      │ │   tréninků    │ │      Kč       │ │   /měsíc  ││
+│ │ [+ Dobít]     │ │ [+ Trénink]   │ │ 48 tréninků   │ │ 14.3/měs  ││
+│ └───────────────┘ └───────────────┘ └───────────────┘ └───────────┘│
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+---
+
+### 3. CLIENT HEALTH ALERT - Enhanced Warning Banner
+
+**Soubor:** `src/components/clients/ClientHealthAlert.tsx`
+
+Aktuální: `rounded-xl p-3 border` s flat colors
+Nové: Premium alert s glow border a pulse
+
 Změny:
-- ProductCard jako `.card-floating` s `backdrop-blur-md`
-- Stock gauge jako horizontální progress bar
-- "V košíku" badge s pulse animace
-- Hover → lift effect (`-translate-y-0.5`, `shadow-md`)
-- Typ produktu jako barevný accent border (primary/accent/warning)
+- Card s animated glow border (warning/destructive)
+- Icon container s colored background glow
+- Pain area badges s hover tooltips
+- Pulse animation pro high severity
+- Gradient background subtle
 
 ---
 
-### 1.2 CartPanel - Premium Checkout
+### 4. CLIENT DETAIL TABS - Premium Tab Navigation
 
-**Soubor:** `src/components/sales/CartPanel.tsx`
+**Soubor:** `src/components/clients/ClientDetailTabs.tsx`
 
-Aktuální: `glass rounded-xl p-4`
-Nové: Premium floating panel s animated summary
+Aktuální: Standard TabsList s basic styling
+Nové: Floating glass tabs s animated indicator
 
 Změny:
-- Panel jako `.card-floating` s výraznějším shadow
-- Payment method jako pill-style selector (animated background)
-- Checkout button s success glow (`shadow-lg shadow-success/25`)
-- Cart items s subtle separátory a hover states
-- Validace errors s refined red glow border
+- TabsList jako glass container s backdrop-blur
+- Active tab s animated background pill (Framer Motion)
+- Badge indicators s pulse pro urgent items
+- Consistent icon sizing a spacing
+- Smooth tab transition animations
 
 ---
 
-### 1.3 FavoriteProducts - Quick Pills
+### 5. CLIENT PROFILE TAB - Card Grid Upgrade
 
-**Soubor:** `src/components/sales/FavoriteProducts.tsx`
+**Soubor:** `src/components/clients/ClientProfileTab.tsx`
 
-Aktuální: `glass rounded-xl p-4` s flat button pills
-Nové: Floating glass container s premium pills
+Aktuální: `bg-card border border-border rounded-2xl`
+Nové: Floating glass cards s instrument styling
+
+Změny:
+- All section cards jako `.card-floating`
+- Field groups s subtle glass dividers
+- Edit mode s premium input focus states
+- Pre-diagnostic sync button s glow effect
+- Training goals jako premium pill badges
+- Consistent typography hierarchy
+
+---
+
+### 6. CLIENT FINANCE LEDGER - Premium Financial Dashboard
+
+**Soubor:** `src/components/clients/ClientFinanceLedger.tsx`
+
+Aktuální: Standard Card s basic rows
+Nové: Floating instrument cards s enhanced timeline
+
+Změny:
+- Main card jako `.card-floating`
+- Stats row jako mini instrument cards
+- Audit banner s enhanced glow (success/error)
+- Filter pills s animated selection
+- Timeline rows s hover lift
+- Month headers jako sticky frosted glass
+- Export buttons s refined styling
+
+---
+
+### 7. CLIENT PRS CARD - Trophy Cabinet Style
+
+**Soubor:** `src/components/clients/ClientPRsCard.tsx`
+
+Aktuální: Standard Card s `bg-secondary/50` items
+Nové: Premium trophy display s glow effects
+
+Změny:
+- Card jako `.card-floating`
+- PR items jako mini floating cards
+- Metric icons s colored glow backgrounds
+- Trophy icon s warning glow
+- Hover → sheet animation smooth
+- Value badges s tabular-nums
+
+---
+
+### 8. CLIENT TRAINING LOAD CARD - Instrument Panel
+
+**Soubor:** `src/components/clients/ClientTrainingLoadCard.tsx`
+
+Aktuální: Standard Card s colored metric boxes
+Nové: Premium instrument dashboard
+
+Změny:
+- Card jako `.card-floating`
+- Metric boxes jako floating mini-cards
+- RPE discrepancy alert s glow border
+- Chart s premium tooltip styling
+- Training type badges s refined styling
+
+---
+
+### 9. CLIENT FEEDBACK ANALYSIS SECTION - Premium Tabs
+
+**Soubor:** `src/components/clients/ClientFeedbackAnalysisSection.tsx`
+
+Aktuální: Card s Collapsible a standard Tabs
+Nové: Floating card s premium tab navigation
+
+Změny:
+- Card jako `.card-floating`
+- Collapsible header s enhanced hover state
+- TabsList jako glass pills
+- Stats badges (red flags, warnings) s glow
+- Spring animation pro expand/collapse
+
+---
+
+### 10. CLIENT ADMIN BLOCK - Settings Panel
+
+**Soubor:** `src/components/clients/ClientAdminBlock.tsx`
+
+Aktuální: `glass rounded-xl` s basic collapsible
+Nové: Floating settings panel s sections
 
 Změny:
 - Container jako `.card-floating`
-- Pills s hover lift + subtle shadow
-- In-cart state s animated ring
-- Star icon s gradient fill
+- Section dividers jako gradient lines
+- Action buttons s refined hover states
+- Archive button s danger styling na hover
 
 ---
 
-### 1.4 RecentSales - Timeline Cards
+### 11. CLIENT NOTES SECTION - Timeline Cards
 
-**Soubor:** `src/components/sales/RecentSales.tsx`
+**Soubor:** `src/components/clients/ClientNotesSection.tsx`
 
-Aktuální: `glass rounded-xl p-4` s basic row items
-Nové: Floating container s premium timeline items
+Aktuální: `glass rounded-2xl` s flat note cards
+Nové: Premium floating notes s timeline
 
 Změny:
 - Container jako `.card-floating`
-- Row items s glass background + hover lift
-- Refresh icon s rotation animation on hover
-- Subtle time connector line (optional visual)
+- Note items s hover lift effect
+- Add note input s glass styling
+- Send button s success glow on focus
+- Empty state s refined illustration
 
 ---
 
-### 1.5 SalesHistory - Premium List Items
+### 12. CLIENT ACTIONS SHEET - Premium Mobile FAB
 
-**Soubor:** `src/components/sales/SalesHistory.tsx`
+**Soubor:** `src/components/clients/ClientActionsSheet.tsx`
 
-Aktuální: `glass hover:bg-secondary/50` rows
-Nové: Floating glass rows s premium interactions
+Aktuální: Basic FAB s grid buttons
+Nové: Premium floating action system
 
 Změny:
-- Order rows jako floating mini-cards
-- Payment icon s colored glow background
-- Amount badge s tabular-nums font
-- Date headers jako sticky frosted glass
-- Search input s floating glass style
-
----
-
-### 1.6 StockManagement - Inventory Dashboard
-
-**Soubor:** `src/components/sales/StockManagement.tsx`
-
-Aktuální: `glass rounded-xl` product cards
-Nové: Instrument-style inventory cards
-
-Změny:
-- Product cards jako `.card-floating`
-- Stock level jako horizontal gauge s gradient fill
-- Low stock warning s animated pulse border
-- Margin percentage jako subtle badge
-- Archive/Active state s opacity transition
-
----
-
-### 1.7 ProductSearchAndFilters - Glass Upgrade
-
-**Soubor:** `src/components/sales/ProductSearchAndFilters.tsx`
-
-Aktuální: Standard Input a Button chips
-Nové: Floating glass search s premium filter pills
-
-Změny:
-- Search input s glass background + subtle glow on focus
-- Category chips jako pill-tabs style
-- Active state s animated indicator
-- In-stock switch s refined styling
-
----
-
-### 1.8 CartSummary - Instrument Summary
-
-**Soubor:** `src/components/sales/CartSummary.tsx`
-
-Aktuální: Standard separators a text
-Nové: Premium glass summary s enhanced typography
-
-Změny:
-- Section backgrounds s subtle glass effect
-- Discount badge s destructive glow
-- Total jako prominent display s tabular-nums
-- Credit balance s conditional color glow
-
----
-
-## ČÁST 2: KARTA TRÉNINKU - Scheduled → Complete Flow
-
-### 2.1 TrainingHeroHeader - Enhanced Status
-
-**Soubor:** `src/components/trainings/TrainingHeroHeader.tsx`
-
-Již upgradováno v Fázi 7, drobné vylepšení:
-- Přidat subtle gradient border pro `scheduled` status
-- Zesílit pulse efekt pro `in_progress`
-- Avatar hover s glow ring effect
-
----
-
-### 2.2 TrainingPrepSection - Alert Cards Premium
-
-**Soubor:** `src/components/trainings/TrainingPrepSection.tsx`
-
-Již upgradováno, vylepšení:
-- Alert karty s barevným glow border (warning/destructive)
-- Followup items s hover lift
-- Previous training collapsible s smooth spring animation
-- Pain points s body diagram highlight accent
-
----
-
-### 2.3 QuickActionsSection - CTA Enhancement
-
-**Soubor:** `src/components/trainings/QuickActionsSection.tsx`
-
-Již má success button, vylepšení:
-- DOKONČIT button s výraznější pulsující glow
-- Secondary buttons s refined hover states
-- Icon containers s subtle backgrounds
-- Loading spinner s success color
-
----
-
-### 2.4 CompleteTrainingDialog - Payment Pills Animation
-
-**Soubor:** `src/components/trainings/CompleteTrainingDialog.tsx`
-
-Již upgradováno, vylepšení:
-- Participant cards s hover micro-interaction
-- Payment summary s subtle glass border
-- Total input s prominent styling
-- Success header gradient zesílení
-
----
-
-### 2.5 ParticipantPaymentCard - Refined Interactions
-
-**Soubor:** `src/components/trainings/ParticipantPaymentCard.tsx`
-
-Již má animated pills, vylepšení:
-- Avatar s hover ring animation
-- Credit balance transition animace
-- Price input focus state s primary ring
-- Debt state s red glow background
-
----
-
-### 2.6 TrainingSummaryOverlay - Celebration Polish
-
-**Soubor:** `src/components/trainings/TrainingSummaryOverlay.tsx`
-
-Již premium, drobné vylepšení:
-- Stat cards s numbered entrance animations (stagger)
-- PR section s fire emoji glow
-- XP badge s scale-in animace
-- Streak counter s pulse na high values
+- FAB s pulsing glow ring
+- Action buttons jako floating tiles s hover lift
+- Generated link display s success glass background
+- Sheet content s rounded-t-3xl enhanced
+- Primary action (Trénink) s prominent glow
 
 ---
 
 ## SOUBORY K ÚPRAVĚ
 
-### Vysoká priorita - Prodej
+### Vysoká priorita
 | Soubor | Změna |
 |--------|-------|
-| `src/components/sales/SalesRegister.tsx` | ProductCard floating + stock gauge |
-| `src/components/sales/CartPanel.tsx` | Premium panel + pill payments |
-| `src/components/sales/SalesHistory.tsx` | Floating list items |
-| `src/components/sales/StockManagement.tsx` | Inventory instrument cards |
+| `src/components/clients/ClientHeaderCompact.tsx` | Premium floating header |
+| `src/components/clients/ClientSummaryStrip.tsx` | Instrument KPI cards |
+| `src/components/clients/ClientDetailTabs.tsx` | Animated tab navigation |
+| `src/components/clients/ClientHealthAlert.tsx` | Glow alert banner |
 
-### Střední priorita - Prodej
+### Střední priorita
 | Soubor | Změna |
 |--------|-------|
-| `src/components/sales/FavoriteProducts.tsx` | Premium pills |
-| `src/components/sales/RecentSales.tsx` | Timeline upgrade |
-| `src/components/sales/ProductSearchAndFilters.tsx` | Glass search + pills |
-| `src/components/sales/CartSummary.tsx` | Instrument summary |
+| `src/components/clients/ClientProfileTab.tsx` | Floating section cards |
+| `src/components/clients/ClientFinanceLedger.tsx` | Premium ledger |
+| `src/components/clients/ClientPRsCard.tsx` | Trophy cabinet style |
+| `src/components/clients/ClientTrainingLoadCard.tsx` | Instrument panel |
 
-### Drobné vylepšení - Trénink
+### Nižší priorita
 | Soubor | Změna |
 |--------|-------|
-| `src/components/trainings/TrainingHeroHeader.tsx` | Status gradient border |
-| `src/components/trainings/TrainingPrepSection.tsx` | Alert glow borders |
-| `src/components/trainings/QuickActionsSection.tsx` | CTA pulse enhancement |
-| `src/components/trainings/ParticipantPaymentCard.tsx` | Micro-interactions |
+| `src/components/clients/ClientFeedbackAnalysisSection.tsx` | Premium tabs |
+| `src/components/clients/ClientAdminBlock.tsx` | Settings panel |
+| `src/components/clients/ClientNotesSection.tsx` | Timeline cards |
+| `src/components/clients/ClientActionsSheet.tsx` | Premium mobile FAB |
 
 ---
 
 ## TECHNICKÉ DETAILY
 
-### ProductCard Premium Styling
+### Header Premium Styling
 ```tsx
-<button
-  className={cn(
-    "relative overflow-hidden rounded-xl text-left transition-all duration-200",
-    "bg-card/80 backdrop-blur-md border border-border/50 shadow-sm",
-    "hover:shadow-md hover:-translate-y-0.5",
-    inCart && "ring-2 ring-primary bg-primary/10",
-    lowStock && "border-warning/50"
-  )}
->
-  {/* Stock gauge */}
-  <div className="h-1 bg-secondary/50 rounded-full overflow-hidden">
-    <div 
-      className="h-full bg-gradient-to-r from-success to-success/50"
-      style={{ width: `${(stock / maxStock) * 100}%` }}
-    />
-  </div>
-</button>
+<div className={cn(
+  "rounded-2xl p-3 sm:p-4 sticky top-0 z-30",
+  "bg-card/80 backdrop-blur-lg border border-border/50",
+  "shadow-sm transition-all duration-200"
+)}>
 ```
 
-### Payment Pills Animation (Framer Motion)
+### Summary Card Floating
 ```tsx
-<motion.div
-  className="absolute inset-y-1 bg-primary rounded-lg"
-  animate={{
-    left: `calc(${activeIndex * (100 / 4)}% + 4px)`,
-    width: `calc(${100 / 4}% - 8px)`,
-  }}
-  transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-/>
+<div className={cn(
+  'rounded-2xl p-3.5 border backdrop-blur-sm transition-all duration-200',
+  'bg-card/80 shadow-sm hover:shadow-md hover:-translate-y-0.5',
+  getCreditBg() // color-coded border
+)}>
 ```
 
-### Cart Checkout Button
+### Tab Navigation Animation
 ```tsx
-<Button 
-  className="w-full h-12 gap-2 bg-success hover:bg-success/90 
-             text-success-foreground font-bold text-base
-             shadow-lg shadow-success/25 transition-all"
-  size="lg"
->
-  <Check className="w-5 h-5" />
-  Dokončit prodej
-</Button>
-```
-
-### Glass Search Input
-```tsx
-<div className="relative">
-  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-  <Input
-    className={cn(
-      "pl-9 pr-9 bg-card/60 backdrop-blur-sm border-border/50",
-      "focus:ring-2 focus:ring-primary/30 focus:border-primary/50",
-      "transition-all duration-200"
-    )}
+<TabsList className="relative bg-secondary/50 backdrop-blur-sm rounded-lg p-1">
+  <motion.div
+    className="absolute inset-y-1 bg-primary rounded-md"
+    layoutId="activeTab"
+    transition={{ type: 'spring', stiffness: 350, damping: 30 }}
   />
-</div>
+  {tabs.map(tab => (
+    <TabsTrigger className="relative z-10" ... />
+  ))}
+</TabsList>
+```
+
+### Health Alert Glow
+```tsx
+<div className={cn(
+  'rounded-xl p-3 border transition-all',
+  hasActivePain 
+    ? 'bg-destructive/10 border-destructive/30 ring-1 ring-destructive/20 animate-pulse-subtle' 
+    : 'bg-warning/10 border-warning/30'
+)}>
+```
+
+### Finance Ledger Row
+```tsx
+<div className={cn(
+  "flex items-center gap-3 p-3 rounded-xl transition-all",
+  "bg-card/60 backdrop-blur-sm border border-border/30",
+  "hover:bg-secondary/50 hover:-translate-y-0.5 hover:shadow-sm"
+)}>
 ```
 
 ---
 
 ## VIZUÁLNÍ SROVNÁNÍ
 
-### Product Card PŘED:
+### Client Header PŘED:
 ```text
-┌─────────────────┐
-│ 📦 Produkt      │
-│ Protein Bar     │
-│                 │
-│ 12 ks • 65 Kč   │
-└─────────────────┘
+┌──────────────────────────────────────┐
+│ ◀ [JN] Jan Novák          📞 💬 ✉️  │
+│      1985 (39 let)                   │
+└──────────────────────────────────────┘
 ```
 
-### Product Card PO:
+### Client Header PO:
 ```text
-╭─────────────────╮
-│ 📦 PRODUKT      │  ← uppercase label
-│                 │
-│ Protein Bar     │
-│ ━━━━━━━━━░░░░  │  ← stock gauge
-│ 12/20 ks        │
-│                 │
-│ 65 Kč           │  ← prominent price
-╰─────────────────╯
-      ↑ glass blur + lift on hover
+╭──────────────────────────────────────╮
+│ ◀ ╭──╮ Jan Novák    🔴 ⚡ 📞💬✉️ ⋮ │  ← floating glass
+│   │JN│ 1985 (39) • Feedback ◉       │
+│   ╰──╯ ────────────────────────────  │
+│  [🗓 Od 3.5.23][⏱ 18m][🔥 5d]       │  ← badge row
+╰──────────────────────────────────────╯
+      ↑ backdrop-blur + shadow
 ```
 
-### Cart Panel PŘED:
+### Summary Strip PŘED:
 ```text
-[Košík (3)]           [Vyčistit]
-────────────────────────────────
-• Protein Bar (2×)       130 Kč
-• Voda                    30 Kč
-────────────────────────────────
-[Hotově][Kredit][Kartou][Převod]
-────────────────────────────────
-Celkem:                  160 Kč
-[    Dokončit prodej    ]
+[Kredit: 7,500] [Měsíc: 12] [LTV: 125k] [Průměr: 8.7k]
 ```
 
-### Cart Panel PO:
+### Summary Strip PO:
 ```text
-╭─────────────────────────────────╮
-│ 🛒 Košík (3)        [Vyčistit] │
-├─────────────────────────────────┤
-│ Protein Bar (2×)       130 Kč  │
-│ Voda                    30 Kč  │
-├─────────────────────────────────┤
-│ ┌─────────────────────────────┐│
-│ │●Hotově│ Kredit│Karta│Přev. ││  ← animated pill
-│ └─────────────────────────────┘│
-├─────────────────────────────────┤
-│ CELKEM          160 Kč         │
-│ ┌─────────────────────────────┐│
-│ │ ✓ DOKONČIT PRODEJ          ││  ← success glow
-│ └─────────────────────────────┘│
-╰─────────────────────────────────╯
+╭───────────────────────────────────────────────────────────╮
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌───────┐│
+│ │💳 KREDIT    │ │📅 MĚSÍC     │ │📈 CELKEM    │ │📊 AVG ││
+│ │  ╭────╮     │ │    12       │ │  125 450    │ │ 8,750 ││
+│ │ ( 7500 )    │ │  tréninků   │ │    Kč       │ │ Kč/m  ││
+│ │  ╰────╯     │ │ [+Trénink]  │ │ 48× • 18m   │ │14.3/m ││
+│ │ [+ Dobít]   │ │             │ │             │ │       ││
+│ └─────────────┘ └─────────────┘ └─────────────┘ └───────┘│
+╰───────────────────────────────────────────────────────────╯
+      ↑ each card floats with hover lift
 ```
 
 ---
 
 ## ANIMACE A INTERAKCE
 
-1. **Hover Effects:**
-   - Cards: `hover:-translate-y-0.5 hover:shadow-md`
-   - Pills: spring animation `stiffness: 350, damping: 30`
+1. **Header Interactions:**
+   - Avatar: hover ring glow
+   - Contact icons: scale + background on hover
+   - Expand section: spring animation
+
+2. **Summary Cards:**
+   - Hover: `-translate-y-0.5`, `shadow-md`
    - Buttons: `active:scale-[0.98]`
+   - Credit ring: subtle pulse při nízkém stavu
 
-2. **In-Cart Badge:**
-   - Scale-in animation
-   - Subtle pulse on add
+3. **Tab Navigation:**
+   - Active indicator: spring `stiffness: 350, damping: 30`
+   - Badge pulse pro unread/urgent
+   - Tab content: fade-in transition
 
-3. **Low Stock Warning:**
-   - Border pulse `ring-1 ring-warning/50 animate-pulse`
+4. **Health Alert:**
+   - High severity: `animate-pulse-subtle`
+   - Icon: colored glow background
+   - Pain badges: hover tooltip
 
-4. **Checkout Success:**
-   - Button glow `shadow-lg shadow-success/25`
-   - Loading spinner with success color
+5. **Mobile FAB:**
+   - Idle: subtle shadow pulse
+   - Press: `scale-[0.95]`
+   - Sheet: spring slide-up
 
-5. **Training Complete Flow:**
-   - Dialog entrance: scale + fade
-   - Payment method: spring indicator
-   - Summary overlay: staggered card entrance
+---
+
+## KONZISTENCE S PŘEDCHOZÍMI FÁZEMI
+
+Všechny změny následují zavedený design systém:
+- `.card-floating` class pro glassmorphism cards
+- `backdrop-blur-md/lg` pro depth
+- `tabular-nums` pro číselné hodnoty
+- Spring animations pro pill selektory
+- Status-based color coding (success/warning/destructive)
+- Hover lift effects (`-translate-y-0.5`, `shadow-md`)
+- Premium typography hierarchy (uppercase labels, bold values)
