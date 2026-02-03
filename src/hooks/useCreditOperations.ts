@@ -482,8 +482,11 @@ export function useCreateTransaction() {
     },
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["credit_transactions", variables.client_id] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["clients", variables.client_id] });
       queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
+      queryClient.invalidateQueries({ queryKey: ["shared_budget_balance", variables.client_id] });
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
       queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
       queryClient.invalidateQueries({ queryKey: ["shared_budget_transactions"] });
