@@ -56,10 +56,11 @@ function ActionButton({ icon: Icon, label, onClick, disabled, variant = 'default
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 p-4 rounded-2xl transition-all active:scale-95',
+        'flex flex-col items-center justify-center gap-2 p-4 rounded-2xl transition-all duration-200 active:scale-95',
+        'border shadow-sm',
         variant === 'primary' 
-          ? 'bg-primary text-primary-foreground' 
-          : 'bg-secondary/80 hover:bg-secondary text-foreground',
+          ? 'bg-primary text-primary-foreground border-primary/50 shadow-primary/20 hover:shadow-md' 
+          : 'bg-card/80 backdrop-blur-sm hover:bg-secondary border-border/50 text-foreground hover:shadow-md hover:-translate-y-0.5',
         disabled && 'opacity-50 cursor-not-allowed'
       )}
     >
@@ -164,7 +165,12 @@ export function ClientActionsSheet({
       {/* Floating Action Button - Mobile only */}
       <button
         onClick={() => setIsOpen(true)}
-        className="sm:hidden fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 transition-transform"
+        className={cn(
+          "sm:hidden fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full",
+          "bg-primary text-primary-foreground shadow-lg shadow-primary/30",
+          "flex items-center justify-center active:scale-95 transition-all duration-200",
+          "ring-4 ring-primary/20 hover:ring-primary/30 hover:shadow-xl"
+        )}
       >
         <Plus className="w-7 h-7" />
       </button>
@@ -178,10 +184,12 @@ export function ClientActionsSheet({
           
           {/* Generated link display */}
           {generatedLink && (
-            <div className="mb-4 p-3 rounded-2xl bg-status-ok/10 border border-status-ok/30 flex items-center gap-3">
-              <Check className="w-5 h-5 text-[hsl(142_76%_36%)] shrink-0" />
+            <div className="mb-4 p-3 rounded-2xl bg-success/10 border border-success/30 shadow-sm shadow-success/10 flex items-center gap-3">
+              <div className="p-1.5 rounded-lg bg-success/20">
+                <Check className="w-4 h-4 text-success" />
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground">{generatedLink.type} odkaz zkopírován</p>
+                <p className="text-xs text-muted-foreground font-medium">{generatedLink.type} odkaz zkopírován</p>
                 <p className="text-sm font-mono truncate">{generatedLink.url}</p>
               </div>
               <Button 

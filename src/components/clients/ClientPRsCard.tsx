@@ -69,10 +69,15 @@ function PRItem({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/50 hover:bg-secondary/80 transition-colors text-left group"
+      className={cn(
+        "w-full flex items-center justify-between py-2.5 px-3 rounded-xl text-left group",
+        "bg-card/60 backdrop-blur-sm border border-border/30 shadow-sm",
+        "hover:bg-secondary/50 hover:-translate-y-0.5 hover:shadow-md",
+        "transition-all duration-200"
+      )}
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className={cn("p-2 rounded-lg flex-shrink-0", colorClass)}>
+        <div className={cn("p-2 rounded-lg flex-shrink-0 shadow-sm", colorClass)}>
           <Icon className="w-4 h-4" />
         </div>
         <div className="min-w-0">
@@ -83,7 +88,7 @@ function PRItem({
         </div>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
-        <Badge variant="secondary" className={cn("font-bold text-sm", colorClass.replace('/20', '/10'))}>
+        <Badge variant="secondary" className={cn("font-bold text-sm tabular-nums shadow-sm", colorClass.replace('/20', '/10'))}>
           {value}
         </Badge>
         <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -139,14 +144,16 @@ export function ClientPRsCard({ clientId, clientName }: ClientPRsCardProps) {
 
   return (
     <>
-      <Card>
+      <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Trophy className="w-5 h-5 text-warning" />
+              <div className="p-1.5 rounded-lg bg-warning/10 shadow-sm shadow-warning/20">
+                <Trophy className="w-5 h-5 text-warning" />
+              </div>
               Osobní rekordy
             </CardTitle>
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs bg-secondary/50">
               {prs.length} {prs.length === 1 ? 'cvik' : prs.length < 5 ? 'cviky' : 'cviků'}
             </Badge>
           </div>

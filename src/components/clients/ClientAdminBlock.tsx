@@ -38,20 +38,22 @@ export function ClientAdminBlock({
   return (
     <div className="space-y-4">
       {/* Admin Settings */}
-      <div className="glass rounded-xl overflow-hidden">
+      <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl overflow-hidden shadow-sm">
         {/* Header - Always visible */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
+          className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-all duration-200"
         >
           <div className="flex items-center gap-2">
-            <Settings className="w-5 h-5 text-muted-foreground" />
+            <div className="p-1.5 rounded-lg bg-muted/50">
+              <Settings className="w-4 h-4 text-muted-foreground" />
+            </div>
             <span className="font-medium text-sm">Nastavení</span>
           </div>
           {isExpanded ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+            <ChevronUp className="w-4 h-4 text-muted-foreground transition-transform" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform" />
           )}
         </button>
         
