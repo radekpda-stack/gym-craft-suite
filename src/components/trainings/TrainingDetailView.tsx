@@ -380,7 +380,7 @@ export function TrainingDetailView({
       )}
 
       {/* TAGS - Compact Grid Selector */}
-      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4">
+      <div className="relative rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4">
         <CompactTagGridSelector
           trainingType={training.training_type}
           onTrainingTypeChange={async (type) => {

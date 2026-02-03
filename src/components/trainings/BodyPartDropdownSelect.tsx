@@ -160,7 +160,7 @@ export function BodyPartDropdownSelect({
             </div>
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-64 p-0 bg-popover border-border" align="start">
+        <PopoverContent className="w-64 p-0 bg-popover border-border z-[100]" align="start">
           <div className="max-h-80 overflow-y-auto">
             {BODY_PART_CATEGORIES.map((category) => {
               const categoryId = getCategoryTagId(category.name);

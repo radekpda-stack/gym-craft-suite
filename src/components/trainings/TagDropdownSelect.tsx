@@ -67,7 +67,7 @@ export function TagDropdownSelect({
             )}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent className="bg-popover border-border z-50">
+        <SelectContent className="bg-popover border-border z-[100]">
           {allowClear && value && (
             <SelectItem value="__clear__" className="text-muted-foreground italic">
               — Zrušit výběr —
