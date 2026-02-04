@@ -319,22 +319,25 @@ export default function Challenges() {
       </div>
 
       <Tabs defaultValue="published">
-        <TabsList className="bg-secondary/30 backdrop-blur-sm p-1">
-          <TabsTrigger value="published" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Play className="h-4 w-4 text-success" />
-            Aktivní ({publishedChallenges.length})
+        <TabsList className="bg-secondary/30 backdrop-blur-sm p-1 overflow-x-auto w-full flex-nowrap">
+          <TabsTrigger value="published" className="gap-1.5 sm:gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm min-w-0 shrink-0">
+            <Play className="h-4 w-4 text-success shrink-0" />
+            <span className="hidden sm:inline">Aktivní</span>
+            <span className="text-xs">({publishedChallenges.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="draft" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Clock className="h-4 w-4" />
-            Koncepty ({draftChallenges.length})
+          <TabsTrigger value="draft" className="gap-1.5 sm:gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm min-w-0 shrink-0">
+            <Clock className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">Koncepty</span>
+            <span className="text-xs">({draftChallenges.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="archived" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Archive className="h-4 w-4" />
-            Archiv ({archivedChallenges.length})
+          <TabsTrigger value="archived" className="gap-1.5 sm:gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm min-w-0 shrink-0">
+            <Archive className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">Archiv</span>
+            <span className="text-xs">({archivedChallenges.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="peer" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Users className="h-4 w-4" />
-            Klientské
+          <TabsTrigger value="peer" className="gap-1.5 sm:gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm min-w-0 shrink-0">
+            <Users className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">Klientské</span>
           </TabsTrigger>
         </TabsList>
 
