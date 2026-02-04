@@ -257,11 +257,12 @@ export function SalesRegister() {
   const selectedClientData = clients.find(c => c.id === selectedClient);
   
   // Get shared budget info for selected client - handles both individual and shared budgets
+  // This hook fetches the balance directly from DB, ensuring fresh data
   const { data: sharedBudget, isLoading: isBudgetLoading } = useSharedBudgetBalance(selectedClient || undefined);
   
-  // Use the correct balance - shared budget takes priority over individual credit
-  // Only fall back to selectedClientData if sharedBudget has loaded (to avoid showing 0 during loading)
-  const effectiveBalance = sharedBudget?.displayBalance ?? (isBudgetLoading ? null : selectedClientData?.credit_balance ?? 0);
+  // ALWAYS use displayBalance from sharedBudget - it fetches fresh data from DB
+  // Do NOT fall back to selectedClientData.credit_balance as it comes from cached useClients()
+  const effectiveBalance = isBudgetLoading ? null : (sharedBudget?.displayBalance ?? 0);
 
   const handleNoClientToggle = useCallback(() => {
     setNoClient(!noClient);
