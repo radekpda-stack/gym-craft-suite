@@ -1,151 +1,171 @@
 
 
-# Oprava UI problémů na stránce Prodej (Sales) - Mobile
+# Přidání rychlého prodeje do karty tréninku
 
-## Identifikované problémy ze screenshotu
+## Přehled řešení
 
-### 1. Záložky (Tabs) - Text "Pokladna" je oříznutý na levé straně
+Vytvořím novou komponentu `TrainingQuickSale`, která bude integrována přímo do karty tréninku. Komponenta umožní rychlý prodej produktů účastníkům tréninku bez nutnosti přecházet do modulu Prodej.
 
-**Příčina:**
-- `TabsTrigger` v `Sales.tsx` používá `hidden xs:inline` pro text labelu
-- Na zařízeních menších než 375px text není zobrazen vůbec, ale ikona s containerem zabírá místo
-- Container má `p-1.5` padding uvnitř ikony, což s `flex-1` způsobuje nerovnoměrné rozdělení
+## Klíčové funkce
 
-**Řešení:**
-- Změnit z `hidden xs:inline` na `hidden sm:inline` pro konzistenci s ostatními breakpointy
-- Přidat `overflow-hidden` na TabsList pro případ přetečení
-- Přidat `text-xs sm:text-sm` pro responsivní velikost textu
-
-### 2. Produktové karty na spodní části obrazovky jsou částečně viditelné
-
-**Příčina:**
-- Stránka Sales.tsx má `pb-24` pro mobilní padding (řádek 40)
-- Ale MobileNav je umístěn na `bottom-6` s výškou cca 80px
-- ProductCard grid se zobrazuje pod FavoriteProducts a RecentSales sekcemi
-
-**Řešení:**
-- Zvýšit bottom padding na `pb-28` nebo `pb-32` pro zajištění dostatečného prostoru
-- Alternativně: Zkontrolovat, zda Layout.tsx má správný `pb-36` (má)
-
-### 3. Ikonová kontejnery v tabech zabírají příliš mnoho místa
-
-**Příčina:**
-- Každý tab má `div` wrapper pro ikonu s `p-1.5 rounded-lg`
-- Na malých obrazovkách to vytváří zbytečné vizuální šumy
-
-**Řešení:**
-- Zjednodušit strukturu tabů na mobilech - pouze ikona bez extra wrapperu
-- Nebo snížit padding na `p-1` pro mobil
-
----
-
-## Soubory k úpravě
-
-| Soubor | Změna |
+| Funkce | Popis |
 |--------|-------|
-| `src/pages/Sales.tsx` | Opravit tabs overflow, zvýšit pb, zjednodušit tab strukturu |
-| `src/components/sales/FavoriteProducts.tsx` | Přidat `min-w-0` a `overflow-hidden` na grid items |
+| Výběr účastníka | Dropdown/pills s účastníky aktuálního tréninku |
+| Rychlý prodej | Jednoduchý grid produktů s tlačítkem přidat |
+| Košík | Kompaktní zobrazení s +/- tlačítky |
+| Platební metody | Cash, karta, kredit, převod |
+| Validace | Kontrola skladu, kreditu při platbě z kreditu |
 
----
+## Architektura
 
-## Technické změny
-
-### 1. Sales.tsx - Oprava TabsList
-
-**Aktuální stav (řádky 80-106):**
-```tsx
-<TabsList className="w-full h-auto p-1.5 card-floating rounded-2xl mb-4 sm:mb-6 backdrop-blur-md">
-  {TABS.map((tab) => {
-    // ...
-    <TabsTrigger className="relative flex-1 gap-2 py-3 px-3 sm:px-4 rounded-xl ...">
-      <div className="p-1.5 rounded-lg ...">
-        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-      </div>
-      <span className="hidden xs:inline text-sm font-medium">{tab.label}</span>
-    </TabsTrigger>
-  })}
-</TabsList>
+```text
+TrainingDetailView
+├── TrainingHeroHeader
+├── TrainingPrepSection (scheduled/in_progress)
+├── TrainingParticipantsManager
+├── ParticipantsPRsSection
+├── CompactTagGridSelector (tags)
+├── WorkoutExerciseManager (cviky)
+├── TrainingQuickSale     ← NOVÁ SEKCE
+│   ├── ParticipantSelector (pills/dropdown)
+│   ├── ProductGrid (kompaktní)
+│   ├── MiniCart
+│   └── CheckoutButton
+└── TrainingCloseSection (completed)
 ```
 
-**Navrhovaná změna:**
-```tsx
-<TabsList className="w-full h-auto p-1.5 card-floating rounded-2xl mb-4 sm:mb-6 backdrop-blur-md overflow-hidden">
-  {TABS.map((tab) => {
-    // ...
-    <TabsTrigger className="relative flex-1 gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl min-w-0 ...">
-      <div className="p-1 sm:p-1.5 rounded-lg shrink-0 ...">
-        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-      </div>
-      <span className="hidden sm:inline text-xs sm:text-sm font-medium truncate">{tab.label}</span>
-    </TabsTrigger>
-  })}
-</TabsList>
+## Implementační detaily
+
+### 1. Nová komponenta `TrainingQuickSale.tsx`
+
+```typescript
+interface TrainingQuickSaleProps {
+  trainingId: string;
+  participants: Array<{
+    client_id: string;
+    name: string;
+  }>;
+  primaryClientId: string;
+}
 ```
 
-**Klíčové změny:**
-- `overflow-hidden` na TabsList
-- `min-w-0` na TabsTrigger pro korektní flexbox chování
-- `shrink-0` na icon wrapper
-- Změna breakpointu z `xs:inline` na `sm:inline` (640px)
-- Přidání `truncate` pro případ dlouhého textu
-- Snížení gap a padding pro mobil: `gap-1.5 sm:gap-2`, `py-2.5 sm:py-3`, `px-2 sm:px-4`
-- Menší padding na icon wrapper: `p-1 sm:p-1.5`
+**Chování:**
+- Při 1 účastníkovi → automaticky předvybraný, bez výběru
+- Při 2+ účastnících → pills nebo dropdown pro výběr komu prodávám
+- Kompaktní grid produktů (pouze fyzické produkty + služby, bez credit_topup)
+- Mini košík pod produkty
+- Platební metody jako horizontální pills
+- Tlačítko "Prodat" s validací
 
-### 2. Sales.tsx - Zvýšení bottom padding
+### 2. UI Design - Pills pro výběr účastníka
 
-**Aktuální stav (řádek 40):**
-```tsx
-<div className="space-y-4 sm:space-y-6 animate-fade-in pb-24 sm:pb-6">
+Při více účastnících se zobrazí horizontální pills:
+
+```text
+┌─────────────────────────────────────────────────┐
+│ 📦 Rychlý prodej                               │
+├─────────────────────────────────────────────────┤
+│ Komu?  [● Zuzka] [○ Petr] [○ Jana]             │
+├─────────────────────────────────────────────────┤
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐        │
+│  │ Protein  │ │ Tyčinka  │ │ Bandáže  │        │
+│  │ 450 Kč   │ │  35 Kč   │ │ 299 Kč   │        │
+│  └──────────┘ └──────────┘ └──────────┘        │
+├─────────────────────────────────────────────────┤
+│ Košík: Protein ×1 = 450 Kč          [−][+][×] │
+├─────────────────────────────────────────────────┤
+│ [Hot.] [Kred.] [Kart.] [Přev.]                 │
+│                                                 │
+│        [  Prodat 450 Kč  ]                     │
+└─────────────────────────────────────────────────┘
 ```
 
-**Navrhovaná změna:**
+### 3. Změny v `TrainingDetailView.tsx`
+
+Přidám sekci `TrainingQuickSale` mezi cviky a close section:
+
 ```tsx
-<div className="space-y-4 sm:space-y-6 animate-fade-in pb-32 sm:pb-6">
+{/* QUICK SALE - for scheduled/in_progress */}
+{(isScheduled || isInProgress) && participants.length > 0 && (
+  <TrainingQuickSale
+    trainingId={training.id}
+    participants={participants}
+    primaryClientId={training.client_id}
+  />
+)}
 ```
 
-Změna `pb-24` na `pb-32` zajistí více prostoru pro bottom navigation (8rem = 128px).
+### 4. Využití existujících hooků
 
-### 3. FavoriteProducts.tsx - Přidání overflow ochrany
+Využiji existující logiku:
+- `useSalesCartWithDiscount` - správa košíku
+- `useProductsSortedBySales` - seznam produktů
+- `processSaleWithDiscount` - zpracování transakce
+- `useSharedBudgetBalance` - ověření kreditu
 
-**Aktuální stav (řádek 39):**
-```tsx
-<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+### 5. Collapsible design
+
+Sekce bude ve výchozím stavu sbalená (collapsed) s ikonou 📦 a "Rychlý prodej". Po kliknutí se rozbalí:
+
+**Sbalený stav:**
+```text
+┌─────────────────────────────────────────────────┐
+│ 📦 Rychlý prodej                          [▼] │
+└─────────────────────────────────────────────────┘
 ```
 
-**Navrhovaná změna:**
+**Rozbalený stav:**
+Plný UI s výběrem účastníka, produkty, košíkem a checkout.
+
+## Soubory k vytvoření/úpravě
+
+| Soubor | Akce | Popis |
+|--------|------|-------|
+| `src/components/trainings/TrainingQuickSale.tsx` | NOVÝ | Hlavní komponenta rychlého prodeje |
+| `src/components/trainings/TrainingDetailView.tsx` | UPRAVIT | Import a integrace TrainingQuickSale |
+
+## Detailní struktura `TrainingQuickSale.tsx`
+
 ```tsx
-<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 overflow-hidden">
+// Stavy
+- selectedParticipantId: string (účastník pro prodej)
+- isExpanded: boolean (sbaleno/rozbaleno)
+- paymentMethod: PaymentMethod
+- isProcessing: boolean
+
+// Hooks
+- useSalesCartWithDiscount({ clientId: selectedParticipantId })
+- useProductsSortedBySales(true)
+- useSharedBudgetBalance(selectedParticipantId)
+
+// Logika
+- Při 1 účastníkovi: automaticky předvybrán
+- Při více: pills s výběrem
+- Filtrovat credit_topup produkty
+- Po úspěšném prodeji: clear cart, toast, invalidate queries
 ```
 
-A na product button (řádek 44-52):
-```tsx
-<button
-  className={cn(
-    "relative flex flex-col items-start gap-1 p-3 rounded-xl text-left transition-all duration-200 min-w-0 overflow-hidden",
-    // ...
-  )}
->
-```
+## Responsivní chování
 
----
+- **Desktop:** 4-5 produktů v řádku
+- **Tablet:** 3 produkty v řádku
+- **Mobil:** 2 produkty v řádku
+- Košík vždy pod produkty
+- Platební metody jako kompaktní pills
 
-## Vizuální výsledek
+## Edge cases
 
-Po implementaci:
-- Záložky na mobilu zobrazí pouze ikony (pod 640px), nad 640px ikony + text
-- Žádné oříznuté texty nebo přetékající elementy
-- Produktové karty budou mít dostatečný prostor od bottom navigation
-- Grid produktů nebude přetékat z containeru
+1. **Žádní účastníci** → Sekce se nezobrazí
+2. **Žádné produkty** → Zobrazí zprávu "Žádné produkty k prodeji"
+3. **Vyprodáno** → Produkt disabled, vizuálně šedý
+4. **Nedostatek kreditu** → Validační chyba při platbě z kreditu
+5. **Shared budget** → Správně zobrazí sdílený zůstatek
 
----
+## Výhody tohoto řešení
 
-## Kontrolní seznam
-
-- [ ] TabsList má `overflow-hidden`
-- [ ] TabsTrigger má `min-w-0` pro flex-shrink
-- [ ] Icon wrapper má `shrink-0`
-- [ ] Text label má `truncate` a responsivní breakpoint `sm:inline`
-- [ ] Stránka má dostatečný `pb-32` pro bottom nav
-- [ ] Grid produktů má `overflow-hidden`
-- [ ] Product buttons mají `min-w-0 overflow-hidden`
+1. **Minimální přerušení workflow** - trenér nemusí opouštět kartu tréninku
+2. **Kontext účastníků** - automaticky ví, komu prodává
+3. **Rychlost** - 3-4 kliknutí pro kompletní prodej
+4. **Collapsible** - nezabírá místo, když není potřeba
+5. **Reuse** - využívá existující prodejní logiku a komponenty
 
