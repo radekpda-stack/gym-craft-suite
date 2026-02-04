@@ -1,187 +1,127 @@
 
-# Přidání partií těla ke všem cvikům
+# Audit funkce tagování na kartě tréninku
 
-## Aktuální stav
+## Shrnutí zjištěných problémů
 
-| Metrika | Hodnota |
-|---------|---------|
-| Aktivní cviky celkem | 198 |
-| Cviky s přiřazenými svaly | 116 |
-| **Cviky BEZ svalových skupin** | **82** |
+### 1. Problém: Kardio/HIIT neumožňuje vybrat partie těla
+**Příčina:** V `TAG_VISIBILITY_BY_TYPE` (CompactTagGridSelector.tsx a TrainingTagStepper.tsx) je pro HIIT a Cardio nastaven `bodyPartsMode: 'only-full-body'`, což automaticky nastavuje "Celé tělo" a neumožňuje manuální výběr. **ALE** validace v `useTrainingTagValidation.ts` stále vyžaduje body_part tag pro tyto typy (pouze `regeneration` je v `TYPES_WITHOUT_BODY_PART`).
 
-### Chybějící cviky podle kategorie
+**Klíčový rozpor:**
+- UI skryje výběr partií pro HIIT/Cardio
+- Validace ale stále vyžaduje body_part tag
+- Auto-select "Celé tělo" se spouští v `useEffect` v TrainingTagStepper, ale v CompactTagSelector (dialog dokončení) se nepoužívá
 
-| Kategorie | Počet | Příklady |
-|-----------|-------|----------|
-| Horní tělo | 36 | Bench press, Dumbbell Row, Chin-up, Dip... |
-| Dolní tělo | 23 | Squat Jump, Glute Bridge, Step Up, Lunges... |
-| Full Body | 14 | Kettlebell Swing, Clean and Jerk, Turkish Get Up... |
-| Core | 9 | Russian Twist, Hollow Body Hold, V-up... |
-| Kardio | 4 | Běh 3000m, HIIT, Tempo Run... |
+### 2. Problém: Intenzita je redundantní s RPE
+**Zjištění:** Existují 3 tagy intenzity (Lehký, Střední, Těžký), ale RPE 1-10 poskytuje přesnější informaci. Data ukazují, že všechny dokončené tréninky mají RPE i intenzitu tag - dvojí zadávání.
 
----
-
-## Řešení: Bulk INSERT do tabulky exercise_muscle_groups
-
-### Mapování kategorie → svalové skupiny
-
-```text
-Horní tělo → horni_koncetiny (region) → body_part_key: "upper"
-Dolní tělo → dolni_koncetiny (region) → body_part_key: "lower"
-Core       → trup (region)           → body_part_key: "core"
-Full Body  → dolni + horni + core     → všechny body_part_key
-Kardio     → dolni_koncetiny          → body_part_key: "lower"
-```
-
-### Použité svalové skupiny (ID → name)
-
-**Dolní končetiny (lower):**
-- `58ff11e8-e65a-4475-9bd7-603eb8989c3e` - quadriceps
-- `afeeb9df-d281-451d-9b51-b93898533b54` - hamstrings
-- `e3e8c5ac-3150-4b39-a623-2ea6e047abad` - gluteus_maximus
-- `c1c5ba46-62f4-470e-8e96-483edd7fd311` - calves
-
-**Horní končetiny (upper):**
-- `a5c4b239-fbae-4886-a8d7-fafa2581f69f` - back_vertical_pull
-- `6e2663c7-da39-4c0b-9146-156d0a372b6c` - shoulders_front
-- `beae2c9d-8fec-4de1-a7c7-3969b5866dd6` - triceps
-- `8154b3a1-cafc-4653-85fb-e7b55cf4a5a6` - biceps
-
-**Core:**
-- `2635d87c-64e9-45d8-8e96-e711469232e9` - core_anti_extension
-- `44de7b80-c8fe-422f-ba78-8f7de39a8111` - core_rotation
+### 3. Problém: Pomalé dokončování
+Trenér musí při dokončení:
+1. Vybrat typ tréninku
+2. Vybrat zaměření (focus)
+3. Vybrat intenzitu
+4. Vybrat partie těla
+5. Zadat RPE
+6. Vybrat platbu
 
 ---
 
-## Implementační kroky
+## Navrhované změny
 
-### Krok 1: INSERT pro cviky kategorie "Core"
-9 cviků → přiřadit `core_anti_extension` jako primary
+### Fáze 1: Oprava kritického bugu (HIIT/Cardio)
 
-```sql
-INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
-SELECT e.id, '2635d87c-64e9-45d8-8e96-e711469232e9', 'primary'
-FROM exercises e
-LEFT JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
-WHERE e.is_archived = false 
-  AND e.category = 'Core'
-  AND emg.id IS NULL;
+#### Změna 1.1: Synchronizace validace s UI logikou
+```typescript
+// useTrainingTagValidation.ts - AKTUALIZOVAT
+// Přidat HIIT a Cardio do výjimek pro body_part, protože UI je nastavuje automaticky
+const TYPES_WITHOUT_BODY_PART = ['regeneration', 'hiit', 'cardio'];
 ```
 
-### Krok 2: INSERT pro cviky kategorie "Dolní tělo"  
-23 cviků → přiřadit `quadriceps` jako primary + `gluteus_maximus` jako secondary
+#### Změna 1.2: Auto-tag v CompactTagSelector pro HIIT/Cardio
+Přidat automatické přidání "Celé tělo" tagu při detekci HIIT/Cardio typu:
+- Při otevření dialogu dokončení pro HIIT/Cardio automaticky přidat "Celé tělo" tag
 
-```sql
--- Primary: quadriceps
-INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
-SELECT e.id, '58ff11e8-e65a-4475-9bd7-603eb8989c3e', 'primary'
-FROM exercises e
-LEFT JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
-WHERE e.is_archived = false 
-  AND e.category = 'Dolní tělo'
-  AND emg.id IS NULL;
+### Fáze 2: Odstranění intenzity (zjednodušení)
 
--- Secondary: gluteus_maximus
-INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
-SELECT e.id, 'e3e8c5ac-3150-4b39-a623-2ea6e047abad', 'secondary'
-FROM exercises e
-JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id AND emg.muscle_group_id = '58ff11e8-e65a-4475-9bd7-603eb8989c3e'
-WHERE e.is_archived = false 
-  AND e.category = 'Dolní tělo';
+#### Změna 2.1: Odstranění pole intenzity z validace
+```typescript
+// useTrainingTagValidation.ts - SMAZAT validaci intensity
+// RPE 1-10 plně nahrazuje: 1-3 = Lehký, 4-6 = Střední, 7-10 = Těžký
 ```
 
-### Krok 3: INSERT pro cviky kategorie "Horní tělo"
-36 cviků → přiřadit podle typu cviku:
-- Push cviky: `shoulders_front` + `triceps`
-- Pull cviky: `back_vertical_pull` + `biceps`
+#### Změna 2.2: Odstranění z UI komponent
+Upravit tyto komponenty:
+- `CompactTagGridSelector.tsx` - odstranit dropdown Intenzita
+- `CompactTagSelector.tsx` - odstranit dropdown Intenzita z 3-sloupcového gridu
+- `TrainingTagStepper.tsx` - odstranit sekci Intenzita
 
-```sql
--- Všechny horní cviky → shoulders jako primary (obecný default)
-INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
-SELECT e.id, '6e2663c7-da39-4c0b-9146-156d0a372b6c', 'primary'
-FROM exercises e
-LEFT JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
-WHERE e.is_archived = false 
-  AND e.category = 'Horní tělo'
-  AND emg.id IS NULL;
+#### Změna 2.3: Automatická derivace intenzity z RPE
+Pro historická data a analytiku - přidat funkci, která mapuje RPE na intenzitu:
+```typescript
+function getIntensityFromRPE(rpe: number): 'Lehký' | 'Střední' | 'Těžký' {
+  if (rpe <= 3) return 'Lehký';
+  if (rpe <= 6) return 'Střední';
+  return 'Těžký';
+}
 ```
 
-### Krok 4: INSERT pro cviky kategorie "Full Body"
-14 cviků → přiřadit kombinaci (quadriceps + shoulders + core)
+### Fáze 3: Zrychlení workflow
 
-```sql
--- Primary: quadriceps (lower body component)
-INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
-SELECT e.id, '58ff11e8-e65a-4475-9bd7-603eb8989c3e', 'primary'
-FROM exercises e
-LEFT JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
-WHERE e.is_archived = false 
-  AND e.category = 'Full Body'
-  AND emg.id IS NULL;
+#### Změna 3.1: Inteligentní auto-tagging
+Rozšířit `useAutoTagFromExercise` hook:
+- Již nyní automaticky taguje partie těla
+- Přidat automatické nastavení focus tagu na základě predominantního cviku
 
--- Secondary: shoulders (upper body component)
-INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
-SELECT e.id, '6e2663c7-da39-4c0b-9146-156d0a372b6c', 'secondary'
-FROM exercises e
-JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
-WHERE e.is_archived = false 
-  AND e.category = 'Full Body'
-  AND emg.muscle_group_id = '58ff11e8-e65a-4475-9bd7-603eb8989c3e';
+#### Změna 3.2: Zjednodušený completion flow
+Nové schéma (3 kroky místo 6):
+1. **Typ tréninku** - vybrat jedním klikem (presety)
+2. **RPE** - numerická hodnota 1-10
+3. **Platba** - potvrzení
 
--- Secondary: core
-INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
-SELECT e.id, '2635d87c-64e9-45d8-8e96-e711469232e9', 'secondary'
-FROM exercises e
-JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
-WHERE e.is_archived = false 
-  AND e.category = 'Full Body'
-  AND emg.muscle_group_id = '58ff11e8-e65a-4475-9bd7-603eb8989c3e';
-```
-
-### Krok 5: INSERT pro cviky kategorie "Kardio"
-4 cviky → přiřadit `quadriceps` (běh = nohy)
-
-```sql
-INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
-SELECT e.id, '58ff11e8-e65a-4475-9bd7-603eb8989c3e', 'primary'
-FROM exercises e
-LEFT JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
-WHERE e.is_archived = false 
-  AND e.category = 'Kardio'
-  AND emg.id IS NULL;
-```
+Partie těla a zaměření jsou auto-detekované z cviků.
 
 ---
 
-## Výsledek po implementaci
+## Soubory k úpravě
+
+| Soubor | Změna |
+|--------|-------|
+| `src/hooks/useTrainingTagValidation.ts` | Přidat hiit/cardio do výjimek, odstranit validaci intensity |
+| `src/components/trainings/CompactTagSelector.tsx` | Auto-set "Celé tělo" pro HIIT/Cardio, odstranit intensity dropdown |
+| `src/components/trainings/CompactTagGridSelector.tsx` | Změnit 4-sloupcový grid na 3-sloupcový (bez intensity) |
+| `src/components/trainings/TrainingTagStepper.tsx` | Odstranit sekci Intenzita |
+| `src/components/trainings/TrainingDetailView.tsx` | Odstranit intensity handling |
+| `src/hooks/useClientTagAnalytics.ts` | Přidat derivaci intenzity z RPE |
+
+---
+
+## Dopady na historická data
+
+### Zachování zpětné kompatibility
+- Historické tréninky s intensity tagem zůstanou beze změny
+- Analytika bude používat:
+  1. Existující intensity tag (pokud je)
+  2. Derivovanou hodnotu z RPE (pokud tag chybí)
+
+### Migrace není nutná
+- Stávající tagy zůstávají v databázi
+- Nové tréninky nebudou vyžadovat intensity tag
+- Analytické komponenty budou rozšířeny o fallback na RPE
+
+---
+
+## Očekávaný výsledek
 
 | Metrika | Před | Po |
 |---------|------|-----|
-| Cviky s přiřazenými svaly | 116 | **198** |
-| Pokrytí | 59% | **100%** |
-| Auto-tagging funguje pro | 116 cviků | **všech 198** |
-
-### Body part mapping po dokončení:
-
-```text
-exercise_body_part_categories view:
-├── upper  → ~96 cviků (Horní tělo + část Full Body)
-├── lower  → ~67 cviků (Dolní tělo + Full Body + Kardio)
-└── core   → ~73 cviků (Core + Full Body)
-```
+| Počet povinných polí pro dokončení | 6 | 3 |
+| Počet kliknutí pro dokončení | 8-12 | 4-6 |
+| Chyba "nelze vybrat partie" pro HIIT | ANO | NE |
+| Duplikace dat (intensity + RPE) | ANO | NE |
 
 ---
 
-## Žádné změny v kódu
+## Priorita implementace
 
-Toto je čistě **datová operace** - vše funguje díky existující infrastruktuře:
-
-1. **View `exercise_body_part_categories`** - automaticky mapuje `muscle_groups.region` na `body_part_key`
-2. **Hook `useAutoTagFromExercise`** - dotazuje se na tuto view
-3. **Tabulka `exercise_muscle_groups`** - pouze potřebuje naplnit daty
-
----
-
-## Implementace
-
-Použiji nástroj pro vkládání dat do databáze (INSERT tool) k provedení všech SQL příkazů výše.
+1. **Kritická oprava** - Fix HIIT/Cardio body part bug (Fáze 1)
+2. **Zjednodušení** - Odstranění intensity tagu (Fáze 2)  
+3. **Optimalizace** - Zrychlení workflow (Fáze 3)
