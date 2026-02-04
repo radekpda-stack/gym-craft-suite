@@ -61,7 +61,7 @@ const TrainingTemplates = lazy(() => import("./pages/TrainingTemplates"));
 const RxWorkouts = lazy(() => import("./pages/RxWorkouts"));
 const ClientPortalAdmin = lazy(() => import("./pages/ClientPortalAdmin"));
 const MyProfile = lazy(() => import("./pages/MyProfile"));
-const PriceMigration = lazy(() => import("./pages/PriceMigration"));
+// PriceMigration removed - migration completed
 const Notes = lazy(() => import("./pages/Notes"));
 const Expenses = lazy(() => import("./pages/Expenses"));
 // FollowupsPage is now integrated into Dashboard via FollowupsSection
@@ -219,7 +219,7 @@ const App = () => (
                           <Route path="/pripomenuti" element={<Navigate to="/" replace />} />
                           <Route path="/admin/user-approvals" element={<LazyRouteWrapper><UserApprovals /></LazyRouteWrapper>} />
                           <Route path="/admin/performance-import" element={<LazyRouteWrapper><PerformanceImport /></LazyRouteWrapper>} />
-                          <Route path="/admin/price-migration" element={<LazyRouteWrapper><PriceMigration /></LazyRouteWrapper>} />
+                          {/* PriceMigration removed - migration completed */}
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Layout>

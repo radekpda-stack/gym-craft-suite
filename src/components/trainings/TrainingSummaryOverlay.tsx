@@ -7,7 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useCelebrations } from '@/contexts/CelebrationContext';
+import { useCelebrations } from '@/contexts/SmartCelebrationContext';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 
