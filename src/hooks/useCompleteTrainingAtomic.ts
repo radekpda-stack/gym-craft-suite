@@ -275,7 +275,7 @@ export function useCompleteTrainingAtomic() {
     },
     onSuccess: (result, params) => {
       // CRITICAL: Granulární invalidace pro každého účastníka tréninku
-      // Toto zajistí okamžitou aktualizaci zůstatků v UI
+      // Toto zajistí okamžitou aktualizaci zůstatků a PRs v UI
       for (const participant of params.participants) {
         queryClient.invalidateQueries({ 
           queryKey: ["clients", participant.client_id],
@@ -287,6 +287,11 @@ export function useCompleteTrainingAtomic() {
         });
         queryClient.invalidateQueries({ 
           queryKey: ["shared_budget_balance", participant.client_id],
+          refetchType: 'all',
+        });
+        // Invalidovat PRs pro každého účastníka
+        queryClient.invalidateQueries({ 
+          queryKey: ["client-exercise-prs", participant.client_id],
           refetchType: 'all',
         });
       }
@@ -309,6 +314,9 @@ export function useCompleteTrainingAtomic() {
       queryClient.invalidateQueries({ queryKey: ["credit_lots"], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ["credit_consumptions"], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ["credit_summary"], refetchType: 'all' });
+      
+      // Globální invalidace PRs
+      queryClient.invalidateQueries({ queryKey: ["client-exercise-prs"], refetchType: 'all' });
 
       // Notify about clients switched to new pricing
       const switchedClients = (result as any).clientsSwitchedToNewPricing as string[] | undefined;

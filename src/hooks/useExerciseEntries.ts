@@ -205,6 +205,7 @@ export function useExerciseEntries(clientId?: string) {
       queryClient.invalidateQueries({ queryKey: ['exercise-stats'] });
       queryClient.invalidateQueries({ queryKey: ['exercise-progress'] });
       queryClient.invalidateQueries({ queryKey: ['exercise-client-comparison'] });
+      queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] });
       toast({ title: 'Záznam přidán', description: 'Tréninkový záznam byl uložen.' });
     },
     onError: () => {
@@ -257,6 +258,7 @@ export function useExerciseEntries(clientId?: string) {
       queryClient.invalidateQueries({ queryKey: ['exercise-progress'] });
       queryClient.invalidateQueries({ queryKey: ['exercise-client-comparison'] });
       queryClient.invalidateQueries({ queryKey: ['exercise-entry', vars?.id] });
+      queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] });
 
       toast({ title: 'Záznam aktualizován', description: 'Změny byly uloženy.' });
     },

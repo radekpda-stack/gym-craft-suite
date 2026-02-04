@@ -27,6 +27,7 @@ const formatTime = formatTimeWithCentiseconds;
 export function useClientExercisePRs(clientId: string | null | undefined) {
   return useQuery({
     queryKey: ['client-exercise-prs', clientId],
+    staleTime: 1000 * 30, // 30 sekund - pro čerstvější data
     queryFn: async () => {
       if (!clientId) return [];
 
