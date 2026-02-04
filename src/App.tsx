@@ -44,7 +44,7 @@ const FeedbackOverview = lazy(() => import("./pages/FeedbackOverview"));
 const PublicNutritionLog = lazy(() => import("./pages/PublicNutritionLog"));
 const PublicChallenge = lazy(() => import("./pages/PublicChallenge"));
 const Sales = lazy(() => import("./pages/Sales"));
-const PRHistory = lazy(() => import("./pages/PRHistory"));
+// PRHistory is now integrated into PerformanceHub
 const AppUsageStats = lazy(() => import("./pages/AppUsageStats"));
 const Statistics = lazy(() => import("./pages/Statistics"));
 const PreDiagnosticFormPage = lazy(() => import("./pages/PreDiagnosticFormPage"));
@@ -64,7 +64,7 @@ const MyProfile = lazy(() => import("./pages/MyProfile"));
 const PriceMigration = lazy(() => import("./pages/PriceMigration"));
 const Notes = lazy(() => import("./pages/Notes"));
 const Expenses = lazy(() => import("./pages/Expenses"));
-const FollowupsPage = lazy(() => import("./pages/FollowupsPage"));
+// FollowupsPage is now integrated into Dashboard via FollowupsSection
 
 // Lazy loaded pages - Client Portal
 const ClientPortalOverview = lazy(() => import("./pages/client-portal/ClientPortalOverview"));
@@ -194,7 +194,8 @@ const App = () => (
                           <Route path="/settings" element={<LazyRouteWrapper><Settings /></LazyRouteWrapper>} />
                           <Route path="/feedback-overview" element={<LazyRouteWrapper><FeedbackOverview /></LazyRouteWrapper>} />
                           <Route path="/sales" element={<LazyRouteWrapper><Sales /></LazyRouteWrapper>} />
-                          <Route path="/pr-history" element={<LazyRouteWrapper><PRHistory /></LazyRouteWrapper>} />
+                          {/* Legacy PR History redirect */}
+                          <Route path="/pr-history" element={<Navigate to="/performance?tab=pr-history" replace />} />
                           <Route path="/app-usage" element={<LazyRouteWrapper><AppUsageStats /></LazyRouteWrapper>} />
                           <Route path="/statistics" element={<LazyRouteWrapper><Statistics /></LazyRouteWrapper>} />
                           <Route path="/statistics/analytics" element={<LazyRouteWrapper><FinanceAnalytics /></LazyRouteWrapper>} />
@@ -214,7 +215,8 @@ const App = () => (
                           <Route path="/my-profile" element={<LazyRouteWrapper><MyProfile /></LazyRouteWrapper>} />
                           <Route path="/notes" element={<LazyRouteWrapper><Notes /></LazyRouteWrapper>} />
                           <Route path="/expenses" element={<LazyRouteWrapper><Expenses /></LazyRouteWrapper>} />
-                          <Route path="/pripomenuti" element={<LazyRouteWrapper><FollowupsPage /></LazyRouteWrapper>} />
+                          {/* Legacy followups redirect - now integrated in Dashboard */}
+                          <Route path="/pripomenuti" element={<Navigate to="/" replace />} />
                           <Route path="/admin/user-approvals" element={<LazyRouteWrapper><UserApprovals /></LazyRouteWrapper>} />
                           <Route path="/admin/performance-import" element={<LazyRouteWrapper><PerformanceImport /></LazyRouteWrapper>} />
                           <Route path="/admin/price-migration" element={<LazyRouteWrapper><PriceMigration /></LazyRouteWrapper>} />

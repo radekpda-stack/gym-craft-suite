@@ -14,15 +14,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { usePRMetrics, PRPeriod, PRType } from '@/hooks/usePRMetrics';
 import { useClients } from '@/hooks/useClients';
 import { useExercises } from '@/hooks/useExercises';
-import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 
 type SortField = 'date' | 'exerciseName' | 'value' | 'clientName';
 type SortDirection = 'asc' | 'desc';
 
-const PRHistory = () => {
-  usePageTracking('pr_history');
+export function PRHistoryContent() {
   const [period, setPeriod] = useState<PRPeriod>('3months');
   const [prType, setPrType] = useState<PRType>('1rm');
   const [exerciseFilter, setExerciseFilter] = useState<string | null>(null);
@@ -146,31 +144,20 @@ const PRHistory = () => {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-primary" />
-            Historie PR
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Detailní přehled všech osobních rekordů
-          </p>
-        </div>
-        <Button onClick={handleExportCSV} disabled={!filteredAndSortedPRs.length}>
-          <Download className="h-4 w-4 mr-2" />
-          Export XLSX
-        </Button>
-      </div>
-
+    <div className="space-y-4">
       {/* Filters */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filtry
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Filtry
+            </CardTitle>
+            <Button onClick={handleExportCSV} disabled={!filteredAndSortedPRs.length} size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Export XLSX
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -396,6 +383,4 @@ const PRHistory = () => {
       </Card>
     </div>
   );
-};
-
-export default PRHistory;
+}

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Zap, Dumbbell, ClipboardCheck, Trophy, Plus, List, BarChart3, Users } from 'lucide-react';
+import { Zap, Dumbbell, ClipboardCheck, Trophy, Plus, List, BarChart3, Users, Medal } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ExerciseListView } from '@/components/exercises/ExerciseListView';
 import { ExerciseAnalyticsView } from '@/components/exercises/ExerciseAnalyticsView';
 import { TestsContent } from '@/components/performance/TestsContent';
 import { ChallengesContent } from '@/components/performance/ChallengesContent';
+import { PRHistoryContent } from '@/components/performance/PRHistoryContent';
 import { PerformanceKPIBar } from '@/components/performance/PerformanceKPIBar';
 import { ExerciseSearchCommand } from '@/components/performance/ExerciseSearchCommand';
 import { CategoryCards } from '@/components/performance/CategoryCards';
@@ -20,7 +21,7 @@ import { useModuleSettings } from '@/hooks/useModuleSettings';
 import { usePerformanceOverview } from '@/hooks/usePerformanceOverview';
 import { useExercisesWithUsage } from '@/hooks/useExerciseStats';
 
-type PerformanceTab = 'overview' | 'clients' | 'library' | 'analytics' | 'tests' | 'challenges';
+type PerformanceTab = 'overview' | 'clients' | 'library' | 'analytics' | 'pr-history' | 'tests' | 'challenges';
 
 export default function PerformanceHub() {
   usePageTracking('performance');
@@ -105,7 +106,7 @@ export default function PerformanceHub() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full max-w-3xl mx-auto bg-secondary/30 backdrop-blur-sm p-1" style={{ gridTemplateColumns: `repeat(${tabCount + 2}, 1fr)` }}>
+        <TabsList className="grid w-full max-w-4xl mx-auto bg-secondary/30 backdrop-blur-sm p-1" style={{ gridTemplateColumns: `repeat(${tabCount + 3}, 1fr)` }}>
           <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Zap className="w-4 h-4" />
             <span className="hidden sm:inline">Přehled</span>
@@ -121,6 +122,10 @@ export default function PerformanceHub() {
           <TabsTrigger value="analytics" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <BarChart3 className="w-4 h-4" />
             <span className="hidden sm:inline">Analytika</span>
+          </TabsTrigger>
+          <TabsTrigger value="pr-history" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Medal className="w-4 h-4" />
+            <span className="hidden sm:inline">PR Historie</span>
           </TabsTrigger>
           {testsEnabled && (
             <TabsTrigger value="tests" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
@@ -189,6 +194,11 @@ export default function PerformanceHub() {
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="mt-6">
           <ExerciseAnalyticsView />
+        </TabsContent>
+
+        {/* PR History Tab */}
+        <TabsContent value="pr-history" className="mt-6">
+          <PRHistoryContent />
         </TabsContent>
 
         {/* Tests Tab */}
