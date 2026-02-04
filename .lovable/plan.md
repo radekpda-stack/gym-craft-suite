@@ -1,136 +1,212 @@
 
-# Zjednodušení aplikace - Audit a návrhy
+
+# Audit a Zjednodušení Aplikace - Fáze 2
 
 ## Shrnutí analýzy
 
-Provedl jsem komplexní audit aplikace a identifikoval několik oblastí, kde lze zjednodušit architekturu, redukovat duplicity a zlepšit uživatelský zážitek.
+Po důkladném prozkoumání kódové základny jsem identifikoval několik oblastí, kde lze dále zjednodušit architekturu, odstranit nepoužívané soubory a zlepšit celkovou udržovatelnost.
 
 ---
 
-## 1. Duplicitní hooky a datové vrstvy
+## 1. Nepoužívané / Duplicitní Komponenty
+
+### Dashboard komponenty - kandidáti k odstranění
+
+| Soubor | Problém | Doporučení |
+|--------|---------|------------|
+| `DashboardInsights.tsx` (842 řádků) | Starší verze, nahrazena `DashboardInsightsRefactored.tsx` | **Smazat** |
+| `DashboardSettings.tsx` | Duplicitní s `DashboardSettingsNew.tsx` | **Smazat starší** |
+| `DashboardSettingsNew.tsx` | Nikde se neimportuje | **Smazat nebo integrovat** |
+
+### RX Workout V1/V2 duplicita
+
+| Soubor | Stav |
+|--------|------|
+| `useRxWorkoutParser.ts` | V1 - původní verze |
+| `useRxWorkoutParserV2.ts` | V2 - aktivně používaná |
+| `useRxWorkouts.ts` | V1 - částečně používaná |
+| `useRxWorkoutsV2.ts` | V2 - aktivně používaná |
+
+**Doporučení**: Sloučit V1 a V2 do jedné verze, odstranit starší kód.
+
+---
+
+## 2. Celebration Contexty - duplicita
 
 ### Problém
-Existuje mnoho hooků, které dělají podobné věci nebo se vzájemně překrývají:
+Existují **2 duplicitní celebration kontexty**:
+- `CelebrationContext.tsx` (80 řádků) - jednoduchý
+- `SmartCelebrationContext.tsx` (132 řádků) - pokročilý s queue
 
-| Oblast | Počet hooků | Příklady duplicit |
-|--------|-------------|-------------------|
-| Klientské statistiky | 14+ | `useClientAttendanceStats` existuje ve 2 souborech |
-| Finance | 8+ | `useFinancialStats`, `useFinanceAnalytics`, `useFinancialReportData` |
-| Tréninky | 13+ | `useTrainingSessions`, `useTrainingProgress`, `useTrainingLoadStats` |
+Oba se používají paralelně v `ClientPortalShell.tsx`.
 
-### Návrh řešení
-Konsolidovat hooky do logických domén:
-- ✅ **Fáze 1**: Sloučit duplicitní `useClientAttendanceStats` do jednoho (přejmenováno na `useClientPortalAttendanceStats`)
-- **Fáze 4**: Vytvořit centrální `useClientData` hook s lazy-loading sub-dat
-- **Fáze 4**: Refaktorovat finance hooky do jednoho `useFinanceHub`
+### Doporučení
+Sloučit do jednoho `SmartCelebrationContext`, odstranit `CelebrationContext`.
 
 ---
 
-## 2. Přebujelý systém modulů
+## 3. Analytics Stránky - kandidáti ke sloučení
+
+### Separátní analytické stránky
+
+| Stránka | Řádků | Použití |
+|---------|-------|---------|
+| `ExerciseAnalytics.tsx` | 460 | Samostatná stránka |
+| `FinanceAnalytics.tsx` | 366 | Samostatná stránka |
+| `ClientAnalytics.tsx` | 326 | Samostatná stránka |
+
+### Doporučení
+Tyto stránky lze integrovat do stávajících modulů:
+- `ExerciseAnalytics` → `PerformanceHub` jako tab
+- `FinanceAnalytics` → `Statistics` jako sub-tab ve Finance
+- `ClientAnalytics` → `Statistics` jako sub-tab v Klienti
+
+---
+
+## 4. Nevyužívané Admin Stránky
+
+| Stránka | Účel | Doporučení |
+|---------|------|------------|
+| `PriceMigration.tsx` | Jednorázová migrace cen | **Smazat** - migrace dokončena |
+| `AppUsageStats.tsx` | Admin-only analytika (1 uživatel) | Přesunout do `Settings` jako sekci |
+
+---
+
+## 5. Hooky - přebujelý stav
+
+### Statistika
+- **332 souborů** s hooky v `src/hooks/`
+- **4160 exportovaných funkcí** typu `use*`
+
+### Identifikované duplicity/podobnosti
+
+| Oblast | Hooky | Problém |
+|--------|-------|---------|
+| Alerts | `useSmartAlerts`, `useTodayAlerts` | Podobná funkcionalita |
+| Analytics | `useAdvancedAnalytics` (6 funkcí), `useFeatureStats`, `useAppUsageAnalytics` | Překryv |
+| Client health | `usePainHistory`, `useClientInjuryHistory`, `useHealthConditions` | Podobná data |
+| Business | `useBusinessAnalytics`, `useBusinessHealthScore`, `useBusinessYieldScore` | 3 různé "business skóre" |
+
+### Doporučení
+1. Sloučit `useSmartAlerts` a `useTodayAlerts` do jednoho `useAlerts`
+2. Konsolidovat business analytics do `useBusinessHub`
+3. Sloučit health-related hooky do `useClientHealth`
+
+---
+
+## 6. Trainings.tsx vs SchedulePage.tsx
 
 ### Problém
-Existuje **13 konfigurovatelných modulů** - mnoho z nich se překrývá nebo jsou příliš granulární.
+Existují **2 podobné stránky** pro tréninky:
+- `Trainings.tsx` (487 řádků) - seznam tréninků
+- `SchedulePage.tsx` - kalendářní pohled na rozvrh
 
-### Návrh řešení: Redukce na 5 hlavních modulů
-*Plánováno pro Fázi 5*
+### Doporučení
+Sloučit `Trainings.tsx` do `SchedulePage.tsx` jako alternativní view (list vs calendar).
 
 ---
 
-## 3. Složitá navigace
+## 7. Client Portal - 18 stránek
+
+### Současný stav
+Klientský portál má **18 samostatných stránek**:
+
+```
+ClientPortalOverview     ClientPortalNutrition
+ClientPortalProgress     ClientPortalProfile
+ClientPortalAttendance   ClientPortalSettings
+ClientPortalCredit       ClientPortalChallenges
+ClientPortalWorkoutDiary ClientPortalBadges
+ClientPortalLeaderboard  ClientPortalCompetitions
+ClientPortalRewards      ClientPortalPurchases
+ClientPortalHomework     ClientPortalChat
+ClientPortalDiagnostic   ClientPortalNutritionTab
+```
+
+### Doporučení - Seskupit do 5 hlavních sekcí
+
+| Nová sekce | Původní stránky |
+|------------|-----------------|
+| **Přehled** | Overview |
+| **Můj pokrok** | Progress + Badges + Leaderboard + WorkoutDiary |
+| **Můj účet** | Credit + Purchases + Attendance |
+| **Výzvy** | Challenges + Competitions + Rewards + Homework |
+| **Profil** | Profile + Settings + Nutrition + Chat + Diagnostic |
+
+---
+
+## 8. FeedbackOverview.tsx - velká stránka
 
 ### Problém
-- Sidebar měl **6 sekcí** a **14+ položek**
-- Mobile menu replikovalo vše s drobnými odlišnostmi
+`FeedbackOverview.tsx` má **1006 řádků** - příliš velká pro jednu stránku.
 
-### Řešení
-1. ✅ Odstranit legacy redirecty z App.tsx
-2. ✅ Zjednodušit sidebar na **4 sekce**: Hlavní, Data & Výkonnost, Finance, Systém
-3. ✅ Sjednotit mobile menu s desktop navigací
+### Doporučení
+Rozdělit na menší komponenty nebo integrovat do `Statistics.tsx` jako tab "Zpětná vazba".
 
 ---
 
-## 4. Příliš mnoho stránek
+## Prioritizovaný Plán Implementace
 
-### Problém
-Aplikace měla **47 stránek** + **18 client portal stránek** = **65 stránek celkem**.
+### Fáze A: Čištění mrtvého kódu (Low-risk)
 
-### Řešení
+1. **Smazat `DashboardInsights.tsx`** - nahrazeno `DashboardInsightsRefactored`
+2. **Smazat `DashboardSettings.tsx`** a `DashboardSettingsNew.tsx` - nepoužívané
+3. **Smazat `PriceMigration.tsx`** - jednorázová migrace dokončena
+4. **Vyčistit RX V1 hooky** - ponechat pouze V2 verze
 
-| Stránka | Status | Řešení |
-|---------|--------|--------|
-| `CanceledTrainings.tsx` | ✅ Hotovo | Integrováno do `SchedulePage` jako Sheet |
-| `PRHistory.tsx` | ✅ Hotovo | Integrováno do `PerformanceHub` jako tab "PR Historie" |
-| `FollowupsPage.tsx` | ✅ Hotovo | Integrováno do Dashboard jako `FollowupsSection` |
-| `FeedbackOverview.tsx` | ⏳ Odloženo | Komplexní funkcionalita - ponecháno jako samostatná stránka |
-| `Records.tsx` | ⏳ Odloženo | Ponecháno jako samostatná stránka (jiná funkcionalita než PR) |
+### Fáze B: Sloučení kontextů
 
----
+1. Sloučit `CelebrationContext` do `SmartCelebrationContext`
+2. Aktualizovat importy napříč aplikací
 
-## 5. Klientský portál - příliš mnoho záložek
+### Fáze C: Konsolidace Analytics stránek
 
-### Problém
-Client Portal má **18 stránek/záložek** - pro běžného klienta je to přehnaně složité.
+1. Integrovat `ExerciseAnalytics` do `PerformanceHub`
+2. Integrovat `FinanceAnalytics` do `Statistics`
+3. Integrovat `ClientAnalytics` do `Statistics`
+4. Smazat samostatné stránky po migraci
 
-### Návrh řešení: Seskupit do 5 hlavních sekcí
-*Plánováno pro budoucí fázi*
+### Fáze D: Sloučení tréninků
 
----
+1. Přidat "list view" do `SchedulePage.tsx`
+2. Migrovat funkcionalitu z `Trainings.tsx`
+3. Smazat `Trainings.tsx`
 
-## Prioritizovaný plán implementace
+### Fáze E: Client Portal reorganizace
 
-### ✅ Fáze 1: Quick Wins (HOTOVO)
-1. ✅ Odstranit duplicitní `useClientAttendanceStats` hook → přejmenováno na `useClientPortalAttendanceStats`
-2. ✅ Odstranit legacy redirecty z App.tsx
-3. ✅ Sloučit `CanceledTrainings` do `SchedulePage` jako `CanceledTrainingsSheet`
+1. Vytvořit tabbed layout pro seskupení stránek
+2. Reorganizovat navigaci z 18 na 5 sekcí
+3. Zachovat deep-linky pro zpětnou kompatibilitu
 
-### ✅ Fáze 2: Konsolidace navigace (HOTOVO)
-1. ✅ Zjednodušit sidebar na 4 sekce
-2. ✅ Sjednotit mobile menu s desktop
+### Fáze F: Konsolidace hooků
 
-### ✅ Fáze 3: Sloučení duplicitních stránek (HOTOVO)
-1. ✅ Integrovat `PRHistory` do `PerformanceHub` jako nový tab "PR Historie"
-2. ✅ Integrovat `FollowupsPage` do Dashboard jako `FollowupsSection`
-3. ⏳ `FeedbackOverview` - ponecháno (komplexní unikátní funkcionalita)
-
-### ✅ Fáze 4: Refaktoring hooků (HOTOVO)
-1. ✅ Vytvořit `useClientHub` konsolidovaný hook
-2. ✅ Vytvořit `useFinanceHub` konsolidovaný hook
-3. ✅ Aktualizovat index exporty
-
-### ✅ Fáze 5: Redukce modulů (HOTOVO)
-1. ✅ Sloučit 13 modulů do 5 logických celků:
-   - **Klientský portál** - client_portal
-   - **Data & Výkonnost** - exercises, training_templates, pr_history, tests, challenges, diagnostics
-   - **Strava & Zpětná vazba** - nutrition, feedback
-   - **Finance** - sales, statistics
-   - **Systém** - calendar, rewards_system
-2. ✅ Aktualizovat UI nastavení modulů (collapsible groups)
-3. ✅ Aktualizovat hooks (useModuleSettings, useTrainerModuleSettings)
+1. Vytvořit `useAlerts` sloučením `useSmartAlerts` + `useTodayAlerts`
+2. Vytvořit `useBusinessHub` sloučením business score hooků
+3. Aktualizovat index exporty
 
 ---
 
-## Výsledky po Fázi 1-4
+## Očekávané výsledky
 
 | Metrika | Před | Po |
 |---------|------|-----|
-| Položky v navigaci (desktop) | 14 | **8** |
-| Duplicitní hooky | 8+ | **1 opraveno** |
-| Legacy redirecty | 5 | **0** |
-| Stránky sloučené do komponent | 0 | **3** (CanceledTrainings, PRHistory, FollowupsPage) |
-| Konsolidované hub hooky | 0 | **2** (useClientHub, useFinanceHub) |
+| Dashboard komponenty | 95+ | ~75 |
+| Mrtvé komponenty | 5+ | 0 |
+| Analytics stránky | 3 separátní | Integrované |
+| Client Portal navigace | 18 položek | 5 sekcí |
+| Duplicitní kontexty | 2 | 1 |
+| RX hook verze | 2 (V1+V2) | 1 |
 
-### Smazané soubory
-- `src/pages/CanceledTrainings.tsx` → `src/components/schedule/CanceledTrainingsSheet.tsx`
-- `src/pages/PRHistory.tsx` → `src/components/performance/PRHistoryContent.tsx`
-- `src/pages/FollowupsPage.tsx` → `src/components/dashboard/FollowupsSection.tsx`
+---
 
-### Nové komponenty
-- `CanceledTrainingsSheet` - Sheet pro zobrazení zrušených tréninků v Schedule
-- `PRHistoryContent` - Tab obsah pro PR historii v PerformanceHub
-- `FollowupsSection` - Sbalitelná sekce připomenutí na Dashboard
+## Poznámky k implementaci
 
-### Nové hub hooky (Fáze 4)
-- `useClientHub` - Konsolidovaný hook pro přístup ke všem client-related datům s lazy-loading
-- `useClientsHub` - Hook pro práci s více klienty a filtrování
-- `useFinanceHub` - Konsolidovaný hook pro přístup ke všem finance-related datům
-- `useFinanceSummary` - Lightweight hook pro dashboard finanční souhrn
+### Bezpečnostní opatření
+- Před smazáním komponenty ověřit, že není nikde importována
+- Vytvořit redirecty pro smazané routy
+- Zachovat zpětnou kompatibilitu API hooků
+
+### Postupné zavádění
+Fáze A-B jsou bezrizikové a mohou být implementovány okamžitě.
+Fáze C-F vyžadují více testování a mohou být rozloženy do více iterací.
+
