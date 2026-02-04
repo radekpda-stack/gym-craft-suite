@@ -2,7 +2,7 @@
  * TrainingCloseSection - Merged closure section for completed trainings
  * Combines: Payment, Notes, Followups, Feedback
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CreditCard, StickyNote, Bell, MessageCircle, Plus, ExternalLink, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -13,8 +13,10 @@ import { FollowupInput } from '@/components/trainings/FollowupInput';
 import { ChangePaymentMethodDialog, PaymentMethod } from '@/components/trainings/ChangePaymentMethodDialog';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { MultiParticipantFeedbackSection } from '@/components/feedback/MultiParticipantFeedbackSection';
+import { ParticipantPaymentBreakdown, ParticipantPaymentInfo } from '@/components/trainings/ParticipantPaymentBreakdown';
 import { TrainingSession } from '@/hooks/useTrainingSessions';
 import { Client } from '@/hooks/useClients';
+import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
@@ -60,6 +62,45 @@ export function TrainingCloseSection({
   showNote,
   onShowNoteChange,
 }: TrainingCloseSectionProps) {
+  // Load individual participant payment methods for multi-participant trainings
+  const [participantPayments, setParticipantPayments] = useState<ParticipantPaymentInfo[]>([]);
+  
+  useEffect(() => {
+    async function loadParticipantPayments() {
+      if (participants.length <= 1) {
+        setParticipantPayments([]);
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('training_participants')
+        .select('client_id, price_share, payment_method')
+        .eq('training_session_id', training.id);
+      
+      if (error) {
+        console.error('Failed to load participant payments:', error);
+        return;
+      }
+      
+      // Merge participant names with payment data
+      const paymentsWithNames: ParticipantPaymentInfo[] = participants.map(p => {
+        const paymentData = data?.find(d => d.client_id === p.client_id);
+        return {
+          client_id: p.client_id,
+          client_name: p.name,
+          price_share: paymentData?.price_share || 0,
+          payment_method: paymentData?.payment_method || null,
+        };
+      });
+      
+      setParticipantPayments(paymentsWithNames);
+    }
+    
+    if (training.status === 'completed') {
+      loadParticipantPayments();
+    }
+  }, [training.id, training.status, participants]);
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4 space-y-4">
       {/* Subtle success gradient for completed */}
@@ -94,6 +135,13 @@ export function TrainingCloseSection({
           isLoading={isChangingPayment}
         />
       </div>
+
+      {/* Individual Participant Payments for multi-participant trainings */}
+      {participantPayments.length > 1 && (
+        <div className="relative">
+          <ParticipantPaymentBreakdown participants={participantPayments} />
+        </div>
+      )}
 
       {/* Note */}
       <div className="py-2 border-b border-border/30">
