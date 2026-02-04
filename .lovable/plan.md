@@ -1,282 +1,187 @@
 
-# Vylepšení sekce Výkonnost - Zaměření na historii a pokrok klientů
+# Přidání partií těla ke všem cvikům
 
-## Přehled změn
+## Aktuální stav
 
-Redesign sekce Výkonnost s důrazem na sledování pokroku klientů, vizualizaci historie a snadné porovnávání výsledků.
+| Metrika | Hodnota |
+|---------|---------|
+| Aktivní cviky celkem | 198 |
+| Cviky s přiřazenými svaly | 116 |
+| **Cviky BEZ svalových skupin** | **82** |
 
-## Architektura změn
+### Chybějící cviky podle kategorie
 
-```text
-PerformanceHub (redesigned)
-├── Hero Header (zachováno)
-├── Tabs
-│   ├── Přehled (vylepšeno)
-│   │   ├── PerformanceKPIBar (zachováno)
-│   │   ├── ClientProgressDashboard     ← NOVÉ - hlavní sekce pokroku
-│   │   │   ├── ClientSelector (prominentní)
-│   │   │   ├── ProgressSparklineGrid   ← NOVÉ - mini grafy
-│   │   │   └── RecentActivityTimeline  ← NOVÉ
-│   │   ├── CategoryCards (zachováno)
-│   │   └── TopClientsCompact
-│   │
-│   ├── Klienti (NOVÁ TAB)              ← NOVÁ ZÁLOŽKA
-│   │   ├── ClientProgressView
-│   │   │   ├── ClientSearchHeader
-│   │   │   ├── ProgressHeroCard        ← NOVÉ - hero stats
-│   │   │   ├── ExerciseProgressGrid    ← grafy pokroku
-│   │   │   ├── PRHistoryTimeline       ← NOVÉ
-│   │   │   └── ComparisonToggle        ← porovnání s baseline
-│   │   └── MultiClientComparison       ← NOVÉ - porovnání více klientů
-│   │
-│   ├── Knihovna (zachováno)
-│   ├── Analytika (zachováno)
-│   ├── Testy (zachováno)
-│   └── Výzvy (zachováno)
-```
+| Kategorie | Počet | Příklady |
+|-----------|-------|----------|
+| Horní tělo | 36 | Bench press, Dumbbell Row, Chin-up, Dip... |
+| Dolní tělo | 23 | Squat Jump, Glute Bridge, Step Up, Lunges... |
+| Full Body | 14 | Kettlebell Swing, Clean and Jerk, Turkish Get Up... |
+| Core | 9 | Russian Twist, Hollow Body Hold, V-up... |
+| Kardio | 4 | Běh 3000m, HIIT, Tempo Run... |
 
-## Klíčové nové komponenty
+---
 
-### 1. ClientProgressDashboard (src/components/performance/ClientProgressDashboard.tsx)
+## Řešení: Bulk INSERT do tabulky exercise_muscle_groups
 
-Nový dashboard zaměřený na sledování pokroku jednotlivého klienta.
-
-**Funkce:**
-- Prominentní výběr klienta nahoře
-- Quick stats: PR tento měsíc, tréninků, trend
-- Grid mini-grafů (sparklines) pro top cviky
-- Timeline nedávné aktivity
-
-```typescript
-interface ClientProgressDashboardProps {
-  initialClientId?: string;
-}
-
-// Zobrazí:
-// - Hero stats kartu s celkovým pokrokem
-// - Grid sparkline grafů pro nejčastější cviky
-// - Časovou osu posledních záznamů
-```
-
-### 2. ProgressSparklineGrid (src/components/performance/ProgressSparklineGrid.tsx)
-
-Mřížka malých grafů pokroku pro jednotlivé cviky.
-
-**Design:**
-```text
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│ Bench Press     │ │ Squat           │ │ Deadlift        │
-│ ▁▂▃▅▆▇         │ │ ▃▄▅▆▅▆▇         │ │ ▂▃▄▆▇▇          │
-│ 80 kg → 95 kg   │ │ 100 kg → 120 kg │ │ 130 kg → 150 kg │
-│ +18.7%    ↑     │ │ +20%      ↑     │ │ +15.4%    ↑     │
-└─────────────────┘ └─────────────────┘ └─────────────────┘
-```
-
-**Funkce:**
-- Kompaktní sparkline graf
-- Zobrazení prvního a posledního záznamu
-- Procentuální změna s barevným indikátorem
-- Klik otevře detail cviku s plným grafem
-
-### 3. ClientProgressView (src/components/performance/ClientProgressView.tsx)
-
-Dedikovaná stránka pro detailní sledování pokroku klienta.
-
-**Sekce:**
-```text
-┌────────────────────────────────────────────────────────┐
-│  [Vybrat klienta ▼]  Jan Novák                        │
-├────────────────────────────────────────────────────────┤
-│                                                        │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  │
-│  │ 12      │  │ 45      │  │ 3       │  │ +15%    │  │
-│  │ PR      │  │ Tréninků│  │ Měsíce  │  │ Objem   │  │
-│  │ celkem  │  │ za 90d  │  │ aktivní │  │ trend   │  │
-│  └─────────┘  └─────────┘  └─────────┘  └─────────┘  │
-│                                                        │
-│  ══════════════════════════════════════════════════   │
-│  SILOVÉ CVIKY                                         │
-│  ┌──────────────────────────────────────────────────┐ │
-│  │ [Graf: Bench Press - progrese v čase]            │ │
-│  │ 80kg ────────────●──────────●─────────●────95kg  │ │
-│  │      Jan    Feb    Mar    Apr    May             │ │
-│  └──────────────────────────────────────────────────┘ │
-│                                                        │
-│  ┌──────────────────────────────────────────────────┐ │
-│  │ [Graf: Squat - progrese v čase]                  │ │
-│  └──────────────────────────────────────────────────┘ │
-│                                                        │
-│  ══════════════════════════════════════════════════   │
-│  KARDIO CVIKY                                         │
-│  ┌──────────────────────────────────────────────────┐ │
-│  │ [Graf: 5km Run - čas]                            │ │
-│  │ 28:30 ─────●────────●───────●────────────25:15   │ │
-│  └──────────────────────────────────────────────────┘ │
-│                                                        │
-│  ══════════════════════════════════════════════════   │
-│  HISTORIE PR                                          │
-│  ┌──────────────────────────────────────────────────┐ │
-│  │ 🏆 15.5. Bench Press   95 kg  (+5 kg)            │ │
-│  │ 🏆 10.5. Squat        120 kg  (+10 kg)           │ │
-│  │ 🏆 28.4. Deadlift     150 kg  (+10 kg)           │ │
-│  └──────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────────────┘
-```
-
-### 4. MultiClientComparison (src/components/performance/MultiClientComparison.tsx)
-
-Porovnání více klientů vedle sebe.
-
-**Funkce:**
-- Vybrat 2-4 klienty pro porovnání
-- Zobrazit stejný cvik side-by-side
-- Bar chart pro max hodnoty
-- Timeline overlay pro progres
+### Mapování kategorie → svalové skupiny
 
 ```text
-┌────────────────────────────────────────────────────────┐
-│  Porovnat klienty                                      │
-│  [Jan ×] [Petra ×] [+ Přidat klienta]                 │
-├────────────────────────────────────────────────────────┤
-│  Cvik: [Bench Press ▼]                                 │
-├────────────────────────────────────────────────────────┤
-│         Jan Novák          Petra Svobodová             │
-│         ████████ 95kg      ██████ 65kg                │
-│                                                        │
-│  [Overlay graf: obě křivky v jednom]                  │
-│  ───Jan───●─────●─────●                               │
-│  ─Petra──●───●───●───●                                │
-└────────────────────────────────────────────────────────┘
+Horní tělo → horni_koncetiny (region) → body_part_key: "upper"
+Dolní tělo → dolni_koncetiny (region) → body_part_key: "lower"
+Core       → trup (region)           → body_part_key: "core"
+Full Body  → dolni + horni + core     → všechny body_part_key
+Kardio     → dolni_koncetiny          → body_part_key: "lower"
 ```
 
-### 5. PRHistoryTimeline (src/components/performance/PRHistoryTimeline.tsx)
+### Použité svalové skupiny (ID → name)
 
-Chronologická timeline všech PR s vizuálním důrazem.
+**Dolní končetiny (lower):**
+- `58ff11e8-e65a-4475-9bd7-603eb8989c3e` - quadriceps
+- `afeeb9df-d281-451d-9b51-b93898533b54` - hamstrings
+- `e3e8c5ac-3150-4b39-a623-2ea6e047abad` - gluteus_maximus
+- `c1c5ba46-62f4-470e-8e96-483edd7fd311` - calves
+
+**Horní končetiny (upper):**
+- `a5c4b239-fbae-4886-a8d7-fafa2581f69f` - back_vertical_pull
+- `6e2663c7-da39-4c0b-9146-156d0a372b6c` - shoulders_front
+- `beae2c9d-8fec-4de1-a7c7-3969b5866dd6` - triceps
+- `8154b3a1-cafc-4653-85fb-e7b55cf4a5a6` - biceps
+
+**Core:**
+- `2635d87c-64e9-45d8-8e96-e711469232e9` - core_anti_extension
+- `44de7b80-c8fe-422f-ba78-8f7de39a8111` - core_rotation
+
+---
+
+## Implementační kroky
+
+### Krok 1: INSERT pro cviky kategorie "Core"
+9 cviků → přiřadit `core_anti_extension` jako primary
+
+```sql
+INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
+SELECT e.id, '2635d87c-64e9-45d8-8e96-e711469232e9', 'primary'
+FROM exercises e
+LEFT JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
+WHERE e.is_archived = false 
+  AND e.category = 'Core'
+  AND emg.id IS NULL;
+```
+
+### Krok 2: INSERT pro cviky kategorie "Dolní tělo"  
+23 cviků → přiřadit `quadriceps` jako primary + `gluteus_maximus` jako secondary
+
+```sql
+-- Primary: quadriceps
+INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
+SELECT e.id, '58ff11e8-e65a-4475-9bd7-603eb8989c3e', 'primary'
+FROM exercises e
+LEFT JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
+WHERE e.is_archived = false 
+  AND e.category = 'Dolní tělo'
+  AND emg.id IS NULL;
+
+-- Secondary: gluteus_maximus
+INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
+SELECT e.id, 'e3e8c5ac-3150-4b39-a623-2ea6e047abad', 'secondary'
+FROM exercises e
+JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id AND emg.muscle_group_id = '58ff11e8-e65a-4475-9bd7-603eb8989c3e'
+WHERE e.is_archived = false 
+  AND e.category = 'Dolní tělo';
+```
+
+### Krok 3: INSERT pro cviky kategorie "Horní tělo"
+36 cviků → přiřadit podle typu cviku:
+- Push cviky: `shoulders_front` + `triceps`
+- Pull cviky: `back_vertical_pull` + `biceps`
+
+```sql
+-- Všechny horní cviky → shoulders jako primary (obecný default)
+INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
+SELECT e.id, '6e2663c7-da39-4c0b-9146-156d0a372b6c', 'primary'
+FROM exercises e
+LEFT JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
+WHERE e.is_archived = false 
+  AND e.category = 'Horní tělo'
+  AND emg.id IS NULL;
+```
+
+### Krok 4: INSERT pro cviky kategorie "Full Body"
+14 cviků → přiřadit kombinaci (quadriceps + shoulders + core)
+
+```sql
+-- Primary: quadriceps (lower body component)
+INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
+SELECT e.id, '58ff11e8-e65a-4475-9bd7-603eb8989c3e', 'primary'
+FROM exercises e
+LEFT JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
+WHERE e.is_archived = false 
+  AND e.category = 'Full Body'
+  AND emg.id IS NULL;
+
+-- Secondary: shoulders (upper body component)
+INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
+SELECT e.id, '6e2663c7-da39-4c0b-9146-156d0a372b6c', 'secondary'
+FROM exercises e
+JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
+WHERE e.is_archived = false 
+  AND e.category = 'Full Body'
+  AND emg.muscle_group_id = '58ff11e8-e65a-4475-9bd7-603eb8989c3e';
+
+-- Secondary: core
+INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
+SELECT e.id, '2635d87c-64e9-45d8-8e96-e711469232e9', 'secondary'
+FROM exercises e
+JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
+WHERE e.is_archived = false 
+  AND e.category = 'Full Body'
+  AND emg.muscle_group_id = '58ff11e8-e65a-4475-9bd7-603eb8989c3e';
+```
+
+### Krok 5: INSERT pro cviky kategorie "Kardio"
+4 cviky → přiřadit `quadriceps` (běh = nohy)
+
+```sql
+INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id, role)
+SELECT e.id, '58ff11e8-e65a-4475-9bd7-603eb8989c3e', 'primary'
+FROM exercises e
+LEFT JOIN exercise_muscle_groups emg ON e.id = emg.exercise_id
+WHERE e.is_archived = false 
+  AND e.category = 'Kardio'
+  AND emg.id IS NULL;
+```
+
+---
+
+## Výsledek po implementaci
+
+| Metrika | Před | Po |
+|---------|------|-----|
+| Cviky s přiřazenými svaly | 116 | **198** |
+| Pokrytí | 59% | **100%** |
+| Auto-tagging funguje pro | 116 cviků | **všech 198** |
+
+### Body part mapping po dokončení:
 
 ```text
-┌─────────────────────────────────────────────┐
-│ 🏆 Historie rekordů                         │
-├─────────────────────────────────────────────┤
-│ ● 15.5.2026                                 │
-│   Bench Press    95 kg  (+5 kg)   🔥 +5.5%  │
-│                                             │
-│ ● 10.5.2026                                 │
-│   Squat         120 kg  (+10 kg)  🔥 +9.0%  │
-│                                             │
-│ ● 28.4.2026                                 │
-│   Deadlift      150 kg  (+10 kg)  🔥 +7.1%  │
-└─────────────────────────────────────────────┘
+exercise_body_part_categories view:
+├── upper  → ~96 cviků (Horní tělo + část Full Body)
+├── lower  → ~67 cviků (Dolní tělo + Full Body + Kardio)
+└── core   → ~73 cviků (Core + Full Body)
 ```
 
-## UI/UX vylepšení
+---
 
-### Prémiový design podle existujících standardů
+## Žádné změny v kódu
 
-Zachovám stávající vizuální identitu:
-- **Glassmorphism**: `backdrop-blur-md`, `bg-card/80`, `border-border/50`
-- **Instrumentální pojetí**: Activity Rings, Gauge Meters, sparklines
-- **Signální barvy**: zelená=pokrok, žlutá=stagnace (bez hodnocení)
-- **Animace**: Framer Motion s `cardInteraction` efekty
+Toto je čistě **datová operace** - vše funguje díky existující infrastruktuře:
 
-### Nová záložka "Klienti" v hlavní navigaci
+1. **View `exercise_body_part_categories`** - automaticky mapuje `muscle_groups.region` na `body_part_key`
+2. **Hook `useAutoTagFromExercise`** - dotazuje se na tuto view
+3. **Tabulka `exercise_muscle_groups`** - pouze potřebuje naplnit daty
 
-```text
-[Přehled] [Klienti] [Knihovna] [Analytika] [Testy] [Výzvy]
-              ↑ NOVÁ
-```
+---
 
-Tato záložka se stane primárním místem pro sledování pokroku:
-- Rychlý přístup k detailu jakéhokoli klienta
-- Porovnání více klientů
-- Filtrování podle období, typu cviku
+## Implementace
 
-### Vylepšená navigace a vyhledávání
-
-- Globální search (Cmd+K) již existuje - využít pro rychlý skok na klienta
-- "Nedávno prohlížení" chips pro rychlý návrat
-
-## Soubory k vytvoření
-
-| Soubor | Popis |
-|--------|-------|
-| `src/components/performance/ClientProgressDashboard.tsx` | Dashboard pokroku klienta |
-| `src/components/performance/ProgressSparklineGrid.tsx` | Mřížka mini-grafů |
-| `src/components/performance/ClientProgressView.tsx` | Detailní view pokroku |
-| `src/components/performance/MultiClientComparison.tsx` | Porovnání více klientů |
-| `src/components/performance/PRHistoryTimeline.tsx` | Timeline PR |
-| `src/components/performance/ProgressHeroCard.tsx` | Hero stats karta |
-| `src/hooks/useClientProgressStats.ts` | Hook pro statistiky pokroku |
-
-## Soubory k úpravě
-
-| Soubor | Změna |
-|--------|-------|
-| `src/pages/PerformanceHub.tsx` | Přidat novou záložku "Klienti", reorganizovat přehled |
-| `src/components/performance/ClientProgressLeaderboard.tsx` | Kompaktnější verze pro přehled |
-
-## Technické detaily
-
-### Hook useClientProgressStats
-
-```typescript
-interface ClientProgressStats {
-  totalPRs: number;
-  prsThisMonth: number;
-  trainingsCount: number;
-  activeSince: Date;
-  volumeTrend: number; // procentuální změna
-  topExercises: {
-    name: string;
-    type: 'strength' | 'cardio' | 'skill';
-    firstValue: number;
-    lastValue: number;
-    changePercent: number;
-    sparklineData: number[];
-  }[];
-  recentPRs: {
-    date: string;
-    exerciseName: string;
-    value: number;
-    previousValue: number;
-    unit: string;
-  }[];
-}
-```
-
-### Sparkline komponenta
-
-Využije existující Recharts pro mini-grafy:
-```typescript
-<ResponsiveContainer width={120} height={40}>
-  <AreaChart data={sparklineData}>
-    <defs>
-      <linearGradient id="sparkGradient" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-      </linearGradient>
-    </defs>
-    <Area 
-      type="monotone" 
-      dataKey="value" 
-      stroke="hsl(var(--primary))"
-      fill="url(#sparkGradient)"
-    />
-  </AreaChart>
-</ResponsiveContainer>
-```
-
-## Očekávaný výsledek
-
-1. **Rychlý přehled** - Na první pohled vidím pokrok všech klientů
-2. **Detailní analýza** - Jeden klik pro kompletní historii konkrétního klienta
-3. **Snadné porovnání** - Vizuální porovnání více klientů side-by-side
-4. **Prémiová estetika** - Konzistentní s existujícím designem (Whoop/Apple Fitness styl)
-5. **Rychlá navigace** - Všechny informace dostupné na 1-2 kliky
-
-## Priorita implementace
-
-1. **Fáze 1**: ClientProgressView + useClientProgressStats (základní sledování jednoho klienta)
-2. **Fáze 2**: ProgressSparklineGrid + ProgressHeroCard (vizuální vylepšení)
-3. **Fáze 3**: Integrace do PerformanceHub (nová záložka Klienti)
-4. **Fáze 4**: MultiClientComparison (porovnání více klientů)
-5. **Fáze 5**: PRHistoryTimeline (detailní historie rekordů)
+Použiji nástroj pro vkládání dat do databáze (INSERT tool) k provedení všech SQL příkazů výše.
