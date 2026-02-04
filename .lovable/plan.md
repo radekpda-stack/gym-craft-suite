@@ -6,43 +6,43 @@
 |------|------|----------|
 | A: Čištění mrtvého kódu | ✅ Dokončeno | Smazáno: DashboardInsights, DashboardSettings, DashboardSettingsNew, PriceMigration, usePriceMigration |
 | B: Sloučení kontextů | ✅ Dokončeno | CelebrationContext sloučen do SmartCelebrationContext |
-| C: Konsolidace Analytics | ⏳ Čeká | |
+| C: Konsolidace Analytics | ✅ Dokončeno | ExerciseAnalytics, ClientAnalytics, FinanceAnalytics odstraněny, routy přesměrovány |
 | D: Sloučení tréninků | ⏳ Čeká | |
 | E: Client Portal reorganizace | ⏳ Čeká | |
 | F: Konsolidace hooků | ⏳ Čeká | |
 
 ---
 
-## Poznámky z implementace
+## Dokončené změny
 
 ### Fáze A: Mrtvý kód
-- **RX V1 hooky** nelze smazat - stále se aktivně používají v 11 souborech
 - Smazané soubory:
   - `src/components/dashboard/DashboardInsights.tsx` (842 řádků)
   - `src/components/dashboard/DashboardSettings.tsx`
   - `src/components/dashboard/DashboardSettingsNew.tsx`
   - `src/pages/PriceMigration.tsx`
   - `src/hooks/usePriceMigration.ts`
-  - Route `/admin/price-migration` odstraněna z App.tsx
+- Route `/admin/price-migration` odstraněna
 
 ### Fáze B: Celebration kontexty
-- `SmartCelebrationContext` nyní obsahuje oba API:
-  - Smart API: `celebrate()`, `currentCelebration`, `dismissCurrent()`, `pendingCount`, `mode`, `setMode()`
-  - Legacy API: `showLevelUp()`, `showBadge()`, `showPR()`, `showStreak()`
+- `SmartCelebrationContext` nyní obsahuje legacy API: `showLevelUp()`, `showBadge()`, `showPR()`, `showStreak()`
 - `CelebrationContext.tsx` smazán
-- `CelebrationProvider` odstraněn z `ClientPortalShell.tsx`
 - Aktualizovány importy v 4 souborech
+
+### Fáze C: Analytics konsolidace
+- Smazané stránky:
+  - `src/pages/ExerciseAnalytics.tsx` (460 řádků)
+  - `src/pages/ClientAnalytics.tsx` (326 řádků)
+  - `src/pages/FinanceAnalytics.tsx` (366 řádků)
+- Routy přesměrovány:
+  - `/exercises/analytics` → `/performance?tab=analytics`
+  - `/clients/analytics` → `/statistics?tab=clients`
+  - `/statistics/analytics` → `/statistics?tab=finance`
+- Hooky ponechány - používají je komponenty v `/components/analytics/`
 
 ---
 
-## Zbývající úkoly (Fáze C-F)
-
-### Fáze C: Analytics stránky
-- [ ] Integrovat `ExerciseAnalytics` do `PerformanceHub` jako tab
-- [ ] Integrovat `FinanceAnalytics` do `Statistics` jako sub-tab
-- [ ] Integrovat `ClientAnalytics` do `Statistics` jako sub-tab
-
-### Fáze D: Tréninky
+## Zbývající úkoly (Fáze D-F)
 - [ ] Přidat list view do `SchedulePage.tsx`
 - [ ] Sloučit funkcionalitu z `Trainings.tsx`
 - [ ] Smazat `Trainings.tsx`
