@@ -196,11 +196,11 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
                         paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
                       )} />
                       <span className={cn(
-                        "text-[10px] sm:text-xs font-medium text-center",
+                        "text-[10px] sm:text-xs font-medium text-center truncate",
                         paymentMethod === method.value ? "text-primary" : "text-muted-foreground"
                       )}>
-                        <span className="hidden xs:inline">{method.label}</span>
-                        <span className="xs:hidden">{method.shortLabel}</span>
+                        <span className="hidden sm:inline">{method.label}</span>
+                        <span className="sm:hidden">{method.shortLabel}</span>
                       </span>
                     </Label>
                   </div>

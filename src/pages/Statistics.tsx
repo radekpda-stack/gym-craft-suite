@@ -42,22 +42,22 @@ export default function Statistics() {
 
       {/* Category Tabs - 4 categories only */}
       <Tabs defaultValue="career" className="w-full">
-        <TabsList className="w-full grid grid-cols-4 h-auto p-1 mb-6">
-          <TabsTrigger value="career" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm">
+        <TabsList className="w-full grid grid-cols-4 h-auto p-1 mb-6 overflow-hidden">
+          <TabsTrigger value="career" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm min-w-0">
             <Trophy className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline">Kariéra</span>
+            <span className="hidden sm:inline truncate">Kariéra</span>
           </TabsTrigger>
-          <TabsTrigger value="finance" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm">
+          <TabsTrigger value="finance" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm min-w-0">
             <DollarSign className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline">Finance</span>
+            <span className="hidden sm:inline truncate">Finance</span>
           </TabsTrigger>
-          <TabsTrigger value="trainings" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm">
+          <TabsTrigger value="trainings" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm min-w-0">
             <Activity className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline">Tréninky</span>
+            <span className="hidden sm:inline truncate">Tréninky</span>
           </TabsTrigger>
-          <TabsTrigger value="clients" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm">
+          <TabsTrigger value="clients" className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 text-xs sm:text-sm min-w-0">
             <Users className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline">Klienti</span>
+            <span className="hidden sm:inline truncate">Klienti</span>
           </TabsTrigger>
         </TabsList>
 

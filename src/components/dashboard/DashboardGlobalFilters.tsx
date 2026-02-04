@@ -106,8 +106,8 @@ export function DashboardGlobalFilters() {
                   filters.globalPeriod === 'custom' && 'bg-primary text-primary-foreground'
                 )}
               >
-                <CalendarDays className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
-                <span className="hidden xs:inline">
+                <CalendarDays className="w-3 sm:w-3.5 h-3 sm:h-3.5 shrink-0" />
+                <span className="hidden sm:inline truncate">
                   {filters.globalPeriod === 'custom' && filters.customDateRange 
                     ? `${format(filters.customDateRange.from, 'd.M.')} - ${format(filters.customDateRange.to, 'd.M.')}`
                     : 'Vlastní'
@@ -145,14 +145,14 @@ export function DashboardGlobalFilters() {
             className="h-7 sm:h-8 gap-1 sm:gap-1.5 text-xs"
             onClick={() => setShowAdvanced(!showAdvanced)}
           >
-            <Filter className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
-            <span className="hidden xs:inline">Filtry</span>
+            <Filter className="w-3 sm:w-3.5 h-3 sm:h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Filtry</span>
             {activeFiltersCount > 0 && (
-              <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-4 sm:h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs">
+              <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-4 sm:h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs shrink-0">
                 {activeFiltersCount}
               </Badge>
             )}
-            <ChevronDown className={cn('w-3 sm:w-3.5 h-3 sm:h-3.5 transition-transform', showAdvanced && 'rotate-180')} />
+            <ChevronDown className={cn('w-3 sm:w-3.5 h-3 sm:h-3.5 transition-transform shrink-0', showAdvanced && 'rotate-180')} />
           </Button>
 
           {/* Reset button */}
@@ -163,8 +163,8 @@ export function DashboardGlobalFilters() {
               className="h-7 sm:h-8 gap-1 sm:gap-1.5 text-muted-foreground text-xs"
               onClick={resetFilters}
             >
-              <X className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
-              <span className="hidden xs:inline">Reset</span>
+              <X className="w-3 sm:w-3.5 h-3 sm:h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Reset</span>
             </Button>
           )}
         </div>

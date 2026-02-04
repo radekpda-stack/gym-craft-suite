@@ -564,16 +564,16 @@ export default function Clients() {
         </div>
 
         {/* Unified View Mode Toggle - Single row with 4 options */}
-        <div className="flex gap-1 p-1 bg-secondary/50 rounded-lg w-full">
+        <div className="flex gap-1 p-1 bg-secondary/50 rounded-lg w-full overflow-hidden">
           <Button
             variant={viewMode === 'today' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('today')}
-            className="flex-1 gap-1 px-2 h-8 text-xs"
+            className="flex-1 gap-1 px-2 h-8 text-xs min-w-0"
           >
-            <Calendar className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">Dnes</span>
-            <Badge variant={viewMode === 'today' ? 'secondary' : 'outline'} className="h-4 px-1 text-[10px]">
+            <Calendar className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline truncate">Dnes</span>
+            <Badge variant={viewMode === 'today' ? 'secondary' : 'outline'} className="h-4 px-1 text-[10px] shrink-0">
               {todayCount}
             </Badge>
           </Button>
@@ -581,11 +581,11 @@ export default function Clients() {
             variant={viewMode === 'week' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('week')}
-            className="flex-1 gap-1 px-2 h-8 text-xs"
+            className="flex-1 gap-1 px-2 h-8 text-xs min-w-0"
           >
-            <CalendarDays className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">Týden</span>
-            <Badge variant={viewMode === 'week' ? 'secondary' : 'outline'} className="h-4 px-1 text-[10px]">
+            <CalendarDays className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline truncate">Týden</span>
+            <Badge variant={viewMode === 'week' ? 'secondary' : 'outline'} className="h-4 px-1 text-[10px] shrink-0">
               {weekCount}
             </Badge>
           </Button>
@@ -593,10 +593,10 @@ export default function Clients() {
             variant={viewMode === 'all' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('all')}
-            className="flex-1 gap-1 px-2 h-8 text-xs"
+            className="flex-1 gap-1 px-2 h-8 text-xs min-w-0"
           >
-            <span>Všichni</span>
-            <Badge variant={viewMode === 'all' ? 'secondary' : 'outline'} className="h-4 px-1 text-[10px]">
+            <span className="truncate">Všichni</span>
+            <Badge variant={viewMode === 'all' ? 'secondary' : 'outline'} className="h-4 px-1 text-[10px] shrink-0">
               {activeClients.length}
             </Badge>
           </Button>
@@ -604,12 +604,12 @@ export default function Clients() {
             variant={viewMode === 'archived' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('archived')}
-            className="flex-1 gap-1 px-2 h-8 text-xs"
+            className="flex-1 gap-1 px-2 h-8 text-xs min-w-0"
           >
-            <Archive className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Archiv</span>
+            <Archive className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline truncate">Archiv</span>
             {archivedClients.length > 0 && (
-              <Badge variant={viewMode === 'archived' ? 'secondary' : 'outline'} className="h-4 px-1 text-[10px]">
+              <Badge variant={viewMode === 'archived' ? 'secondary' : 'outline'} className="h-4 px-1 text-[10px] shrink-0">
                 {archivedClients.length}
               </Badge>
             )}
