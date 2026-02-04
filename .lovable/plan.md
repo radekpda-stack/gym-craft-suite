@@ -92,10 +92,10 @@ Client Portal má **18 stránek/záložek** - pro běžného klienta je to přeh
 2. ✅ Integrovat `FollowupsPage` do Dashboard jako `FollowupsSection`
 3. ⏳ `FeedbackOverview` - ponecháno (komplexní unikátní funkcionalita)
 
-### ⏳ Fáze 4: Refaktoring hooků (PLÁNOVÁNO)
-1. Vytvořit `useClientHub` konsolidovaný hook
-2. Vytvořit `useFinanceHub` konsolidovaný hook
-3. Optimalizovat lazy-loading dat
+### ✅ Fáze 4: Refaktoring hooků (HOTOVO)
+1. ✅ Vytvořit `useClientHub` konsolidovaný hook
+2. ✅ Vytvořit `useFinanceHub` konsolidovaný hook
+3. ✅ Aktualizovat index exporty
 
 ### ⏳ Fáze 5: Redukce modulů (PLÁNOVÁNO)
 1. Sloučit 13 modulů do 5 logických celků
@@ -104,7 +104,7 @@ Client Portal má **18 stránek/záložek** - pro běžného klienta je to přeh
 
 ---
 
-## Výsledky po Fázi 1-3
+## Výsledky po Fázi 1-4
 
 | Metrika | Před | Po |
 |---------|------|-----|
@@ -112,6 +112,7 @@ Client Portal má **18 stránek/záložek** - pro běžného klienta je to přeh
 | Duplicitní hooky | 8+ | **1 opraveno** |
 | Legacy redirecty | 5 | **0** |
 | Stránky sloučené do komponent | 0 | **3** (CanceledTrainings, PRHistory, FollowupsPage) |
+| Konsolidované hub hooky | 0 | **2** (useClientHub, useFinanceHub) |
 
 ### Smazané soubory
 - `src/pages/CanceledTrainings.tsx` → `src/components/schedule/CanceledTrainingsSheet.tsx`
@@ -122,3 +123,9 @@ Client Portal má **18 stránek/záložek** - pro běžného klienta je to přeh
 - `CanceledTrainingsSheet` - Sheet pro zobrazení zrušených tréninků v Schedule
 - `PRHistoryContent` - Tab obsah pro PR historii v PerformanceHub
 - `FollowupsSection` - Sbalitelná sekce připomenutí na Dashboard
+
+### Nové hub hooky (Fáze 4)
+- `useClientHub` - Konsolidovaný hook pro přístup ke všem client-related datům s lazy-loading
+- `useClientsHub` - Hook pro práci s více klienty a filtrování
+- `useFinanceHub` - Konsolidovaný hook pro přístup ke všem finance-related datům
+- `useFinanceSummary` - Lightweight hook pro dashboard finanční souhrn
