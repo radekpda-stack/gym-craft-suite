@@ -63,6 +63,7 @@ import { CompactTagGridSelector } from './CompactTagGridSelector';
 import { WorkoutExerciseManager } from './WorkoutExerciseManager';
 import { TrainingParticipantsManager } from './TrainingParticipantsManager';
 import { ParticipantsPRsSection } from './ParticipantsPRsSection';
+import { TrainingQuickSale } from './TrainingQuickSale';
 
 const trainingDetailSchema = z.object({
   date: z.date(),
@@ -442,6 +443,15 @@ export function TrainingDetailView({
           participants={participants}
         />
       </div>
+
+      {/* QUICK SALE - for scheduled/in_progress */}
+      {(isScheduled || isInProgress) && participants.length > 0 && (
+        <TrainingQuickSale
+          trainingId={training.id}
+          participants={participants}
+          primaryClientId={training.client_id}
+        />
+      )}
 
       {/* CLOSE SECTION - only for completed */}
       {isCompleted && (
