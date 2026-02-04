@@ -51,10 +51,8 @@ const PreDiagnosticFormPage = lazy(() => import("./pages/PreDiagnosticFormPage")
 const ClientIntakePage = lazy(() => import("./pages/ClientIntakePage"));
 const PerformanceHub = lazy(() => import("./pages/PerformanceHub"));
 const ExerciseDetail = lazy(() => import("./pages/ExerciseDetail"));
-const ExerciseAnalytics = lazy(() => import("./pages/ExerciseAnalytics"));
-const ClientAnalytics = lazy(() => import("./pages/ClientAnalytics"));
+// ExerciseAnalytics, ClientAnalytics, FinanceAnalytics removed - integrated into Statistics and PerformanceHub
 const TestDetail = lazy(() => import("./pages/TestDetail"));
-const FinanceAnalytics = lazy(() => import("./pages/FinanceAnalytics"));
 const NutritionPage = lazy(() => import("./pages/NutritionPage"));
 const NutritionClientDetail = lazy(() => import("./pages/NutritionClientDetail"));
 const TrainingTemplates = lazy(() => import("./pages/TrainingTemplates"));
@@ -198,10 +196,11 @@ const App = () => (
                           <Route path="/pr-history" element={<Navigate to="/performance?tab=pr-history" replace />} />
                           <Route path="/app-usage" element={<LazyRouteWrapper><AppUsageStats /></LazyRouteWrapper>} />
                           <Route path="/statistics" element={<LazyRouteWrapper><Statistics /></LazyRouteWrapper>} />
-                          <Route path="/statistics/analytics" element={<LazyRouteWrapper><FinanceAnalytics /></LazyRouteWrapper>} />
-                          <Route path="/clients/analytics" element={<LazyRouteWrapper><ClientAnalytics /></LazyRouteWrapper>} />
+                          {/* Legacy analytics routes - redirect to integrated modules */}
+                          <Route path="/statistics/analytics" element={<Navigate to="/statistics?tab=finance" replace />} />
+                          <Route path="/clients/analytics" element={<Navigate to="/statistics?tab=clients" replace />} />
                           <Route path="performance" element={<LazyRouteWrapper><PerformanceHub /></LazyRouteWrapper>} />
-                          <Route path="exercises/analytics" element={<LazyRouteWrapper><ExerciseAnalytics /></LazyRouteWrapper>} />
+                          <Route path="exercises/analytics" element={<Navigate to="/performance?tab=analytics" replace />} />
                           <Route path="exercises/:id" element={<LazyRouteWrapper><ExerciseDetail /></LazyRouteWrapper>} />
                           <Route path="tests/:id" element={<LazyRouteWrapper><TestDetail /></LazyRouteWrapper>} />
                           <Route path="/nutrition" element={<LazyRouteWrapper><NutritionPage /></LazyRouteWrapper>} />
