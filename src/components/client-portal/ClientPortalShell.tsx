@@ -1,7 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { ClientPortalProvider, useClientPortal } from "@/contexts/ClientPortalContext";
 import { ClientPortalLayout } from "@/components/client-portal/ClientPortalLayout";
-import { CelebrationProvider } from "@/contexts/CelebrationContext";
 import { SmartCelebrationProvider } from "@/contexts/SmartCelebrationContext";
 import { useCelebrationDetector } from "@/hooks/useCelebrationDetector";
 import { useChallengeNotifications } from "@/hooks/useChallengeNotifications";
@@ -31,9 +30,7 @@ export function ClientPortalShell() {
   return (
     <ClientPortalProvider>
       <SmartCelebrationProvider>
-        <CelebrationProvider>
-          <ClientPortalContent />
-        </CelebrationProvider>
+        <ClientPortalContent />
       </SmartCelebrationProvider>
     </ClientPortalProvider>
   );

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useCelebrations } from '@/contexts/CelebrationContext';
+import { useCelebrations } from '@/contexts/SmartCelebrationContext';
 
 interface NutritionXPResult {
   success: boolean;

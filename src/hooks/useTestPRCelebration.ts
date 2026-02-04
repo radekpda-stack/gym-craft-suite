@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { useCelebrations } from '@/contexts/CelebrationContext';
+import { useCelebrations } from '@/contexts/SmartCelebrationContext';
 import type { TestSession, TestDefinition } from '@/types/tests';
 import { formatDuration } from '@/lib/utils';
 
