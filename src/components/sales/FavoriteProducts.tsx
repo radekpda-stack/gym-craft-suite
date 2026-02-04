@@ -36,7 +36,7 @@ export function FavoriteProducts({
         </span>
       </div>
       
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 overflow-hidden">
         {topProducts.map(product => {
           const inCart = getCartQuantity(product.id);
           
@@ -45,7 +45,7 @@ export function FavoriteProducts({
               key={product.id}
               onClick={() => onAddToCart(product)}
               className={cn(
-                "relative flex flex-col items-start gap-1 p-3 rounded-xl text-left transition-all duration-200",
+                "relative flex flex-col items-start gap-1 p-3 rounded-xl text-left transition-all duration-200 min-w-0 overflow-hidden",
                 "bg-card/60 backdrop-blur-sm border border-border/50 shadow-sm",
                 "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]",
                 inCart && "ring-2 ring-primary bg-primary/10"

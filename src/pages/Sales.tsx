@@ -37,7 +37,7 @@ export default function Sales() {
   }, [products]);
 
   return (
-    <div className="space-y-4 sm:space-y-6 animate-fade-in pb-24 sm:pb-6">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in pb-32 sm:pb-6">
       {/* Premium Hero Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-5 sm:p-6">
         {/* Background glow effects */}
@@ -79,7 +79,7 @@ export default function Sales() {
 
       {/* Premium Floating Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full h-auto p-1.5 card-floating rounded-2xl mb-4 sm:mb-6 backdrop-blur-md">
+        <TabsList className="w-full h-auto p-1.5 card-floating rounded-2xl mb-4 sm:mb-6 backdrop-blur-md overflow-hidden">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.value;
@@ -88,18 +88,18 @@ export default function Sales() {
                 key={tab.value}
                 value={tab.value}
                 className={cn(
-                  "relative flex-1 gap-2 py-3 px-3 sm:px-4 rounded-xl transition-all",
+                  "relative flex-1 gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl transition-all min-w-0",
                   "text-muted-foreground hover:text-foreground/80",
                   isActive && "text-primary-foreground bg-primary shadow-md"
                 )}
               >
                 <div className={cn(
-                  "p-1.5 rounded-lg transition-colors",
+                  "p-1 sm:p-1.5 rounded-lg transition-colors shrink-0",
                   isActive ? "bg-primary-foreground/20" : "bg-transparent"
                 )}>
                   <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <span className="hidden xs:inline text-sm font-medium">{tab.label}</span>
+                <span className="hidden sm:inline text-xs sm:text-sm font-medium truncate">{tab.label}</span>
               </TabsTrigger>
             );
           })}
