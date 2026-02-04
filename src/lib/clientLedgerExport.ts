@@ -20,6 +20,7 @@ export interface LedgerEntry {
   memberName?: string | null; // For group budgets
   trainingSessionId?: string | null;
   productId?: string | null;
+  displayAmount?: number; // For showing actual price when amount is 0 (non-credit payments)
 }
 
 export interface LedgerExportRow {
