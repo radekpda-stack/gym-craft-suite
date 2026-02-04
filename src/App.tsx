@@ -35,12 +35,9 @@ const UserApprovals = lazy(() => import("./pages/admin/UserApprovals"));
 const PerformanceImport = lazy(() => import("./pages/admin/PerformanceImport"));
 const Clients = lazy(() => import("./pages/Clients"));
 const ClientDetail = lazy(() => import("./pages/ClientDetail"));
-const Trainings = lazy(() => import("./pages/Trainings"));
 const TrainingDetail = lazy(() => import("./pages/TrainingDetail"));
 const Records = lazy(() => import("./pages/Records"));
-const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const SchedulePage = lazy(() => import("./pages/SchedulePage"));
-const CanceledTrainings = lazy(() => import("./pages/CanceledTrainings"));
 const Settings = lazy(() => import("./pages/Settings"));
 const FeedbackPage = lazy(() => import("./pages/FeedbackPage"));
 const FeedbackOverview = lazy(() => import("./pages/FeedbackOverview"));
@@ -191,12 +188,9 @@ const App = () => (
                           <Route path="/" element={<LazyRouteWrapper><Index /></LazyRouteWrapper>} />
                           <Route path="/clients" element={<LazyRouteWrapper><Clients /></LazyRouteWrapper>} />
                           <Route path="/clients/:id" element={<LazyRouteWrapper><ClientDetail /></LazyRouteWrapper>} />
-                          <Route path="/trainings" element={<Navigate to="/schedule" replace />} />
                           <Route path="/trainings/:id" element={<LazyRouteWrapper><TrainingDetail /></LazyRouteWrapper>} />
                           <Route path="/records" element={<LazyRouteWrapper><Records /></LazyRouteWrapper>} />
-                          <Route path="/calendar" element={<Navigate to="/schedule" replace />} />
                           <Route path="/schedule" element={<LazyRouteWrapper><SchedulePage /></LazyRouteWrapper>} />
-                          <Route path="/canceled" element={<LazyRouteWrapper><CanceledTrainings /></LazyRouteWrapper>} />
                           <Route path="/settings" element={<LazyRouteWrapper><Settings /></LazyRouteWrapper>} />
                           <Route path="/feedback-overview" element={<LazyRouteWrapper><FeedbackOverview /></LazyRouteWrapper>} />
                           <Route path="/sales" element={<LazyRouteWrapper><Sales /></LazyRouteWrapper>} />
@@ -206,12 +200,9 @@ const App = () => (
                           <Route path="/statistics/analytics" element={<LazyRouteWrapper><FinanceAnalytics /></LazyRouteWrapper>} />
                           <Route path="/clients/analytics" element={<LazyRouteWrapper><ClientAnalytics /></LazyRouteWrapper>} />
                           <Route path="performance" element={<LazyRouteWrapper><PerformanceHub /></LazyRouteWrapper>} />
-                          <Route path="exercises" element={<Navigate to="/performance?tab=exercises" replace />} />
                           <Route path="exercises/analytics" element={<LazyRouteWrapper><ExerciseAnalytics /></LazyRouteWrapper>} />
                           <Route path="exercises/:id" element={<LazyRouteWrapper><ExerciseDetail /></LazyRouteWrapper>} />
-                          <Route path="tests" element={<Navigate to="/performance?tab=tests" replace />} />
                           <Route path="tests/:id" element={<LazyRouteWrapper><TestDetail /></LazyRouteWrapper>} />
-                          <Route path="challenges" element={<Navigate to="/performance?tab=challenges" replace />} />
                           <Route path="/nutrition" element={<LazyRouteWrapper><NutritionPage /></LazyRouteWrapper>} />
                           <Route path="/nutrition/client/:clientId" element={<LazyRouteWrapper><NutritionClientDetail /></LazyRouteWrapper>} />
                           {/* Legacy route - redirect to main nutrition page */}

@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
-import { useClientAttendanceStats, type PeriodDays } from '@/hooks/useClientPortalStats';
+import { useClientPortalAttendanceStats, type PeriodDays } from '@/hooks/useClientPortalStats';
 import { useClientComprehensiveAttendanceStats } from '@/hooks/useClientComprehensiveAttendanceStats';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { Calendar, CheckCircle2, Clock, Dumbbell, AlertCircle, Flame, TrendingUp, Trophy, CalendarDays, Target } from 'lucide-react';
@@ -25,7 +25,7 @@ export default function ClientPortalAttendance() {
   const { clientId } = useClientPortal();
   const [period, setPeriod] = useState<PeriodDays>(30);
   
-  const { data: stats, isLoading, error } = useClientAttendanceStats(clientId ?? undefined, period);
+  const { data: stats, isLoading, error } = useClientPortalAttendanceStats(clientId ?? undefined, period);
   const { stats: comprehensiveStats, isLoading: isLoadingComprehensive } = useClientComprehensiveAttendanceStats(clientId ?? undefined);
   const { trackPageMount, trackPortalEvent } = useClientPortalPageTracking('client_portal_attendance');
 
