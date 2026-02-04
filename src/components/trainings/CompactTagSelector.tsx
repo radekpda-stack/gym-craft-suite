@@ -33,7 +33,6 @@ const TAG_PRESETS: TagPreset[] = [
     color: "#ef4444",
     tagNames: [
       { type: "focus", name: "Síla" },
-      { type: "intensity", name: "Těžký" },
       { type: "body_part", name: "Horní část" },
     ],
   },
@@ -43,7 +42,6 @@ const TAG_PRESETS: TagPreset[] = [
     color: "#22c55e",
     tagNames: [
       { type: "focus", name: "Mobilita" },
-      { type: "intensity", name: "Lehký" },
       { type: "body_part", name: "Core" },
     ],
   },
@@ -53,8 +51,7 @@ const TAG_PRESETS: TagPreset[] = [
     color: "#0ea5e9",
     tagNames: [
       { type: "focus", name: "Kardio" },
-      { type: "intensity", name: "Střední" },
-      { type: "body_part", name: "Dolní část" },
+      { type: "body_part", name: "Celé tělo" },
     ],
   },
   {
@@ -63,7 +60,6 @@ const TAG_PRESETS: TagPreset[] = [
     color: "#8b5cf6",
     tagNames: [
       { type: "focus", name: "Síla" },
-      { type: "intensity", name: "Střední" },
       { type: "body_part", name: "Horní část" },
     ],
   },
@@ -85,7 +81,6 @@ export function CompactTagSelector({
 
   // Group tags by type
   const focusTags = useMemo(() => tags.filter(t => t.tag_type === 'focus'), [tags]);
-  const intensityTags = useMemo(() => tags.filter(t => t.tag_type === 'intensity'), [tags]);
   const bodyPartTags = useMemo(() => 
     tags.filter(t => t.tag_type === 'body_part' && BODY_PART_CATEGORIES.includes(t.name)), 
     [tags]
@@ -93,7 +88,6 @@ export function CompactTagSelector({
 
   // Get currently selected tag for each type
   const selectedFocusId = selectedTagIds.find(id => focusTags.some(t => t.id === id)) || null;
-  const selectedIntensityId = selectedTagIds.find(id => intensityTags.some(t => t.id === id)) || null;
   const selectedBodyPartId = selectedTagIds.find(id => bodyPartTags.some(t => t.id === id)) || null;
 
   const handleApplyPreset = async (preset: TagPreset) => {
@@ -181,8 +175,8 @@ export function CompactTagSelector({
         </div>
       </div>
 
-      {/* 3-Column Dropdown Grid */}
-      <div className="grid grid-cols-3 gap-1.5">
+      {/* 2-Column Dropdown Grid (focus + body part) */}
+      <div className="grid grid-cols-2 gap-1.5">
         <TagDropdownSelect
           label={
             <span className="flex items-center gap-1">
@@ -197,22 +191,6 @@ export function CompactTagSelector({
           onChange={(id) => handleTagTypeSelect('focus', id)}
           placeholder="Vybrat"
           className={missingTypes.includes('focus') ? "ring-1 ring-warning/50 rounded-lg" : ""}
-          allowClear
-        />
-        <TagDropdownSelect
-          label={
-            <span className="flex items-center gap-1">
-              Intenzita
-              {missingTypes.includes('intensity') && (
-                <AlertCircle className="w-3 h-3 text-warning" />
-              )}
-            </span>
-          }
-          options={intensityTags.map(t => ({ id: t.id, label: t.name }))}
-          value={selectedIntensityId}
-          onChange={(id) => handleTagTypeSelect('intensity', id)}
-          placeholder="Vybrat"
-          className={missingTypes.includes('intensity') ? "ring-1 ring-warning/50 rounded-lg" : ""}
           allowClear
         />
         <TagDropdownSelect

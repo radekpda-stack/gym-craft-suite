@@ -475,14 +475,6 @@ export function TrainingForm({
               });
               setSelectedTagIds([...otherTags, ...ids]);
             }}
-            intensityTagId={intensityTagId}
-            onIntensityTagChange={(id) => {
-              const otherTags = selectedTagIds.filter(tagId => {
-                const tag = tags.find(t => t.id === tagId);
-                return tag?.tag_type !== 'intensity';
-              });
-              setSelectedTagIds(id ? [...otherTags, id] : otherTags);
-            }}
             bodyPartTagIds={bodyPartTagIds}
             onBodyPartTagsChange={(ids) => {
               const otherTags = selectedTagIds.filter(id => {

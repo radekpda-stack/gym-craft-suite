@@ -54,13 +54,11 @@ interface ExpandedTagModalProps {
   // Current values
   trainingType: string | null;
   focusTagIds: string[];
-  intensityTagId: string | null;
   bodyPartTagIds: string[];
   coachRPE: number | null;
   // Callbacks
   onTrainingTypeChange: (type: string) => void;
   onFocusTagsChange: (ids: string[]) => void;
-  onIntensityTagChange: (id: string | null) => void;
   onBodyPartTagsChange: (ids: string[]) => void;
   onCoachRPEChange: (rpe: number) => void;
 }
@@ -70,12 +68,10 @@ export function ExpandedTagModal({
   onOpenChange,
   trainingType,
   focusTagIds,
-  intensityTagId,
   bodyPartTagIds,
   coachRPE,
   onTrainingTypeChange,
   onFocusTagsChange,
-  onIntensityTagChange,
   onBodyPartTagsChange,
   onCoachRPEChange,
 }: ExpandedTagModalProps) {
@@ -85,9 +81,8 @@ export function ExpandedTagModal({
   // Rozdělit tagy podle typu
   const tagsByType = useMemo(() => {
     const focus = tags.filter((t) => t.tag_type === 'focus');
-    const intensity = tags.filter((t) => t.tag_type === 'intensity');
     const bodyPart = tags.filter((t) => t.tag_type === 'body_part');
-    return { focus, intensity, bodyPart };
+    return { focus, bodyPart };
   }, [tags]);
 
   // Získat tag podle jména
@@ -227,24 +222,6 @@ export function ExpandedTagModal({
                     selected={focusTagIds.includes(tag.id)}
                     onClick={() => toggleTag(tag.id, focusTagIds, onFocusTagsChange)}
                     variant="focus"
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Intenzita (single-select) */}
-          {tagsByType.intensity.length > 0 && (
-            <div>
-              <SectionLabel>Intenzita</SectionLabel>
-              <div className="flex flex-wrap gap-2">
-                {tagsByType.intensity.map((tag) => (
-                  <TagChip
-                    key={tag.id}
-                    label={tag.name}
-                    selected={intensityTagId === tag.id}
-                    onClick={() => onIntensityTagChange(intensityTagId === tag.id ? null : tag.id)}
-                    variant="intensity"
                   />
                 ))}
               </div>

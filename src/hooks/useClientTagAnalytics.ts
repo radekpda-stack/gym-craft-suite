@@ -13,6 +13,16 @@ export interface TagDistribution {
   percentage: number;
 }
 
+// Derive intensity from RPE for backward compatibility
+export type DerivedIntensity = 'Lehký' | 'Střední' | 'Těžký';
+
+export function getIntensityFromRPE(rpe: number | null | undefined): DerivedIntensity | null {
+  if (rpe == null) return null;
+  if (rpe <= 3) return 'Lehký';
+  if (rpe <= 6) return 'Střední';
+  return 'Těžký';
+}
+
 export interface TagAnalytics {
   focusDistribution: TagDistribution[];
   bodyPartDistribution: TagDistribution[];

@@ -20,21 +20,20 @@ const TRAINING_TYPES: TagOption[] = [
   { id: 'diagnostic', label: 'Diagnostický', icon: '📊' },
 ];
 
-// Konfigurace viditelnosti sekcí podle typu tréninku
+// Konfigurace viditelnosti sekcí podle typu tréninku - intensity removed, RPE replaces it
 type TagVisibility = {
   showFocus: boolean;
-  showIntensity: boolean;
   bodyPartsMode: 'full' | 'only-full-body' | 'hidden';
 };
 
 const TAG_VISIBILITY_BY_TYPE: Record<string, TagVisibility> = {
-  strength: { showFocus: true, showIntensity: true, bodyPartsMode: 'full' },
-  functional: { showFocus: true, showIntensity: true, bodyPartsMode: 'full' },
-  hiit: { showFocus: false, showIntensity: true, bodyPartsMode: 'only-full-body' },
-  cardio: { showFocus: false, showIntensity: true, bodyPartsMode: 'only-full-body' },
-  regeneration: { showFocus: false, showIntensity: true, bodyPartsMode: 'hidden' },
-  mobility: { showFocus: false, showIntensity: false, bodyPartsMode: 'full' },
-  diagnostic: { showFocus: false, showIntensity: false, bodyPartsMode: 'full' },
+  strength: { showFocus: true, bodyPartsMode: 'full' },
+  functional: { showFocus: true, bodyPartsMode: 'full' },
+  hiit: { showFocus: false, bodyPartsMode: 'only-full-body' },
+  cardio: { showFocus: false, bodyPartsMode: 'only-full-body' },
+  regeneration: { showFocus: false, bodyPartsMode: 'hidden' },
+  mobility: { showFocus: false, bodyPartsMode: 'full' },
+  diagnostic: { showFocus: false, bodyPartsMode: 'full' },
 };
 
 // Body part category mapping
@@ -47,9 +46,6 @@ interface CompactTagGridSelectorProps {
   // Tagy zaměření (focus)
   focusTagIds: string[];
   onFocusTagsChange: (ids: string[]) => void;
-  // Tag intenzity
-  intensityTagId: string | null;
-  onIntensityTagChange: (id: string | null) => void;
   // Tagy partií těla
   bodyPartTagIds: string[];
   onBodyPartTagsChange: (ids: string[]) => void;
@@ -66,8 +62,6 @@ export function CompactTagGridSelector({
   onTrainingTypeChange,
   focusTagIds,
   onFocusTagsChange,
-  intensityTagId,
-  onIntensityTagChange,
   bodyPartTagIds,
   onBodyPartTagsChange,
   coachRPE,
@@ -84,16 +78,12 @@ export function CompactTagGridSelector({
       .filter((t) => t.tag_type === 'focus')
       .map((t) => ({ id: t.id, label: t.name }));
     
-    const intensity: TagOption[] = tags
-      .filter((t) => t.tag_type === 'intensity')
-      .map((t) => ({ id: t.id, label: t.name }));
-    
     // Body parts - only show top-level categories in compact view
     const bodyPart: TagOption[] = tags
       .filter((t) => t.tag_type === 'body_part' && BODY_PART_CATEGORY_NAMES.includes(t.name))
       .map((t) => ({ id: t.id, label: t.name }));
     
-    return { focus, intensity, bodyPart };
+    return { focus, bodyPart };
   }, [tags]);
 
   // Získat aktuální nastavení viditelnosti podle typu tréninku
@@ -159,8 +149,8 @@ export function CompactTagGridSelector({
         </Button>
       </div>
 
-      {/* 4-dropdown grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {/* 3-dropdown grid: Typ, Zaměření, Partie */}
+      <div className="grid grid-cols-3 gap-2">
         {/* Typ tréninku - always visible */}
         <TagDropdownSelect
           label="Typ"
@@ -194,26 +184,6 @@ export function CompactTagGridSelector({
           <div className="flex flex-col gap-1">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
               Zaměření
-            </span>
-            <div className="h-9 flex items-center px-2 bg-muted/30 rounded-xl text-xs text-muted-foreground">
-              —
-            </div>
-          </div>
-        )}
-
-        {/* Intenzita - conditional */}
-        {visibility.showIntensity ? (
-          <TagDropdownSelect
-            label="Intenzita"
-            options={tagOptions.intensity}
-            value={intensityTagId}
-            onChange={onIntensityTagChange}
-            placeholder="Intenzita..."
-          />
-        ) : (
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-              Intenzita
             </span>
             <div className="h-9 flex items-center px-2 bg-muted/30 rounded-xl text-xs text-muted-foreground">
               —
@@ -263,18 +233,16 @@ export function CompactTagGridSelector({
         </div>
       )}
 
-      {/* Expanded modal */}
+      {/* Expanded modal - without intensity props */}
       <ExpandedTagModal
         open={showExpandedModal}
         onOpenChange={setShowExpandedModal}
         trainingType={trainingType}
         focusTagIds={focusTagIds}
-        intensityTagId={intensityTagId}
         bodyPartTagIds={bodyPartTagIds}
         coachRPE={coachRPE}
         onTrainingTypeChange={onTrainingTypeChange}
         onFocusTagsChange={onFocusTagsChange}
-        onIntensityTagChange={onIntensityTagChange}
         onBodyPartTagsChange={onBodyPartTagsChange}
         onCoachRPEChange={onCoachRPEChange}
       />

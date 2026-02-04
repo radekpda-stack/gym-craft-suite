@@ -11,11 +11,11 @@ export interface TagValidationResult {
 // Training types that don't require focus tag (matches TAG_VISIBILITY_BY_TYPE in TrainingTagStepper)
 const TYPES_WITHOUT_FOCUS = ['hiit', 'cardio', 'regeneration', 'mobility', 'diagnostic'];
 
-// Training types that don't require intensity tag
-const TYPES_WITHOUT_INTENSITY = ['mobility', 'diagnostic'];
+// Training types that don't require intensity tag - ALL types now, RPE replaces intensity
+const TYPES_WITHOUT_INTENSITY = ['strength', 'functional', 'hiit', 'cardio', 'regeneration', 'mobility', 'diagnostic'];
 
-// Training types that don't require body_part tag (hidden in UI)
-const TYPES_WITHOUT_BODY_PART = ['regeneration'];
+// Training types that don't require body_part tag (auto-set or hidden in UI)
+const TYPES_WITHOUT_BODY_PART = ['regeneration', 'hiit', 'cardio'];
 
 /**
  * Validates that a training session has the required tag types based on training type:
@@ -44,11 +44,8 @@ export function useTrainingTagValidation(
       errors.push("Chybí tag zaměření (např. Síla, Mobilita, Kardio)");
     }
 
-    const requiresIntensity = !TYPES_WITHOUT_INTENSITY.includes(type);
-    if (requiresIntensity && !selectedTagTypes.has("intensity")) {
-      missingTypes.push("intensity");
-      errors.push("Chybí tag intenzity (Lehký, Střední, Těžký)");
-    }
+  // Intensity validation removed - RPE 1-10 replaces intensity tags
+  // Historical data with intensity tags will still work for analytics
 
     const requiresBodyPart = !TYPES_WITHOUT_BODY_PART.includes(type);
     if (requiresBodyPart && !selectedTagTypes.has("body_part")) {
@@ -106,11 +103,7 @@ export function validateTrainingTags(
     errors.push("Chybí tag zaměření (např. Síla, Mobilita, Kardio)");
   }
 
-  const requiresIntensity = !TYPES_WITHOUT_INTENSITY.includes(type);
-  if (requiresIntensity && !selectedTagTypes.has("intensity")) {
-    missingTypes.push("intensity");
-    errors.push("Chybí tag intenzity (Lehký, Střední, Těžký)");
-  }
+  // Intensity validation removed - RPE 1-10 replaces intensity tags
 
   const requiresBodyPart = !TYPES_WITHOUT_BODY_PART.includes(type);
   if (requiresBodyPart && !selectedTagTypes.has("body_part")) {
