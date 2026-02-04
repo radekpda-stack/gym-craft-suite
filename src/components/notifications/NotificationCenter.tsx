@@ -148,47 +148,8 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   // Pending action system - action executes AFTER sheet closes
   const pendingActionRef = useRef<PendingActionType | null>(null);
 
-  // Execute pending action after sheet closes
-  const flushPendingAction = useCallback(async () => {
-    const action = pendingActionRef.current;
-    if (!action) return;
-    pendingActionRef.current = null;
-
-    // Small delay to ensure sheet animation completes
-    await new Promise(resolve => setTimeout(resolve, 50));
-
-    switch (action.type) {
-      case 'nutrition':
-        setSelectedNutritionNotification(action.notification);
-        setNutritionDialogOpen(true);
-        break;
-      case 'workout':
-        setSelectedWorkoutNotification(action.notification);
-        setWorkoutDialogOpen(true);
-        break;
-      case 'birthday':
-        setSelectedBirthdayNotification(action.notification);
-        setBirthdayDialogOpen(true);
-        break;
-      case 'anniversary':
-        setSelectedAnniversaryNotification(action.notification);
-        setAnniversaryDialogOpen(true);
-        break;
-      case 'profile':
-        setSelectedProfileNotification(action.notification);
-        setProfileUpdateDialogOpen(true);
-        break;
-      case 'feedback':
-        await loadAndOpenFeedback(action.notification);
-        break;
-      case 'navigate':
-        navigate(action.path);
-        break;
-    }
-  }, [navigate]);
-
-  // Load feedback data and open dialog
-  const loadAndOpenFeedback = async (notification: UnifiedNotification) => {
+  // Load feedback data and open dialog - defined as useCallback so it's stable
+  const loadAndOpenFeedback = useCallback(async (notification: UnifiedNotification) => {
     const trainingId = notification.entity_type === 'training' ? notification.entity_id : null;
     
     if (!trainingId) {
@@ -237,7 +198,46 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     } finally {
       setLoadingFeedback(false);
     }
-  };
+  }, [navigate]);
+
+  // Execute pending action after sheet closes
+  const flushPendingAction = useCallback(async () => {
+    const action = pendingActionRef.current;
+    if (!action) return;
+    pendingActionRef.current = null;
+
+    // Small delay to ensure sheet animation completes
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    switch (action.type) {
+      case 'nutrition':
+        setSelectedNutritionNotification(action.notification);
+        setNutritionDialogOpen(true);
+        break;
+      case 'workout':
+        setSelectedWorkoutNotification(action.notification);
+        setWorkoutDialogOpen(true);
+        break;
+      case 'birthday':
+        setSelectedBirthdayNotification(action.notification);
+        setBirthdayDialogOpen(true);
+        break;
+      case 'anniversary':
+        setSelectedAnniversaryNotification(action.notification);
+        setAnniversaryDialogOpen(true);
+        break;
+      case 'profile':
+        setSelectedProfileNotification(action.notification);
+        setProfileUpdateDialogOpen(true);
+        break;
+      case 'feedback':
+        await loadAndOpenFeedback(action.notification);
+        break;
+      case 'navigate':
+        navigate(action.path);
+        break;
+    }
+  }, [navigate, loadAndOpenFeedback]);
 
   const handleSheetOpenChange = useCallback((open: boolean) => {
     setSheetOpen(open);
