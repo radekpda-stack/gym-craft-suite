@@ -16,22 +16,21 @@ const TRAINING_TYPES = [
   { value: 'diagnostic', label: 'Diagnostický', icon: '📊' },
 ] as const;
 
-// Konfigurace viditelnosti sekcí podle typu tréninku
+// Konfigurace viditelnosti sekcí podle typu tréninku - intensity removed (RPE replaces it)
 type TagVisibility = {
   showFocus: boolean;
-  showIntensity: boolean;
   bodyPartsMode: 'full' | 'only-full-body' | 'hidden';
   autoSelectFullBody?: boolean;
 };
 
 const TAG_VISIBILITY_BY_TYPE: Record<string, TagVisibility> = {
-  strength: { showFocus: true, showIntensity: true, bodyPartsMode: 'full' },
-  functional: { showFocus: true, showIntensity: true, bodyPartsMode: 'full' },
-  hiit: { showFocus: false, showIntensity: true, bodyPartsMode: 'only-full-body', autoSelectFullBody: true },
-  cardio: { showFocus: false, showIntensity: true, bodyPartsMode: 'only-full-body', autoSelectFullBody: true },
-  regeneration: { showFocus: false, showIntensity: true, bodyPartsMode: 'hidden' },
-  mobility: { showFocus: false, showIntensity: false, bodyPartsMode: 'full' },
-  diagnostic: { showFocus: false, showIntensity: false, bodyPartsMode: 'full' },
+  strength: { showFocus: true, bodyPartsMode: 'full' },
+  functional: { showFocus: true, bodyPartsMode: 'full' },
+  hiit: { showFocus: false, bodyPartsMode: 'only-full-body', autoSelectFullBody: true },
+  cardio: { showFocus: false, bodyPartsMode: 'only-full-body', autoSelectFullBody: true },
+  regeneration: { showFocus: false, bodyPartsMode: 'hidden' },
+  mobility: { showFocus: false, bodyPartsMode: 'full' },
+  diagnostic: { showFocus: false, bodyPartsMode: 'full' },
 };
 
 // Hierarchie partií těla - mapování kategorií na podřazené tagy
@@ -76,9 +75,6 @@ interface TrainingTagStepperProps {
   // Tagy zaměření (focus)
   focusTagIds: string[];
   onFocusTagsChange: (ids: string[]) => void;
-  // Tag intenzity
-  intensityTagId: string | null;
-  onIntensityTagChange: (id: string | null) => void;
   // Tagy partií těla
   bodyPartTagIds: string[];
   onBodyPartTagsChange: (ids: string[]) => void;
@@ -97,8 +93,6 @@ export function TrainingTagStepper({
   onTrainingTypeChange,
   focusTagIds,
   onFocusTagsChange,
-  intensityTagId,
-  onIntensityTagChange,
   bodyPartTagIds,
   onBodyPartTagsChange,
   coachRPE,
@@ -113,9 +107,8 @@ export function TrainingTagStepper({
   // Rozdělit tagy podle typu
   const tagsByType = useMemo(() => {
     const focus = tags.filter((t) => t.tag_type === 'focus');
-    const intensity = tags.filter((t) => t.tag_type === 'intensity');
     const bodyPart = tags.filter((t) => t.tag_type === 'body_part');
-    return { focus, intensity, bodyPart };
+    return { focus, bodyPart };
   }, [tags]);
 
   // Získat aktuální nastavení viditelnosti podle typu tréninku
@@ -180,10 +173,9 @@ export function TrainingTagStepper({
   // Vybrané hodnoty pro shrnutí
   const selectedType = TRAINING_TYPES.find((t) => t.value === trainingType);
   const selectedFocusNames = focusTagIds.map(getTagName).filter(Boolean);
-  const selectedIntensityName = intensityTagId ? getTagName(intensityTagId) : null;
   const selectedBodyPartNames = bodyPartTagIds.map(getTagName).filter(Boolean);
 
-  const hasAnySelection = selectedType || selectedFocusNames.length > 0 || selectedIntensityName || selectedBodyPartNames.length > 0 || coachRPE;
+  const hasAnySelection = selectedType || selectedFocusNames.length > 0 || selectedBodyPartNames.length > 0 || coachRPE;
 
   // Kompaktní shrnutí - jedna řádka badges (respektuje viditelnost sekcí)
   const renderCompactSummary = () => {
@@ -201,11 +193,6 @@ export function TrainingTagStepper({
             {name}
           </Badge>
         ))}
-        {visibility.showIntensity && selectedIntensityName && (
-          <Badge variant="secondary" className="text-xs bg-warning/15 text-warning border-0">
-            {selectedIntensityName}
-          </Badge>
-        )}
         {visibility.bodyPartsMode !== 'hidden' && selectedBodyPartNames.map((name) => (
           <Badge key={name} variant="secondary" className="text-xs bg-primary/15 text-primary border-0">
             {name}
@@ -416,24 +403,6 @@ export function TrainingTagStepper({
                 selected={focusTagIds.includes(tag.id)}
                 onClick={() => toggleTag(tag.id, focusTagIds, onFocusTagsChange)}
                 variant="focus"
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Intenzita (single-select) - pouze pokud je povoleno pro tento typ */}
-      {visibility.showIntensity && tagsByType.intensity.length > 0 && (
-        <div>
-          <SectionLabel>Intenzita</SectionLabel>
-          <div className="flex flex-wrap gap-2">
-            {tagsByType.intensity.map((tag) => (
-              <TagChip
-                key={tag.id}
-                label={tag.name}
-                selected={intensityTagId === tag.id}
-                onClick={() => onIntensityTagChange(intensityTagId === tag.id ? null : tag.id)}
-                variant="intensity"
               />
             ))}
           </div>

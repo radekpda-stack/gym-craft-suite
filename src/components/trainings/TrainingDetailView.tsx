@@ -400,17 +400,6 @@ export function TrainingDetailView({
             setSelectedTagIds(newTagIds);
             debouncedSaveTags(newTagIds);
           }}
-          intensityTagId={intensityTagId}
-          onIntensityTagChange={(id) => {
-            const otherTags = selectedTagIds.filter(tagId => {
-              const tag = tags.find(t => t.id === tagId);
-              return tag && tag.tag_type !== 'intensity';
-            });
-            const validId = id && tags.some(t => t.id === id) ? id : null;
-            const newTagIds = validId ? [...otherTags, validId] : otherTags;
-            setSelectedTagIds(newTagIds);
-            debouncedSaveTags(newTagIds);
-          }}
           bodyPartTagIds={bodyPartTagIds}
           onBodyPartTagsChange={(ids) => {
             const validIds = ids.filter(id => tags.some(t => t.id === id));

@@ -248,8 +248,6 @@ export function TrainingModeCard({
               onTrainingTypeChange={handleTrainingTypeChange}
               focusTagIds={sessionTags.focusTagIds}
               onFocusTagsChange={(ids) => handleTagsChange({ focusTagIds: ids })}
-              intensityTagId={sessionTags.intensityTagId}
-              onIntensityTagChange={(id) => handleTagsChange({ intensityTagId: id })}
               bodyPartTagIds={sessionTags.bodyPartTagIds}
               onBodyPartTagsChange={(ids) => handleTagsChange({ bodyPartTagIds: ids })}
               coachRPE={sessionTags.coachRPE}
