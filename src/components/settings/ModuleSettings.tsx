@@ -1,25 +1,27 @@
 import { useLanguage } from "@/lib/i18n";
-import { useModuleSettings, useUpdateModuleSettings, type ModuleSettings as ModuleSettingsType } from "@/hooks/useModuleSettings";
+import { 
+  useModuleSettings, 
+  useUpdateModuleSettings, 
+  type ModuleGroups,
+  MODULE_GROUP_MAPPING,
+  type ModuleSettings as ModuleSettingsType 
+} from "@/hooks/useModuleSettings";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
   Users,
   Utensils,
-  MessageSquare,
-  Activity,
-  LayoutTemplate,
-  Trophy,
-  AlertTriangle,
-  LucideIcon,
-  Calendar,
-  ShoppingBag,
-  BarChart3,
   Dumbbell,
-  Gift,
+  Wallet,
+  Settings,
+  ChevronDown,
+  LucideIcon,
 } from "lucide-react";
+import { useState } from "react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-interface ModuleConfig {
-  key: keyof ModuleSettingsType;
+interface GroupConfig {
+  key: keyof ModuleGroups;
   icon: LucideIcon;
   labelCs: string;
   labelEn: string;
@@ -27,148 +29,113 @@ interface ModuleConfig {
   descriptionEn: string;
   warningCs?: string;
   warningEn?: string;
+  subModules: {
+    key: keyof ModuleSettingsType;
+    labelCs: string;
+    labelEn: string;
+  }[];
 }
 
-const MODULES: ModuleConfig[] = [
+const MODULE_GROUPS: GroupConfig[] = [
   {
     key: "client_portal",
     icon: Users,
     labelCs: "Klientský portál",
     labelEn: "Client Portal",
-    descriptionCs: "Umožňuje klientům přihlásit se a sledovat své tréninky, kredit a pokrok",
-    descriptionEn: "Allows clients to log in and track their trainings, credit and progress",
+    descriptionCs: "Přístup klientů k jejich účtům, tréninkům a pokroku",
+    descriptionEn: "Client access to their accounts, trainings, and progress",
     warningCs: "Klienti ztratí přístup ke svým účtům",
     warningEn: "Clients will lose access to their accounts",
+    subModules: [
+      { key: "client_portal", labelCs: "Klientský portál", labelEn: "Client Portal" },
+    ],
   },
   {
-    key: "calendar",
-    icon: Calendar,
-    labelCs: "Kalendář",
-    labelEn: "Calendar",
-    descriptionCs: "Kalendářní zobrazení tréninků a plánování",
-    descriptionEn: "Calendar view for trainings and scheduling",
-    warningCs: "Skryje sekci Kalendář z navigace",
-    warningEn: "Hides Calendar section from navigation",
-  },
-  {
-    key: "sales",
-    icon: ShoppingBag,
-    labelCs: "Prodej",
-    labelEn: "Sales",
-    descriptionCs: "Pokladna, sklad a prodej produktů klientům",
-    descriptionEn: "Register, inventory and product sales to clients",
-    warningCs: "Skryje sekci Prodej z navigace",
-    warningEn: "Hides Sales section from navigation",
-  },
-  {
-    key: "statistics",
-    icon: BarChart3,
-    labelCs: "Statistiky",
-    labelEn: "Statistics",
-    descriptionCs: "Finanční statistiky a přehledy",
-    descriptionEn: "Financial statistics and overviews",
-    warningCs: "Skryje sekci Statistiky z navigace",
-    warningEn: "Hides Statistics section from navigation",
-  },
-  {
-    key: "challenges",
-    icon: Trophy,
-    labelCs: "Výzvy",
-    labelEn: "Challenges",
-    descriptionCs: "Soutěže a výzvy pro klienty",
-    descriptionEn: "Competitions and challenges for clients",
-    warningCs: "Skryje sekci Výzvy z navigace",
-    warningEn: "Hides Challenges section from navigation",
-  },
-  {
-    key: "exercises",
+    key: "performance",
     icon: Dumbbell,
-    labelCs: "Cviky",
-    labelEn: "Exercises",
-    descriptionCs: "Knihovna cviků a jejich správa",
-    descriptionEn: "Exercise library and management",
-    warningCs: "Skryje sekci Cviky z navigace",
-    warningEn: "Hides Exercises section from navigation",
+    labelCs: "Data & Výkonnost",
+    labelEn: "Data & Performance",
+    descriptionCs: "Cviky, šablony, PR, testy, výzvy a diagnostika",
+    descriptionEn: "Exercises, templates, PRs, tests, challenges, and diagnostics",
+    warningCs: "Skryje sekce Výkonnost a související funkce",
+    warningEn: "Hides Performance sections and related features",
+    subModules: [
+      { key: "exercises", labelCs: "Cviky", labelEn: "Exercises" },
+      { key: "training_templates", labelCs: "Šablony tréninků", labelEn: "Training Templates" },
+      { key: "pr_history", labelCs: "PR Historie", labelEn: "PR History" },
+      { key: "tests", labelCs: "Testy", labelEn: "Tests" },
+      { key: "challenges", labelCs: "Výzvy", labelEn: "Challenges" },
+      { key: "diagnostics", labelCs: "Diagnostika", labelEn: "Diagnostics" },
+    ],
   },
   {
-    key: "nutrition",
+    key: "nutrition_feedback",
     icon: Utensils,
-    labelCs: "Strava & Výživa",
-    labelEn: "Nutrition & Diet",
-    descriptionCs: "Nutriční dotazníky, kampaně a analýzy stravy klientů",
-    descriptionEn: "Nutrition questionnaires, campaigns and diet analysis for clients",
-    warningCs: "Skryje celou sekci Strava z navigace",
-    warningEn: "Hides entire Nutrition section from navigation",
+    labelCs: "Strava & Zpětná vazba",
+    labelEn: "Nutrition & Feedback",
+    descriptionCs: "Nutriční dotazníky, kampaně a sběr feedbacku",
+    descriptionEn: "Nutrition questionnaires, campaigns, and feedback collection",
+    warningCs: "Skryje sekce Strava a Feedbacky",
+    warningEn: "Hides Nutrition and Feedback sections",
+    subModules: [
+      { key: "nutrition", labelCs: "Strava & Výživa", labelEn: "Nutrition" },
+      { key: "feedback", labelCs: "Feedbacky", labelEn: "Feedback" },
+    ],
   },
   {
-    key: "feedback",
-    icon: MessageSquare,
-    labelCs: "Feedbacky",
-    labelEn: "Feedback",
-    descriptionCs: "Sběr zpětné vazby od klientů po tréninku",
-    descriptionEn: "Collect feedback from clients after training",
-    warningCs: "Skryje sekci Feedbacky z navigace",
-    warningEn: "Hides Feedback section from navigation",
+    key: "finance",
+    icon: Wallet,
+    labelCs: "Finance",
+    labelEn: "Finance",
+    descriptionCs: "Prodeje, statistiky a finanční přehledy",
+    descriptionEn: "Sales, statistics, and financial overviews",
+    warningCs: "Skryje sekce Prodej a Statistiky",
+    warningEn: "Hides Sales and Statistics sections",
+    subModules: [
+      { key: "sales", labelCs: "Prodej", labelEn: "Sales" },
+      { key: "statistics", labelCs: "Statistiky", labelEn: "Statistics" },
+    ],
   },
   {
-    key: "diagnostics",
-    icon: Activity,
-    labelCs: "Diagnostika",
-    labelEn: "Diagnostics",
-    descriptionCs: "Pre-diagnostické dotazníky a záznamy pro klienty",
-    descriptionEn: "Pre-diagnostic questionnaires and records for clients",
-  },
-  {
-    key: "training_templates",
-    icon: LayoutTemplate,
-    labelCs: "Šablony tréninků",
-    labelEn: "Training Templates",
-    descriptionCs: "Předpřipravené šablony pro rychlé vytváření tréninků",
-    descriptionEn: "Pre-made templates for quickly creating trainings",
-    warningCs: "Skryje sekci Šablony z navigace",
-    warningEn: "Hides Templates section from navigation",
-  },
-  {
-    key: "pr_history",
-    icon: Trophy,
-    labelCs: "PR Historie",
-    labelEn: "PR History",
-    descriptionCs: "Sledování osobních rekordů klientů",
-    descriptionEn: "Track personal records of clients",
-  },
-  {
-    key: "tests",
-    icon: Activity,
-    labelCs: "Testy",
-    labelEn: "Tests",
-    descriptionCs: "Fyzické testy a hodnocení klientů",
-    descriptionEn: "Physical tests and client assessments",
-    warningCs: "Skryje sekci Testy z navigace",
-    warningEn: "Hides Tests section from navigation",
-  },
-  {
-    key: "rewards_system",
-    icon: Gift,
-    labelCs: "Systém odměn",
-    labelEn: "Rewards System",
-    descriptionCs: "Věrnostní odměny a výměna bodů za odměny v klientském portálu",
-    descriptionEn: "Loyalty rewards and point redemption in client portal",
-    warningCs: "Klienti neuvidí sekci Odměny",
-    warningEn: "Clients won't see the Rewards section",
+    key: "system",
+    icon: Settings,
+    labelCs: "Systém",
+    labelEn: "System",
+    descriptionCs: "Kalendář a systém odměn",
+    descriptionEn: "Calendar and rewards system",
+    warningCs: "Skryje systémové funkce",
+    warningEn: "Hides system features",
+    subModules: [
+      { key: "calendar", labelCs: "Kalendář", labelEn: "Calendar" },
+      { key: "rewards_system", labelCs: "Systém odměn", labelEn: "Rewards System" },
+    ],
   },
 ];
 
 export function ModuleSettings() {
   const { language } = useLanguage();
-  const { modules, isLoading } = useModuleSettings();
-  const { toggleModule, isUpdating } = useUpdateModuleSettings();
+  const { modules, groups, isLoading } = useModuleSettings();
+  const { toggleModule, toggleGroup, isUpdating } = useUpdateModuleSettings();
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  const enabledCount = Object.values(modules).filter(Boolean).length;
+  const enabledGroupCount = Object.values(groups).filter(Boolean).length;
+
+  const toggleExpanded = (groupKey: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  };
 
   if (isLoading) {
     return (
       <div className="space-y-3">
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="h-20 rounded-xl bg-muted/30 animate-pulse" />
         ))}
       </div>
@@ -180,66 +147,117 @@ export function ModuleSettings() {
       {/* Summary */}
       <div className="glass-subtle rounded-xl p-4 flex items-center justify-between">
         <span className="text-sm text-muted-foreground">
-          {language === 'cs' ? 'Aktivní moduly' : 'Active modules'}
+          {language === 'cs' ? 'Aktivní skupiny modulů' : 'Active module groups'}
         </span>
         <span className="text-sm font-medium">
-          {enabledCount} / {MODULES.length}
+          {enabledGroupCount} / {MODULE_GROUPS.length}
         </span>
       </div>
 
-      {/* Module list */}
+      {/* Module groups */}
       <div className="space-y-2">
-        {MODULES.map((module) => {
-          const Icon = module.icon;
-          const isEnabled = modules[module.key];
-          const label = language === 'cs' ? module.labelCs : module.labelEn;
-          const description = language === 'cs' ? module.descriptionCs : module.descriptionEn;
-          const warning = language === 'cs' ? module.warningCs : module.warningEn;
+        {MODULE_GROUPS.map((group) => {
+          const Icon = group.icon;
+          const isGroupEnabled = groups[group.key];
+          const label = language === 'cs' ? group.labelCs : group.labelEn;
+          const description = language === 'cs' ? group.descriptionCs : group.descriptionEn;
+          const warning = language === 'cs' ? group.warningCs : group.warningEn;
+          const isExpanded = expandedGroups.has(group.key);
+          const hasSubModules = group.subModules.length > 1;
 
           return (
-            <div
-              key={module.key}
-              className={cn(
-                "rounded-xl p-4 transition-all",
-                isEnabled 
-                  ? "glass-subtle" 
-                  : "bg-muted/20 opacity-60"
-              )}
+            <Collapsible
+              key={group.key}
+              open={isExpanded && hasSubModules}
+              onOpenChange={() => hasSubModules && toggleExpanded(group.key)}
             >
-              <div className="flex items-start gap-4">
-                <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
-                  isEnabled ? "bg-primary/10" : "bg-muted"
-                )}>
-                  <Icon className={cn(
-                    "w-5 h-5",
-                    isEnabled ? "text-primary" : "text-muted-foreground"
-                  )} />
+              <div
+                className={cn(
+                  "rounded-xl transition-all",
+                  isGroupEnabled 
+                    ? "glass-subtle" 
+                    : "bg-muted/20 opacity-60"
+                )}
+              >
+                {/* Group header */}
+                <div className="p-4">
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                      isGroupEnabled ? "bg-primary/10" : "bg-muted"
+                    )}>
+                      <Icon className={cn(
+                        "w-5 h-5",
+                        isGroupEnabled ? "text-primary" : "text-muted-foreground"
+                      )} />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-sm">{label}</h4>
+                          {hasSubModules && (
+                            <CollapsibleTrigger asChild>
+                              <button 
+                                className="p-1 hover:bg-muted/50 rounded transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <ChevronDown className={cn(
+                                  "w-4 h-4 text-muted-foreground transition-transform",
+                                  isExpanded && "rotate-180"
+                                )} />
+                              </button>
+                            </CollapsibleTrigger>
+                          )}
+                        </div>
+                        <Switch
+                          checked={isGroupEnabled}
+                          onCheckedChange={() => toggleGroup(group.key)}
+                          disabled={isUpdating}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {description}
+                      </p>
+                      
+                      {/* Warning when disabled */}
+                      {!isGroupEnabled && warning && (
+                        <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                          ⚠ {warning}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <h4 className="font-medium text-sm">{label}</h4>
-                    <Switch
-                      checked={isEnabled}
-                      onCheckedChange={() => toggleModule(module.key)}
-                      disabled={isUpdating}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {description}
-                  </p>
-                  
-                  {/* Warning when disabled */}
-                  {!isEnabled && warning && (
-                    <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-600 dark:text-amber-500">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>{warning}</span>
+                {/* Sub-modules (expandable) */}
+                {hasSubModules && (
+                  <CollapsibleContent>
+                    <div className="border-t border-border/50 px-4 pb-4 pt-3 space-y-2">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {language === 'cs' ? 'Jednotlivé moduly:' : 'Individual modules:'}
+                      </p>
+                      {group.subModules.map((sub) => (
+                        <div 
+                          key={sub.key}
+                          className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-muted/30"
+                        >
+                          <span className="text-sm">
+                            {language === 'cs' ? sub.labelCs : sub.labelEn}
+                          </span>
+                          <Switch
+                            checked={modules[sub.key]}
+                            onCheckedChange={() => toggleModule(sub.key)}
+                            disabled={isUpdating}
+                            className="scale-90"
+                          />
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </div>
+                  </CollapsibleContent>
+                )}
               </div>
-            </div>
+            </Collapsible>
           );
         })}
       </div>

@@ -97,10 +97,15 @@ Client Portal má **18 stránek/záložek** - pro běžného klienta je to přeh
 2. ✅ Vytvořit `useFinanceHub` konsolidovaný hook
 3. ✅ Aktualizovat index exporty
 
-### ⏳ Fáze 5: Redukce modulů (PLÁNOVÁNO)
-1. Sloučit 13 modulů do 5 logických celků
-2. Aktualizovat UI nastavení modulů
-3. Upravit podmíněné zobrazování v navigaci
+### ✅ Fáze 5: Redukce modulů (HOTOVO)
+1. ✅ Sloučit 13 modulů do 5 logických celků:
+   - **Klientský portál** - client_portal
+   - **Data & Výkonnost** - exercises, training_templates, pr_history, tests, challenges, diagnostics
+   - **Strava & Zpětná vazba** - nutrition, feedback
+   - **Finance** - sales, statistics
+   - **Systém** - calendar, rewards_system
+2. ✅ Aktualizovat UI nastavení modulů (collapsible groups)
+3. ✅ Aktualizovat hooks (useModuleSettings, useTrainerModuleSettings)
 
 ---
 
