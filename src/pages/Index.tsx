@@ -7,6 +7,7 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardActions } from '@/components/dashboard/DashboardActions';
 import { TodayTimelineCompact } from '@/components/dashboard/TodayTimelineCompact';
 import { ActionCenterCard } from '@/components/dashboard/ActionCenterCard';
+import { FollowupsSection } from '@/components/dashboard/FollowupsSection';
 import { PendingPerformancesCard } from '@/components/performance/PendingPerformancesCard';
 import { WeeklyQuickStats } from '@/components/dashboard/WeeklyQuickStats';
 import { FinanceSummaryCard } from '@/components/dashboard/FinanceSummaryCard';
@@ -75,6 +76,17 @@ export default function Index() {
                 followupCount={followupCount}
                 isLoading={isLoading}
               />
+            </SectionErrorBoundary>
+          </section>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            FOLLOWUPS SECTION - Inline view with direct actions
+        ═══════════════════════════════════════════════════════════════════ */}
+        {followupCount > 0 && (
+          <section>
+            <SectionErrorBoundary section="Připomenutí" compact>
+              <FollowupsSection defaultExpanded={followupCount <= 5} />
             </SectionErrorBoundary>
           </section>
         )}

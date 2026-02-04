@@ -18,208 +18,107 @@ Existuje mnoho hooků, které dělají podobné věci nebo se vzájemně překr�
 | Finance | 8+ | `useFinancialStats`, `useFinanceAnalytics`, `useFinancialReportData` |
 | Tréninky | 13+ | `useTrainingSessions`, `useTrainingProgress`, `useTrainingLoadStats` |
 
-### Konkrétní duplicity
-```
-useClientAttendanceStats → src/hooks/useClientAttendanceStats.ts
-useClientAttendanceStats → src/hooks/useClientPortalStats.ts (DUPLICITA!)
-```
-
 ### Návrh řešení
 Konsolidovat hooky do logických domén:
-- **Fáze 1**: Sloučit duplicitní `useClientAttendanceStats` do jednoho
-- **Fáze 2**: Vytvořit centrální `useClientData` hook s lazy-loading sub-dat
-- **Fáze 3**: Refaktorovat finance hooky do jednoho `useFinanceHub`
+- ✅ **Fáze 1**: Sloučit duplicitní `useClientAttendanceStats` do jednoho (přejmenováno na `useClientPortalAttendanceStats`)
+- **Fáze 4**: Vytvořit centrální `useClientData` hook s lazy-loading sub-dat
+- **Fáze 4**: Refaktorovat finance hooky do jednoho `useFinanceHub`
 
 ---
 
 ## 2. Přebujelý systém modulů
 
 ### Problém
-Existuje **13 konfigurovatelných modulů**:
-- client_portal, nutrition, feedback, diagnostics, training_templates
-- pr_history, tests, sales, calendar, statistics, challenges, exercises, rewards_system
-
-Mnoho z nich se překrývá nebo jsou příliš granulární.
+Existuje **13 konfigurovatelných modulů** - mnoho z nich se překrývá nebo jsou příliš granulární.
 
 ### Návrh řešení: Redukce na 5 hlavních modulů
-
-| Nový modul | Obsahuje |
-|------------|----------|
-| **Klientský portál** | client_portal + rewards_system |
-| **Výkonnost & Data** | exercises + tests + challenges + pr_history |
-| **Strava & Feedback** | nutrition + feedback + diagnostics |
-| **Finance** | sales + statistics |
-| **Plánování** | calendar + training_templates |
-
-Toto zjednoduší nastavení a navigaci.
+*Plánováno pro Fázi 5*
 
 ---
 
 ## 3. Složitá navigace
 
 ### Problém
-- Sidebar má **6 sekcí** a **14+ položek**
-- Mobile menu replikuje vše s drobnými odlišnostmi
-- Některé stránky jsou přístupné více cestami (duplicitní routy)
+- Sidebar měl **6 sekcí** a **14+ položek**
+- Mobile menu replikovalo vše s drobnými odlišnostmi
 
-### Příklad duplicitních rout
-```typescript
-// V App.tsx existují tyto redirecty - zbytečná komplexita
-<Route path="/trainings" element={<Navigate to="/schedule" replace />} />
-<Route path="/calendar" element={<Navigate to="/schedule" replace />} />
-<Route path="exercises" element={<Navigate to="/performance?tab=exercises" replace />} />
-<Route path="tests" element={<Navigate to="/performance?tab=tests" replace />} />
-<Route path="challenges" element={<Navigate to="/performance?tab=challenges" replace />} />
-```
-
-### Návrh řešení
-1. **Odstranit legacy redirecty** - stránky `/trainings`, `/calendar`, `/exercises`, `/tests`, `/challenges` již nejsou potřeba
-2. **Zjednodušit sidebar** - sloučit sekce "Data" a "Finance" do jedné "Business"
-3. **Sjednotit mobile menu** - použít stejnou strukturu jako desktop
+### Řešení
+1. ✅ Odstranit legacy redirecty z App.tsx
+2. ✅ Zjednodušit sidebar na **4 sekce**: Hlavní, Data & Výkonnost, Finance, Systém
+3. ✅ Sjednotit mobile menu s desktop navigací
 
 ---
 
 ## 4. Příliš mnoho stránek
 
 ### Problém
-Aplikace má **47 stránek** + **18 client portal stránek** = **65 stránek celkem**.
+Aplikace měla **47 stránek** + **18 client portal stránek** = **65 stránek celkem**.
 
-Některé jsou specializované a zřídka používané:
-- `PriceMigration.tsx` - jednorázová migrace
-- `CanceledTrainings.tsx` - lze integrovat do Schedule
-- `FeedbackOverview.tsx` - lze integrovat do Dashboard
-- `FollowupsPage.tsx` - lze integrovat do Dashboard nebo Client detail
+### Řešení
 
-### Návrh řešení
-
-| Stránka k odstranění | Kam přesunout funkcionalitu |
-|---------------------|------------------------------|
-| `CanceledTrainings.tsx` | Filter v `SchedulePage` |
-| `FeedbackOverview.tsx` | Tab v `Statistics.tsx` nebo widget v Dashboard |
-| `FollowupsPage.tsx` | Sekce v `ClientDetail` nebo `ActionCenter` na Dashboard |
-| `PRHistory.tsx` | Tab v `PerformanceHub.tsx` |
-| `Records.tsx` | Tab v `PerformanceHub.tsx` |
-
-Tím se redukuje počet hlavních stránek z 47 na ~42.
+| Stránka | Status | Řešení |
+|---------|--------|--------|
+| `CanceledTrainings.tsx` | ✅ Hotovo | Integrováno do `SchedulePage` jako Sheet |
+| `PRHistory.tsx` | ✅ Hotovo | Integrováno do `PerformanceHub` jako tab "PR Historie" |
+| `FollowupsPage.tsx` | ✅ Hotovo | Integrováno do Dashboard jako `FollowupsSection` |
+| `FeedbackOverview.tsx` | ⏳ Odloženo | Komplexní funkcionalita - ponecháno jako samostatná stránka |
+| `Records.tsx` | ⏳ Odloženo | Ponecháno jako samostatná stránka (jiná funkcionalita než PR) |
 
 ---
 
 ## 5. Klientský portál - příliš mnoho záložek
 
 ### Problém
-Client Portal má **18 stránek/záložek**:
-- Overview, Progress, Diary, Homework, Attendance, Credit, Purchases
-- Nutrition, Challenges, Badges, Leaderboard, Competitions
-- Rewards, Profile, Settings, Chat, Diagnostic
-
-Pro běžného klienta je to přehnaně složité.
+Client Portal má **18 stránek/záložek** - pro běžného klienta je to přehnaně složité.
 
 ### Návrh řešení: Seskupit do 5 hlavních sekcí
-
-```
-Přehled     → Overview (se shrnutím všeho důležitého)
-Můj pokrok  → Progress + Badges + Leaderboard + Diary
-Můj účet    → Credit + Purchases + Attendance
-Výzvy       → Challenges + Competitions + Rewards
-Profil      → Profile + Settings + Chat + Nutrition (jako sub-tab)
-```
-
-Navigace klienta se zjednoduší z 18 na 5 položek.
-
----
-
-## 6. Dashboard komponenty
-
-### Problém
-Dashboard má **90+ komponent** v `src/components/dashboard/`:
-- Mnoho "Card" variant pro podobná data
-- Modální okna pro detaily, které by mohly být inline
-
-### Návrh řešení
-1. Vytvořit generickou `DashboardCard` komponentu s props pro různé typy
-2. Sloučit podobné karty (např. `BusinessHealthScoreCard` + `BusinessYieldScoreCard`)
-3. Použít Sheet místo Modal pro detaily
-
----
-
-## 7. Statistiky - duplicitní sekce
-
-### Problém
-Statistiky jsou rozptýleny:
-- `Statistics.tsx` - hlavní stránka (4 záložky)
-- `PerformanceHub.tsx` - má vlastní analytiku (6 záložek)
-- `Dashboard` - má finance + insights
-- `ExerciseAnalytics.tsx` - separátní stránka
-- `FinanceAnalytics.tsx` - separátní stránka
-- `ClientAnalytics.tsx` - separátní stránka
-
-### Návrh řešení: Centralizace
-1. **Statistics.tsx** zůstává jako hlavní hub
-2. Odstranit separátní stránky `ExerciseAnalytics`, `FinanceAnalytics`, `ClientAnalytics`
-3. Integrovat jejich obsah jako sub-záložky v příslušných sekcích
-
----
-
-## 8. Settings - příliš granulární
-
-### Problém
-Nastavení má **50+ komponent** v `src/components/settings/`:
-- Příliš mnoho specializovaných sekcí
-- Některé funkce (Social Export, AI Assistant) by neměly být v nastavení
-
-### Návrh řešení
-1. Přesunout **Social Media Export** do samostatné stránky nebo Dashboard
-2. Přesunout **AI Assistant** do globálního přístupu (Command Palette)
-3. Sloučit podobné sekce (např. všechny ceníkové do jedné)
+*Plánováno pro budoucí fázi*
 
 ---
 
 ## Prioritizovaný plán implementace
 
-### Fáze 1: Quick Wins (nízká složitost, vysoký dopad)
-1. ✅ Odstranit duplicitní `useClientAttendanceStats` hook
+### ✅ Fáze 1: Quick Wins (HOTOVO)
+1. ✅ Odstranit duplicitní `useClientAttendanceStats` hook → přejmenováno na `useClientPortalAttendanceStats`
 2. ✅ Odstranit legacy redirecty z App.tsx
-3. ✅ Sloučit `CanceledTrainings` do `SchedulePage` jako filter
+3. ✅ Sloučit `CanceledTrainings` do `SchedulePage` jako `CanceledTrainingsSheet`
 
-### Fáze 2: Konsolidace navigace
-1. Zjednodušit sidebar na 4-5 sekcí
-2. Sjednotit mobile menu s desktop
-3. Redukovat Client Portal na 5 hlavních sekcí
+### ✅ Fáze 2: Konsolidace navigace (HOTOVO)
+1. ✅ Zjednodušit sidebar na 4 sekce
+2. ✅ Sjednotit mobile menu s desktop
 
-### Fáze 3: Sloučení duplicitních stránek
-1. Integrovat `PRHistory` a `Records` do `PerformanceHub`
-2. Integrovat `FollowupsPage` do Dashboard ActionCenter
-3. Odstranit `FeedbackOverview` - integrovat do Statistics
+### ✅ Fáze 3: Sloučení duplicitních stránek (HOTOVO)
+1. ✅ Integrovat `PRHistory` do `PerformanceHub` jako nový tab "PR Historie"
+2. ✅ Integrovat `FollowupsPage` do Dashboard jako `FollowupsSection`
+3. ⏳ `FeedbackOverview` - ponecháno (komplexní unikátní funkcionalita)
 
-### Fáze 4: Refaktoring hooků
+### ⏳ Fáze 4: Refaktoring hooků (PLÁNOVÁNO)
 1. Vytvořit `useClientHub` konsolidovaný hook
 2. Vytvořit `useFinanceHub` konsolidovaný hook
 3. Optimalizovat lazy-loading dat
 
-### Fáze 5: Redukce modulů
+### ⏳ Fáze 5: Redukce modulů (PLÁNOVÁNO)
 1. Sloučit 13 modulů do 5 logických celků
 2. Aktualizovat UI nastavení modulů
 3. Upravit podmíněné zobrazování v navigaci
 
 ---
 
-## Očekávané výsledky
+## Výsledky po Fázi 1-3
 
 | Metrika | Před | Po |
 |---------|------|-----|
-| Počet stránek | 65 | ~50 |
-| Položky v navigaci (desktop) | 14 | 8 |
-| Položky v Client Portal | 18 | 5 |
-| Konfigurovatelné moduly | 13 | 5 |
-| Duplicitní hooky | 8+ | 0 |
-| Legacy redirecty | 5 | 0 |
+| Položky v navigaci (desktop) | 14 | **8** |
+| Duplicitní hooky | 8+ | **1 opraveno** |
+| Legacy redirecty | 5 | **0** |
+| Stránky sloučené do komponent | 0 | **3** (CanceledTrainings, PRHistory, FollowupsPage) |
 
----
+### Smazané soubory
+- `src/pages/CanceledTrainings.tsx` → `src/components/schedule/CanceledTrainingsSheet.tsx`
+- `src/pages/PRHistory.tsx` → `src/components/performance/PRHistoryContent.tsx`
+- `src/pages/FollowupsPage.tsx` → `src/components/dashboard/FollowupsSection.tsx`
 
-## Doporučení pro okamžitou akci
-
-Začnu s **Fází 1** - Quick Wins, které přinesou okamžité zlepšení bez velkého rizika:
-
-1. **Odstranit duplicitní `useClientAttendanceStats`** - jeden je v `useClientAttendanceStats.ts`, druhý v `useClientPortalStats.ts`
-2. **Vyčistit legacy redirecty** z App.tsx
-3. **Přidat "Zrušené" filter** do SchedulePage místo separátní stránky
+### Nové komponenty
+- `CanceledTrainingsSheet` - Sheet pro zobrazení zrušených tréninků v Schedule
+- `PRHistoryContent` - Tab obsah pro PR historii v PerformanceHub
+- `FollowupsSection` - Sbalitelná sekce připomenutí na Dashboard

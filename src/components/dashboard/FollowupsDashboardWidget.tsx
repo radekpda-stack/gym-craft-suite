@@ -82,12 +82,9 @@ export function FollowupsDashboardWidget({ limit = 5 }: FollowupsDashboardWidget
             </Badge>
           </CardTitle>
           {hasMore && (
-            <Link to="/pripomenuti">
-              <Button variant="ghost" size="sm">
-                Vše
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
+            <span className="text-xs text-muted-foreground ml-auto">
+              +{followups.length - limit} dalších
+            </span>
           )}
         </div>
       </CardHeader>
@@ -132,13 +129,7 @@ export function FollowupsDashboardWidget({ limit = 5 }: FollowupsDashboardWidget
             );
           })}
         </div>
-        {hasMore && (
-          <Link to="/pripomenuti" className="block mt-3">
-            <Button variant="outline" size="sm" className="w-full">
-              Zobrazit všechna ({followups.length})
-            </Button>
-          </Link>
-        )}
+        {/* All followups are shown inline in FollowupsSection on Dashboard */}
       </CardContent>
     </Card>
   );
