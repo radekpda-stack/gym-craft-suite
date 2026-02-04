@@ -435,6 +435,7 @@ export function useSyncToClientStats() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exercise-entries'] });
       queryClient.invalidateQueries({ queryKey: ['exercise-history'] });
+      queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] });
       toast({
         title: 'Statistiky aktualizovány',
         description: 'Data byla synchronizována s profily klientů.',
