@@ -28,7 +28,7 @@ export interface AttendanceStats {
   }>;
 }
 
-export function useClientAttendanceStats(clientId: string | undefined, period: PeriodDays = 30) {
+export function useClientPortalAttendanceStats(clientId: string | undefined, period: PeriodDays = 30) {
   return useQuery({
     queryKey: ['client-portal-attendance-stats', clientId, period],
     queryFn: async (): Promise<AttendanceStats> => {

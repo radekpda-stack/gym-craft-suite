@@ -12,7 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
-import { useClientAttendanceStats } from '@/hooks/useClientPortalStats';
+import { useClientPortalAttendanceStats } from '@/hooks/useClientPortalStats';
 import { useMyPRs } from '@/hooks/useClientPRs';
 import { useClientExercisePRs } from '@/hooks/useClientExercisePRs';
 import { useNavigate } from 'react-router-dom';
@@ -53,7 +53,7 @@ export function ClientQuickStats() {
   const { clientId } = useClientPortal();
   const navigate = useNavigate();
   
-  const { data: attendanceStats, isLoading: attendanceLoading } = useClientAttendanceStats(clientId ?? undefined, 30);
+  const { data: attendanceStats, isLoading: attendanceLoading } = useClientPortalAttendanceStats(clientId ?? undefined, 30);
   const { data: definedPrs, isLoading: definedPrsLoading } = useMyPRs();
   const { data: exercisePrs, isLoading: exercisePrsLoading } = useClientExercisePRs(clientId);
   

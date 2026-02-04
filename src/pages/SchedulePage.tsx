@@ -3,6 +3,7 @@ import { motion, useAnimation, PanInfo } from 'framer-motion';
 import { addDays, subDays, isSameDay, format, startOfWeek, endOfWeek } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Plus, List, Calendar as CalendarIcon, Settings2, Dumbbell } from 'lucide-react';
+import { CanceledTrainingsSheet } from '@/components/schedule/CanceledTrainingsSheet';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useTrainingSessions, useCreateTrainingSession, useUpdateTrainingSession, useCancelTrainingSession, useDeleteTrainingSession, TrainingSession } from '@/hooks/useTrainingSessions';
@@ -335,6 +336,7 @@ export default function SchedulePage() {
               <Dumbbell className="w-4 h-4 text-primary" />
               <span className="text-xs font-medium text-foreground/80 ml-1.5 hidden sm:inline">Tréninkový režim</span>
             </Button>
+            <CanceledTrainingsSheet />
             <Button
               variant="ghost"
               size="icon"
