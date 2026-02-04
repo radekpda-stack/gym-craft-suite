@@ -1,171 +1,217 @@
 
+# Oprava nesouladu kreditního zůstatku
 
-# Přidání rychlého prodeje do karty tréninku
+## Analýza problému
 
-## Přehled řešení
+### Co vidíme na screenshotu
+- Zobrazený zůstatek: **2 960 Kč**
+- Vypočtený zůstatek: **360 Kč**
+- Rozdíl: **2 600 Kč**
 
-Vytvořím novou komponentu `TrainingQuickSale`, která bude integrována přímo do karty tréninku. Komponenta umožní rychlý prodej produktů účastníkům tréninku bez nutnosti přecházet do modulu Prodej.
+### Co je ve skutečnosti v databázi
+- `clients.credit_balance`: **-469 Kč**
+- Součet transakcí (ledger): **-440 Kč**
+- Zuzka **není** členem sdíleného budgetu
 
-## Klíčové funkce
+### Root cause
+Problém má **dvě části**:
 
-| Funkce | Popis |
-|--------|-------|
-| Výběr účastníka | Dropdown/pills s účastníky aktuálního tréninku |
-| Rychlý prodej | Jednoduchý grid produktů s tlačítkem přidat |
-| Košík | Kompaktní zobrazení s +/- tlačítky |
-| Platební metody | Cash, karta, kredit, převod |
-| Validace | Kontrola skladu, kreditu při platbě z kreditu |
+1. **Audit v UI počítá balance nesprávně** - Komponenta `ClientFinanceLedger` buduje `ledgerEntries` ze směsi transakcí a training sessions, ale logika přeskakuje transakce typu `training` s `training_session_id` a pak přidává sessions znovu. To může vést k chybným výsledkům.
 
-## Architektura
+2. **Hook `useSharedBudgetBalance` vrací zastaralou hodnotu** - Pro individuální klienty vrací `client.credit_balance` z tabulky clients místo aktuálního ledger balance z view `vw_client_ledger_balances`.
 
-```text
-TrainingDetailView
-├── TrainingHeroHeader
-├── TrainingPrepSection (scheduled/in_progress)
-├── TrainingParticipantsManager
-├── ParticipantsPRsSection
-├── CompactTagGridSelector (tags)
-├── WorkoutExerciseManager (cviky)
-├── TrainingQuickSale     ← NOVÁ SEKCE
-│   ├── ParticipantSelector (pills/dropdown)
-│   ├── ProductGrid (kompaktní)
-│   ├── MiniCart
-│   └── CheckoutButton
-└── TrainingCloseSection (completed)
-```
+---
 
-## Implementační detaily
+## Navrhované řešení
 
-### 1. Nová komponenta `TrainingQuickSale.tsx`
+### Fáze 1: Oprava hooku `useSharedBudgetBalance`
+Změnit hook tak, aby pro individuální klienty používal ledger balance z databázové view místo uložené hodnoty.
+
+**Změny v `src/hooks/useCreditOperations.ts`:**
 
 ```typescript
-interface TrainingQuickSaleProps {
-  trainingId: string;
-  participants: Array<{
-    client_id: string;
-    name: string;
-  }>;
-  primaryClientId: string;
+// Aktuální logika (chybná):
+if (!membership) {
+  const { data: client } = await supabase
+    .from("clients")
+    .select("credit_balance")
+    .eq("id", clientId)
+    .maybeSingle();
+  const balance = client?.credit_balance || 0;
+  // ...
+}
+
+// Nová logika (správná):
+if (!membership) {
+  // Použít ledger balance místo uložené hodnoty
+  const { data: ledgerData } = await supabase
+    .from("vw_client_ledger_balances")
+    .select("ledger_balance")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  
+  const balance = ledgerData?.ledger_balance ?? 0;
+  // ...
 }
 ```
 
-**Chování:**
-- Při 1 účastníkovi → automaticky předvybraný, bez výběru
-- Při 2+ účastnících → pills nebo dropdown pro výběr komu prodávám
-- Kompaktní grid produktů (pouze fyzické produkty + služby, bez credit_topup)
-- Mini košík pod produkty
-- Platební metody jako horizontální pills
-- Tlačítko "Prodat" s validací
+### Fáze 2: Oprava auditu v `ClientFinanceLedger`
+Změnit logiku auditu tak, aby porovnávala zobrazený zůstatek pouze s transakcemi (ne se sessions).
 
-### 2. UI Design - Pills pro výběr účastníka
+**Změny v `src/components/clients/ClientFinanceLedger.tsx`:**
 
-Při více účastnících se zobrazí horizontální pills:
+```typescript
+// Aktuální audit (chybný):
+const calculatedBalance = ledgerEntries.reduce((sum, e) => sum + e.amount, 0);
 
-```text
-┌─────────────────────────────────────────────────┐
-│ 📦 Rychlý prodej                               │
-├─────────────────────────────────────────────────┤
-│ Komu?  [● Zuzka] [○ Petr] [○ Jana]             │
-├─────────────────────────────────────────────────┤
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐        │
-│  │ Protein  │ │ Tyčinka  │ │ Bandáže  │        │
-│  │ 450 Kč   │ │  35 Kč   │ │ 299 Kč   │        │
-│  └──────────┘ └──────────┘ └──────────┘        │
-├─────────────────────────────────────────────────┤
-│ Košík: Protein ×1 = 450 Kč          [−][+][×] │
-├─────────────────────────────────────────────────┤
-│ [Hot.] [Kred.] [Kart.] [Přev.]                 │
-│                                                 │
-│        [  Prodat 450 Kč  ]                     │
-└─────────────────────────────────────────────────┘
+// Nový audit - počítat pouze z transakcí:
+const calculatedFromTransactions = useMemo(() => {
+  return transactions
+    .filter(tx => tx.status === 'completed' || !tx.status) // completed transactions only
+    .reduce((sum, tx) => sum + tx.amount, 0);
+}, [transactions]);
+
+const auditResult = useMemo(() => {
+  const difference = Math.abs(calculatedFromTransactions - currentBalance);
+  const matches = difference < 1;
+  return { calculatedBalance: calculatedFromTransactions, matches, difference };
+}, [calculatedFromTransactions, currentBalance]);
 ```
 
-### 3. Změny v `TrainingDetailView.tsx`
+### Fáze 3: Jednorázová oprava dat v databázi
+Synchronizovat `credit_balance` s ledger balance pro všechny klienty.
 
-Přidám sekci `TrainingQuickSale` mezi cviky a close section:
-
-```tsx
-{/* QUICK SALE - for scheduled/in_progress */}
-{(isScheduled || isInProgress) && participants.length > 0 && (
-  <TrainingQuickSale
-    trainingId={training.id}
-    participants={participants}
-    primaryClientId={training.client_id}
-  />
-)}
+**SQL migrace:**
+```sql
+-- Synchronizovat credit_balance s ledger pro všechny individuální klienty
+UPDATE clients c
+SET credit_balance = COALESCE(
+  (SELECT SUM(amount) 
+   FROM credit_transactions 
+   WHERE client_id = c.id AND status = 'completed'),
+  0
+),
+updated_at = now()
+WHERE NOT EXISTS (
+  SELECT 1 FROM client_budget_members WHERE client_id = c.id
+);
 ```
 
-### 4. Využití existujících hooků
+---
 
-Využiji existující logiku:
-- `useSalesCartWithDiscount` - správa košíku
-- `useProductsSortedBySales` - seznam produktů
-- `processSaleWithDiscount` - zpracování transakce
-- `useSharedBudgetBalance` - ověření kreditu
+## Technické detaily
 
-### 5. Collapsible design
+### Soubory k úpravě
 
-Sekce bude ve výchozím stavu sbalená (collapsed) s ikonou 📦 a "Rychlý prodej". Po kliknutí se rozbalí:
+| Soubor | Změna |
+|--------|-------|
+| `src/hooks/useCreditOperations.ts` | Hook `useSharedBudgetBalance` - použít ledger balance místo credit_balance |
+| `src/components/clients/ClientFinanceLedger.tsx` | Opravit logiku auditu - počítat pouze z transakcí |
+| Databázová migrace | Synchronizovat credit_balance pro všechny klienty |
 
-**Sbalený stav:**
-```text
-┌─────────────────────────────────────────────────┐
-│ 📦 Rychlý prodej                          [▼] │
-└─────────────────────────────────────────────────┘
+### Změna v `useCreditOperations.ts`
+
+```typescript
+export function useSharedBudgetBalance(clientId?: string) {
+  return useQuery({
+    queryKey: ["shared_budget_balance", clientId],
+    queryFn: async (): Promise<SharedBudgetInfo> => {
+      if (!clientId) {
+        return { /* default empty */ };
+      }
+
+      const membership = await getClientBudgetGroup(clientId);
+
+      if (!membership) {
+        // ZMĚNA: Použít ledger balance místo credit_balance
+        const { data: ledgerData, error: ledgerError } = await supabase
+          .from("vw_client_ledger_balances")
+          .select("ledger_balance")
+          .eq("client_id", clientId)
+          .maybeSingle();
+
+        if (ledgerError) throw ledgerError;
+        const balance = ledgerData?.ledger_balance ?? 0;
+        
+        return {
+          isShared: false,
+          groupId: null,
+          groupName: null,
+          sharedBalance: balance,
+          displayBalance: balance,
+          isExhausted: balance <= 0,
+          isNegative: balance < 0,
+          members: [],
+        };
+      }
+      
+      // ... zbytek logiky pro shared budget zůstává stejný
+    },
+    // ...
+  });
+}
 ```
 
-**Rozbalený stav:**
-Plný UI s výběrem účastníka, produkty, košíkem a checkout.
+### Změna v `ClientFinanceLedger.tsx`
 
-## Soubory k vytvoření/úpravě
+Přidat nový `useMemo` pro výpočet balance z transakcí:
 
-| Soubor | Akce | Popis |
-|--------|------|-------|
-| `src/components/trainings/TrainingQuickSale.tsx` | NOVÝ | Hlavní komponenta rychlého prodeje |
-| `src/components/trainings/TrainingDetailView.tsx` | UPRAVIT | Import a integrace TrainingQuickSale |
+```typescript
+// Před auditResult, přidat:
+const calculatedFromTransactions = useMemo(() => {
+  // Součet všech transakcí
+  let sum = 0;
+  
+  transactions.forEach(tx => {
+    // Přeskočit transakce s training_session_id (jsou započítány jako sessions)
+    if (tx.training_session_id) return;
+    sum += tx.amount;
+  });
+  
+  // Přidat sessions placené kreditem
+  sessions.forEach(session => {
+    if (session.status === 'scheduled') return;
+    
+    const participantData = participantPayments.get(session.id);
+    const paymentMethod = participantData?.payment_method ?? session.payment_method ?? 'credit';
+    const price = participantData?.price_share ?? session.final_price ?? 0;
+    
+    if (paymentMethod === 'credit' && price > 0) {
+      sum -= price;
+    }
+  });
+  
+  return sum;
+}, [transactions, sessions, participantPayments]);
 
-## Detailní struktura `TrainingQuickSale.tsx`
-
-```tsx
-// Stavy
-- selectedParticipantId: string (účastník pro prodej)
-- isExpanded: boolean (sbaleno/rozbaleno)
-- paymentMethod: PaymentMethod
-- isProcessing: boolean
-
-// Hooks
-- useSalesCartWithDiscount({ clientId: selectedParticipantId })
-- useProductsSortedBySales(true)
-- useSharedBudgetBalance(selectedParticipantId)
-
-// Logika
-- Při 1 účastníkovi: automaticky předvybrán
-- Při více: pills s výběrem
-- Filtrovat credit_topup produkty
-- Po úspěšném prodeji: clear cart, toast, invalidate queries
+// Upravit auditResult:
+const auditResult = useMemo(() => {
+  const difference = Math.abs(calculatedFromTransactions - currentBalance);
+  const matches = difference < 1;
+  return {
+    calculatedBalance: calculatedFromTransactions,
+    matches,
+    difference,
+  };
+}, [calculatedFromTransactions, currentBalance]);
 ```
 
-## Responsivní chování
+---
 
-- **Desktop:** 4-5 produktů v řádku
-- **Tablet:** 3 produkty v řádku
-- **Mobil:** 2 produkty v řádku
-- Košík vždy pod produkty
-- Platební metody jako kompaktní pills
+## Očekávaný výsledek
 
-## Edge cases
+Po implementaci:
+1. ✅ Hook `useSharedBudgetBalance` vrací vždy aktuální ledger balance
+2. ✅ Audit v UI správně porovnává zobrazený zůstatek s transakcemi
+3. ✅ Databáze má synchronizované hodnoty `credit_balance` s ledgerem
+4. ✅ Žádné nesoulady se již nebudou zobrazovat falešně
 
-1. **Žádní účastníci** → Sekce se nezobrazí
-2. **Žádné produkty** → Zobrazí zprávu "Žádné produkty k prodeji"
-3. **Vyprodáno** → Produkt disabled, vizuálně šedý
-4. **Nedostatek kreditu** → Validační chyba při platbě z kreditu
-5. **Shared budget** → Správně zobrazí sdílený zůstatek
+---
 
-## Výhody tohoto řešení
+## Rizika a mitigace
 
-1. **Minimální přerušení workflow** - trenér nemusí opouštět kartu tréninku
-2. **Kontext účastníků** - automaticky ví, komu prodává
-3. **Rychlost** - 3-4 kliknutí pro kompletní prodej
-4. **Collapsible** - nezabírá místo, když není potřeba
-5. **Reuse** - využívá existující prodejní logiku a komponenty
-
+| Riziko | Mitigace |
+|--------|----------|
+| Ledger view může být pomalá | View je již optimalizovaná s indexy |
+| Existující transakce bez status | Přidat fallback pro transakce bez status (považovat za completed) |
+| Uživatel uvidí jiný zůstatek po opravě | To je správné chování - uvidí skutečný stav |
