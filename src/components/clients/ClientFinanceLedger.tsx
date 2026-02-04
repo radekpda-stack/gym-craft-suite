@@ -220,12 +220,29 @@ export function ClientFinanceLedger({
     });
     
     // Add training sessions that affected credit
+    // ONLY sessions paid with credit should affect the credit balance calculation
     sessions.forEach(session => {
       if (session.status === 'scheduled') return;
       
       const price = session.final_price || 0;
       if (price <= 0) return; // No credit impact
       
+      // Determine if this session was paid with credit
+      // payment_status: paid_credit = credit, paid_cash/paid_card = not credit
+      // payment_method: credit = credit, cash/card/bank_transfer = not credit
+      const paymentMethod = session.payment_method || 'credit';
+      const paymentStatus = session.payment_status || '';
+      
+      // A session affects credit only if:
+      // 1. payment_method is 'credit' or null (legacy)
+      // 2. OR payment_status is 'paid_credit' or 'pending' (not yet paid, might affect balance)
+      const isCreditPayment = 
+        paymentMethod === 'credit' || 
+        paymentStatus === 'paid_credit' ||
+        paymentStatus === 'pending';
+      
+      // For cash/card payments, the session shouldn't affect credit balance in audit
+      // But we still show them in the ledger for context (with amount = 0 for balance calc)
       const pricingType = getPricingTypeLabel(session.participant_count);
       
       entries.push({
@@ -233,10 +250,13 @@ export function ClientFinanceLedger({
         date: session.date,
         type: 'training',
         description: `${pricingType} trénink`,
-        amount: -price,
+        // Only credit payments affect the balance calculation
+        amount: isCreditPayment ? -price : 0,
         balance: 0,
-        paymentMethod: session.payment_method || 'credit',
+        paymentMethod: paymentMethod,
         trainingSessionId: session.id,
+        // Store actual price for display purposes
+        displayAmount: -price,
       });
     });
     
@@ -520,6 +540,11 @@ function LedgerRow({ entry, showMember }: LedgerRowProps) {
   const isClickable = !!entry.trainingSessionId;
   const date = parseISO(entry.date);
   
+  // For display: use displayAmount if available (non-credit payments), otherwise use amount
+  const displayedAmount = entry.displayAmount ?? entry.amount;
+  // For coloring: non-credit payments (amount=0) should still show in muted color
+  const isNonCreditPayment = entry.amount === 0 && entry.displayAmount !== undefined;
+  
   const content = (
     <div className={cn(
       "flex items-center gap-3 p-3 rounded-xl transition-all duration-200",
@@ -529,9 +554,11 @@ function LedgerRow({ entry, showMember }: LedgerRowProps) {
       {/* Icon */}
       <div className={cn(
         "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm",
-        entry.amount > 0 
-          ? "bg-success/10 text-success shadow-success/10" 
-          : "bg-destructive/10 text-destructive shadow-destructive/10"
+        isNonCreditPayment
+          ? "bg-muted text-muted-foreground"
+          : entry.amount > 0 
+            ? "bg-success/10 text-success shadow-success/10" 
+            : "bg-destructive/10 text-destructive shadow-destructive/10"
       )}>
         {getTypeIcon(entry.type)}
       </div>
@@ -561,9 +588,18 @@ function LedgerRow({ entry, showMember }: LedgerRowProps) {
       <div className="text-right shrink-0">
         <p className={cn(
           "text-sm font-bold tabular-nums",
-          entry.amount > 0 ? "text-success" : "text-destructive"
+          isNonCreditPayment
+            ? "text-muted-foreground"
+            : entry.amount > 0 ? "text-success" : "text-destructive"
         )}>
-          {entry.amount > 0 ? '+' : ''}{formatCurrency(entry.amount)}
+          {/* Show actual price with strikethrough for non-credit, or normal for credit */}
+          {isNonCreditPayment ? (
+            <span className="line-through opacity-60">{formatCurrency(displayedAmount)}</span>
+          ) : (
+            <>
+              {entry.amount > 0 ? '+' : ''}{formatCurrency(entry.amount)}
+            </>
+          )}
         </p>
         <p className="text-xs text-muted-foreground tabular-nums">
           {formatCurrency(entry.balance)}
