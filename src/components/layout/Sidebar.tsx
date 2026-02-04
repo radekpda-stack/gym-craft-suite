@@ -5,31 +5,20 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
   Users,
-  Dumbbell,
-  Target,
   Activity,
   Calendar,
   Settings,
   ChevronRight,
-  ChevronDown,
   Zap,
   LogOut,
   TrendingUp,
   ShoppingBag,
-  ClipboardList,
   BarChart3,
   LucideIcon,
   Utensils,
-  FileText,
   LayoutTemplate,
-  Image,
-  FileQuestion,
-  PieChart,
   Receipt,
   UserCircle,
-  Trophy,
-  ClipboardCheck,
-  Database,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
@@ -37,13 +26,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/lib/i18n';
 import { Separator } from '@/components/ui/separator';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { useModuleSettings } from '@/hooks/useModuleSettings';
-import { usePendingSubmissionsCount } from '@/hooks/usePendingSubmissions';
 import { Badge } from '@/components/ui/badge';
 
 interface NavItem {
@@ -51,7 +34,6 @@ interface NavItem {
   to: string;
   icon: LucideIcon;
   label: string;
-  children?: NavItem[];
   badge?: number;
 }
 
@@ -122,118 +104,6 @@ const NavItemButton = memo(function NavItemButton({
   );
 });
 
-const NavItemExpandable = memo(function NavItemExpandable({
-  item,
-  collapsed,
-  isActive,
-  hasActiveChild,
-}: {
-  item: NavItem;
-  collapsed: boolean;
-  isActive: (to: string) => boolean;
-  hasActiveChild: boolean;
-}) {
-  const [isOpen, setIsOpen] = useState(hasActiveChild);
-  const Icon = item.icon;
-
-  // Auto-expand when child becomes active
-  if (hasActiveChild && !isOpen) {
-    setIsOpen(true);
-  }
-
-  if (collapsed) {
-    return (
-      <Tooltip delayDuration={0}>
-        <TooltipTrigger asChild>
-          <NavLink
-            to={item.to}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group relative',
-              hasActiveChild
-                ? 'bg-primary/10 text-primary'
-                : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-            )}
-          >
-            {hasActiveChild && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
-            )}
-            <Icon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.5} />
-          </NavLink>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="flex flex-col gap-1 p-2">
-          <span className="font-semibold text-xs mb-1">{item.label}</span>
-          {item.children?.map((child) => (
-            <NavLink
-              key={child.id}
-              to={child.to}
-              className={cn(
-                'flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors',
-                isActive(child.to)
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'hover:bg-accent'
-              )}
-            >
-              <child.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
-              {child.label}
-            </NavLink>
-          ))}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return (
-    <div className="space-y-0.5">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          'w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group relative',
-          hasActiveChild
-            ? 'bg-primary/10 text-primary'
-            : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-        )}
-      >
-        {hasActiveChild && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
-        )}
-        <Icon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.5} />
-        <span className="text-sm font-medium truncate flex-1 text-left">
-          {item.label}
-        </span>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <ChevronDown className="w-4 h-4 opacity-50" />
-        </motion.div>
-      </button>
-      
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="space-y-0.5 py-0.5">
-              {item.children?.map((child) => (
-                <NavItemButton
-                  key={child.id}
-                  item={child}
-                  collapsed={collapsed}
-                  isChild
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-});
-
 function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
   return (
     <AnimatePresence mode="wait">
@@ -259,60 +129,26 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
   const { signOut, user } = useAuth();
   const { t } = useLanguage();
   const { isModuleEnabled } = useModuleSettings();
-  const pendingSubmissionsCount = usePendingSubmissionsCount();
 
-  const isActive = (to: string) => {
-    return location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
-  };
-
-  // Check if nutrition is active
-  const hasActiveNutritionChild = isActive('/nutrition');
-
-  // Define sections with items - filtered by module settings
+  // Define sections with items - SIMPLIFIED: 4 main sections
   const sections: NavSection[] = useMemo(() => {
     const allSections: NavSection[] = [
       {
         label: 'Hlavní',
         items: [
           { id: 'dashboard', to: '/', icon: LayoutDashboard, label: t.nav.dashboard },
-          { id: 'my-profile', to: '/my-profile', icon: UserCircle, label: 'Můj profil' },
-        ],
-      },
-      {
-        label: 'Plánování',
-        items: [
           { id: 'schedule', to: '/schedule', icon: Calendar, label: 'Rozvrh' },
-          ...(isModuleEnabled('training_templates') ? [{ id: 'training-templates', to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' }] : []),
-          ...(isModuleEnabled('training_templates') ? [{ id: 'rx-workouts', to: '/rx-workouts', icon: Dumbbell, label: 'RX Workouty' }] : []),
-          ...(isModuleEnabled('feedback') ? [{ id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Zpětná vazba' }] : []),
-        ],
-      },
-      {
-        label: 'Klienti',
-        items: [
           { id: 'clients', to: '/clients', icon: Users, label: t.nav.clients },
-          ...(isModuleEnabled('client_portal') ? [{ id: 'client-portal', to: '/client-portal', icon: UserCircle, label: 'Klientský portál' }] : []),
         ],
       },
       {
-        label: 'Data',
+        label: 'Data & Výkonnost',
         items: [
-          { 
-            id: 'data', 
-            to: '/performance', 
-            icon: Database, 
-            label: 'Data & Výkonnost',
-            children: [
-              { id: 'performance', to: '/performance', icon: Zap, label: 'Výkonnost' },
-              { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
-              ...(isModuleEnabled('nutrition') ? [{
-                id: 'nutrition',
-                to: '/nutrition',
-                icon: Utensils,
-                label: 'Strava',
-              }] : []),
-            ],
-          },
+          { id: 'performance', to: '/performance', icon: Zap, label: 'Výkonnost' },
+          { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
+          ...(isModuleEnabled('training_templates') ? [{ id: 'training-templates', to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' }] : []),
+          ...(isModuleEnabled('nutrition') ? [{ id: 'nutrition', to: '/nutrition', icon: Utensils, label: 'Strava' }] : []),
+          ...(isModuleEnabled('feedback') ? [{ id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Zpětná vazba' }] : []),
         ],
       },
       {
@@ -326,6 +162,8 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
       {
         label: 'Systém',
         items: [
+          ...(isModuleEnabled('client_portal') ? [{ id: 'client-portal', to: '/client-portal', icon: UserCircle, label: 'Klientský portál' }] : []),
+          { id: 'my-profile', to: '/my-profile', icon: UserCircle, label: 'Můj profil' },
           { id: 'settings', to: '/settings', icon: Settings, label: t.nav.settings },
         ],
       },
@@ -333,7 +171,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
 
     // Filter out sections that have no visible items
     return allSections.filter(section => section.items.length > 0);
-  }, [t, isModuleEnabled, pendingSubmissionsCount]);
+  }, [t, isModuleEnabled]);
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -421,23 +259,13 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
                 <SectionLabel label={section.label} collapsed={collapsed} />
               )}
               <div className="space-y-0.5">
-                {section.items.map((item) => 
-                  item.children ? (
-                    <NavItemExpandable
-                      key={item.id}
-                      item={item}
-                      collapsed={collapsed}
-                      isActive={isActive}
-                      hasActiveChild={hasActiveNutritionChild}
-                    />
-                  ) : (
-                    <NavItemButton
-                      key={item.id}
-                      item={item}
-                      collapsed={collapsed}
-                    />
-                  )
-                )}
+                {section.items.map((item) => (
+                  <NavItemButton
+                    key={item.id}
+                    item={item}
+                    collapsed={collapsed}
+                  />
+                ))}
               </div>
               {sectionIndex < sections.length - 1 && (
                 <Separator className="my-3 bg-sidebar-border/30" />

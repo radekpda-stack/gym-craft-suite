@@ -46,58 +46,38 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
   const { signOut, user } = useAuth();
   const { isModuleEnabled } = useModuleSettings();
 
-  // Build sections based on enabled modules
+  // Build sections - SIMPLIFIED: 4 main sections (matching desktop Sidebar)
   const sections: NavSection[] = useMemo(() => {
     const allSections: NavSection[] = [
       {
         label: 'Hlavní',
         items: [
           { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-        ],
-      },
-      {
-        label: 'Plánování',
-        items: [
           { to: '/schedule', icon: CalendarDays, label: 'Rozvrh' },
-          ...(isModuleEnabled('training_templates') ? [{ to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' }] : []),
-        ],
-      },
-      {
-        label: 'Klienti',
-        items: [
           { to: '/clients', icon: Users, label: 'Klienti' },
-          ...(isModuleEnabled('client_portal') ? [{ to: '/client-portal', icon: UserCircle, label: 'Klientský portál' }] : []),
-          { to: '/my-profile', icon: UserCircle, label: 'Můj profil' },
         ],
       },
       {
-        label: 'Záznamy',
+        label: 'Data & Výkonnost',
         items: [
           { to: '/performance', icon: Zap, label: 'Výkonnost' },
           { to: '/records', icon: Activity, label: 'Záznamy' },
+          ...(isModuleEnabled('training_templates') ? [{ to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' }] : []),
+          ...(isModuleEnabled('nutrition') ? [{ to: '/nutrition', icon: Utensils, label: 'Strava' }] : []),
+          ...(isModuleEnabled('feedback') ? [{ to: '/feedback-overview', icon: MessageSquare, label: 'Zpětná vazba' }] : []),
         ],
       },
-      ...(isModuleEnabled('nutrition') ? [{
-        label: 'Strava',
-        items: [
-          { to: '/nutrition', icon: Utensils, label: 'Strava' },
-        ],
-      }] : []),
       {
         label: 'Finance',
         items: [
           { to: '/sales', icon: ShoppingBag, label: 'Prodeje' },
         ],
       },
-      ...(isModuleEnabled('feedback') ? [{
-        label: 'Komunikace',
-        items: [
-          { to: '/feedback-overview', icon: MessageSquare, label: 'Feedbacky' },
-        ],
-      }] : []),
       {
         label: 'Systém',
         items: [
+          ...(isModuleEnabled('client_portal') ? [{ to: '/client-portal', icon: UserCircle, label: 'Klientský portál' }] : []),
+          { to: '/my-profile', icon: UserCircle, label: 'Můj profil' },
           { to: '/settings', icon: Settings, label: 'Nastavení' },
         ],
       },
