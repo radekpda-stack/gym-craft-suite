@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Zap, Dumbbell, ClipboardCheck, Trophy, Plus, List, BarChart3 } from 'lucide-react';
+import { Zap, Dumbbell, ClipboardCheck, Trophy, Plus, List, BarChart3, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ExerciseListView } from '@/components/exercises/ExerciseListView';
@@ -12,6 +12,7 @@ import { ExerciseSearchCommand } from '@/components/performance/ExerciseSearchCo
 import { CategoryCards } from '@/components/performance/CategoryCards';
 import { ClientProgressLeaderboard } from '@/components/performance/ClientProgressLeaderboard';
 import { RecentExercisesChips } from '@/components/performance/RecentExercisesChips';
+import { ClientProgressView } from '@/components/performance/ClientProgressView';
 import { FloatingActionButton, FABAction } from '@/components/ui/floating-action-button';
 import { ExerciseFormDialog } from '@/components/exercises/ExerciseFormDialog';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
@@ -19,7 +20,7 @@ import { useModuleSettings } from '@/hooks/useModuleSettings';
 import { usePerformanceOverview } from '@/hooks/usePerformanceOverview';
 import { useExercisesWithUsage } from '@/hooks/useExerciseStats';
 
-type PerformanceTab = 'overview' | 'library' | 'analytics' | 'tests' | 'challenges';
+type PerformanceTab = 'overview' | 'clients' | 'library' | 'analytics' | 'tests' | 'challenges';
 
 export default function PerformanceHub() {
   usePageTracking('performance');
@@ -104,10 +105,14 @@ export default function PerformanceHub() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full max-w-2xl mx-auto bg-secondary/30 backdrop-blur-sm p-1" style={{ gridTemplateColumns: `repeat(${tabCount + 1}, 1fr)` }}>
+        <TabsList className="grid w-full max-w-3xl mx-auto bg-secondary/30 backdrop-blur-sm p-1" style={{ gridTemplateColumns: `repeat(${tabCount + 2}, 1fr)` }}>
           <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Zap className="w-4 h-4" />
             <span className="hidden sm:inline">Přehled</span>
+          </TabsTrigger>
+          <TabsTrigger value="clients" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">Klienti</span>
           </TabsTrigger>
           <TabsTrigger value="library" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <List className="w-4 h-4" />
@@ -154,6 +159,11 @@ export default function PerformanceHub() {
             recentExercises={overview?.recentExercises || []}
             isLoading={overviewLoading}
           />
+        </TabsContent>
+
+        {/* Clients Tab - Client Progress View */}
+        <TabsContent value="clients" className="mt-6">
+          <ClientProgressView />
         </TabsContent>
 
         {/* Library Tab - Exercise List */}
