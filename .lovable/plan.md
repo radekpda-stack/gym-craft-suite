@@ -1,227 +1,151 @@
 
-# Audit UI - Nalezené problémy a doporučené opravy
 
-## Shrnutí auditu
+# Oprava UI problémů na stránce Prodej (Sales) - Mobile
 
-Provedl jsem důkladnou analýzu UI komponent a stylů v aplikaci. Obecně je aplikace velmi dobře navržena s konzistentním designovým systémem a korektní implementací overflow handling. Nicméně jsem identifikoval několik oblastí ke zlepšení.
+## Identifikované problémy ze screenshotu
 
----
+### 1. Záložky (Tabs) - Text "Pokladna" je oříznutý na levé straně
 
-## 1. Chybějící definice CSS třídy `hero-card`
-
-**Problém:**
-Třída `hero-card` je používána v 3 komponentách (`ClientCard.tsx`, `TodayTimelineCard.tsx`, `HeroAttentionCard.tsx`), ale nemá definici v `index.css`. Vyhledávání v CSS souborech nevrátilo žádné výsledky.
-
-**Důsledek:**
-Komponenty používající `hero-card` nemají žádné specifické styly - závisí pouze na dalších třídách jako `p-4`, `rounded-2xl` atd.
+**Příčina:**
+- `TabsTrigger` v `Sales.tsx` používá `hidden xs:inline` pro text labelu
+- Na zařízeních menších než 375px text není zobrazen vůbec, ale ikona s containerem zabírá místo
+- Container má `p-1.5` padding uvnitř ikony, což s `flex-1` způsobuje nerovnoměrné rozdělení
 
 **Řešení:**
-Přidat definici do `index.css`:
+- Změnit z `hidden xs:inline` na `hidden sm:inline` pro konzistenci s ostatními breakpointy
+- Přidat `overflow-hidden` na TabsList pro případ přetečení
+- Přidat `text-xs sm:text-sm` pro responsivní velikost textu
 
-```css
-.hero-card {
-  @apply glass rounded-2xl border border-border/50;
-  box-shadow: var(--shadow-md);
-}
+### 2. Produktové karty na spodní části obrazovky jsou částečně viditelné
 
-.hero-card:hover {
-  border-color: hsl(var(--primary) / 0.2);
-}
-```
-
----
-
-## 2. Nekonzistentní použití CSS tříd pro karty
-
-**Problém:**
-Aplikace používá několik různých přístupů pro karty:
-- `glass rounded-2xl` (62 souborů)
-- `liquid-glass rounded-2xl` (5 souborů)
-- `hero-card` (3 soubory)
-- `jm-card` (CSS definice)
-- `Card` komponenta s variantami
-
-**Důsledek:**
-Nekonzistentní vzhled karet napříč aplikací.
+**Příčina:**
+- Stránka Sales.tsx má `pb-24` pro mobilní padding (řádek 40)
+- Ale MobileNav je umístěn na `bottom-6` s výškou cca 80px
+- ProductCard grid se zobrazuje pod FavoriteProducts a RecentSales sekcemi
 
 **Řešení:**
-Doporučuji sjednotit na tyto varianty:
-1. `Card` komponenta pro standardní karty
-2. `glass rounded-2xl` pro prémiové floating karty
-3. Odstranit duplicitní `liquid-glass` (je aliasem pro `glass`)
+- Zvýšit bottom padding na `pb-28` nebo `pb-32` pro zajištění dostatečného prostoru
+- Alternativně: Zkontrolovat, zda Layout.tsx má správný `pb-36` (má)
 
----
+### 3. Ikonová kontejnery v tabech zabírají příliš mnoho místa
 
-## 3. Tooltip a Popover - potenciální z-index konflikt
-
-**Problém:**
-`TooltipContent` má `z-50`, ale `MobileNav` a některé modály mají také `z-50`. Toto může způsobit překrývání.
-
-**Aktuální stav:**
-- `TooltipContent`: z-50
-- `MobileNav`: z-50
-- `DialogContent`: z-50
-- `SheetContent`: z-50
+**Příčina:**
+- Každý tab má `div` wrapper pro ikonu s `p-1.5 rounded-lg`
+- Na malých obrazovkách to vytváří zbytečné vizuální šumy
 
 **Řešení:**
-Upravit z-index hierarchii v komponentách:
-
-| Komponenta | Doporučený z-index |
-|------------|-------------------|
-| Tooltip | z-[60] |
-| Popover | z-[55] |
-| Dialog/Sheet | z-50 |
-| MobileNav | z-50 |
-| Sidebar | z-40 |
-
----
-
-## 4. CommandItem - chybějící hover stav viditelnost
-
-**Problém:**
-V `command.tsx` má `CommandItem` hover stav definovaný pouze pomocí `data-[selected='true']:bg-accent`, což může být málo viditelné v některých tématech.
-
-**Řešení:**
-Přidat explicitní hover stav:
-
-```tsx
-// Změna v command.tsx řádek 107-109
-className={cn(
-  "relative flex cursor-default select-none items-center rounded-lg px-2 py-1.5 text-sm outline-none transition-colors hover:bg-secondary data-[disabled=true]:pointer-events-none data-[selected='true']:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50",
-  className,
-)}
-```
-
----
-
-## 5. Progress komponenta - chybějící border-radius konzistence
-
-**Problém:**
-`Progress` komponenta používá `rounded-full`, zatímco ostatní komponenty používají `rounded-xl` nebo `rounded-2xl`.
-
-**Řešení:**
-Ponechat `rounded-full` pro progress bary (je to správné pro lineární progress), ale přidat možnost varianty:
-
-```tsx
-// Přidat variant prop pokud potřeba
-```
-
----
-
-## 6. Badge - truncate pro dlouhé texty
-
-**Problém:**
-`Badge` má `whitespace-nowrap` a `max-w-full overflow-hidden`, ale chybí `truncate` pro text uvnitř.
-
-**Aktuální stav:**
-```tsx
-"inline-flex items-center rounded-full border px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-nowrap max-w-full overflow-hidden"
-```
-
-**Řešení:**
-Text se sice neořízne díky `whitespace-nowrap`, ale přetéká. Přidat `truncate`:
-
-```tsx
-"inline-flex items-center rounded-full border px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 max-w-full truncate"
-```
-
-Odstranit `whitespace-nowrap` a přidat `truncate` zajistí, že dlouhé texty budou správně oříznuty.
-
----
-
-## 7. TabsTrigger - chybí min-w-0 pro flex-shrink
-
-**Problém:**
-`TabsTrigger` má `shrink-0`, což brání zmenšování, ale v některých případech to může způsobit přetečení.
-
-**Aktuální stav:**
-```tsx
-"inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium ... shrink-0 min-w-0"
-```
-
-**Řešení:**
-Stav je správný - `min-w-0` je přítomno. Žádná změna není potřeba.
-
----
-
-## 8. Button - přidání min-w-0 pro flex kontexty
-
-**Problém:**
-`Button` komponenta nemá `min-w-0`, což může způsobit přetečení v některých flex layoutech.
-
-**Řešení:**
-Přidat `min-w-0` do základních stylů:
-
-```tsx
-// button.tsx řádek 8
-"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded text-sm font-semibold ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 select-none min-w-0"
-```
-
----
-
-## 9. Sheet title - chybí truncate pro dlouhé názvy
-
-**Problém:**
-`SheetTitle` nemá truncate nebo break-words pro dlouhé titulky.
-
-**Řešení:**
-Přidat `break-words pr-8` (prostor pro close button):
-
-```tsx
-// sheet.tsx řádek 88
-className={cn("text-lg font-semibold text-foreground break-words pr-8", className)}
-```
-
----
-
-## 10. AlertDialogTitle - chybí pr-X pro close button prostor
-
-**Problém:**
-`AlertDialogTitle` nemá padding-right pro případné close buttony.
-
-**Řešení:**
-AlertDialog nemá close button jako Dialog, takže toto není problém.
+- Zjednodušit strukturu tabů na mobilech - pouze ikona bez extra wrapperu
+- Nebo snížit padding na `p-1` pro mobil
 
 ---
 
 ## Soubory k úpravě
 
-| Soubor | Změna | Priorita |
-|--------|-------|----------|
-| `src/index.css` | Přidat definici `.hero-card` | Vysoká |
-| `src/components/ui/badge.tsx` | Nahradit `whitespace-nowrap` za `truncate` | Střední |
-| `src/components/ui/button.tsx` | Přidat `min-w-0` | Střední |
-| `src/components/ui/command.tsx` | Přidat `hover:bg-secondary` do CommandItem | Nízká |
-| `src/components/ui/tooltip.tsx` | Změnit z-index na z-[60] | Střední |
-| `src/components/ui/popover.tsx` | Změnit z-index na z-[55] | Střední |
-| `src/components/ui/sheet.tsx` | Přidat `break-words pr-8` do SheetTitle | Nízká |
+| Soubor | Změna |
+|--------|-------|
+| `src/pages/Sales.tsx` | Opravit tabs overflow, zvýšit pb, zjednodušit tab strukturu |
+| `src/components/sales/FavoriteProducts.tsx` | Přidat `min-w-0` a `overflow-hidden` na grid items |
 
 ---
 
-## Implementační plán
+## Technické změny
 
-### Fáze 1: Kritické opravy (doporučeno okamžitě)
+### 1. Sales.tsx - Oprava TabsList
 
-1. **Přidat `.hero-card` do CSS** - třída je používána ale nedefinována
-2. **Opravit z-index hierarchii** - zamezí překrývání tooltipů
+**Aktuální stav (řádky 80-106):**
+```tsx
+<TabsList className="w-full h-auto p-1.5 card-floating rounded-2xl mb-4 sm:mb-6 backdrop-blur-md">
+  {TABS.map((tab) => {
+    // ...
+    <TabsTrigger className="relative flex-1 gap-2 py-3 px-3 sm:px-4 rounded-xl ...">
+      <div className="p-1.5 rounded-lg ...">
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+      </div>
+      <span className="hidden xs:inline text-sm font-medium">{tab.label}</span>
+    </TabsTrigger>
+  })}
+</TabsList>
+```
 
-### Fáze 2: Prevence overflow (střední priorita)
+**Navrhovaná změna:**
+```tsx
+<TabsList className="w-full h-auto p-1.5 card-floating rounded-2xl mb-4 sm:mb-6 backdrop-blur-md overflow-hidden">
+  {TABS.map((tab) => {
+    // ...
+    <TabsTrigger className="relative flex-1 gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl min-w-0 ...">
+      <div className="p-1 sm:p-1.5 rounded-lg shrink-0 ...">
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+      </div>
+      <span className="hidden sm:inline text-xs sm:text-sm font-medium truncate">{tab.label}</span>
+    </TabsTrigger>
+  })}
+</TabsList>
+```
 
-3. **Badge truncate** - dlouhé texty v badges
-4. **Button min-w-0** - flexbox kontexty
+**Klíčové změny:**
+- `overflow-hidden` na TabsList
+- `min-w-0` na TabsTrigger pro korektní flexbox chování
+- `shrink-0` na icon wrapper
+- Změna breakpointu z `xs:inline` na `sm:inline` (640px)
+- Přidání `truncate` pro případ dlouhého textu
+- Snížení gap a padding pro mobil: `gap-1.5 sm:gap-2`, `py-2.5 sm:py-3`, `px-2 sm:px-4`
+- Menší padding na icon wrapper: `p-1 sm:p-1.5`
 
-### Fáze 3: Vylepšení UX (nízká priorita)
+### 2. Sales.tsx - Zvýšení bottom padding
 
-5. **CommandItem hover** - lepší vizuální feedback
-6. **SheetTitle break-words** - dlouhé nadpisy
+**Aktuální stav (řádek 40):**
+```tsx
+<div className="space-y-4 sm:space-y-6 animate-fade-in pb-24 sm:pb-6">
+```
+
+**Navrhovaná změna:**
+```tsx
+<div className="space-y-4 sm:space-y-6 animate-fade-in pb-32 sm:pb-6">
+```
+
+Změna `pb-24` na `pb-32` zajistí více prostoru pro bottom navigation (8rem = 128px).
+
+### 3. FavoriteProducts.tsx - Přidání overflow ochrany
+
+**Aktuální stav (řádek 39):**
+```tsx
+<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+```
+
+**Navrhovaná změna:**
+```tsx
+<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 overflow-hidden">
+```
+
+A na product button (řádek 44-52):
+```tsx
+<button
+  className={cn(
+    "relative flex flex-col items-start gap-1 p-3 rounded-xl text-left transition-all duration-200 min-w-0 overflow-hidden",
+    // ...
+  )}
+>
+```
 
 ---
 
-## Pozitivní zjištění
+## Vizuální výsledek
 
-Aplikace má velmi dobře implementovaný overflow handling:
-- `DialogContent` má `max-h-[85vh] overflow-y-auto overflow-x-hidden`
-- `SheetContent` má `overflow-y-auto overflow-x-hidden max-h-[85vh]`
-- `Table` má wrapper s `overflow-x-auto`
-- `TabsList` má `overflow-x-auto scrollbar-hide`
-- UI_GUIDELINES.md je dobře strukturován a dodržován
+Po implementaci:
+- Záložky na mobilu zobrazí pouze ikony (pod 640px), nad 640px ikony + text
+- Žádné oříznuté texty nebo přetékající elementy
+- Produktové karty budou mít dostatečný prostor od bottom navigation
+- Grid produktů nebude přetékat z containeru
+
+---
+
+## Kontrolní seznam
+
+- [ ] TabsList má `overflow-hidden`
+- [ ] TabsTrigger má `min-w-0` pro flex-shrink
+- [ ] Icon wrapper má `shrink-0`
+- [ ] Text label má `truncate` a responsivní breakpoint `sm:inline`
+- [ ] Stránka má dostatečný `pb-32` pro bottom nav
+- [ ] Grid produktů má `overflow-hidden`
+- [ ] Product buttons mají `min-w-0 overflow-hidden`
+
