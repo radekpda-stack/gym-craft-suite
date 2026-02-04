@@ -5,7 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ModuleSettings } from './useModuleSettings';
+import { ModuleSettings, ModuleGroups, MODULE_GROUP_MAPPING } from './useModuleSettings';
 
 const DEFAULT_MODULES: ModuleSettings = {
   client_portal: true,
@@ -20,7 +20,7 @@ const DEFAULT_MODULES: ModuleSettings = {
   statistics: true,
   challenges: true,
   exercises: true,
-  rewards_system: false, // Disabled by default
+  rewards_system: false,
 };
 
 export function useTrainerModuleSettings(trainerId: string | undefined) {
@@ -42,7 +42,6 @@ export function useTrainerModuleSettings(trainerId: string | undefined) {
       }
 
       if (data?.value) {
-        // Merge with defaults to ensure all keys exist
         return {
           ...DEFAULT_MODULES,
           ...(data.value as Partial<ModuleSettings>),
@@ -52,7 +51,7 @@ export function useTrainerModuleSettings(trainerId: string | undefined) {
       return DEFAULT_MODULES;
     },
     enabled: !!trainerId,
-    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    staleTime: 1000 * 60 * 5,
     placeholderData: DEFAULT_MODULES,
   });
 }
@@ -63,4 +62,15 @@ export function useIsModuleEnabledForClient(
 ): boolean {
   const { data: settings } = useTrainerModuleSettings(trainerId);
   return settings?.[moduleName] ?? DEFAULT_MODULES[moduleName];
+}
+
+export function useIsGroupEnabledForClient(
+  trainerId: string | undefined,
+  groupName: keyof ModuleGroups
+): boolean {
+  const { data: settings } = useTrainerModuleSettings(trainerId);
+  if (!settings) return true;
+  
+  const modulesInGroup = MODULE_GROUP_MAPPING[groupName];
+  return modulesInGroup.some(m => settings[m]);
 }
