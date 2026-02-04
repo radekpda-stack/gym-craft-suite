@@ -1,185 +1,227 @@
 
+# Audit UI - Nalezené problémy a doporučené opravy
 
-# Oprava chybějících PR záznamů na kartě tréninku
+## Shrnutí auditu
 
-## Identifikovaný problém
+Provedl jsem důkladnou analýzu UI komponent a stylů v aplikaci. Obecně je aplikace velmi dobře navržena s konzistentním designovým systémem a korektní implementací overflow handling. Nicméně jsem identifikoval několik oblastí ke zlepšení.
 
-Při zobrazení sekce **"Výsledky účastníků"** na kartě tréninku se nezobrazují všechny PR záznamy. Pro Martinu Štefanovou chybí:
-- **Bench press** (35 kg z 2024-08-16)
-- **Bulharský dřep** (20 kg z 2026-02-03)
+---
 
-Mirka Kotová má všech 5 záznamů správně.
+## 1. Chybějící definice CSS třídy `hero-card`
 
-## Příčina problému
+**Problém:**
+Třída `hero-card` je používána v 3 komponentách (`ClientCard.tsx`, `TodayTimelineCard.tsx`, `HeroAttentionCard.tsx`), ale nemá definici v `index.css`. Vyhledávání v CSS souborech nevrátilo žádné výsledky.
 
-### 1. Chybí cache invalidace pro `client-exercise-prs`
+**Důsledek:**
+Komponenty používající `hero-card` nemají žádné specifické styly - závisí pouze na dalších třídách jako `p-4`, `rounded-2xl` atd.
 
-Po dokončení tréninku se vytvářejí nové záznamy v `exercise_entries`, ale cache pro hook `useClientExercisePRs` není invalidována:
+**Řešení:**
+Přidat definici do `index.css`:
 
-| Soubor | Invaliduje `client-exercise-prs`? |
-|--------|-----------------------------------|
-| `useCompleteTrainingAtomic.ts` | ❌ NE |
-| `useExerciseEntries.ts` | ❌ NE |
-| `useWorkoutEntries.ts` | ❌ NE |
-
-### 2. Výsledek
-
-Když uživatel dokončí trénink:
-1. Nové exercise entries se uloží do databáze ✅
-2. Cache pro `exercise-entries` se invaliduje ✅
-3. Cache pro `client-exercise-prs` zůstane **zastaralá** ❌
-4. UI zobrazuje staré PRs z cache
-
-## Řešení
-
-### Část A: Přidat invalidaci do `useCompleteTrainingAtomic.ts`
-
-```typescript
-// Po dokončení tréninku invalidovat PRs pro všechny účastníky
-for (const participant of params.participants) {
-  queryClient.invalidateQueries({ 
-    queryKey: ["client-exercise-prs", participant.client_id],
-    refetchType: 'all',
-  });
+```css
+.hero-card {
+  @apply glass rounded-2xl border border-border/50;
+  box-shadow: var(--shadow-md);
 }
 
-// Také globální invalidace
-queryClient.invalidateQueries({ 
-  queryKey: ["client-exercise-prs"], 
-  refetchType: 'all' 
-});
-```
-
-### Část B: Přidat invalidaci do `useExerciseEntries.ts`
-
-V `addEntry` a `updateEntry` mutacích:
-
-```typescript
-onSuccess: () => {
-  // Stávající invalidace...
-  queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] });
+.hero-card:hover {
+  border-color: hsl(var(--primary) / 0.2);
 }
 ```
 
-### Část C: Přidat invalidaci do `useSyncToClientStats`
+---
 
-V `useWorkoutEntries.ts`:
+## 2. Nekonzistentní použití CSS tříd pro karty
 
-```typescript
-onSuccess: () => {
-  // Stávající invalidace...
-  queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] });
-}
+**Problém:**
+Aplikace používá několik různých přístupů pro karty:
+- `glass rounded-2xl` (62 souborů)
+- `liquid-glass rounded-2xl` (5 souborů)
+- `hero-card` (3 soubory)
+- `jm-card` (CSS definice)
+- `Card` komponenta s variantami
+
+**Důsledek:**
+Nekonzistentní vzhled karet napříč aplikací.
+
+**Řešení:**
+Doporučuji sjednotit na tyto varianty:
+1. `Card` komponenta pro standardní karty
+2. `glass rounded-2xl` pro prémiové floating karty
+3. Odstranit duplicitní `liquid-glass` (je aliasem pro `glass`)
+
+---
+
+## 3. Tooltip a Popover - potenciální z-index konflikt
+
+**Problém:**
+`TooltipContent` má `z-50`, ale `MobileNav` a některé modály mají také `z-50`. Toto může způsobit překrývání.
+
+**Aktuální stav:**
+- `TooltipContent`: z-50
+- `MobileNav`: z-50
+- `DialogContent`: z-50
+- `SheetContent`: z-50
+
+**Řešení:**
+Upravit z-index hierarchii v komponentách:
+
+| Komponenta | Doporučený z-index |
+|------------|-------------------|
+| Tooltip | z-[60] |
+| Popover | z-[55] |
+| Dialog/Sheet | z-50 |
+| MobileNav | z-50 |
+| Sidebar | z-40 |
+
+---
+
+## 4. CommandItem - chybějící hover stav viditelnost
+
+**Problém:**
+V `command.tsx` má `CommandItem` hover stav definovaný pouze pomocí `data-[selected='true']:bg-accent`, což může být málo viditelné v některých tématech.
+
+**Řešení:**
+Přidat explicitní hover stav:
+
+```tsx
+// Změna v command.tsx řádek 107-109
+className={cn(
+  "relative flex cursor-default select-none items-center rounded-lg px-2 py-1.5 text-sm outline-none transition-colors hover:bg-secondary data-[disabled=true]:pointer-events-none data-[selected='true']:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50",
+  className,
+)}
 ```
 
-### Část D: Snížit staleTime v `useClientExercisePRs`
+---
 
-Pro zajištění čerstvějších dat:
+## 5. Progress komponenta - chybějící border-radius konzistence
 
-```typescript
-return useQuery({
-  queryKey: ['client-exercise-prs', clientId],
-  staleTime: 1000 * 30, // 30 sekund místo default
-  queryFn: async () => { ... }
-});
+**Problém:**
+`Progress` komponenta používá `rounded-full`, zatímco ostatní komponenty používají `rounded-xl` nebo `rounded-2xl`.
+
+**Řešení:**
+Ponechat `rounded-full` pro progress bary (je to správné pro lineární progress), ale přidat možnost varianty:
+
+```tsx
+// Přidat variant prop pokud potřeba
 ```
+
+---
+
+## 6. Badge - truncate pro dlouhé texty
+
+**Problém:**
+`Badge` má `whitespace-nowrap` a `max-w-full overflow-hidden`, ale chybí `truncate` pro text uvnitř.
+
+**Aktuální stav:**
+```tsx
+"inline-flex items-center rounded-full border px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-nowrap max-w-full overflow-hidden"
+```
+
+**Řešení:**
+Text se sice neořízne díky `whitespace-nowrap`, ale přetéká. Přidat `truncate`:
+
+```tsx
+"inline-flex items-center rounded-full border px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 max-w-full truncate"
+```
+
+Odstranit `whitespace-nowrap` a přidat `truncate` zajistí, že dlouhé texty budou správně oříznuty.
+
+---
+
+## 7. TabsTrigger - chybí min-w-0 pro flex-shrink
+
+**Problém:**
+`TabsTrigger` má `shrink-0`, což brání zmenšování, ale v některých případech to může způsobit přetečení.
+
+**Aktuální stav:**
+```tsx
+"inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium ... shrink-0 min-w-0"
+```
+
+**Řešení:**
+Stav je správný - `min-w-0` je přítomno. Žádná změna není potřeba.
+
+---
+
+## 8. Button - přidání min-w-0 pro flex kontexty
+
+**Problém:**
+`Button` komponenta nemá `min-w-0`, což může způsobit přetečení v některých flex layoutech.
+
+**Řešení:**
+Přidat `min-w-0` do základních stylů:
+
+```tsx
+// button.tsx řádek 8
+"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded text-sm font-semibold ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 select-none min-w-0"
+```
+
+---
+
+## 9. Sheet title - chybí truncate pro dlouhé názvy
+
+**Problém:**
+`SheetTitle` nemá truncate nebo break-words pro dlouhé titulky.
+
+**Řešení:**
+Přidat `break-words pr-8` (prostor pro close button):
+
+```tsx
+// sheet.tsx řádek 88
+className={cn("text-lg font-semibold text-foreground break-words pr-8", className)}
+```
+
+---
+
+## 10. AlertDialogTitle - chybí pr-X pro close button prostor
+
+**Problém:**
+`AlertDialogTitle` nemá padding-right pro případné close buttony.
+
+**Řešení:**
+AlertDialog nemá close button jako Dialog, takže toto není problém.
 
 ---
 
 ## Soubory k úpravě
 
-| Soubor | Změna |
-|--------|-------|
-| `src/hooks/useCompleteTrainingAtomic.ts` | Přidat invalidaci `client-exercise-prs` |
-| `src/hooks/useExerciseEntries.ts` | Přidat invalidaci v `addEntry` a `updateEntry` |
-| `src/hooks/useWorkoutEntries.ts` | Přidat invalidaci v `useSyncToClientStats` |
-| `src/hooks/useClientExercisePRs.ts` | Přidat `staleTime: 30s` |
+| Soubor | Změna | Priorita |
+|--------|-------|----------|
+| `src/index.css` | Přidat definici `.hero-card` | Vysoká |
+| `src/components/ui/badge.tsx` | Nahradit `whitespace-nowrap` za `truncate` | Střední |
+| `src/components/ui/button.tsx` | Přidat `min-w-0` | Střední |
+| `src/components/ui/command.tsx` | Přidat `hover:bg-secondary` do CommandItem | Nízká |
+| `src/components/ui/tooltip.tsx` | Změnit z-index na z-[60] | Střední |
+| `src/components/ui/popover.tsx` | Změnit z-index na z-[55] | Střední |
+| `src/components/ui/sheet.tsx` | Přidat `break-words pr-8` do SheetTitle | Nízká |
 
 ---
 
-## Technické detaily změn
+## Implementační plán
 
-### 1. useCompleteTrainingAtomic.ts
+### Fáze 1: Kritické opravy (doporučeno okamžitě)
 
-**Řádek ~292 (po granulární invalidaci účastníků):**
+1. **Přidat `.hero-card` do CSS** - třída je používána ale nedefinována
+2. **Opravit z-index hierarchii** - zamezí překrývání tooltipů
 
-```typescript
-// NOVÉ: Invalidovat PRs pro každého účastníka
-for (const participant of params.participants) {
-  queryClient.invalidateQueries({ 
-    queryKey: ["client-exercise-prs", participant.client_id],
-    refetchType: 'all',
-  });
-}
-```
+### Fáze 2: Prevence overflow (střední priorita)
 
-**Řádek ~310 (v globálních invalidacích):**
+3. **Badge truncate** - dlouhé texty v badges
+4. **Button min-w-0** - flexbox kontexty
 
-```typescript
-queryClient.invalidateQueries({ queryKey: ["client-exercise-prs"], refetchType: 'all' });
-```
+### Fáze 3: Vylepšení UX (nízká priorita)
 
-### 2. useExerciseEntries.ts
-
-**Řádek ~203 (addEntry onSuccess):**
-
-```typescript
-onSuccess: () => {
-  queryClient.invalidateQueries({ queryKey: ['exercise-entries'] });
-  queryClient.invalidateQueries({ queryKey: ['exercise-history'] });
-  queryClient.invalidateQueries({ queryKey: ['exercise-stats'] });
-  queryClient.invalidateQueries({ queryKey: ['exercise-progress'] });
-  queryClient.invalidateQueries({ queryKey: ['exercise-client-comparison'] });
-  queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] }); // NOVÉ
-  toast({ title: 'Záznam přidán', description: 'Tréninkový záznam byl uložen.' });
-}
-```
-
-**Řádek ~254 (updateEntry onSuccess):**
-
-```typescript
-queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] }); // NOVÉ
-```
-
-### 3. useWorkoutEntries.ts
-
-**Řádek ~435 (useSyncToClientStats onSuccess):**
-
-```typescript
-onSuccess: () => {
-  queryClient.invalidateQueries({ queryKey: ['exercise-entries'] });
-  queryClient.invalidateQueries({ queryKey: ['exercise-history'] });
-  queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] }); // NOVÉ
-  toast({
-    title: 'Statistiky aktualizovány',
-    description: 'Data byla synchronizována s profily klientů.',
-  });
-}
-```
-
-### 4. useClientExercisePRs.ts
-
-**Řádek ~28:**
-
-```typescript
-export function useClientExercisePRs(clientId: string | null | undefined) {
-  return useQuery({
-    queryKey: ['client-exercise-prs', clientId],
-    staleTime: 1000 * 30, // 30 sekund - pro čerstvější data
-    queryFn: async () => {
-      // ...
-    },
-    enabled: !!clientId,
-  });
-}
-```
+5. **CommandItem hover** - lepší vizuální feedback
+6. **SheetTitle break-words** - dlouhé nadpisy
 
 ---
 
-## Očekávaný výsledek
+## Pozitivní zjištění
 
-Po implementaci:
-- Všechny PR záznamy klientů budou okamžitě viditelné po dokončení tréninku
-- Cache se automaticky invaliduje při jakékoli změně v exercise_entries
-- Martina Štefanová bude mít zobrazeno všech 7 cviků včetně Bench press a Bulharský dřep
-
+Aplikace má velmi dobře implementovaný overflow handling:
+- `DialogContent` má `max-h-[85vh] overflow-y-auto overflow-x-hidden`
+- `SheetContent` má `overflow-y-auto overflow-x-hidden max-h-[85vh]`
+- `Table` má wrapper s `overflow-x-auto`
+- `TabsList` má `overflow-x-auto scrollbar-hide`
+- UI_GUIDELINES.md je dobře strukturován a dodržován
