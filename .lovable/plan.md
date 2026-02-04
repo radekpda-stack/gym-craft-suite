@@ -1,63 +1,88 @@
 
-# Oprava kreditového systému - Cache invalidace po dokončení tréninku
+
+# Oprava chybějících PR záznamů na kartě tréninku
 
 ## Identifikovaný problém
 
-Po dokončení tréninku se UI neaktualizuje správně, protože:
+Při zobrazení sekce **"Výsledky účastníků"** na kartě tréninku se nezobrazují všechny PR záznamy. Pro Martinu Štefanovou chybí:
+- **Bench press** (35 kg z 2024-08-16)
+- **Bulharský dřep** (20 kg z 2026-02-03)
 
-1. **Příliš dlouhá staleTime** - `useClient` má 2 minuty, `useSharedBudgetBalance` má 30 sekund
-2. **Neúplná invalidace** - `invalidateQueries({ queryKey: ["clients"] })` invaliduje klíč, ale data se nerefetchnou okamžitě kvůli staleTime
-3. **Chybí granulární invalidace** - nebyly invalidovány konkrétní klíče pro jednotlivé účastníky (`["clients", clientId]`)
+Mirka Kotová má všech 5 záznamů správně.
+
+## Příčina problému
+
+### 1. Chybí cache invalidace pro `client-exercise-prs`
+
+Po dokončení tréninku se vytvářejí nové záznamy v `exercise_entries`, ale cache pro hook `useClientExercisePRs` není invalidována:
+
+| Soubor | Invaliduje `client-exercise-prs`? |
+|--------|-----------------------------------|
+| `useCompleteTrainingAtomic.ts` | ❌ NE |
+| `useExerciseEntries.ts` | ❌ NE |
+| `useWorkoutEntries.ts` | ❌ NE |
+
+### 2. Výsledek
+
+Když uživatel dokončí trénink:
+1. Nové exercise entries se uloží do databáze ✅
+2. Cache pro `exercise-entries` se invaliduje ✅
+3. Cache pro `client-exercise-prs` zůstane **zastaralá** ❌
+4. UI zobrazuje staré PRs z cache
 
 ## Řešení
 
-### Část A: Oprava `useCompleteTrainingAtomic.ts`
-
-Přidám granulární invalidaci pro **všechny účastníky tréninku** s `refetchType: 'all'`:
+### Část A: Přidat invalidaci do `useCompleteTrainingAtomic.ts`
 
 ```typescript
-onSuccess: (result, params) => {
-  // NOVÉ: Granulární invalidace pro každého účastníka
-  for (const participant of params.participants) {
-    queryClient.invalidateQueries({ 
-      queryKey: ["clients", participant.client_id],
-      refetchType: 'all',
-    });
-    queryClient.invalidateQueries({ 
-      queryKey: ["credit_transactions", participant.client_id],
-      refetchType: 'all',
-    });
-    queryClient.invalidateQueries({ 
-      queryKey: ["shared_budget_balance", participant.client_id],
-      refetchType: 'all',
-    });
-  }
-  
-  // Stávající invalidace...
+// Po dokončení tréninku invalidovat PRs pro všechny účastníky
+for (const participant of params.participants) {
+  queryClient.invalidateQueries({ 
+    queryKey: ["client-exercise-prs", participant.client_id],
+    refetchType: 'all',
+  });
 }
-```
 
-### Část B: Snížení staleTime v kritických hooks
-
-V `useClients.ts`:
-- `useClient`: snížit staleTime z 2 minut na **30 sekund**
-- `useCreditTransactions`: snížit staleTime z 2 minut na **30 sekund**
-
-V `useCreditOperations.ts`:
-- `useSharedBudgetBalance`: ponechat 30 sekund (OK)
-
-### Část C: Přidání refetchType do hlavních invalidací
-
-Změnit všechny invalidace v `useCompleteTrainingAtomic.ts` na použití `refetchType: 'all'`:
-
-```typescript
+// Také globální invalidace
 queryClient.invalidateQueries({ 
-  queryKey: ["clients"], 
+  queryKey: ["client-exercise-prs"], 
   refetchType: 'all' 
 });
 ```
 
-Tím se zajistí, že se data opravdu refetchnou, i když jsou v rámci staleTime.
+### Část B: Přidat invalidaci do `useExerciseEntries.ts`
+
+V `addEntry` a `updateEntry` mutacích:
+
+```typescript
+onSuccess: () => {
+  // Stávající invalidace...
+  queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] });
+}
+```
+
+### Část C: Přidat invalidaci do `useSyncToClientStats`
+
+V `useWorkoutEntries.ts`:
+
+```typescript
+onSuccess: () => {
+  // Stávající invalidace...
+  queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] });
+}
+```
+
+### Část D: Snížit staleTime v `useClientExercisePRs`
+
+Pro zajištění čerstvějších dat:
+
+```typescript
+return useQuery({
+  queryKey: ['client-exercise-prs', clientId],
+  staleTime: 1000 * 30, // 30 sekund místo default
+  queryFn: async () => { ... }
+});
+```
 
 ---
 
@@ -65,76 +90,96 @@ Tím se zajistí, že se data opravdu refetchnou, i když jsou v rámci staleTim
 
 | Soubor | Změna |
 |--------|-------|
-| `src/hooks/useCompleteTrainingAtomic.ts` | Přidat granulární invalidaci pro účastníky + refetchType |
-| `src/hooks/useClients.ts` | Snížit staleTime useClient na 30s |
-| `src/hooks/useCreditOperations.ts` | Snížit staleTime useCreditTransactions na 30s |
+| `src/hooks/useCompleteTrainingAtomic.ts` | Přidat invalidaci `client-exercise-prs` |
+| `src/hooks/useExerciseEntries.ts` | Přidat invalidaci v `addEntry` a `updateEntry` |
+| `src/hooks/useWorkoutEntries.ts` | Přidat invalidaci v `useSyncToClientStats` |
+| `src/hooks/useClientExercisePRs.ts` | Přidat `staleTime: 30s` |
 
 ---
 
 ## Technické detaily změn
 
-### 1. useCompleteTrainingAtomic.ts (řádky 276-295)
+### 1. useCompleteTrainingAtomic.ts
 
-**Před:**
+**Řádek ~292 (po granulární invalidaci účastníků):**
+
 ```typescript
-onSuccess: (result, params) => {
-  queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
-  queryClient.invalidateQueries({ queryKey: ["clients"] });
-  queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
-  queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
-  // ...
+// NOVÉ: Invalidovat PRs pro každého účastníka
+for (const participant of params.participants) {
+  queryClient.invalidateQueries({ 
+    queryKey: ["client-exercise-prs", participant.client_id],
+    refetchType: 'all',
+  });
 }
 ```
 
-**Po:**
+**Řádek ~310 (v globálních invalidacích):**
+
 ```typescript
-onSuccess: (result, params) => {
-  // Granulární invalidace pro každého účastníka - kritické pro UI update
-  for (const participant of params.participants) {
-    queryClient.invalidateQueries({ 
-      queryKey: ["clients", participant.client_id],
-      refetchType: 'all',
-    });
-    queryClient.invalidateQueries({ 
-      queryKey: ["credit_transactions", participant.client_id],
-      refetchType: 'all',
-    });
-    queryClient.invalidateQueries({ 
-      queryKey: ["shared_budget_balance", participant.client_id],
-      refetchType: 'all',
-    });
-  }
-  
-  // Hlavní invalidace s refetchType
-  queryClient.invalidateQueries({ queryKey: ["training_sessions"], refetchType: 'all' });
-  queryClient.invalidateQueries({ queryKey: ["clients"], refetchType: 'all' });
-  queryClient.invalidateQueries({ queryKey: ["credit_transactions"], refetchType: 'all' });
-  queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"], refetchType: 'all' });
-  // ... zbytek bez změn
+queryClient.invalidateQueries({ queryKey: ["client-exercise-prs"], refetchType: 'all' });
+```
+
+### 2. useExerciseEntries.ts
+
+**Řádek ~203 (addEntry onSuccess):**
+
+```typescript
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: ['exercise-entries'] });
+  queryClient.invalidateQueries({ queryKey: ['exercise-history'] });
+  queryClient.invalidateQueries({ queryKey: ['exercise-stats'] });
+  queryClient.invalidateQueries({ queryKey: ['exercise-progress'] });
+  queryClient.invalidateQueries({ queryKey: ['exercise-client-comparison'] });
+  queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] }); // NOVÉ
+  toast({ title: 'Záznam přidán', description: 'Tréninkový záznam byl uložen.' });
 }
 ```
 
-### 2. useClients.ts - snížení staleTime
+**Řádek ~254 (updateEntry onSuccess):**
 
-**Řádek 67:** Změnit `staleTime: 1000 * 60 * 2` na `staleTime: 1000 * 30`
+```typescript
+queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] }); // NOVÉ
+```
 
-### 3. useCreditOperations.ts - snížení staleTime
+### 3. useWorkoutEntries.ts
 
-**Řádek 229:** Změnit `staleTime: 1000 * 60 * 2` na `staleTime: 1000 * 30`
+**Řádek ~435 (useSyncToClientStats onSuccess):**
+
+```typescript
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: ['exercise-entries'] });
+  queryClient.invalidateQueries({ queryKey: ['exercise-history'] });
+  queryClient.invalidateQueries({ queryKey: ['client-exercise-prs'] }); // NOVÉ
+  toast({
+    title: 'Statistiky aktualizovány',
+    description: 'Data byla synchronizována s profily klientů.',
+  });
+}
+```
+
+### 4. useClientExercisePRs.ts
+
+**Řádek ~28:**
+
+```typescript
+export function useClientExercisePRs(clientId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['client-exercise-prs', clientId],
+    staleTime: 1000 * 30, // 30 sekund - pro čerstvější data
+    queryFn: async () => {
+      // ...
+    },
+    enabled: !!clientId,
+  });
+}
+```
 
 ---
 
 ## Očekávaný výsledek
 
 Po implementaci:
-- UI se okamžitě aktualizuje po dokončení tréninku
-- Zůstatek klienta zobrazí správnou hodnotu (načtenou z ledger view)
-- Všichni účastníci duo/group tréninku uvidí aktualizovaný kredit
-- Žádné další manuální refetch není potřeba
+- Všechny PR záznamy klientů budou okamžitě viditelné po dokončení tréninku
+- Cache se automaticky invaliduje při jakékoli změně v exercise_entries
+- Martina Štefanová bude mít zobrazeno všech 7 cviků včetně Bench press a Bulharský dřep
 
-## Proč to bude fungovat
-
-1. **Granulární invalidace** - přímo cílíme na konkrétního klienta, ne jen na celou kolekci
-2. **refetchType: 'all'** - vynutí refetch i když data jsou v rámci staleTime
-3. **Kratší staleTime** - data se považují za zastaralá dříve, takže běžná invalidace funguje spolehlivěji
-4. **Ledger view** - `useClient` už načítá balance z `vw_client_ledger_balances`, takže jakmile se refetchne, zobrazí správný zůstatek
