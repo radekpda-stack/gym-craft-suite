@@ -274,14 +274,16 @@ export function useSharedBudgetBalance(clientId?: string) {
       const membership = await getClientBudgetGroup(clientId);
 
       if (!membership) {
-        const { data: client, error: clientError } = await supabase
-          .from("clients")
-          .select("credit_balance")
-          .eq("id", clientId)
+        // FIXED: Use ledger_balance from view instead of cached credit_balance
+        // This ensures we always display the actual calculated balance from transactions
+        const { data: ledgerData, error: ledgerError } = await supabase
+          .from("vw_client_ledger_balances")
+          .select("ledger_balance")
+          .eq("client_id", clientId)
           .maybeSingle();
 
-        if (clientError) throw clientError;
-        const balance = client?.credit_balance || 0;
+        if (ledgerError) throw ledgerError;
+        const balance = ledgerData?.ledger_balance ?? 0;
         return {
           isShared: false, groupId: null, groupName: null, sharedBalance: balance,
           displayBalance: balance, isExhausted: balance <= 0, isNegative: balance < 0, members: [],

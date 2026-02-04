@@ -342,17 +342,46 @@ export function ClientFinanceLedger({
     }));
   }, [filteredEntries]);
 
-  // Audit check - compare calculated balance with stored balance
+  // Calculate balance from transactions - FIXED: use transactions directly, not ledgerEntries
+  // This avoids double-counting issues when building ledgerEntries from mixed sources
+  const calculatedFromTransactions = useMemo(() => {
+    let sum = 0;
+    
+    // Sum all transactions EXCEPT those linked to training sessions
+    // (training session transactions are represented by sessions instead)
+    transactions.forEach(tx => {
+      if (tx.training_session_id) return; // Skip - handled via sessions
+      // Include all statuses (completed is implied if no status field visible)
+      sum += tx.amount;
+    });
+    
+    // Add sessions paid with credit (these affect balance)
+    sessions.forEach(session => {
+      if (session.status === 'scheduled') return;
+      
+      const participantData = participantPayments.get(session.id);
+      const paymentMethod = participantData?.payment_method ?? session.payment_method ?? 'credit';
+      const price = participantData?.price_share ?? session.final_price ?? 0;
+      
+      // Only credit payments affect the balance
+      if (paymentMethod === 'credit' && price > 0) {
+        sum -= price;
+      }
+    });
+    
+    return sum;
+  }, [transactions, sessions, participantPayments]);
+
+  // Audit check - compare calculated balance with displayed balance
   const auditResult = useMemo(() => {
-    const calculatedBalance = ledgerEntries.reduce((sum, e) => sum + e.amount, 0);
-    const difference = Math.abs(calculatedBalance - currentBalance);
+    const difference = Math.abs(calculatedFromTransactions - currentBalance);
     const matches = difference < 1; // Allow 1 CZK tolerance for rounding
     return {
-      calculatedBalance,
+      calculatedBalance: calculatedFromTransactions,
       matches,
       difference,
     };
-  }, [ledgerEntries, currentBalance]);
+  }, [calculatedFromTransactions, currentBalance]);
 
   // Stats
   const stats = useMemo(() => {
