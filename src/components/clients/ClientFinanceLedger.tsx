@@ -14,7 +14,7 @@
  * - Filter by type
  * - Group budget support
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Wallet,
@@ -51,6 +51,7 @@ import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { format, parseISO, subDays, subMonths, isAfter } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   LedgerEntry, 
   LedgerEntryType, 
@@ -179,6 +180,39 @@ export function ClientFinanceLedger({
   const [filter, setFilter] = useState<FilterType>('all');
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
   const [showGroupScope, setShowGroupScope] = useState(true);
+  
+  // Load participant payment methods for this client
+  // This is critical for multi-participant trainings where each participant has their own payment method
+  const [participantPayments, setParticipantPayments] = useState<Map<string, { payment_method: string | null; price_share: number }>>(new Map());
+  
+  useEffect(() => {
+    async function loadParticipantPayments() {
+      const sessionIds = sessions.map(s => s.id);
+      if (sessionIds.length === 0) return;
+      
+      const { data, error } = await supabase
+        .from('training_participants')
+        .select('training_session_id, payment_method, price_share')
+        .eq('client_id', clientId)
+        .in('training_session_id', sessionIds);
+      
+      if (error) {
+        console.error('Failed to load participant payments:', error);
+        return;
+      }
+      
+      const payments = new Map<string, { payment_method: string | null; price_share: number }>();
+      data?.forEach(p => {
+        payments.set(p.training_session_id, {
+          payment_method: p.payment_method,
+          price_share: p.price_share,
+        });
+      });
+      setParticipantPayments(payments);
+    }
+    
+    loadParticipantPayments();
+  }, [sessions, clientId]);
 
   // Build unified ledger entries with running balance
   const ledgerEntries = useMemo(() => {
@@ -220,28 +254,26 @@ export function ClientFinanceLedger({
     });
     
     // Add training sessions that affected credit
-    // ONLY sessions paid with credit should affect the credit balance calculation
+    // CRITICAL: For multi-participant trainings, use the PARTICIPANT's payment_method, not session's
     sessions.forEach(session => {
       if (session.status === 'scheduled') return;
       
-      const price = session.final_price || 0;
+      // Check if this client has a participant record for this session
+      const participantData = participantPayments.get(session.id);
+      
+      // Use participant-level payment method if available, otherwise fall back to session level
+      const paymentMethod = participantData?.payment_method ?? session.payment_method ?? 'credit';
+      // Use participant's price_share if available, otherwise use session's final_price
+      const price = participantData?.price_share ?? session.final_price ?? 0;
+      
       if (price <= 0) return; // No credit impact
       
       // Determine if this session was paid with credit
-      // payment_status: paid_credit = credit, paid_cash/paid_card = not credit
-      // payment_method: credit = credit, cash/card/bank_transfer = not credit
-      const paymentMethod = session.payment_method || 'credit';
-      const paymentStatus = session.payment_status || '';
+      // A session affects credit only if payment_method is 'credit'
+      // Cash, card, bank, pending (paid externally) should NOT affect credit balance
+      const isCreditPayment = paymentMethod === 'credit';
       
-      // A session affects credit only if:
-      // 1. payment_method is 'credit' or null (legacy)
-      // 2. OR payment_status is 'paid_credit' or 'pending' (not yet paid, might affect balance)
-      const isCreditPayment = 
-        paymentMethod === 'credit' || 
-        paymentStatus === 'paid_credit' ||
-        paymentStatus === 'pending';
-      
-      // For cash/card payments, the session shouldn't affect credit balance in audit
+      // For cash/card/bank payments, the session shouldn't affect credit balance in audit
       // But we still show them in the ledger for context (with amount = 0 for balance calc)
       const pricingType = getPricingTypeLabel(session.participant_count);
       
@@ -272,7 +304,7 @@ export function ClientFinanceLedger({
     }
     
     return entries;
-  }, [sessions, transactions, currentBalance, clientId, isSharedBudget, showGroupScope]);
+  }, [sessions, transactions, currentBalance, clientId, isSharedBudget, showGroupScope, participantPayments]);
 
   // Filter entries by type and period
   const filteredEntries = useMemo(() => {
