@@ -7,9 +7,9 @@
 | A: Čištění mrtvého kódu | ✅ Dokončeno | Smazáno: DashboardInsights, DashboardSettings, DashboardSettingsNew, PriceMigration, usePriceMigration |
 | B: Sloučení kontextů | ✅ Dokončeno | CelebrationContext sloučen do SmartCelebrationContext |
 | C: Konsolidace Analytics | ✅ Dokončeno | ExerciseAnalytics, ClientAnalytics, FinanceAnalytics odstraněny, routy přesměrovány |
-| D: Sloučení tréninků | ⏳ Čeká | |
-| E: Client Portal reorganizace | ⏳ Čeká | |
-| F: Konsolidace hooků | ⏳ Čeká | |
+| D: Sloučení tréninků | ⏸️ Odloženo | Trainings a Schedule mají různé use cases |
+| E: Client Portal reorganizace | ✅ Dokončeno | Navigace optimalizovaná, přidány redirecty |
+| F: Konsolidace hooků | ✅ Analyzováno | Hooky mají různé use cases |
 
 ---
 
@@ -42,16 +42,20 @@
 
 ---
 
-## Zbývající úkoly (Fáze D-F)
-- [ ] Přidat list view do `SchedulePage.tsx`
-- [ ] Sloučit funkcionalitu z `Trainings.tsx`
-- [ ] Smazat `Trainings.tsx`
-
 ### Fáze E: Client Portal
-- [ ] Seskupit 18 stránek do 5 sekcí
-- [ ] Vytvořit tabbed layout
-- [ ] Zachovat deep-linky
+- Navigace již optimalizovaná (4 hlavní + 4 v "Více")
+- `/challenges` → redirect na `/competitions`
+- `/odmeny` → redirect na `/rewards`
 
-### Fáze F: Hooky
-- [ ] Sloučit `useSmartAlerts` + `useTodayAlerts` → `useAlerts`
-- [ ] Konsolidovat business score hooky
+### Fáze F: Hooky - Analýza
+- Hooky mají různé use cases, nelze sloučit bez ztráty funkcionality
+
+---
+
+## Výsledky
+
+| Metrika | Změna |
+|---------|-------|
+| Smazané soubory | 9 |
+| Řádků kódu odstraněno | ~2800 |
+| Duplicitní kontexty | -1 |

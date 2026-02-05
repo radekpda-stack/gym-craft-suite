@@ -72,7 +72,7 @@ const ClientPortalCredit = lazy(() => import("./pages/client-portal/ClientPortal
 const ClientPortalNutrition = lazy(() => import("./pages/client-portal/ClientPortalNutrition"));
 const ClientPortalProfile = lazy(() => import("./pages/client-portal/ClientPortalProfile"));
 const ClientPortalSettings = lazy(() => import("./pages/client-portal/ClientPortalSettings"));
-const ClientPortalChallenges = lazy(() => import("./pages/client-portal/ClientPortalChallenges"));
+// ClientPortalChallenges is now loaded via ClientPortalCompetitions wrapper
 const ClientPortalWorkoutDiary = lazy(() => import("./pages/client-portal/ClientPortalWorkoutDiary"));
 const ClientPortalBadges = lazy(() => import("./pages/client-portal/ClientPortalBadges"));
 const ClientPortalLeaderboard = lazy(() => import("./pages/client-portal/ClientPortalLeaderboard"));
@@ -143,11 +143,13 @@ const App = () => (
                 <Route path="credit" element={<ClientPortalCredit />} />
                 <Route path="purchases" element={<ClientPortalPurchases />} />
                 <Route path="nutrition" element={<ClientPortalNutrition />} />
-                <Route path="challenges" element={<ClientPortalChallenges />} />
+                {/* challenges redirects to competitions */}
+                <Route path="challenges" element={<Navigate to="../competitions" replace />} />
                 <Route path="badges" element={<ClientPortalBadges />} />
                 <Route path="leaderboard" element={<ClientPortalLeaderboard />} />
                 <Route path="competitions" element={<ClientPortalCompetitions />} />
-                <Route path="odmeny" element={<ClientPortalRewards />} />
+                {/* odmeny is legacy, redirect to rewards */}
+                <Route path="odmeny" element={<Navigate to="../rewards" replace />} />
                 <Route path="rewards" element={<ClientPortalRewards />} />
                 <Route path="profile" element={<ClientPortalProfile />} />
                 <Route path="settings" element={<ClientPortalSettings />} />
@@ -165,7 +167,8 @@ const App = () => (
                 <Route path="credit" element={<ClientPortalCredit />} />
                 <Route path="purchases" element={<ClientPortalPurchases />} />
                 <Route path="nutrition" element={<ClientPortalNutrition />} />
-                <Route path="challenges" element={<ClientPortalChallenges />} />
+                {/* challenges redirects to competitions */}
+                <Route path="challenges" element={<Navigate to="../competitions" replace />} />
                 <Route path="badges" element={<ClientPortalBadges />} />
                 <Route path="leaderboard" element={<ClientPortalLeaderboard />} />
                 <Route path="competitions" element={<ClientPortalCompetitions />} />
