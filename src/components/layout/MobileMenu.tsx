@@ -62,7 +62,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
         items: [
           { to: '/performance', icon: Zap, label: 'Výkonnost' },
           { to: '/records', icon: Activity, label: 'Záznamy' },
-          ...(isModuleEnabled('training_templates') ? [{ to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' }] : []),
+          ...(isModuleEnabled('training_templates') ? [{ to: '/training-templates', icon: LayoutTemplate, label: 'Workouty' }] : []),
           ...(isModuleEnabled('nutrition') ? [{ to: '/nutrition', icon: Utensils, label: 'Strava' }] : []),
           ...(isModuleEnabled('feedback') ? [{ to: '/feedback-overview', icon: MessageSquare, label: 'Zpětná vazba' }] : []),
         ],

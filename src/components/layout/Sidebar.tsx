@@ -146,7 +146,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         items: [
           { id: 'performance', to: '/performance', icon: Zap, label: 'Výkonnost' },
           { id: 'records', to: '/records', icon: Activity, label: 'Záznamy' },
-          ...(isModuleEnabled('training_templates') ? [{ id: 'training-templates', to: '/training-templates', icon: LayoutTemplate, label: 'Šablony' }] : []),
+          ...(isModuleEnabled('training_templates') ? [{ id: 'training-templates', to: '/training-templates', icon: LayoutTemplate, label: 'Workouty' }] : []),
           ...(isModuleEnabled('nutrition') ? [{ id: 'nutrition', to: '/nutrition', icon: Utensils, label: 'Strava' }] : []),
           ...(isModuleEnabled('feedback') ? [{ id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Zpětná vazba' }] : []),
         ],
