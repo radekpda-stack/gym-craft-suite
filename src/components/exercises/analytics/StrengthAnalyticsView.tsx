@@ -3,9 +3,10 @@ import { useExerciseAnalyticsComplete, type AnalyticsPeriod } from '@/hooks/useE
 import { AnalyticsFiltersBar } from './AnalyticsFiltersBar';
 import { AnalyticsKPIRow } from './AnalyticsKPIRow';
 import { AnalyticsInsightBar } from './AnalyticsInsightBar';
-import { VolumeTimelineCardNew } from './VolumeTimelineCardNew';
-import { PRTimelineCardNew } from './PRTimelineCardNew';
-import { RpeTimelineCard } from './RpeTimelineCard';
+import { StagnationAlertCard } from './StagnationAlertCard';
+import { MovementGapsCard } from './MovementGapsCard';
+import { UnusedExercisesCard } from './UnusedExercisesCard';
+import { ClientAttentionCard } from './ClientAttentionCard';
 import { LoadDistributionCard } from './LoadDistributionCard';
 import { MovementPatternsCard } from './MovementPatternsCard';
 import { TopExercisesTable } from './TopExercisesTable';
@@ -53,44 +54,28 @@ export function StrengthAnalyticsView() {
         isLoading={isLoading} 
       />
 
-      {/* 3 Main Charts */}
+      {/* 3 Trainer-focused Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <VolumeTimelineCardNew
-          data={data?.volumeTimeline || []}
+        <StagnationAlertCard
+          data={data?.stagnatingClients || []}
           isLoading={isLoading}
         />
-        <PRTimelineCardNew
-          data={data?.prTimeline || []}
+        <MovementGapsCard
+          data={data?.movementGaps || []}
           isLoading={isLoading}
         />
-        <RpeTimelineCard
-          data={data?.rpeTimeline || []}
+        <UnusedExercisesCard
+          data={data?.unusedExercises || []}
+          totalExercises={data?.totalExercisesInLibrary}
           isLoading={isLoading}
         />
       </div>
 
-      {/* Secondary Blocks - Load Distribution & Movement Patterns */}
-      <AnalyticsGrid>
-        <AnalyticsGridItem>
-          <LoadDistributionCard
-            data={data?.loadDistribution?.map(d => ({
-              ...d,
-              comparisonValue: 0, // No comparison in simplified view
-            })) || []}
-            isLoading={isLoading}
-          />
-        </AnalyticsGridItem>
-        <AnalyticsGridItem>
-          <MovementPatternsCard
-            data={data?.movementPatterns?.map(p => ({
-              ...p,
-              totalEntries: data?.kpi?.tonnage ? 100 : 0,
-              coverage: 100,
-            })) || []}
-            isLoading={isLoading}
-          />
-        </AnalyticsGridItem>
-      </AnalyticsGrid>
+      {/* Clients Needing Attention - Full Width */}
+      <ClientAttentionCard
+        data={data?.clientsNeedingAttention || []}
+        isLoading={isLoading}
+      />
 
       {/* Top Exercises Table */}
       <TopExercisesTable
