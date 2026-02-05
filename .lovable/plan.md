@@ -1,200 +1,221 @@
 
-# Redesign Karty klienta: Kredit & Finanční historie jako priorita
 
-## Cíl
-Přepracovat UI karty klienta tak, aby **Kredit** a **Finanční/Tréninková historie** byly dominantními prvky - okamžitě viditelné a snadno dostupné bez navigace do záložek.
+# Audit kreditového systému: Analýza a návrh zjednodušení
+
+## Shrnutí zjištění
+
+Po důkladné analýze kódu a databáze jsem identifikoval několik kritických problémů v kreditovém systému, které vedou k diskrepancím mezi zobrazeným zůstatkem a historií transakcí.
 
 ---
 
-## Současný stav
+## Identifikované problémy
 
-Aktuální struktura stránky `/clients/:id`:
+### 1. Dvojí zdroj pravdy (stored_balance vs ledger)
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│ ClientHeaderCompact (jméno, kontakty, badges)           │
-├─────────────────────────────────────────────────────────┤
-│ ClientHealthAlert (zdravotní upozornění)                │
-├─────────────────────────────────────────────────────────┤
-│ ClientSummaryStrip (kredit + 3 další metriky)           │  ← Kredit je zde, ale malý
-├─────────────────────────────────────────────────────────┤
-│ ClientDetailTabs (Profil | Média | Tréninky | Finance...) │
-│   └─ Finance záložka obsahuje ClientFinanceLedger       │  ← Historie je schovaná
-└─────────────────────────────────────────────────────────┘
+Systém ukládá zůstatky na dvou místech:
+- **`clients.credit_balance`** – uložený zůstatek pro individuální klienty
+- **`client_budget_groups.shared_balance`** – uložený zůstatek pro skupiny
+
+Zároveň existují view `vw_client_ledger_balances` a `vw_group_ledger_balances`, které počítají zůstatek ze součtu transakcí.
+
+**Problém**: Aktuální stav databáze ukazuje 5 klientů s diskrepancí:
+
+| Klient | Uloženo | Ledger | Rozdíl |
+|--------|---------|--------|--------|
+| Kokešová Maruška | -14 364 | 0 | -14 364 |
+| Roman Lazinka | -2 599 | -599 | -2 000 |
+| Kokeš Jirka | -1 800 | 0 | -1 800 |
+| Milan Dolák | -1 600 | 0 | -1 600 |
+| Malvína Koutová | -1 000 | 0 | -1 000 |
+
+**Příčina**: Tito klienti jsou členy skupinových rozpočtů (`is_in_group = true`), ale mají nenulový `credit_balance` v tabulce `clients`. Pro členy skupin by měl být `credit_balance` vždy 0.
+
+---
+
+### 2. Chybějící `price_share` u tréninků
+
+Při dokončení tréninku se některým účastníkům neuloží `price_share` do tabulky `training_participants`:
+
+```
+20 tréninků má price_share = 0 při final_price > 0
 ```
 
-**Problém:** Kredit je jen jedna z mnoha karet v SummaryStrip a finanční historie vyžaduje proklik na záložku "Finance".
+**Příklad**: Petr Barda, trénink s `final_price = 800`, ale `price_share = 0`.
+
+**Důsledek**: Při auditu se používá `price_share` z `training_participants`, ale když je 0, systém nemůže správně spočítat stržený kredit.
 
 ---
 
-## Navrhovaný redesign
+### 3. Trigger vs RPC – konflikt při aktualizaci zůstatku
 
-### Princip: "Credit-First Hero Section"
+Existují dva mechanismy pro aktualizaci zůstatků:
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│ ClientHeaderCompact (zůstává - jméno, kontakty)         │
-├─────────────────────────────────────────────────────────┤
-│                                                          │
-│   ╔════════════════════════════════════════════════╗    │
-│   ║  CREDIT HERO CARD                              ║    │  ← NOVÝ velký prvek
-│   ║  ┌────────────┐  ┌────────────────────────────┐║    │
-│   ║  │ 8 500 Kč   │  │ Posledních 5 pohybů:       │║    │
-│   ║  │  ZŮSTATEK  │  │  • 5.2. Trénink  -900 Kč   │║    │
-│   ║  │            │  │  • 3.2. Dobití +3000 Kč    │║    │
-│   ║  │  [+Dobít]  │  │  • 1.2. Trénink  -900 Kč   │║    │
-│   ║  │            │  │  • ...                     │║    │
-│   ║  └────────────┘  │  [Celá historie →]         │║    │
-│   ║                  └────────────────────────────┘║    │
-│   ╚════════════════════════════════════════════════╝    │
-│                                                          │
-├─────────────────────────────────────────────────────────┤
-│ Quick Stats Strip (tréninky měsíc, rok, LTV) - menší   │
-├─────────────────────────────────────────────────────────┤
-│ ClientDetailTabs (Profil | Média | Tréninky | Výkon...) │
-│   └─ Finance záložka zůstává pro detailní ledger       │
-└─────────────────────────────────────────────────────────┘
+1. **Trigger `sync_balance_after_transaction`** – automaticky aktualizuje zůstatek při INSERT do `credit_transactions`
+2. **RPC `rpc_complete_training_session`** – ručně aktualizuje zůstatek v kódu
+
+**Problém**: RPC funkce `rpc_complete_training_session` (řádky 141-210) vytváří transakci a **neaktualizuje** explicitně zůstatek – spoléhá na trigger. Ale `rpc_process_sale` (řádky 244-295) **explicitně aktualizuje** zůstatek před triggerem.
+
+Toto může vést k nekonzistencím, pokud:
+- Trigger selže (např. kvůli chybě v ON_CLIENT_ADDED_TO_BUDGET_GROUP)
+- Dojde k race condition při rychlých operacích
+
+---
+
+### 4. Cache invalidation – staleTime vs refetchType
+
+V `useCreditOperations.ts`:
+```typescript
+staleTime: 30 * 1000 // 30 sekund
 ```
 
----
-
-## Konkrétní změny
-
-### 1. Nová komponenta: `ClientCreditHeroCard`
-
-**Soubor:** `src/components/clients/ClientCreditHeroCard.tsx` (nový)
-
-Velká, dominantní karta s glassmorphismem obsahující:
-
-**Levá část (1/3):**
-- Velký zůstatek kreditu (text-3xl font-bold)
-- Barevná signalizace (zelená/žlutá/červená podle stavu)
-- Badge pro sdílený rozpočet
-- CTA tlačítko "Dobít kredit"
-
-**Pravá část (2/3):**
-- Nadpis "Poslední pohyby"
-- Seznam posledních 5 transakcí (kompaktní řádky):
-  - Datum | Popis | Částka (barevně +/-)
-  - Ikony typu (trénink/dobití/produkt)
-- Odkaz "Celá historie →" → přepne na záložku Finance
-
-**Mobilní layout:**
-- Stack vertikálně (kredit nahoře, historie dole)
-- Sbalitelná historie (defaultně 3 položky, "Zobrazit více")
-
-### 2. Úprava `ClientSummaryStrip`
-
-**Soubor:** `src/components/clients/ClientSummaryStrip.tsx`
-
-- **Odstranit** kredit kartu (přesunuta do CreditHeroCard)
-- Zůstanou pouze:
-  - Tréninky tento měsíc
-  - LTV (celková hodnota)
-  - Průměr/měsíc
-- Zmenšit na kompaktnější strip (2-3 karty)
-
-### 3. Úprava `ClientDetail.tsx`
-
-**Soubor:** `src/pages/ClientDetail.tsx`
-
-Změna pořadí sekcí:
-1. ClientHeaderCompact (beze změny)
-2. ClientHealthAlert (beze změny)
-3. **ClientCreditHeroCard** (NOVÉ - nahrazuje část SummaryStrip)
-4. ClientSummaryStrip (zmenšený - bez kreditu)
-5. ClientDetailTabs (beze změny)
-
-### 4. Vylepšení rychlé navigace do historie
-
-**V ClientCreditHeroCard:**
-- Kliknutí na "Celá historie" změní URL na `?tab=finance`
-- ClientDetailTabs již podporuje `?tab=` parametr
-
----
-
-## Vizuální specifikace
-
-### CreditHeroCard design:
-
-```css
-/* Kontejner */
-.credit-hero {
-  background: glassmorphism (bg-card/80 backdrop-blur-lg);
-  border: 2px solid (dynamicky podle stavu kreditu);
-  border-radius: 1.5rem;
-  padding: 1.5rem;
-}
-
-/* Kredit zůstatek */
-.credit-balance {
-  font-size: 2.5rem (text-4xl);
-  font-weight: bold;
-  font-variant-numeric: tabular-nums;
-  color: zelená > 2000, žlutá 500-2000, červená < 500;
-}
-
-/* Historie timeline */
-.history-item {
-  display: flex;
-  gap: 0.75rem;
-  padding: 0.5rem;
-  border-radius: 0.75rem;
-  transition: hover lift effect;
-}
-
-/* Hover na položce historie */
-.history-item:hover {
-  background: secondary/50;
-  transform: translateY(-1px);
-}
+V `useCompleteTrainingAtomic.ts`:
+```typescript
+queryClient.invalidateQueries({ 
+  queryKey: ["shared_budget_balance", participant.client_id],
+  refetchType: 'all'
+});
 ```
 
-### Barevná signalizace kreditu:
-
-| Stav | Zůstatek | Barva borderu | Barva textu |
-|------|----------|---------------|-------------|
-| OK | > 2000 Kč | border-success/30 | text-success |
-| Varování | 500-2000 Kč | border-warning/30 | text-warning |
-| Kritický | < 500 Kč | border-destructive/30 | text-destructive |
-| Dluh | < 0 nebo nezaplaceno | border-destructive + pulse | text-destructive + badge |
+**Problém**: `refetchType: 'all'` vynucuje refetch, ale pokud je `staleTime` 30s, UI může stále zobrazovat zastaralá data z jiných komponent, které neprovedly invalidaci.
 
 ---
 
-## Data pro CreditHeroCard
+### 5. Klienti ve skupinách mají osobní zůstatek
 
-Hook `useClientCreditHeroData(clientId)` bude kombinovat:
-- `useSharedBudgetBalance` → zůstatek
-- `useCreditTransactions` → posledních 5 transakcí
-- `useUnpaidTrainings` → počet nezaplacených
+Pro členy skupinových rozpočtů platí pravidlo: **Osobní `credit_balance` by měl být 0**, veškeré transakce jdou na skupinu.
 
-Nebo využít existující data z `ClientDetail.tsx` a předat jako props.
+Aktuální stav:
+- Roman Lazinka: `credit_balance = -2599`, ale je ve skupině "Rom"
+- Milan Dolák: `credit_balance = -1600`, ale je ve skupině "Dolák"
 
----
-
-## Soubory k úpravě/vytvoření
-
-| Soubor | Akce | Popis |
-|--------|------|-------|
-| `src/components/clients/ClientCreditHeroCard.tsx` | **Nový** | Hlavní hero karta s kreditem a historií |
-| `src/components/clients/ClientSummaryStrip.tsx` | Upravit | Odstranit kredit, zmenšit na 2-3 metriky |
-| `src/pages/ClientDetail.tsx` | Upravit | Přidat CreditHeroCard do layoutu |
+**Příčina**: Při přidání klienta do skupiny se pravděpodobně neresetoval jeho osobní zůstatek, nebo došlo k chybě v triggeru.
 
 ---
 
-## Přínosy
+## Navrhovaná řešení
 
-1. **Kredit je okamžitě viditelný** - dominantní pozice, velký font
-2. **Historie bez klikání** - posledních 5 pohybů přímo na kartě
-3. **Rychlá akce** - tlačítko "Dobít" přímo u zůstatku
-4. **Zachovaná funkcionalita** - plný ledger stále v záložce Finance
-5. **Konzistentní design** - využívá existující glassmorphism a instrumentální styl
+### Řešení 1: Ledger jako jediný zdroj pravdy (doporučeno)
+
+**Princip**: Zrušit cached `stored_balance` sloupce a vždy číst z ledger views.
+
+**Změny**:
+
+1. **UI vždy čte z `vw_client_ledger_balances` / `vw_group_ledger_balances`**
+   - Upravit `useSharedBudgetBalance` – již částečně implementováno
+   - Zajistit, že všechny komponenty používají tyto views
+
+2. **Odstranit triggery pro sync balancí** – nejsou potřeba, pokud se nečte ze stored sloupce
+
+3. **Smazat/deprecatovat `credit_balance` sloupec** – nebo ho ponechat jen pro zpětnou kompatibilitu, ale nepoužívat v UI
+
+**Výhody**:
+- Jediný zdroj pravdy
+- Žádné diskrepance
+- Jednodušší debugování
+
+**Nevýhody**:
+- Mírně pomalejší čtení (SUM přes transakce)
+- Nutnost indexů pro výkon
 
 ---
 
-## Technické poznámky
+### Řešení 2: Opravit stávající systém s triggery
 
-- Využít existující `LedgerEntry` typ z `ClientFinanceLedger`
-- Znovupoužít ikony a formátování z existujících komponent
-- Animace: Framer Motion pro micro-interactions (hover lift)
-- Responsivita: Mobile-first s breakpointem na `sm:` pro desktop layout
+**Změny**:
+
+1. **Opravit `price_share` při dokončení tréninku**
+   ```sql
+   -- V rpc_complete_training_session přidat:
+   UPDATE training_participants
+   SET price_share = v_price_share
+   WHERE training_session_id = p_session_id
+   AND client_id = v_client_id;
+   ```
+
+2. **Přidat nočni audit cron job**
+   - Porovnat `stored_balance` vs ledger
+   - Automaticky opravit diskrepance
+   - Logovat do `app_settings` nebo dedikované tabulky
+
+3. **Resetovat osobní zůstatky členů skupin**
+   ```sql
+   UPDATE clients c
+   SET credit_balance = 0
+   WHERE EXISTS (SELECT 1 FROM client_budget_members bm WHERE bm.client_id = c.id);
+   ```
+
+4. **Posílit trigger při přidání do skupiny**
+   - Zajistit převod osobního zůstatku do skupiny
+   - Nebo vynulovat a vytvořit adjustment transakci
+
+---
+
+### Řešení 3: Hybrid – Materialized View s refresh
+
+**Princip**: Použít materialized view pro rychlé čtení, ale pravidelně refreshovat.
+
+**Implementace**:
+```sql
+CREATE MATERIALIZED VIEW mv_credit_balances AS
+SELECT 
+  c.id as client_id,
+  COALESCE(SUM(ct.amount) FILTER (WHERE ct.group_id IS NULL), 0) as balance
+FROM clients c
+LEFT JOIN credit_transactions ct ON ct.client_id = c.id
+GROUP BY c.id;
+
+CREATE INDEX ON mv_credit_balances(client_id);
+```
+
+Refresh každou minutu nebo při kritických operacích.
+
+---
+
+## Doporučený plán implementace
+
+### Fáze 1: Okamžité opravy (bezpečné)
+
+1. **Opravit stávající diskrepance** – jednorázová migrace
+2. **Opravit `price_share = 0` záznamy** – dopočítat z `final_price / participant_count`
+3. **Přidat validaci do `rpc_complete_training_session`** – vždy zapisovat `price_share`
+
+### Fáze 2: Zjednodušení architektury
+
+1. **Migrovat UI na ledger views** – `vw_client_ledger_balances`
+2. **Přidat index pro rychlé výpočty**:
+   ```sql
+   CREATE INDEX idx_credit_transactions_client_amount 
+   ON credit_transactions(client_id, amount) 
+   WHERE status = 'completed';
+   ```
+3. **Snížit `staleTime` na 5s nebo 0** pro kritické komponenty (kredit)
+
+### Fáze 3: Monitoring
+
+1. **Přidat denní audit job** (edge function + cron)
+2. **Vytvořit alert při diskrepanci > 1 Kč**
+3. **Dashboard v Settings pro ruční audit** (již existuje `CreditAuditPanel`)
+
+---
+
+## Technické soubory k úpravě
+
+| Soubor/Tabulka | Změna |
+|----------------|-------|
+| `rpc_complete_training_session` | Přidat UPDATE na `training_participants.price_share` |
+| `vw_client_ledger_balances` | Optimalizovat pro indexy |
+| `useSharedBudgetBalance` | Vždy číst z view, ne z cached sloupce |
+| `ClientCreditHeroCard` | Ověřit použití správného zdroje dat |
+| `CreditAuditPanel` | Přidat tlačítko "Opravit vše" s detailním logem |
+| Jednorázová migrace | Opravit stored_balance = ledger pro všechny entity |
+
+---
+
+## Očekávaný výsledek
+
+Po implementaci:
+- ✅ Žádné diskrepance mezi UI a databází
+- ✅ Jediný zdroj pravdy pro zůstatky
+- ✅ Automatická detekce a oprava problémů
+- ✅ Rychlejší debugging díky přehlednému auditu
+
