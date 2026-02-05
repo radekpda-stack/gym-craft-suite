@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Search, Filter, Dumbbell, Users, Activity, ChevronRight, Edit2, X, 
   CheckSquare, Square, Trophy, Clock, Archive, SortAsc, ChevronDown, Star, Trash2 
@@ -77,6 +77,7 @@ interface Exercise {
   clientCount: number;
   is_archived?: boolean;
   is_time_based?: boolean;
+  exercise_type_v2?: string | null;
 }
 
 interface ExerciseListViewProps {
@@ -86,10 +87,12 @@ interface ExerciseListViewProps {
 
 export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { language } = useLanguage();
   const { favoriteIds, toggleFavorite, isFavorite } = useFavoriteExercises();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all'); // strength, cardio, plyometric
   const [patternFilter, setPatternFilter] = useState<string>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('alphabetical');
@@ -107,6 +110,31 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
   const [editExercise, setEditExercise] = useState<Exercise | null>(null);
   const [duplicateExercise, setDuplicateExercise] = useState<Exercise | null>(null);
 
+  // Read category filter from URL params on mount and when URL changes
+  useEffect(() => {
+    const urlCategory = searchParams.get('category');
+    if (urlCategory && ['strength', 'cardio', 'plyometric'].includes(urlCategory)) {
+      setTypeFilter(urlCategory);
+      setShowFilters(true); // Show filters panel when filter is active
+    }
+  }, [searchParams]);
+
+  // Clear URL param when type filter is reset
+  const handleTypeFilterChange = useCallback((value: string) => {
+    setTypeFilter(value);
+    if (value === 'all') {
+      // Remove category from URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('category');
+      setSearchParams(newParams);
+    } else {
+      // Update category in URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('category', value);
+      setSearchParams(newParams);
+    }
+  }, [searchParams, setSearchParams]);
+
   // Separate active and archived exercises
   const activeExercises = useMemo(() => exercises.filter(e => !e.is_archived), [exercises]);
   const archivedExercises = useMemo(() => exercises.filter(e => e.is_archived), [exercises]);
@@ -121,10 +149,19 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (categoryFilter !== 'all') count++;
+    if (typeFilter !== 'all') count++;
     if (patternFilter !== 'all') count++;
     if (difficultyFilter !== 'all') count++;
     return count;
-  }, [categoryFilter, patternFilter, difficultyFilter]);
+  }, [categoryFilter, typeFilter, patternFilter, difficultyFilter]);
+
+  // Helper to get exercise type (maps exercise_type_v2 to our main categories)
+  const getExerciseMainType = useCallback((exercise: Exercise): 'strength' | 'cardio' | 'plyometric' => {
+    const type = exercise.exercise_type_v2;
+    if (type === 'plyometric') return 'plyometric';
+    if (type === 'cardio') return 'cardio';
+    return 'strength'; // 'strength', 'mixed', or null default to strength
+  }, []);
 
   // Filter exercises
   const filteredExercises = useMemo(() => {
@@ -138,12 +175,17 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
         const name = normalizeText(exercise.name_cs || exercise.name);
         if (!name.includes(normalizedQuery)) return false;
       }
+      // Filter by exercise type (strength/cardio/plyometric)
+      if (typeFilter !== 'all') {
+        const exerciseType = getExerciseMainType(exercise);
+        if (exerciseType !== typeFilter) return false;
+      }
       if (categoryFilter !== 'all' && exercise.category !== categoryFilter) return false;
       if (patternFilter !== 'all' && exercise.movement_pattern !== patternFilter) return false;
       if (difficultyFilter !== 'all' && exercise.difficulty !== difficultyFilter) return false;
       return true;
     });
-  }, [activeExercises, searchQuery, categoryFilter, patternFilter, difficultyFilter, onlyUsed]);
+  }, [activeExercises, searchQuery, typeFilter, categoryFilter, patternFilter, difficultyFilter, onlyUsed, getExerciseMainType]);
 
   // Sort exercises
   const sortedExercises = useMemo(() => {
@@ -334,10 +376,47 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                 <span className="font-medium">{filteredExercises.length} výsledků</span>
                 <span className="text-muted-foreground/50">•</span>
                 <span>{activeFilterCount} aktivních filtrů</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs ml-auto"
+                  onClick={() => {
+                    handleTypeFilterChange('all');
+                    setCategoryFilter('all');
+                    setPatternFilter('all');
+                    setDifficultyFilter('all');
+                  }}
+                >
+                  Zrušit filtry
+                </Button>
               </div>
             )}
             
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Type filter (Strength/Cardio/Plyometric) - highlighted */}
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { value: 'all', label: 'Vše', icon: Dumbbell },
+                { value: 'strength', label: 'Síla', icon: Dumbbell },
+                { value: 'cardio', label: 'Kardio', icon: Activity },
+                { value: 'plyometric', label: 'Plyometrie', icon: Activity },
+              ].map((type) => (
+                <Button
+                  key={type.value}
+                  variant={typeFilter === type.value ? 'default' : 'outline'}
+                  size="sm"
+                  className={cn(
+                    "gap-1.5",
+                    typeFilter === type.value && "shadow-sm"
+                  )}
+                  onClick={() => handleTypeFilterChange(type.value)}
+                >
+                  <type.icon className="w-3.5 h-3.5" />
+                  {type.label}
+                </Button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-border/30">
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="bg-background/60 backdrop-blur-sm border-border/50">
                   <SelectValue placeholder="Kategorie" />
