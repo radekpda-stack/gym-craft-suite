@@ -22,6 +22,7 @@ import { ClientSummaryStrip } from '@/components/clients/ClientSummaryStrip';
 import { ClientDetailTabs } from '@/components/clients/ClientDetailTabs';
 import { ClientHealthAlert } from '@/components/clients/ClientHealthAlert';
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
+ import { ClientCreditHeroCard } from '@/components/clients/ClientCreditHeroCard';
 import { useFeedbackEvaluation } from '@/hooks/useFeedbackEvaluation';
 
 
@@ -169,21 +170,26 @@ export default function ClientDetail() {
         healthRestrictions={client.health_restrictions} 
       />
 
-      {/* SECTION 3: Summary Strip - Credit + Stats */}
+       {/* SECTION 3: Credit Hero Card - Dominant credit display */}
+       <ClientCreditHeroCard
+         creditBalance={creditBalance}
+         isSharedBudget={isSharedBudget}
+         budgetGroupName={sharedBudgetInfo?.groupName}
+         transactions={allTransactions}
+         unpaidCount={unpaidCount}
+         unpaidAmount={unpaidAmount}
+         paymentMode={client.payment_mode}
+         onAddCredit={() => setIsCreditModalOpen(true)}
+       />
+       
+       {/* SECTION 4: Summary Strip - Secondary Stats */}
       <ClientSummaryStrip
         clientId={client.id}
-        creditBalance={creditBalance}
-        isSharedBudget={isSharedBudget}
-        budgetGroupName={sharedBudgetInfo?.groupName}
         sessionsThisMonth={sessionsThisMonth}
-        unpaidCount={unpaidCount}
-        unpaidAmount={unpaidAmount}
-        paymentMode={client.payment_mode}
-        onAddCredit={() => setIsCreditModalOpen(true)}
         onAddTraining={() => setIsTrainingDialogOpen(true)}
       />
 
-      {/* SECTION 4: Main Tabs */}
+       {/* SECTION 5: Main Tabs */}
       <ClientDetailTabs
         client={client}
         sessions={sessions}
