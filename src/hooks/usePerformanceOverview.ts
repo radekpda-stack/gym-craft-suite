@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { startOfMonth, subDays, format } from 'date-fns';
+import { subDays, format } from 'date-fns';
 
 export interface PerformanceOverview {
   totalExercises: number;
-  totalEntriesThisMonth: number;
-  totalPRsThisMonth: number;
+  totalEntries: number;
+  totalPRs: number;
   categories: {
     strength: { count: number; entries: number };
     cardio: { count: number; entries: number };
@@ -43,18 +43,17 @@ function mapToMainCategory(exerciseType: string | null): 'strength' | 'cardio' |
 
 export function usePerformanceOverview() {
   const { user } = useAuth();
-  const thisMonthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
   const sixtyDaysAgo = format(subDays(new Date(), 60), 'yyyy-MM-dd');
 
   return useQuery({
-    queryKey: ['performance-overview', user?.id, thisMonthStart],
+    queryKey: ['performance-overview', user?.id],
     queryFn: async (): Promise<PerformanceOverview> => {
       if (!user?.id) {
         return {
           totalExercises: 0,
-          totalEntriesThisMonth: 0,
-          totalPRsThisMonth: 0,
+          totalEntries: 0,
+          totalPRs: 0,
           categories: {
             strength: { count: 0, entries: 0 },
             cardio: { count: 0, entries: 0 },
@@ -65,123 +64,131 @@ export function usePerformanceOverview() {
         };
       }
 
+      // First fetch clients to get their IDs for filtering
+      const clientsResult = await supabase
+        .from('clients')
+        .select('id, name')
+        .eq('user_id', user.id);
+
+      const clients = clientsResult.data || [];
+      const clientIds = clients.map(c => c.id);
+
+      // If trainer has no clients, return empty data
+      if (clientIds.length === 0) {
+        // Still fetch exercises for count
+        const exercisesResult = await supabase
+          .from('exercises')
+          .select('id, name, category, exercise_type_v2')
+          .eq('is_archived', false)
+          .or(`user_id.eq.${user.id},source.eq.system`);
+
+        const exercises = exercisesResult.data || [];
+        const categories = {
+          strength: { count: 0, entries: 0 },
+          cardio: { count: 0, entries: 0 },
+          plyometric: { count: 0, entries: 0 },
+        };
+
+        exercises.forEach((ex) => {
+          const mainCat = mapToMainCategory(ex.exercise_type_v2);
+          categories[mainCat].count++;
+        });
+
+        return {
+          totalExercises: exercises.length,
+          totalEntries: 0,
+          totalPRs: 0,
+          categories,
+          topClients: [],
+          recentExercises: [],
+        };
+      }
+
       // Fetch all data in parallel
       const [
         exercisesResult,
-        // Strength entries
-        strengthEntriesThisMonthResult,
-        strengthPrsThisMonthResult,
+        // All strength entries (for category mapping)
+        allStrengthEntriesResult,
         strengthEntriesLast30Result,
         strengthEntriesPrev30Result,
-        // Cardio entries
-        cardioEntriesThisMonthResult,
-        cardioPrsThisMonthResult,
+        // All cardio entries
+        allCardioEntriesResult,
         cardioEntriesLast30Result,
         cardioEntriesPrev30Result,
-        // Skill/Plyometric entries
-        skillEntriesThisMonthResult,
-        skillBreakthroughsThisMonthResult,
+        // All skill/Plyometric entries
+        allSkillEntriesResult,
         skillEntriesLast30Result,
         skillEntriesPrev30Result,
         // Recent exercises
         recentExercisesResult,
-        clientsResult,
       ] = await Promise.all([
-        // Total exercises (non-archived)
+        // Total exercises (non-archived) with name for mapping
         supabase
           .from('exercises')
-          .select('id, category, exercise_type_v2')
+          .select('id, name, category, exercise_type_v2')
           .eq('is_archived', false)
-          // Include both trainer-owned and system/shared exercises
           .or(`user_id.eq.${user.id},source.eq.system`),
         
-        // Strength entries this month
+        // All strength entries (filter by trainer's clients)
         supabase
           .from('exercise_entries')
-          .select('id, exercise_id')
-          .eq('user_id', user.id)
-          .gte('date', thisMonthStart),
+          .select('id, exercise_id, exercise_name, is_pr, client_id')
+          .in('client_id', clientIds),
         
-        // Strength PRs this month
-        supabase
-          .from('exercise_entries')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('is_pr', true)
-          .gte('date', thisMonthStart),
-        
-        // Strength entries last 30 days (for top clients)
+        // Strength entries last 30 days (for top clients trend)
         supabase
           .from('exercise_entries')
           .select('client_id, is_pr')
-          .eq('user_id', user.id)
+          .in('client_id', clientIds)
           .gte('date', thirtyDaysAgo),
         
         // Strength entries previous 30 days (for trend calculation)
         supabase
           .from('exercise_entries')
           .select('client_id')
-          .eq('user_id', user.id)
+          .in('client_id', clientIds)
           .gte('date', sixtyDaysAgo)
           .lt('date', thirtyDaysAgo),
         
-        // Cardio entries this month
+        // All cardio entries (filter by trainer's clients)
         supabase
           .from('cardio_entries')
-          .select('id, exercise_id')
-          .eq('user_id', user.id)
-          .gte('date', thisMonthStart),
-        
-        // Cardio PRs this month
-        supabase
-          .from('cardio_entries')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('is_pr', true)
-          .gte('date', thisMonthStart),
+          .select('id, exercise_id, exercise_name, is_pr, client_id')
+          .in('client_id', clientIds),
         
         // Cardio entries last 30 days
         supabase
           .from('cardio_entries')
           .select('client_id, is_pr')
-          .eq('user_id', user.id)
+          .in('client_id', clientIds)
           .gte('date', thirtyDaysAgo),
         
         // Cardio entries previous 30 days
         supabase
           .from('cardio_entries')
           .select('client_id')
-          .eq('user_id', user.id)
+          .in('client_id', clientIds)
           .gte('date', sixtyDaysAgo)
           .lt('date', thirtyDaysAgo),
         
-        // Skill/Plyometric entries this month
+        // All skill/Plyometric entries (filter by trainer's clients)
         supabase
           .from('skill_entries')
-          .select('id, exercise_id')
-          .eq('user_id', user.id)
-          .gte('date', thisMonthStart),
-        
-        // Skill breakthroughs this month (equivalent to PR)
-        supabase
-          .from('skill_entries')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('is_breakthrough', true)
-          .gte('date', thisMonthStart),
+          .select('id, exercise_id, exercise_name, is_breakthrough, client_id')
+          .in('client_id', clientIds),
         
         // Skill entries last 30 days
         supabase
           .from('skill_entries')
           .select('client_id, is_breakthrough')
-          .eq('user_id', user.id)
+          .in('client_id', clientIds)
           .gte('date', thirtyDaysAgo),
         
         // Skill entries previous 30 days
         supabase
           .from('skill_entries')
           .select('client_id')
-          .eq('user_id', user.id)
+          .in('client_id', clientIds)
           .gte('date', sixtyDaysAgo)
           .lt('date', thirtyDaysAgo),
         
@@ -189,19 +196,13 @@ export function usePerformanceOverview() {
         supabase
           .from('exercise_entries')
           .select('exercise_id, exercise_name, date, exercises!inner(id, category, exercise_type_v2)')
-          .eq('user_id', user.id)
+          .in('client_id', clientIds)
           .not('exercise_id', 'is', null)
           .order('date', { ascending: false })
           .limit(50),
-        
-        // Clients for name lookup
-        supabase
-          .from('clients')
-          .select('id, name')
-          .eq('user_id', user.id),
       ]);
 
-      // Process exercises by category
+      // Build exercise category maps
       const exercises = exercisesResult.data || [];
       const categories = {
         strength: { count: 0, entries: 0 },
@@ -210,44 +211,71 @@ export function usePerformanceOverview() {
       };
 
       const exerciseCategoryMap = new Map<string, 'strength' | 'cardio' | 'plyometric'>();
+      const exerciseNameCategoryMap = new Map<string, 'strength' | 'cardio' | 'plyometric'>();
       
       exercises.forEach((ex) => {
         const mainCat = mapToMainCategory(ex.exercise_type_v2);
         categories[mainCat].count++;
         exerciseCategoryMap.set(ex.id, mainCat);
-      });
-
-      // Count strength entries per category
-      const strengthEntriesThisMonth = strengthEntriesThisMonthResult.data || [];
-      strengthEntriesThisMonth.forEach((entry) => {
-        if (entry.exercise_id) {
-          const cat = exerciseCategoryMap.get(entry.exercise_id) || 'strength';
-          categories[cat].entries++;
+        // Also map by normalized name for fallback
+        if (ex.name) {
+          exerciseNameCategoryMap.set(ex.name.trim().toLowerCase(), mainCat);
         }
       });
 
-      // Count cardio entries - all go to cardio category
-      const cardioEntriesThisMonth = cardioEntriesThisMonthResult.data || [];
-      categories.cardio.entries += cardioEntriesThisMonth.length;
+      // Helper to get category for an entry
+      const getCategoryForEntry = (
+        exerciseId: string | null,
+        exerciseName: string | null,
+        defaultCat: 'strength' | 'cardio' | 'plyometric' = 'strength'
+      ): 'strength' | 'cardio' | 'plyometric' => {
+        if (exerciseId) {
+          const cat = exerciseCategoryMap.get(exerciseId);
+          if (cat) return cat;
+        }
+        if (exerciseName) {
+          const normalizedName = exerciseName.trim().toLowerCase();
+          const cat = exerciseNameCategoryMap.get(normalizedName);
+          if (cat) return cat;
+        }
+        return defaultCat;
+      };
 
-      // Count skill/plyometric entries - all go to plyometric category
-      const skillEntriesThisMonth = skillEntriesThisMonthResult.data || [];
-      categories.plyometric.entries += skillEntriesThisMonth.length;
-
-      // Calculate total entries and PRs across all tables
-      const totalEntriesThisMonth = 
-        strengthEntriesThisMonth.length + 
-        cardioEntriesThisMonth.length + 
-        skillEntriesThisMonth.length;
+      // Count all strength entries per category (mapped by exercise_type_v2)
+      const allStrengthEntries = allStrengthEntriesResult.data || [];
+      let totalPRs = 0;
       
-      const totalPRsThisMonth = 
-        (strengthPrsThisMonthResult.data?.length || 0) + 
-        (cardioPrsThisMonthResult.data?.length || 0) + 
-        (skillBreakthroughsThisMonthResult.data?.length || 0);
+      allStrengthEntries.forEach((entry) => {
+        const cat = getCategoryForEntry(entry.exercise_id, entry.exercise_name, 'strength');
+        categories[cat].entries++;
+        if (entry.is_pr) totalPRs++;
+      });
 
+      // Count all cardio entries (map to category, default cardio)
+      const allCardioEntries = allCardioEntriesResult.data || [];
+      allCardioEntries.forEach((entry) => {
+        const cat = getCategoryForEntry(entry.exercise_id, entry.exercise_name, 'cardio');
+        categories[cat].entries++;
+        if (entry.is_pr) totalPRs++;
+      });
+
+      // Count all skill/plyometric entries (map to category, default plyometric)
+      const allSkillEntries = allSkillEntriesResult.data || [];
+      allSkillEntries.forEach((entry) => {
+        const cat = getCategoryForEntry(entry.exercise_id, entry.exercise_name, 'plyometric');
+        categories[cat].entries++;
+        if (entry.is_breakthrough) totalPRs++;
+      });
+
+      // Calculate total entries across all tables
+      const totalEntries = 
+        allStrengthEntries.length + 
+        allCardioEntries.length + 
+        allSkillEntries.length;
+      
       // Process top clients
       const clientNameMap = new Map<string, string>();
-      (clientsResult.data || []).forEach((c) => {
+      clients.forEach((c) => {
         clientNameMap.set(c.id, c.name);
       });
 
@@ -346,8 +374,8 @@ export function usePerformanceOverview() {
 
       return {
         totalExercises: exercises.length,
-        totalEntriesThisMonth,
-        totalPRsThisMonth,
+        totalEntries,
+        totalPRs,
         categories,
         topClients,
         recentExercises,

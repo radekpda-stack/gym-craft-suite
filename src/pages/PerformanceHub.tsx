@@ -99,8 +99,8 @@ export default function PerformanceHub() {
       {/* KPI Bar */}
       <PerformanceKPIBar
         totalExercises={overview?.totalExercises || 0}
-        totalEntriesThisMonth={overview?.totalEntriesThisMonth || 0}
-        totalPRsThisMonth={overview?.totalPRsThisMonth || 0}
+        totalEntriesThisMonth={overview?.totalEntries || 0}
+        totalPRsThisMonth={overview?.totalPRs || 0}
         isLoading={overviewLoading}
       />
 
