@@ -68,10 +68,22 @@ export function usePerformanceOverview() {
       // Fetch all data in parallel
       const [
         exercisesResult,
-        entriesThisMonthResult,
-        prsThisMonthResult,
-        allEntriesLast30Result,
-        allEntriesPrev30Result,
+        // Strength entries
+        strengthEntriesThisMonthResult,
+        strengthPrsThisMonthResult,
+        strengthEntriesLast30Result,
+        strengthEntriesPrev30Result,
+        // Cardio entries
+        cardioEntriesThisMonthResult,
+        cardioPrsThisMonthResult,
+        cardioEntriesLast30Result,
+        cardioEntriesPrev30Result,
+        // Skill/Plyometric entries
+        skillEntriesThisMonthResult,
+        skillBreakthroughsThisMonthResult,
+        skillEntriesLast30Result,
+        skillEntriesPrev30Result,
+        // Recent exercises
         recentExercisesResult,
         clientsResult,
       ] = await Promise.all([
@@ -83,14 +95,14 @@ export function usePerformanceOverview() {
           // Include both trainer-owned and system/shared exercises
           .or(`user_id.eq.${user.id},source.eq.system`),
         
-        // Entries this month
+        // Strength entries this month
         supabase
           .from('exercise_entries')
           .select('id, exercise_id')
           .eq('user_id', user.id)
           .gte('date', thisMonthStart),
         
-        // PRs this month
+        // Strength PRs this month
         supabase
           .from('exercise_entries')
           .select('id')
@@ -98,16 +110,76 @@ export function usePerformanceOverview() {
           .eq('is_pr', true)
           .gte('date', thisMonthStart),
         
-        // All entries last 30 days (for top clients)
+        // Strength entries last 30 days (for top clients)
         supabase
           .from('exercise_entries')
           .select('client_id, is_pr')
           .eq('user_id', user.id)
           .gte('date', thirtyDaysAgo),
         
-        // All entries previous 30 days (for trend calculation)
+        // Strength entries previous 30 days (for trend calculation)
         supabase
           .from('exercise_entries')
+          .select('client_id')
+          .eq('user_id', user.id)
+          .gte('date', sixtyDaysAgo)
+          .lt('date', thirtyDaysAgo),
+        
+        // Cardio entries this month
+        supabase
+          .from('cardio_entries')
+          .select('id, exercise_id')
+          .eq('user_id', user.id)
+          .gte('date', thisMonthStart),
+        
+        // Cardio PRs this month
+        supabase
+          .from('cardio_entries')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('is_pr', true)
+          .gte('date', thisMonthStart),
+        
+        // Cardio entries last 30 days
+        supabase
+          .from('cardio_entries')
+          .select('client_id, is_pr')
+          .eq('user_id', user.id)
+          .gte('date', thirtyDaysAgo),
+        
+        // Cardio entries previous 30 days
+        supabase
+          .from('cardio_entries')
+          .select('client_id')
+          .eq('user_id', user.id)
+          .gte('date', sixtyDaysAgo)
+          .lt('date', thirtyDaysAgo),
+        
+        // Skill/Plyometric entries this month
+        supabase
+          .from('skill_entries')
+          .select('id, exercise_id')
+          .eq('user_id', user.id)
+          .gte('date', thisMonthStart),
+        
+        // Skill breakthroughs this month (equivalent to PR)
+        supabase
+          .from('skill_entries')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('is_breakthrough', true)
+          .gte('date', thisMonthStart),
+        
+        // Skill entries last 30 days
+        supabase
+          .from('skill_entries')
+          .select('client_id, is_breakthrough')
+          .eq('user_id', user.id)
+          .gte('date', thirtyDaysAgo),
+        
+        // Skill entries previous 30 days
+        supabase
+          .from('skill_entries')
           .select('client_id')
           .eq('user_id', user.id)
           .gte('date', sixtyDaysAgo)
@@ -145,14 +217,33 @@ export function usePerformanceOverview() {
         exerciseCategoryMap.set(ex.id, mainCat);
       });
 
-      // Count entries per category
-      const entriesThisMonth = entriesThisMonthResult.data || [];
-      entriesThisMonth.forEach((entry) => {
+      // Count strength entries per category
+      const strengthEntriesThisMonth = strengthEntriesThisMonthResult.data || [];
+      strengthEntriesThisMonth.forEach((entry) => {
         if (entry.exercise_id) {
           const cat = exerciseCategoryMap.get(entry.exercise_id) || 'strength';
           categories[cat].entries++;
         }
       });
+
+      // Count cardio entries - all go to cardio category
+      const cardioEntriesThisMonth = cardioEntriesThisMonthResult.data || [];
+      categories.cardio.entries += cardioEntriesThisMonth.length;
+
+      // Count skill/plyometric entries - all go to plyometric category
+      const skillEntriesThisMonth = skillEntriesThisMonthResult.data || [];
+      categories.plyometric.entries += skillEntriesThisMonth.length;
+
+      // Calculate total entries and PRs across all tables
+      const totalEntriesThisMonth = 
+        strengthEntriesThisMonth.length + 
+        cardioEntriesThisMonth.length + 
+        skillEntriesThisMonth.length;
+      
+      const totalPRsThisMonth = 
+        (strengthPrsThisMonthResult.data?.length || 0) + 
+        (cardioPrsThisMonthResult.data?.length || 0) + 
+        (skillBreakthroughsThisMonthResult.data?.length || 0);
 
       // Process top clients
       const clientNameMap = new Map<string, string>();
@@ -161,7 +252,9 @@ export function usePerformanceOverview() {
       });
 
       const clientStats = new Map<string, { entries: number; prs: number }>();
-      (allEntriesLast30Result.data || []).forEach((entry) => {
+      
+      // Add strength entries
+      (strengthEntriesLast30Result.data || []).forEach((entry) => {
         if (!clientStats.has(entry.client_id)) {
           clientStats.set(entry.client_id, { entries: 0, prs: 0 });
         }
@@ -169,10 +262,42 @@ export function usePerformanceOverview() {
         stats.entries++;
         if (entry.is_pr) stats.prs++;
       });
+      
+      // Add cardio entries
+      (cardioEntriesLast30Result.data || []).forEach((entry) => {
+        if (!clientStats.has(entry.client_id)) {
+          clientStats.set(entry.client_id, { entries: 0, prs: 0 });
+        }
+        const stats = clientStats.get(entry.client_id)!;
+        stats.entries++;
+        if (entry.is_pr) stats.prs++;
+      });
+      
+      // Add skill entries
+      (skillEntriesLast30Result.data || []).forEach((entry) => {
+        if (!clientStats.has(entry.client_id)) {
+          clientStats.set(entry.client_id, { entries: 0, prs: 0 });
+        }
+        const stats = clientStats.get(entry.client_id)!;
+        stats.entries++;
+        if (entry.is_breakthrough) stats.prs++;
+      });
 
       // Calculate previous period stats for trend
       const prevClientStats = new Map<string, number>();
-      (allEntriesPrev30Result.data || []).forEach((entry) => {
+      
+      // Add strength entries from previous period
+      (strengthEntriesPrev30Result.data || []).forEach((entry) => {
+        prevClientStats.set(entry.client_id, (prevClientStats.get(entry.client_id) || 0) + 1);
+      });
+      
+      // Add cardio entries from previous period
+      (cardioEntriesPrev30Result.data || []).forEach((entry) => {
+        prevClientStats.set(entry.client_id, (prevClientStats.get(entry.client_id) || 0) + 1);
+      });
+      
+      // Add skill entries from previous period
+      (skillEntriesPrev30Result.data || []).forEach((entry) => {
         prevClientStats.set(entry.client_id, (prevClientStats.get(entry.client_id) || 0) + 1);
       });
 
@@ -221,8 +346,8 @@ export function usePerformanceOverview() {
 
       return {
         totalExercises: exercises.length,
-        totalEntriesThisMonth: entriesThisMonth.length,
-        totalPRsThisMonth: prsThisMonthResult.data?.length || 0,
+        totalEntriesThisMonth,
+        totalPRsThisMonth,
         categories,
         topClients,
         recentExercises,
