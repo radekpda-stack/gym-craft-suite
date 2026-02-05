@@ -1,4 +1,5 @@
 import { TrendingUp, TrendingDown, Minus, Weight, Calendar, Trophy, Activity, Dumbbell } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
@@ -55,10 +56,10 @@ const HELP_CONTENT = {
     description: 'Průměrná hodnota vnímané námahy (Rate of Perceived Exertion) za období.',
     calculation: 'Průměr všech RPE hodnot (1-10)',
   },
-  bwReps: {
-    title: 'BW opakování',
-    description: 'Celkový počet opakování u bodyweight cviků (shyby, kliky, dropy atd.).',
-    calculation: 'BW reps = Σ (série × opakování) pro is_bodyweight = true',
+  clientsAttention: {
+    title: 'Klienti vyžadující pozornost',
+    description: 'Počet klientů, kteří vykazují signály vyžadující zásah trenéra.',
+    calculation: 'Kritéria: žádné PR za období, klesající frekvence tréninků',
   },
 };
 
@@ -196,27 +197,51 @@ export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
         </div>
       </Card>
 
-      {/* BW Reps (secondary) */}
+      {/* Clients Needing Attention */}
       <Card className={cn(
         "relative overflow-hidden p-3 col-span-2 sm:col-span-1",
-        "bg-muted/30 backdrop-blur-md",
-        "border border-border/50"
+        "bg-card/80 backdrop-blur-md",
+        "border shadow-sm",
+        kpi?.clientsNeedingAttentionCount && kpi.clientsNeedingAttentionCount > 0 
+          ? "border-warning/30" 
+          : "border-border/50"
       )}>
+        <div className={cn(
+          "absolute inset-0 opacity-30 bg-gradient-to-br to-transparent",
+          kpi?.clientsNeedingAttentionCount && kpi.clientsNeedingAttentionCount > 0 
+            ? "bg-warning/10" 
+            : "bg-muted/30"
+        )} />
         <div className="relative">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
-            <div className="p-1 rounded bg-muted/50">
-              <Dumbbell className="w-3 h-3 text-muted-foreground" />
+            <div className={cn(
+              "p-1 rounded",
+              kpi?.clientsNeedingAttentionCount && kpi.clientsNeedingAttentionCount > 0 
+                ? "bg-warning/10" 
+                : "bg-muted/50"
+            )}>
+              <Users className={cn(
+                "w-3 h-3",
+                kpi?.clientsNeedingAttentionCount && kpi.clientsNeedingAttentionCount > 0 
+                  ? "text-warning" 
+                  : "text-muted-foreground"
+              )} />
             </div>
-            <span className="text-[10px] uppercase tracking-widest font-medium">BW reps</span>
+            <span className="text-[10px] uppercase tracking-widest font-medium">Pozornost</span>
             <StatInfoTooltip
-              title={HELP_CONTENT.bwReps.title}
-              description={HELP_CONTENT.bwReps.description}
-              calculation={HELP_CONTENT.bwReps.calculation}
+              title={HELP_CONTENT.clientsAttention.title}
+              description={HELP_CONTENT.clientsAttention.description}
+              calculation={HELP_CONTENT.clientsAttention.calculation}
             />
           </div>
           <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className="text-xl font-bold tabular-nums">{formatVolume(kpi?.bwReps || 0)}</span>
-            <TrendBadge value={kpi?.bwRepsTrend} />
+            <span className={cn(
+              "text-xl font-bold tabular-nums",
+              kpi?.clientsNeedingAttentionCount && kpi.clientsNeedingAttentionCount > 0 && "text-warning"
+            )}>
+              {kpi?.clientsNeedingAttentionCount || 0}
+            </span>
+            <span className="text-[10px] text-muted-foreground">klientů</span>
           </div>
         </div>
       </Card>

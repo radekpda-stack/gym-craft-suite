@@ -1,6 +1,19 @@
 
 # Redesign Analytiky Výkonnosti – Pohled Trenéra
 
+## ✅ IMPLEMENTOVÁNO
+
+Všechny změny byly implementovány:
+- ✅ StagnationAlertCard - seznam klientů/cviků bez progresu 3+ týdny
+- ✅ MovementGapsCard - identifikace podtrénovaných pohybových vzorců
+- ✅ UnusedExercisesCard - cviky z knihovny nepoužité 30+ dní
+- ✅ ClientAttentionCard - klienti vyžadující pozornost trenéra
+- ✅ Hook rozšířen o nová data (stagnatingClients, movementGaps, unusedExercises, clientsNeedingAttention)
+- ✅ KPI řádek upraven (nahrazeno BW reps → Klienti s pozorností)
+- ✅ Smazány zastaralé komponenty (VolumeTimelineCardNew, PRTimelineCardNew, RpeTimelineCard)
+
+---
+
 ## Problém
 
 Aktuální záložka **Analytika** v sekci Výkonnost obsahuje grafy, které mají nízkou užitnou hodnotu pro trenéra:

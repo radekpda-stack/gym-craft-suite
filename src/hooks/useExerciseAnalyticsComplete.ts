@@ -6,6 +6,40 @@ import { cs } from 'date-fns/locale';
 
 export type AnalyticsPeriod = 7 | 30 | 90 | 'custom';
 
+// ============ NEW TYPES FOR TRAINER-FOCUSED ANALYTICS ============
+
+export interface StagnatingClient {
+  clientId: string;
+  clientName: string;
+  exerciseName: string;
+  weeksStagnant: number;
+  lastValue: number;
+}
+
+export interface MovementGap {
+  pattern: string;
+  label: string;
+  usageCount: number;
+  isUnderworked: boolean;
+  totalCount: number;
+}
+
+export interface UnusedExercise {
+  id: string;
+  name: string;
+  lastUsedDate: string | null;
+  daysSinceUse: number;
+}
+
+export type AttentionReason = 'no_pr' | 'declining_frequency' | 'high_asymmetry';
+
+export interface ClientNeedingAttention {
+  clientId: string;
+  clientName: string;
+  reasons: AttentionReason[];
+  priority: 'high' | 'medium' | 'low';
+}
+
 export interface AnalyticsKPI {
   tonnage: number;
   tonnageTrend: number;
@@ -17,6 +51,7 @@ export interface AnalyticsKPI {
   rpeTrend: number;
   bwReps: number; // bodyweight reps (sets * reps for is_bodyweight=true)
   bwRepsTrend: number;
+  clientsNeedingAttentionCount: number;
 }
 
 export interface VolumeTimelinePoint {
@@ -59,6 +94,12 @@ export interface AnalyticsData {
   movementPatterns: { pattern: string; label: string; count: number }[];
   topExercises: TopExerciseItem[];
   insight: string;
+  // New trainer-focused data
+  stagnatingClients: StagnatingClient[];
+  movementGaps: MovementGap[];
+  unusedExercises: UnusedExercise[];
+  totalExercisesInLibrary: number;
+  clientsNeedingAttention: ClientNeedingAttention[];
 }
 
 const BODY_PART_LABELS: Record<string, string> = {
@@ -127,7 +168,7 @@ export function useExerciseAnalyticsComplete(
       // Build query for previous period (for trends)
       let prevQuery = supabase
         .from('exercise_entries')
-        .select('id, sets, reps, weight_kg, is_bodyweight, is_pr, rpe, date')
+        .select('id, client_id, sets, reps, weight_kg, is_bodyweight, is_pr, rpe, date')
         .eq('user_id', user.id)
         .gte('date', prevDateStr)
         .lt('date', dateStr);
@@ -146,6 +187,27 @@ export function useExerciseAnalyticsComplete(
       ]);
 
       if (error) throw error;
+
+      // ============ FETCH ADDITIONAL DATA FOR NEW CARDS ============
+      
+      // Fetch all clients for this trainer
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id, first_name, last_name')
+        .eq('user_id', user.id);
+
+      const clientMap = new Map<string, string>();
+      clients?.forEach(c => {
+        clientMap.set(c.id, `${c.first_name} ${c.last_name}`);
+      });
+
+      // Fetch all exercises in trainer's library
+      const { data: allExercises } = await supabase
+        .from('exercises')
+        .select('id, name')
+        .or(`user_id.eq.${user.id},source.eq.system`);
+
+      const totalExercisesInLibrary = allExercises?.length || 0;
 
       // Fetch body part categories for load distribution
       const exerciseIds = [...new Set((entries || []).map(e => e.exercise_id).filter(Boolean) as string[])];
@@ -226,6 +288,173 @@ export function useExerciseAnalyticsComplete(
       const bwRepsTrend = prevBwReps > 0 
         ? Math.round(((bwReps - prevBwReps) / prevBwReps) * 100) 
         : 0;
+
+      // ============ STAGNATING CLIENTS ============
+      // Group entries by client + exercise to find stagnation
+      const clientExerciseProgress = new Map<string, { 
+        clientId: string; 
+        clientName: string;
+        exerciseName: string;
+        weeklyMaxes: Map<string, number>;
+      }>();
+
+      (entries || []).forEach(e => {
+        if (!e.client_id || e.is_bodyweight) return;
+        const key = `${e.client_id}-${e.exercise_id || e.exercise_name}`;
+        const weekKey = format(startOfWeek(parseISO(e.date), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+        
+        if (!clientExerciseProgress.has(key)) {
+          clientExerciseProgress.set(key, {
+            clientId: e.client_id,
+            clientName: clientMap.get(e.client_id) || 'Neznámý',
+            exerciseName: e.exercise_name,
+            weeklyMaxes: new Map(),
+          });
+        }
+        
+        const progress = clientExerciseProgress.get(key)!;
+        const currentMax = progress.weeklyMaxes.get(weekKey) || 0;
+        const entryValue = e.weight_kg || 0;
+        if (entryValue > currentMax) {
+          progress.weeklyMaxes.set(weekKey, entryValue);
+        }
+      });
+
+      const stagnatingClients: StagnatingClient[] = [];
+      clientExerciseProgress.forEach((progress) => {
+        const sortedWeeks = Array.from(progress.weeklyMaxes.entries())
+          .sort((a, b) => a[0].localeCompare(b[0]));
+        
+        if (sortedWeeks.length >= 3) {
+          const recentWeeks = sortedWeeks.slice(-4);
+          const maxValues = recentWeeks.map(w => w[1]);
+          const maxVal = Math.max(...maxValues);
+          
+          // Check if no improvement in last 3+ weeks
+          const stagnantWeeks = maxValues.filter(v => v === maxVal).length;
+          if (stagnantWeeks >= 3 && maxVal > 0) {
+            stagnatingClients.push({
+              clientId: progress.clientId,
+              clientName: progress.clientName,
+              exerciseName: progress.exerciseName,
+              weeksStagnant: stagnantWeeks,
+              lastValue: maxVal,
+            });
+          }
+        }
+      });
+
+      // ============ MOVEMENT GAPS ============
+      const patternCounts = new Map<string, number>();
+      let totalPatternEntries = 0;
+      
+      (entries || []).forEach(e => {
+        const exercise = e.exercises as any;
+        const pattern = exercise?.movement_pattern;
+        if (pattern && MOVEMENT_PATTERN_LABELS[pattern]) {
+          patternCounts.set(pattern, (patternCounts.get(pattern) || 0) + 1);
+          totalPatternEntries++;
+        }
+      });
+
+      const movementGaps: MovementGap[] = Object.keys(MOVEMENT_PATTERN_LABELS)
+        .map(pattern => {
+          const count = patternCounts.get(pattern) || 0;
+          const percentage = totalPatternEntries > 0 ? (count / totalPatternEntries) * 100 : 0;
+          return {
+            pattern,
+            label: MOVEMENT_PATTERN_LABELS[pattern],
+            usageCount: count,
+            isUnderworked: percentage < 5 && count < 3,
+            totalCount: totalPatternEntries,
+          };
+        })
+        .filter(p => p.usageCount > 0 || p.isUnderworked);
+
+      // ============ UNUSED EXERCISES ============
+      const usedExerciseIds = new Set((entries || []).map(e => e.exercise_id).filter(Boolean));
+      
+      const unusedExercises: UnusedExercise[] = (allExercises || [])
+        .filter(ex => !usedExerciseIds.has(ex.id))
+        .map(ex => ({
+          id: ex.id,
+          name: ex.name,
+          lastUsedDate: null,
+          daysSinceUse: days + 1, // More than the period
+        }))
+        .slice(0, 20);
+
+      // ============ CLIENTS NEEDING ATTENTION ============
+      const clientStats = new Map<string, {
+        clientId: string;
+        clientName: string;
+        prCount: number;
+        currentFrequency: number;
+        prevFrequency: number;
+      }>();
+
+      // Current period stats per client
+      (entries || []).forEach(e => {
+        if (!e.client_id) return;
+        if (!clientStats.has(e.client_id)) {
+          clientStats.set(e.client_id, {
+            clientId: e.client_id,
+            clientName: clientMap.get(e.client_id) || 'Neznámý',
+            prCount: 0,
+            currentFrequency: 0,
+            prevFrequency: 0,
+          });
+        }
+        const stats = clientStats.get(e.client_id)!;
+        if (e.is_pr) stats.prCount++;
+      });
+
+      // Calculate frequency per client
+      const clientDays = new Map<string, Set<string>>();
+      const clientPrevDays = new Map<string, Set<string>>();
+
+      (entries || []).forEach(e => {
+        if (!e.client_id) return;
+        if (!clientDays.has(e.client_id)) clientDays.set(e.client_id, new Set());
+        clientDays.get(e.client_id)!.add(e.date);
+      });
+
+      (prevEntries || []).forEach(e => {
+        if (!e.client_id) return;
+        if (!clientPrevDays.has(e.client_id)) clientPrevDays.set(e.client_id, new Set());
+        clientPrevDays.get(e.client_id)!.add(e.date);
+      });
+
+      clientStats.forEach((stats, clientId) => {
+        const currDays = clientDays.get(clientId)?.size || 0;
+        const prevDaysCount = clientPrevDays.get(clientId)?.size || 0;
+        stats.currentFrequency = currDays / weeks;
+        stats.prevFrequency = prevDaysCount / weeks;
+      });
+
+      const clientsNeedingAttention: ClientNeedingAttention[] = [];
+
+      clientStats.forEach((stats) => {
+        const reasons: AttentionReason[] = [];
+        
+        if (stats.prCount === 0 && stats.currentFrequency > 0) {
+          reasons.push('no_pr');
+        }
+        
+        if (stats.prevFrequency > 0 && stats.currentFrequency < stats.prevFrequency * 0.7) {
+          reasons.push('declining_frequency');
+        }
+        
+        if (reasons.length > 0) {
+          const priority = reasons.length >= 2 ? 'high' : reasons.includes('declining_frequency') ? 'medium' : 'low';
+          clientsNeedingAttention.push({
+            clientId: stats.clientId,
+            clientName: stats.clientName,
+            reasons,
+            priority,
+          });
+        }
+      });
 
       // ============ VOLUME TIMELINE (weekly) ============
       const weekIntervals = eachWeekOfInterval(
@@ -315,21 +544,12 @@ export function useExerciseAnalyticsComplete(
       }));
 
       // ============ MOVEMENT PATTERNS ============
-      const patternCounts = new Map<string, number>();
-      (entries || []).forEach(e => {
-        const exercise = e.exercises as any;
-        const pattern = exercise?.movement_pattern;
-        if (pattern && MOVEMENT_PATTERN_LABELS[pattern]) {
-          const label = MOVEMENT_PATTERN_LABELS[pattern];
-          patternCounts.set(label, (patternCounts.get(label) || 0) + 1);
-        }
-      });
-
+      // Reuse patternCounts from MOVEMENT GAPS section
       const movementPatterns = Array.from(patternCounts.entries())
-        .map(([label, count]) => ({
-          pattern: label.toLowerCase().replace(/\s/g, '_'),
-          label,
-          count,
+        .map(([pattern, count]) => ({
+          pattern: pattern.toLowerCase().replace(/\s/g, '_'),
+          label: MOVEMENT_PATTERN_LABELS[pattern] || pattern,
+          count: count,
         }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 6);
@@ -428,6 +648,7 @@ export function useExerciseAnalyticsComplete(
           rpeTrend,
           bwReps,
           bwRepsTrend,
+          clientsNeedingAttentionCount: clientsNeedingAttention.length,
         },
         volumeTimeline,
         prTimeline,
@@ -436,6 +657,11 @@ export function useExerciseAnalyticsComplete(
         movementPatterns,
         topExercises,
         insight,
+        stagnatingClients: stagnatingClients.slice(0, 10),
+        movementGaps,
+        unusedExercises,
+        totalExercisesInLibrary,
+        clientsNeedingAttention: clientsNeedingAttention.slice(0, 10),
       };
     },
     enabled: !!user?.id,
