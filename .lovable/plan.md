@@ -1,113 +1,200 @@
 
+# Redesign Karty klienta: Kredit & Finanční historie jako priorita
+
 ## Cíl
-Přejmenovat navigační položku „Šablony" na „Workouty" a do stránky přidat třetí záložku „Výzvy" s funkcionalitou pro správu klientských challenge.
+Přepracovat UI karty klienta tak, aby **Kredit** a **Finanční/Tréninková historie** byly dominantními prvky - okamžitě viditelné a snadno dostupné bez navigace do záložek.
 
 ---
 
-## Změny
+## Současný stav
 
-### 1. Přejmenování navigace: "Šablony" → "Workouty"
-
-**Soubory:**
-- `src/components/layout/Sidebar.tsx` (řádek ~149)
-- `src/components/layout/MobileMenu.tsx` (řádek ~65)
-
-Změna label z `'Šablony'` na `'Workouty'`.
-
----
-
-### 2. Aktualizace nadpisu stránky TrainingTemplates
-
-**Soubor:** `src/pages/TrainingTemplates.tsx`
-
-- Nadpis: `"Šablony & RX Workouty"` → `"Workouty"`
-- Popis: aktualizovat na obecnější text
-
----
-
-### 3. Přidání záložky "Výzvy" do TrainingTemplates
-
-**Soubor:** `src/pages/TrainingTemplates.tsx`
-
-Přidám třetí záložku `challenges` vedle stávajících `templates` a `rx`:
+Aktuální struktura stránky `/clients/:id`:
 
 ```text
-┌──────────────────────────────────────────────────────┐
-│  [Šablony]  [RX Workouty]  [Výzvy]                   │
-├──────────────────────────────────────────────────────┤
-│                                                      │
-│   (obsah podle aktivní záložky)                      │
-│                                                      │
-└──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ ClientHeaderCompact (jméno, kontakty, badges)           │
+├─────────────────────────────────────────────────────────┤
+│ ClientHealthAlert (zdravotní upozornění)                │
+├─────────────────────────────────────────────────────────┤
+│ ClientSummaryStrip (kredit + 3 další metriky)           │  ← Kredit je zde, ale malý
+├─────────────────────────────────────────────────────────┤
+│ ClientDetailTabs (Profil | Média | Tréninky | Finance...) │
+│   └─ Finance záložka obsahuje ClientFinanceLedger       │  ← Historie je schovaná
+└─────────────────────────────────────────────────────────┘
 ```
 
-**Záložka "Výzvy" bude obsahovat:**
-- Import komponenty `ChallengesContent` z `src/components/performance/ChallengesContent.tsx`
-- Tato komponenta již obsahuje plnou funkcionalitu:
-  - Seznam aktivních/konceptů/archivovaných výzev
-  - Vytvoření nové výzvy
-  - Editor výzvy (`ChallengeEditor`)
-  - Správa výsledků a vítězů
-  - Veřejné nastavení pro sdílení
+**Problém:** Kredit je jen jedna z mnoha karet v SummaryStrip a finanční historie vyžaduje proklik na záložku "Finance".
 
 ---
 
-### 4. Přidání ikony Trophy k záložce
+## Navrhovaný redesign
 
-Do importů přidám `Trophy` z `lucide-react` a použiji ji u záložky "Výzvy".
+### Princip: "Credit-First Hero Section"
 
----
-
-## Technické detaily
-
-### Změny v `TrainingTemplates.tsx`:
-
-```tsx
-// Přidám import
-import { ChallengesContent } from '@/components/performance/ChallengesContent';
-import { Trophy } from 'lucide-react';
-
-// V TabsList přidám třetí záložku
-<TabsTrigger value="challenges" className="gap-2">
-  <Trophy className="h-4 w-4" />
-  <span>Výzvy</span>
-</TabsTrigger>
-
-// Přidám TabsContent
-<TabsContent value="challenges" className="mt-6">
-  <ChallengesContent />
-</TabsContent>
-```
-
-### Změny v `Sidebar.tsx`:
-```tsx
-// Řádek ~149: změna label
-{ id: 'training-templates', to: '/training-templates', icon: LayoutTemplate, label: 'Workouty' }
-```
-
-### Změny v `MobileMenu.tsx`:
-```tsx
-// Řádek ~65: změna label
-{ to: '/training-templates', icon: LayoutTemplate, label: 'Workouty' }
+```text
+┌─────────────────────────────────────────────────────────┐
+│ ClientHeaderCompact (zůstává - jméno, kontakty)         │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│   ╔════════════════════════════════════════════════╗    │
+│   ║  CREDIT HERO CARD                              ║    │  ← NOVÝ velký prvek
+│   ║  ┌────────────┐  ┌────────────────────────────┐║    │
+│   ║  │ 8 500 Kč   │  │ Posledních 5 pohybů:       │║    │
+│   ║  │  ZŮSTATEK  │  │  • 5.2. Trénink  -900 Kč   │║    │
+│   ║  │            │  │  • 3.2. Dobití +3000 Kč    │║    │
+│   ║  │  [+Dobít]  │  │  • 1.2. Trénink  -900 Kč   │║    │
+│   ║  │            │  │  • ...                     │║    │
+│   ║  └────────────┘  │  [Celá historie →]         │║    │
+│   ║                  └────────────────────────────┘║    │
+│   ╚════════════════════════════════════════════════╝    │
+│                                                          │
+├─────────────────────────────────────────────────────────┤
+│ Quick Stats Strip (tréninky měsíc, rok, LTV) - menší   │
+├─────────────────────────────────────────────────────────┤
+│ ClientDetailTabs (Profil | Média | Tréninky | Výkon...) │
+│   └─ Finance záložka zůstává pro detailní ledger       │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Výsledek
+## Konkrétní změny
 
-Po implementaci:
-1. V navigaci bude položka **"Workouty"** (místo "Šablony")
-2. Po kliknutí se otevře stránka se třemi záložkami:
-   - **Šablony** – tréninkové šablony (stávající)
-   - **RX Workouty** – benchmarky s leaderboardy (stávající)
-   - **Výzvy** – správa challenge pro klienty (nové)
+### 1. Nová komponenta: `ClientCreditHeroCard`
+
+**Soubor:** `src/components/clients/ClientCreditHeroCard.tsx` (nový)
+
+Velká, dominantní karta s glassmorphismem obsahující:
+
+**Levá část (1/3):**
+- Velký zůstatek kreditu (text-3xl font-bold)
+- Barevná signalizace (zelená/žlutá/červená podle stavu)
+- Badge pro sdílený rozpočet
+- CTA tlačítko "Dobít kredit"
+
+**Pravá část (2/3):**
+- Nadpis "Poslední pohyby"
+- Seznam posledních 5 transakcí (kompaktní řádky):
+  - Datum | Popis | Částka (barevně +/-)
+  - Ikony typu (trénink/dobití/produkt)
+- Odkaz "Celá historie →" → přepne na záložku Finance
+
+**Mobilní layout:**
+- Stack vertikálně (kredit nahoře, historie dole)
+- Sbalitelná historie (defaultně 3 položky, "Zobrazit více")
+
+### 2. Úprava `ClientSummaryStrip`
+
+**Soubor:** `src/components/clients/ClientSummaryStrip.tsx`
+
+- **Odstranit** kredit kartu (přesunuta do CreditHeroCard)
+- Zůstanou pouze:
+  - Tréninky tento měsíc
+  - LTV (celková hodnota)
+  - Průměr/měsíc
+- Zmenšit na kompaktnější strip (2-3 karty)
+
+### 3. Úprava `ClientDetail.tsx`
+
+**Soubor:** `src/pages/ClientDetail.tsx`
+
+Změna pořadí sekcí:
+1. ClientHeaderCompact (beze změny)
+2. ClientHealthAlert (beze změny)
+3. **ClientCreditHeroCard** (NOVÉ - nahrazuje část SummaryStrip)
+4. ClientSummaryStrip (zmenšený - bez kreditu)
+5. ClientDetailTabs (beze změny)
+
+### 4. Vylepšení rychlé navigace do historie
+
+**V ClientCreditHeroCard:**
+- Kliknutí na "Celá historie" změní URL na `?tab=finance`
+- ClientDetailTabs již podporuje `?tab=` parametr
 
 ---
 
-## Soubory k úpravě
+## Vizuální specifikace
 
-| Soubor | Typ změny |
-|--------|-----------|
-| `src/components/layout/Sidebar.tsx` | Přejmenovat label |
-| `src/components/layout/MobileMenu.tsx` | Přejmenovat label |
-| `src/pages/TrainingTemplates.tsx` | Přidat záložku Výzvy, aktualizovat nadpis |
+### CreditHeroCard design:
+
+```css
+/* Kontejner */
+.credit-hero {
+  background: glassmorphism (bg-card/80 backdrop-blur-lg);
+  border: 2px solid (dynamicky podle stavu kreditu);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+}
+
+/* Kredit zůstatek */
+.credit-balance {
+  font-size: 2.5rem (text-4xl);
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  color: zelená > 2000, žlutá 500-2000, červená < 500;
+}
+
+/* Historie timeline */
+.history-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 0.75rem;
+  transition: hover lift effect;
+}
+
+/* Hover na položce historie */
+.history-item:hover {
+  background: secondary/50;
+  transform: translateY(-1px);
+}
+```
+
+### Barevná signalizace kreditu:
+
+| Stav | Zůstatek | Barva borderu | Barva textu |
+|------|----------|---------------|-------------|
+| OK | > 2000 Kč | border-success/30 | text-success |
+| Varování | 500-2000 Kč | border-warning/30 | text-warning |
+| Kritický | < 500 Kč | border-destructive/30 | text-destructive |
+| Dluh | < 0 nebo nezaplaceno | border-destructive + pulse | text-destructive + badge |
+
+---
+
+## Data pro CreditHeroCard
+
+Hook `useClientCreditHeroData(clientId)` bude kombinovat:
+- `useSharedBudgetBalance` → zůstatek
+- `useCreditTransactions` → posledních 5 transakcí
+- `useUnpaidTrainings` → počet nezaplacených
+
+Nebo využít existující data z `ClientDetail.tsx` a předat jako props.
+
+---
+
+## Soubory k úpravě/vytvoření
+
+| Soubor | Akce | Popis |
+|--------|------|-------|
+| `src/components/clients/ClientCreditHeroCard.tsx` | **Nový** | Hlavní hero karta s kreditem a historií |
+| `src/components/clients/ClientSummaryStrip.tsx` | Upravit | Odstranit kredit, zmenšit na 2-3 metriky |
+| `src/pages/ClientDetail.tsx` | Upravit | Přidat CreditHeroCard do layoutu |
+
+---
+
+## Přínosy
+
+1. **Kredit je okamžitě viditelný** - dominantní pozice, velký font
+2. **Historie bez klikání** - posledních 5 pohybů přímo na kartě
+3. **Rychlá akce** - tlačítko "Dobít" přímo u zůstatku
+4. **Zachovaná funkcionalita** - plný ledger stále v záložce Finance
+5. **Konzistentní design** - využívá existující glassmorphism a instrumentální styl
+
+---
+
+## Technické poznámky
+
+- Využít existující `LedgerEntry` typ z `ClientFinanceLedger`
+- Znovupoužít ikony a formátování z existujících komponent
+- Animace: Framer Motion pro micro-interactions (hover lift)
+- Responsivita: Mobile-first s breakpointem na `sm:` pro desktop layout
