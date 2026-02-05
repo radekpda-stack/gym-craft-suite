@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LayoutTemplate, Dumbbell, FileText, Timer, Repeat, Weight, Loader2, Plus } from "lucide-react";
+import { LayoutTemplate, Dumbbell, FileText, Timer, Repeat, Weight, Loader2, Plus, Trophy } from "lucide-react";
 import { TemplatesList } from "@/components/training/TemplatesList";
 import { TemplateEditor } from "@/components/training/TemplateEditor";
 import { TrainingTemplate } from "@/hooks/useTrainingTemplates";
 import { useRxWorkouts, RxScoringMode } from "@/hooks/useRxWorkouts";
 import { RxWorkoutCard } from "@/components/rx/RxWorkoutCard";
 import { RxImportDialog } from "@/components/rx/RxImportDialog";
+import { ChallengesContent } from "@/components/performance/ChallengesContent";
 
 export default function TrainingTemplates() {
   const [editingTemplate, setEditingTemplate] = useState<TrainingTemplate | null>(null);
@@ -61,10 +62,10 @@ export default function TrainingTemplates() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <LayoutTemplate className="h-6 w-6" />
-            Šablony & RX Workouty
+            Workouty
           </h1>
           <p className="text-muted-foreground">
-            Tréninkové šablony a standardizované benchmarky
+            Šablony, RX benchmarky a výzvy pro klienty
           </p>
         </div>
         {activeTab === "rx" && (
@@ -84,6 +85,10 @@ export default function TrainingTemplates() {
           <TabsTrigger value="rx" className="gap-2">
             <Dumbbell className="h-4 w-4" />
             <span>RX Workouty</span>
+          </TabsTrigger>
+          <TabsTrigger value="challenges" className="gap-2">
+            <Trophy className="h-4 w-4" />
+            <span>Výzvy</span>
           </TabsTrigger>
         </TabsList>
 
@@ -132,6 +137,10 @@ export default function TrainingTemplates() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="challenges" className="mt-6">
+          <ChallengesContent />
         </TabsContent>
       </Tabs>
 
