@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, Filter, Dumbbell, Users, Activity, ChevronRight, Edit2, X, 
-  CheckSquare, Square, Trophy, Clock, Archive, SortAsc, ChevronDown, Star 
+  CheckSquare, Square, Trophy, Clock, Archive, SortAsc, ChevronDown, Star, Trash2 
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -28,6 +28,7 @@ import { normalizeText, MOVEMENT_PATTERNS, DIFFICULTIES } from '@/hooks/useExerc
 import { useFavoriteExercises } from '@/hooks/useFavoriteExercises';
 import { cn } from '@/lib/utils';
 import { BulkExerciseEditDialog } from '@/components/exercises/BulkExerciseEditDialog';
+import { BulkDeleteConfirmDialog } from '@/components/exercises/BulkDeleteConfirmDialog';
 import { ExerciseFormDialog } from '@/components/exercises/ExerciseFormDialog';
 import { ExerciseContextMenu } from '@/components/exercises/ExerciseContextMenu';
 import { format, subDays } from 'date-fns';
@@ -100,6 +101,7 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
   const [bulkEditMode, setBulkEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
   // Edit/Duplicate dialogs
   const [editExercise, setEditExercise] = useState<Exercise | null>(null);
@@ -240,6 +242,11 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
     exitBulkEditMode();
   };
 
+  const handleBulkDeleteComplete = () => {
+    setShowBulkDeleteDialog(false);
+    exitBulkEditMode();
+  };
+
   return (
     <div className="space-y-4">
       {/* Bulk Edit Header */}
@@ -265,6 +272,16 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
             <Edit2 className="w-4 h-4" />
             Upravit ({selectedIds.size})
           </Button>
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={() => setShowBulkDeleteDialog(true)}
+          disabled={selectedIds.size === 0}
+          className="gap-1.5"
+        >
+          <Trash2 className="w-4 h-4" />
+          Smazat
+        </Button>
           <Button variant="ghost" size="sm" onClick={exitBulkEditMode}>
             <X className="w-4 h-4" />
           </Button>
@@ -633,6 +650,14 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
         onOpenChange={setShowBulkEditDialog}
         selectedExercises={selectedExercises}
         onComplete={handleBulkEditComplete}
+      />
+
+      {/* Bulk Delete Dialog */}
+      <BulkDeleteConfirmDialog
+        open={showBulkDeleteDialog}
+        onOpenChange={setShowBulkDeleteDialog}
+        selectedExercises={selectedExercises}
+        onComplete={handleBulkDeleteComplete}
       />
 
       {/* Edit Exercise Dialog */}
