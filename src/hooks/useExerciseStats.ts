@@ -412,7 +412,7 @@ export function useExercisesWithUsage() {
       // Get all exercises
       const { data: exercises, error: exercisesError } = await supabase
         .from('exercises')
-        .select('id, name, name_cs, category, difficulty, movement_pattern, equipment, is_archived, is_time_based')
+        .select('id, name, name_cs, category, difficulty, movement_pattern, equipment, is_archived, is_time_based, exercise_type_v2')
         .eq('is_archived', false)
         .order('category')
         .order('name');
