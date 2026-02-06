@@ -62,6 +62,26 @@ Deno.serve(async (req) => {
 
     if (itemsToFix.length === 0) {
       console.log("✅ No discrepancies found. All balances are correct.");
+      
+      // Store successful audit result
+      await supabase.from("app_settings").upsert(
+        {
+          key: "last_financial_audit",
+          value: {
+            timestamp: new Date().toISOString(),
+            audited: discrepancies.length,
+            discrepancies_found: 0,
+            fixed: 0,
+            errors: 0,
+            duration_ms: Date.now() - startTime,
+            status: "clean",
+          },
+          description: "Last automatic financial audit result",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "key" }
+      );
+      
       return new Response(
         JSON.stringify({
           success: true,
@@ -129,6 +149,16 @@ Deno.serve(async (req) => {
         }
       } catch (err) {
         console.error(`❌ Exception fixing ${item.entity_name}:`, err);
+        fixResults.push({
+          success: false,
+          entity_type: item.entity_type,
+          entity_id: item.entity_id,
+          old_balance: item.stored_balance,
+          ledger_balance: item.ledger_balance,
+          new_balance: item.stored_balance,
+          adjustment: 0,
+          error: err instanceof Error ? err.message : "Unknown error",
+        });
         errorCount++;
       }
     }
@@ -150,6 +180,7 @@ Deno.serve(async (req) => {
       fixed: successCount,
       errors: errorCount,
       duration_ms: duration,
+      status: errorCount > 0 ? "partial" : "fixed",
       details: fixResults.slice(0, 20), // Keep last 20 for logs
     };
 

@@ -226,7 +226,7 @@ export async function clearPersonalDebtToSharedBudget(
 export function useCreditTransactions(clientId?: string) {
   return useQuery({
     queryKey: ["credit_transactions", clientId],
-    staleTime: 1000 * 30, // 30 seconds - shorter to ensure fresh data after training completion
+    staleTime: 5 * 1000, // 5 seconds - critical for showing recent transactions
     queryFn: async () => {
       let query = supabase
         .from("credit_transactions")
@@ -327,7 +327,7 @@ export function useSharedBudgetBalance(clientId?: string) {
       };
     },
     enabled: !!clientId,
-    staleTime: 30 * 1000, // Cache for 30 seconds to avoid flickering on client selection
+    staleTime: 5 * 1000, // 5 seconds - critical for showing accurate balance after operations
   });
 }
 

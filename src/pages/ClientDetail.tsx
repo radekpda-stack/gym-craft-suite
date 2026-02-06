@@ -49,8 +49,10 @@ export default function ClientDetail() {
 
   // Derived data
   const isSharedBudget = sharedBudgetInfo?.isShared ?? false;
-  const sharedBalance = sharedBudgetInfo?.sharedBalance ?? 0;
-  const creditBalance = isSharedBudget ? sharedBalance : (client?.credit_balance || 0);
+  // FIXED: Always use sharedBalance from useSharedBudgetBalance hook
+  // The hook now reads from vw_client_ledger_balances view (ledger source of truth)
+  // for BOTH individual clients and shared budget groups
+  const creditBalance = sharedBudgetInfo?.sharedBalance ?? client?.credit_balance ?? 0;
   
   // Unpaid trainings count and amount
   const unpaidCount = unpaidTrainings.length;
