@@ -310,7 +310,17 @@ export function useSharedBudgetBalance(clientId?: string) {
         return { id: client?.id || '', name: client?.name || '', membershipId: m.id };
       }).filter(m => m.id);
 
-      const sharedBalance = group.shared_balance || 0;
+      // FIXED: Use ledger balance from view instead of cached shared_balance
+      // This ensures consistency with individual client balances
+      const { data: groupLedger, error: groupLedgerError } = await supabase
+        .from("vw_group_ledger_balances")
+        .select("ledger_balance")
+        .eq("group_id", group.id)
+        .maybeSingle();
+
+      if (groupLedgerError) throw groupLedgerError;
+      const sharedBalance = groupLedger?.ledger_balance ?? group.shared_balance ?? 0;
+      
       return {
         isShared: true, groupId: group.id, groupName: group.name, sharedBalance,
         displayBalance: sharedBalance, isExhausted: sharedBalance <= 0, isNegative: sharedBalance < 0, members,
