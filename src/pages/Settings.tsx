@@ -24,6 +24,7 @@ import {
   Paintbrush,
   Share2,
   Sparkles,
+  Calculator,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -52,6 +53,7 @@ import { ThemeSettings } from '@/components/settings/ThemeSettings';
 import { SocialMediaExport } from '@/components/settings/SocialMediaExport';
 import { AIAssistantSettings } from '@/components/settings/AIAssistantSettings';
 // CalendarSyncSettings moved to SchedulePage
+import { CreditAuditPanel } from '@/components/settings/CreditAuditPanel';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -430,6 +432,16 @@ export default function Settings() {
               }}
             >
               <UserManagementSettings />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Audit kreditového systému' : 'Credit System Audit'}
+              description={language === 'cs' 
+                ? 'Kontrola konzistence zůstatků a oprava diskrepancí' 
+                : 'Balance consistency check and discrepancy fixing'}
+              icon={Calculator}
+            >
+              <CreditAuditPanel />
             </SettingsSection>
 
             <SettingsSection

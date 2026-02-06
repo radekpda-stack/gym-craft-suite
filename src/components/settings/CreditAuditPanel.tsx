@@ -90,7 +90,7 @@ export function CreditAuditPanel() {
           </div>
           <div className="flex items-center gap-2">
             {isHealthy ? (
-              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+              <Badge variant="outline" className="bg-success/10 text-success border-success/30">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 Vše OK
               </Badge>
@@ -114,7 +114,7 @@ export function CreditAuditPanel() {
       <CardContent className="space-y-4">
         {isHealthy ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" />
+            <CheckCircle2 className="h-12 w-12 text-success mb-4" />
             <h3 className="text-lg font-medium">Finanční systém je v pořádku</h3>
             <p className="text-muted-foreground text-sm mt-1">
               Všechny zůstatky odpovídají transakčnímu ledgeru.
