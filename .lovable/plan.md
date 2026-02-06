@@ -1,221 +1,181 @@
 
-
-# Audit kreditového systému: Analýza a návrh zjednodušení
-
-## Shrnutí zjištění
-
-Po důkladné analýze kódu a databáze jsem identifikoval několik kritických problémů v kreditovém systému, které vedou k diskrepancím mezi zobrazeným zůstatkem a historií transakcí.
-
----
+# Oprava kreditového systému: Ledger jako jediný zdroj pravdy
 
 ## Identifikované problémy
 
-### 1. Dvojí zdroj pravdy (stored_balance vs ledger)
-
-Systém ukládá zůstatky na dvou místech:
-- **`clients.credit_balance`** – uložený zůstatek pro individuální klienty
-- **`client_budget_groups.shared_balance`** – uložený zůstatek pro skupiny
-
-Zároveň existují view `vw_client_ledger_balances` a `vw_group_ledger_balances`, které počítají zůstatek ze součtu transakcí.
-
-**Problém**: Aktuální stav databáze ukazuje 5 klientů s diskrepancí:
-
-| Klient | Uloženo | Ledger | Rozdíl |
-|--------|---------|--------|--------|
-| Kokešová Maruška | -14 364 | 0 | -14 364 |
-| Roman Lazinka | -2 599 | -599 | -2 000 |
-| Kokeš Jirka | -1 800 | 0 | -1 800 |
-| Milan Dolák | -1 600 | 0 | -1 600 |
-| Malvína Koutová | -1 000 | 0 | -1 000 |
-
-**Příčina**: Tito klienti jsou členy skupinových rozpočtů (`is_in_group = true`), ale mají nenulový `credit_balance` v tabulce `clients`. Pro členy skupin by měl být `credit_balance` vždy 0.
-
----
-
-### 2. Chybějící `price_share` u tréninků
-
-Při dokončení tréninku se některým účastníkům neuloží `price_share` do tabulky `training_participants`:
-
-```
-20 tréninků má price_share = 0 při final_price > 0
-```
-
-**Příklad**: Petr Barda, trénink s `final_price = 800`, ale `price_share = 0`.
-
-**Důsledek**: Při auditu se používá `price_share` z `training_participants`, ale když je 0, systém nemůže správně spočítat stržený kredit.
-
----
-
-### 3. Trigger vs RPC – konflikt při aktualizaci zůstatku
-
-Existují dva mechanismy pro aktualizaci zůstatků:
-
-1. **Trigger `sync_balance_after_transaction`** – automaticky aktualizuje zůstatek při INSERT do `credit_transactions`
-2. **RPC `rpc_complete_training_session`** – ručně aktualizuje zůstatek v kódu
-
-**Problém**: RPC funkce `rpc_complete_training_session` (řádky 141-210) vytváří transakci a **neaktualizuje** explicitně zůstatek – spoléhá na trigger. Ale `rpc_process_sale` (řádky 244-295) **explicitně aktualizuje** zůstatek před triggerem.
-
-Toto může vést k nekonzistencím, pokud:
-- Trigger selže (např. kvůli chybě v ON_CLIENT_ADDED_TO_BUDGET_GROUP)
-- Dojde k race condition při rychlých operacích
-
----
-
-### 4. Cache invalidation – staleTime vs refetchType
-
-V `useCreditOperations.ts`:
+### 1. UI používá špatný zdroj dat pro individuální klienty (KRITICKÉ)
+V `ClientDetail.tsx` řádek 53:
 ```typescript
-staleTime: 30 * 1000 // 30 sekund
+const creditBalance = isSharedBudget ? sharedBalance : (client?.credit_balance || 0);
 ```
 
-V `useCompleteTrainingAtomic.ts`:
+**Problém:** Pro Tomáše Stibora (`isSharedBudget = false`):
+- `sharedBalance = 4000` (správná hodnota z ledger view)
+- `client?.credit_balance = 3200` (zastaralá hodnota z tabulky)
+- UI zobrazuje **3200 Kč** místo správných **4000 Kč**
+
+### 2. Trigger synchronizace selhává
+`trg_sync_balance_on_transaction` se nespustil nebo selhal při dnešní transakci za 800 Kč. Důvod je nejasný - možná race condition s RPC lockem.
+
+### 3. Šest klientů má diskrepance mezi uloženým zůstatkem a ledgerem
+Celková nesrovnalost: ~21 000 Kč
+
+### 4. Nejnovější transakce chybí v "Poslední pohyby"
+Cache `staleTime: 30s` může způsobit, že nová transakce se nezobrazí okamžitě.
+
+---
+
+## Navrhované řešení
+
+### Fáze 1: Okamžitá oprava UI (kritické)
+
+**Změna v `src/pages/ClientDetail.tsx`:**
 ```typescript
-queryClient.invalidateQueries({ 
-  queryKey: ["shared_budget_balance", participant.client_id],
-  refetchType: 'all'
-});
+// PŘED (řádek 53):
+const creditBalance = isSharedBudget ? sharedBalance : (client?.credit_balance || 0);
+
+// PO:
+// Vždy použít sharedBalance z useSharedBudgetBalance hooku,
+// který již vrací správnou hodnotu z ledger view
+const creditBalance = sharedBudgetInfo?.sharedBalance ?? client?.credit_balance ?? 0;
 ```
 
-**Problém**: `refetchType: 'all'` vynucuje refetch, ale pokud je `staleTime` 30s, UI může stále zobrazovat zastaralá data z jiných komponent, které neprovedly invalidaci.
+**Vysvětlení:** Hook `useSharedBudgetBalance` již správně načítá `ledger_balance` z view `vw_client_ledger_balances` i pro individuální klienty. Stačí tedy vždy použít jeho hodnotu.
 
----
+### Fáze 2: Oprava cache invalidation
 
-### 5. Klienti ve skupinách mají osobní zůstatek
+**Změny v `src/hooks/useCreditOperations.ts`:**
+```typescript
+// Změna 1: Snížit staleTime pro kritická data
+export function useCreditTransactions(clientId?: string) {
+  return useQuery({
+    queryKey: ["credit_transactions", clientId],
+    staleTime: 5 * 1000, // Snížit z 30s na 5s
+    // ...
+  });
+}
 
-Pro členy skupinových rozpočtů platí pravidlo: **Osobní `credit_balance` by měl být 0**, veškeré transakce jdou na skupinu.
+// Změna 2: Stejně pro useSharedBudgetBalance
+export function useSharedBudgetBalance(clientId?: string) {
+  return useQuery({
+    // ...
+    staleTime: 5 * 1000, // Snížit z 30s na 5s
+  });
+}
+```
 
-Aktuální stav:
-- Roman Lazinka: `credit_balance = -2599`, ale je ve skupině "Rom"
-- Milan Dolák: `credit_balance = -1600`, ale je ve skupině "Dolák"
+### Fáze 3: Jednorázová oprava diskrepancí (databáze)
 
-**Příčina**: Při přidání klienta do skupiny se pravděpodobně neresetoval jeho osobní zůstatek, nebo došlo k chybě v triggeru.
-
----
-
-## Navrhovaná řešení
-
-### Řešení 1: Ledger jako jediný zdroj pravdy (doporučeno)
-
-**Princip**: Zrušit cached `stored_balance` sloupce a vždy číst z ledger views.
-
-**Změny**:
-
-1. **UI vždy čte z `vw_client_ledger_balances` / `vw_group_ledger_balances`**
-   - Upravit `useSharedBudgetBalance` – již částečně implementováno
-   - Zajistit, že všechny komponenty používají tyto views
-
-2. **Odstranit triggery pro sync balancí** – nejsou potřeba, pokud se nečte ze stored sloupce
-
-3. **Smazat/deprecatovat `credit_balance` sloupec** – nebo ho ponechat jen pro zpětnou kompatibilitu, ale nepoužívat v UI
-
-**Výhody**:
-- Jediný zdroj pravdy
-- Žádné diskrepance
-- Jednodušší debugování
-
-**Nevýhody**:
-- Mírně pomalejší čtení (SUM přes transakce)
-- Nutnost indexů pro výkon
-
----
-
-### Řešení 2: Opravit stávající systém s triggery
-
-**Změny**:
-
-1. **Opravit `price_share` při dokončení tréninku**
-   ```sql
-   -- V rpc_complete_training_session přidat:
-   UPDATE training_participants
-   SET price_share = v_price_share
-   WHERE training_session_id = p_session_id
-   AND client_id = v_client_id;
-   ```
-
-2. **Přidat nočni audit cron job**
-   - Porovnat `stored_balance` vs ledger
-   - Automaticky opravit diskrepance
-   - Logovat do `app_settings` nebo dedikované tabulky
-
-3. **Resetovat osobní zůstatky členů skupin**
-   ```sql
-   UPDATE clients c
-   SET credit_balance = 0
-   WHERE EXISTS (SELECT 1 FROM client_budget_members bm WHERE bm.client_id = c.id);
-   ```
-
-4. **Posílit trigger při přidání do skupiny**
-   - Zajistit převod osobního zůstatku do skupiny
-   - Nebo vynulovat a vytvořit adjustment transakci
-
----
-
-### Řešení 3: Hybrid – Materialized View s refresh
-
-**Princip**: Použít materialized view pro rychlé čtení, ale pravidelně refreshovat.
-
-**Implementace**:
+SQL migrace pro opravu existujících diskrepancí:
 ```sql
-CREATE MATERIALIZED VIEW mv_credit_balances AS
-SELECT 
-  c.id as client_id,
-  COALESCE(SUM(ct.amount) FILTER (WHERE ct.group_id IS NULL), 0) as balance
-FROM clients c
-LEFT JOIN credit_transactions ct ON ct.client_id = c.id
-GROUP BY c.id;
+-- Opravit individuální klienty
+UPDATE clients c
+SET credit_balance = ledger.ledger_balance
+FROM vw_client_ledger_balances ledger
+WHERE c.id = ledger.client_id
+AND c.credit_balance != ledger.ledger_balance
+AND NOT EXISTS (
+  SELECT 1 FROM client_budget_members bm WHERE bm.client_id = c.id
+);
 
-CREATE INDEX ON mv_credit_balances(client_id);
+-- Resetovat zůstatky členů skupin na 0 (neměli by mít osobní zůstatek)
+UPDATE clients c
+SET credit_balance = 0
+WHERE EXISTS (
+  SELECT 1 FROM client_budget_members bm WHERE bm.client_id = c.id
+)
+AND c.credit_balance != 0;
+
+-- Opravit skupinové zůstatky
+UPDATE client_budget_groups cbg
+SET shared_balance = ledger.ledger_balance
+FROM vw_group_ledger_balances ledger
+WHERE cbg.id = ledger.group_id
+AND cbg.shared_balance != ledger.ledger_balance;
 ```
 
-Refresh každou minutu nebo při kritických operacích.
+### Fáze 4: Posílit trigger (databáze)
+
+Přepsat trigger s logováním pro diagnostiku:
+```sql
+CREATE OR REPLACE FUNCTION trg_sync_balance_on_transaction()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_group_id uuid;
+  v_old_balance numeric;
+  v_new_balance numeric;
+BEGIN
+  -- Only process completed transactions
+  IF NEW.status != 'completed' THEN
+    RETURN NEW;
+  END IF;
+
+  -- Check if client is in a budget group
+  SELECT group_id INTO v_group_id
+  FROM client_budget_members
+  WHERE client_id = NEW.client_id;
+  
+  IF v_group_id IS NOT NULL THEN
+    UPDATE client_budget_groups
+    SET shared_balance = shared_balance + NEW.amount,
+        updated_at = now()
+    WHERE id = v_group_id
+    RETURNING shared_balance INTO v_new_balance;
+    
+    -- Log for debugging
+    RAISE NOTICE 'Trigger: Updated group % balance by %, new balance: %', 
+                  v_group_id, NEW.amount, v_new_balance;
+  ELSE
+    UPDATE clients
+    SET credit_balance = credit_balance + NEW.amount,
+        updated_at = now()
+    WHERE id = NEW.client_id
+    RETURNING credit_balance INTO v_new_balance;
+    
+    RAISE NOTICE 'Trigger: Updated client % balance by %, new balance: %', 
+                  NEW.client_id, NEW.amount, v_new_balance;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$;
+```
+
+### Fáze 5: Denní automatický audit (edge function)
+
+Aktualizovat existující `daily-financial-audit` edge function pro automatickou opravu diskrepancí každou noc.
 
 ---
 
-## Doporučený plán implementace
+## Soubory k úpravě
 
-### Fáze 1: Okamžité opravy (bezpečné)
-
-1. **Opravit stávající diskrepance** – jednorázová migrace
-2. **Opravit `price_share = 0` záznamy** – dopočítat z `final_price / participant_count`
-3. **Přidat validaci do `rpc_complete_training_session`** – vždy zapisovat `price_share`
-
-### Fáze 2: Zjednodušení architektury
-
-1. **Migrovat UI na ledger views** – `vw_client_ledger_balances`
-2. **Přidat index pro rychlé výpočty**:
-   ```sql
-   CREATE INDEX idx_credit_transactions_client_amount 
-   ON credit_transactions(client_id, amount) 
-   WHERE status = 'completed';
-   ```
-3. **Snížit `staleTime` na 5s nebo 0** pro kritické komponenty (kredit)
-
-### Fáze 3: Monitoring
-
-1. **Přidat denní audit job** (edge function + cron)
-2. **Vytvořit alert při diskrepanci > 1 Kč**
-3. **Dashboard v Settings pro ruční audit** (již existuje `CreditAuditPanel`)
-
----
-
-## Technické soubory k úpravě
-
-| Soubor/Tabulka | Změna |
-|----------------|-------|
-| `rpc_complete_training_session` | Přidat UPDATE na `training_participants.price_share` |
-| `vw_client_ledger_balances` | Optimalizovat pro indexy |
-| `useSharedBudgetBalance` | Vždy číst z view, ne z cached sloupce |
-| `ClientCreditHeroCard` | Ověřit použití správného zdroje dat |
-| `CreditAuditPanel` | Přidat tlačítko "Opravit vše" s detailním logem |
-| Jednorázová migrace | Opravit stored_balance = ledger pro všechny entity |
+| Soubor | Změna |
+|--------|-------|
+| `src/pages/ClientDetail.tsx` | Opravit výpočet `creditBalance` |
+| `src/hooks/useCreditOperations.ts` | Snížit `staleTime` na 5s |
+| Databáze (migrace) | Opravit existující diskrepance |
+| Databáze (migrace) | Posílit trigger s logováním |
 
 ---
 
 ## Očekávaný výsledek
 
 Po implementaci:
-- ✅ Žádné diskrepance mezi UI a databází
-- ✅ Jediný zdroj pravdy pro zůstatky
-- ✅ Automatická detekce a oprava problémů
-- ✅ Rychlejší debugging díky přehlednému auditu
+- ✅ Tomáš Stibor zobrazí správných 4000 Kč
+- ✅ Dnešní trénink se zobrazí v "Poslední pohyby"
+- ✅ Všech 6 klientů s diskrepancí bude opraveno
+- ✅ Budoucí transakce budou správně reflektovány v UI
+- ✅ Automatický audit každou noc detekuje a opraví problémy
 
+---
+
+## Technické poznámky
+
+- Ledger (view `vw_client_ledger_balances`) je **jediný spolehlivý zdroj pravdy**
+- Uložené `credit_balance` sloupce slouží pouze jako cache pro rychlé čtení
+- Cache invalidation je kritická - `refetchType: 'all'` v `useCompleteTrainingAtomic` již funguje správně
+- Problém Tomáše Stibora je způsoben tím, že UI čte ze špatného zdroje, ne že data by neexistovala
