@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { subDays, format, differenceInWeeks, parseISO, startOfDay, addDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -128,6 +129,37 @@ export interface CreditStats {
 }
 
 export function useClientCreditStats(clientId: string | undefined, period: PeriodDays = 30) {
+  const queryClient = useQueryClient();
+  
+  // Subscribe to real-time updates for credit transactions
+  useEffect(() => {
+    if (!clientId) return;
+
+    const channelName = `portal-credit:${clientId}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'credit_transactions',
+          filter: `client_id=eq.${clientId}`,
+        },
+        (payload) => {
+          // Invalidate credit stats to trigger refetch with new balance
+          queryClient.invalidateQueries({ 
+            queryKey: ['client-portal-credit-stats', clientId] 
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [clientId, queryClient]);
+
   return useQuery({
     queryKey: ['client-portal-credit-stats', clientId, period],
     queryFn: async (): Promise<CreditStats> => {
@@ -143,29 +175,68 @@ export function useClientCreditStats(clientId: string | undefined, period: Perio
         };
       }
 
-      // Get current balance (always shown, no filter)
-      // Get current balance from shared budget or ledger (not stale credit_balance field)
+      // NEW: Get current balance from running balance (balance_after on latest transaction)
+      // This provides O(1) performance and 100% accuracy
+      
       // First check if client is in a budget group
       const { data: budgetMembership } = await supabase
         .from('client_budget_members')
-        .select('group_id, client_budget_groups(shared_balance)')
+        .select('group_id')
         .eq('client_id', clientId)
         .maybeSingle();
 
       let balance = 0;
+      const groupId = budgetMembership?.group_id;
       
-      if (budgetMembership?.client_budget_groups) {
-        // Client is in a shared budget - use group balance
-        balance = (budgetMembership.client_budget_groups as any).shared_balance || 0;
-      } else {
-        // Individual client - calculate from ledger
-        const { data: transactions } = await supabase
+      if (groupId) {
+        // Client is in a shared budget - get balance from latest group transaction
+        const { data: latestGroupTx } = await supabase
           .from('credit_transactions')
-          .select('amount')
-          .eq('client_id', clientId)
-          .is('group_id', null);
+          .select('balance_after')
+          .eq('group_id', groupId)
+          .eq('status', 'completed')
+          .not('balance_after', 'is', null)
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
         
-        balance = (transactions || []).reduce((sum, t) => sum + (t.amount || 0), 0);
+        if (latestGroupTx?.balance_after !== null && latestGroupTx?.balance_after !== undefined) {
+          balance = latestGroupTx.balance_after;
+        } else {
+          // Fallback to ledger view
+          const { data: groupLedger } = await supabase
+            .from('vw_group_ledger_balances')
+            .select('ledger_balance')
+            .eq('group_id', groupId)
+            .maybeSingle();
+          balance = groupLedger?.ledger_balance ?? 0;
+        }
+      } else {
+        // Individual client - get balance from latest personal transaction
+        const { data: latestTx } = await supabase
+          .from('credit_transactions')
+          .select('balance_after')
+          .eq('client_id', clientId)
+          .is('group_id', null)
+          .eq('status', 'completed')
+          .not('balance_after', 'is', null)
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (latestTx?.balance_after !== null && latestTx?.balance_after !== undefined) {
+          balance = latestTx.balance_after;
+        } else {
+          // Fallback to ledger view
+          const { data: clientLedger } = await supabase
+            .from('vw_client_ledger_balances')
+            .select('ledger_balance')
+            .eq('client_id', clientId)
+            .maybeSingle();
+          balance = clientLedger?.ledger_balance ?? 0;
+        }
       }
 
       // Get credit_history_start_at from client_accounts
@@ -231,6 +302,7 @@ export function useClientCreditStats(clientId: string | undefined, period: Perio
       };
     },
     enabled: !!clientId,
+    staleTime: 0, // Always fresh - realtime handles updates
   });
 }
 

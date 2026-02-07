@@ -3722,12 +3722,14 @@ export type Database = {
       credit_transactions: {
         Row: {
           amount: number
+          balance_after: number | null
           client_id: string
           created_at: string
           created_by: string | null
           description: string | null
           group_id: string | null
           id: string
+          idempotency_key: string | null
           payment_method: string | null
           product_id: string | null
           reference_id: string | null
@@ -3741,12 +3743,14 @@ export type Database = {
         }
         Insert: {
           amount: number
+          balance_after?: number | null
           client_id: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           group_id?: string | null
           id?: string
+          idempotency_key?: string | null
           payment_method?: string | null
           product_id?: string | null
           reference_id?: string | null
@@ -3760,12 +3764,14 @@ export type Database = {
         }
         Update: {
           amount?: number
+          balance_after?: number | null
           client_id?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           group_id?: string | null
           id?: string
+          idempotency_key?: string | null
           payment_method?: string | null
           product_id?: string | null
           reference_id?: string | null
@@ -11566,6 +11572,15 @@ export type Database = {
           },
         ]
       }
+      vw_running_balances: {
+        Row: {
+          current_balance: number | null
+          entity_id: string | null
+          entity_type: string | null
+          last_updated: string | null
+        }
+        Relationships: []
+      }
       vw_top_errors_24h: {
         Row: {
           error_type: string | null
@@ -11739,6 +11754,18 @@ export type Database = {
           stored_balance: number
         }[]
       }
+      rpc_audit_running_balances: {
+        Args: never
+        Returns: {
+          discrepancy: number
+          entity_id: string
+          entity_name: string
+          entity_type: string
+          ledger_balance: number
+          needs_fix: boolean
+          running_balance: number
+        }[]
+      }
       rpc_complete_training_session: {
         Args: {
           p_idempotency_key: string
@@ -11750,6 +11777,40 @@ export type Database = {
           p_total_price: number
           p_trainer_id: string
           p_trainer_summary?: string
+        }
+        Returns: Json
+      }
+      rpc_credit_add: {
+        Args: {
+          p_amount: number
+          p_client_id: string
+          p_description?: string
+          p_idempotency_key?: string
+          p_payment_method?: string
+        }
+        Returns: Json
+      }
+      rpc_credit_deduct: {
+        Args: {
+          p_amount: number
+          p_client_id: string
+          p_description?: string
+          p_idempotency_key?: string
+          p_source_id?: string
+          p_source_type: string
+        }
+        Returns: Json
+      }
+      rpc_credit_refund: {
+        Args: { p_original_transaction_id: string; p_reason?: string }
+        Returns: Json
+      }
+      rpc_credit_transfer: {
+        Args: {
+          p_amount: number
+          p_from_client_id: string
+          p_reason?: string
+          p_to_client_id: string
         }
         Returns: Json
       }
@@ -11812,6 +11873,13 @@ export type Database = {
       rpc_recalculate_group_balance: {
         Args: { p_group_id: string }
         Returns: Json
+      }
+      rpc_recalculate_running_balances: {
+        Args: { p_client_id?: string; p_group_id?: string }
+        Returns: {
+          final_balance: number
+          transactions_updated: number
+        }[]
       }
       rpc_refund_sale: {
         Args: { p_order_id: string; p_user_id: string }

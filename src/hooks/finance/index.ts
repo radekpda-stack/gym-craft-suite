@@ -5,7 +5,16 @@
 // Consolidated hub hook
 export { useFinanceHub, useFinanceSummary, type FinanceHubOptions, type FinanceHubData } from '../useFinanceHub';
 
-// Core finance hooks
+// NEW: Credit System v2 - Real-time with running balance
+export { 
+  useCreditBalance, 
+  useCreditBalanceValue, 
+  useCreditOperationsV2,
+  type CreditBalanceData 
+} from '../useCreditBalance';
+export { useCreditRealtime, useCreditRealtimeGroup } from '../useCreditRealtime';
+
+// Core finance hooks (legacy, still supported)
 export { useCreditTransactions, useCreateTransaction, useDeleteTransaction } from '../useCreditTransactions';
 export { useFinanceAnalytics, type FinanceAnalyticsData, type FinancePeriodType } from '../useFinanceAnalytics';
 export { useFinancialStats, type FinancialStats } from '../useFinancialStats';
