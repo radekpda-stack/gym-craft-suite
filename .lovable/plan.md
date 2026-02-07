@@ -1,181 +1,501 @@
 
-# Oprava kreditového systému: Ledger jako jediný zdroj pravdy
+# Kompletní přepracování kreditového systému
 
-## Identifikované problémy
+## Executive Summary
 
-### 1. UI používá špatný zdroj dat pro individuální klienty (KRITICKÉ)
-V `ClientDetail.tsx` řádek 53:
-```typescript
-const creditBalance = isSharedBudget ? sharedBalance : (client?.credit_balance || 0);
-```
-
-**Problém:** Pro Tomáše Stibora (`isSharedBudget = false`):
-- `sharedBalance = 4000` (správná hodnota z ledger view)
-- `client?.credit_balance = 3200` (zastaralá hodnota z tabulky)
-- UI zobrazuje **3200 Kč** místo správných **4000 Kč**
-
-### 2. Trigger synchronizace selhává
-`trg_sync_balance_on_transaction` se nespustil nebo selhal při dnešní transakci za 800 Kč. Důvod je nejasný - možná race condition s RPC lockem.
-
-### 3. Šest klientů má diskrepance mezi uloženým zůstatkem a ledgerem
-Celková nesrovnalost: ~21 000 Kč
-
-### 4. Nejnovější transakce chybí v "Poslední pohyby"
-Cache `staleTime: 30s` může způsobit, že nová transakce se nezobrazí okamžitě.
+Navrhovaný redesign kreditového systému zavádí **Event Sourcing architekturu** s jedním zdrojem pravdy (ledger), real-time WebSocket synchronizací a 100% konzistencí mezi všemi obrazovkami. Cílem je eliminovat všechny diskrepance, prodlevy a chyby.
 
 ---
 
-## Navrhované řešení
+## Současný stav a identifikované problémy
 
-### Fáze 1: Okamžitá oprava UI (kritické)
-
-**Změna v `src/pages/ClientDetail.tsx`:**
-```typescript
-// PŘED (řádek 53):
-const creditBalance = isSharedBudget ? sharedBalance : (client?.credit_balance || 0);
-
-// PO:
-// Vždy použít sharedBalance z useSharedBudgetBalance hooku,
-// který již vrací správnou hodnotu z ledger view
-const creditBalance = sharedBudgetInfo?.sharedBalance ?? client?.credit_balance ?? 0;
+### Architektura (aktuální)
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                     DUÁLNÍ ZDROJ DAT                            │
+├─────────────────────────────────────────────────────────────────┤
+│  Cached Balance              │  Ledger (Transakce)              │
+│  ─────────────────────────   │  ──────────────────────────────  │
+│  clients.credit_balance      │  credit_transactions (SUM)       │
+│  groups.shared_balance       │  vw_client_ledger_balances       │
+│                              │  vw_group_ledger_balances        │
+├─────────────────────────────────────────────────────────────────┤
+│  SYNCHRONIZACE: trigger + ruční opravy                          │
+│  PROBLÉM: Trigger občas selže → diskrepance                     │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**Vysvětlení:** Hook `useSharedBudgetBalance` již správně načítá `ledger_balance` z view `vw_client_ledger_balances` i pro individuální klienty. Stačí tedy vždy použít jeho hodnotu.
+### Identifikované problémy
 
-### Fáze 2: Oprava cache invalidation
+1. **Duální zdroj pravdy** 
+   - `clients.credit_balance` vs `vw_client_ledger_balances.ledger_balance`
+   - Trigger `trg_sync_balance_on_transaction` občas selže
+   - UI někdy čte z cache, jindy z ledgeru → nekonzistence
 
-**Změny v `src/hooks/useCreditOperations.ts`:**
-```typescript
-// Změna 1: Snížit staleTime pro kritická data
-export function useCreditTransactions(clientId?: string) {
-  return useQuery({
-    queryKey: ["credit_transactions", clientId],
-    staleTime: 5 * 1000, // Snížit z 30s na 5s
-    // ...
-  });
-}
+2. **Prodlevy v aktualizaci**
+   - `staleTime: 5s` stále může způsobit 5s zpoždění
+   - Žádná real-time synchronizace mezi zařízeními
+   - Po dokončení tréninku může UI zobrazit starý zůstatek
 
-// Změna 2: Stejně pro useSharedBudgetBalance
-export function useSharedBudgetBalance(clientId?: string) {
-  return useQuery({
-    // ...
-    staleTime: 5 * 1000, // Snížit z 30s na 5s
-  });
-}
+3. **Složitost operací**
+   - `rpc_complete_training_session` - 250 řádků SQL
+   - `rpc_process_sale` - 366 řádků SQL
+   - Každá operace duplikuje logiku aktualizace zůstatku
+
+4. **Chybějící audit trail**
+   - Transakce nemají `source_type` + `source_id` pro všechny případy
+   - Těžké dohledat, odkud přišla transakce
+
+5. **Klientský portál**
+   - Načítá data odděleně od admin UI
+   - Může zobrazit jiný zůstatek než trenér vidí
+
+---
+
+## Navrhovaná architektura
+
+### Princip: Event Sourcing + CQRS
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                   NOVÁ ARCHITEKTURA                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌─────────────────────────────────────────────────────────┐   │
+│   │              COMMAND: Operace                            │   │
+│   │  ─────────────────────────────────────────────────────   │   │
+│   │  • rpc_credit_add (dobití)                               │   │
+│   │  • rpc_credit_deduct (trénink, prodej)                   │   │
+│   │  • rpc_credit_refund (zrušení, vratka)                   │   │
+│   │  • rpc_credit_transfer (převod mezi účty)                │   │
+│   └──────────────────────┬──────────────────────────────────┘   │
+│                          │                                       │
+│                          ▼                                       │
+│   ┌─────────────────────────────────────────────────────────┐   │
+│   │           EVENT LOG: credit_transactions                 │   │
+│   │  ─────────────────────────────────────────────────────   │   │
+│   │  Jediný zdroj pravdy (immutable)                        │   │
+│   │  Každá operace = 1 INSERT                               │   │
+│   │  Žádné UPDATE/DELETE na transakce                       │   │
+│   └──────────────────────┬──────────────────────────────────┘   │
+│                          │                                       │
+│            ┌─────────────┴─────────────┐                        │
+│            │     TRIGGER               │                        │
+│            │  trg_broadcast_credit     │                        │
+│            └─────────────┬─────────────┘                        │
+│                          │                                       │
+│            ┌─────────────┴─────────────┐                        │
+│            ▼                           ▼                        │
+│   ┌─────────────────────┐   ┌─────────────────────┐             │
+│   │  MATERIALIZED VIEW  │   │  REALTIME BROADCAST │             │
+│   │  mv_credit_balances │   │  WebSocket → UI     │             │
+│   │  (refresh: 1min)    │   │  (instant update)   │             │
+│   └─────────────────────┘   └─────────────────────┘             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Fáze 3: Jednorázová oprava diskrepancí (databáze)
+---
 
-SQL migrace pro opravu existujících diskrepancí:
+## Fáze 1: Jednotné RPC API pro kredit
+
+### Nové RPC funkce
+
+Nahradit všechny různé způsoby práce s kreditem **4 atomickými operacemi**:
+
 ```sql
--- Opravit individuální klienty
-UPDATE clients c
-SET credit_balance = ledger.ledger_balance
-FROM vw_client_ledger_balances ledger
-WHERE c.id = ledger.client_id
-AND c.credit_balance != ledger.ledger_balance
-AND NOT EXISTS (
-  SELECT 1 FROM client_budget_members bm WHERE bm.client_id = c.id
-);
+-- 1. DOBITÍ KREDITU
+CREATE FUNCTION rpc_credit_add(
+  p_client_id UUID,
+  p_amount NUMERIC,
+  p_payment_method TEXT,  -- cash, card, bank, transfer
+  p_description TEXT DEFAULT NULL,
+  p_sale_order_id UUID DEFAULT NULL
+) RETURNS JSONB;
 
--- Resetovat zůstatky členů skupin na 0 (neměli by mít osobní zůstatek)
-UPDATE clients c
-SET credit_balance = 0
-WHERE EXISTS (
-  SELECT 1 FROM client_budget_members bm WHERE bm.client_id = c.id
-)
-AND c.credit_balance != 0;
+-- 2. ODEČTENÍ KREDITU (trénink, prodej)
+CREATE FUNCTION rpc_credit_deduct(
+  p_client_id UUID,
+  p_amount NUMERIC,
+  p_source_type TEXT,     -- training, sale, package
+  p_source_id UUID,       -- training_session.id nebo sales_order.id
+  p_description TEXT DEFAULT NULL
+) RETURNS JSONB;
 
--- Opravit skupinové zůstatky
-UPDATE client_budget_groups cbg
-SET shared_balance = ledger.ledger_balance
-FROM vw_group_ledger_balances ledger
-WHERE cbg.id = ledger.group_id
-AND cbg.shared_balance != ledger.ledger_balance;
+-- 3. REFUND/VRATKA (zrušený trénink, storno)
+CREATE FUNCTION rpc_credit_refund(
+  p_original_transaction_id UUID,
+  p_reason TEXT
+) RETURNS JSONB;
+
+-- 4. PŘEVOD (osobní → skupinový, mezi klienty)
+CREATE FUNCTION rpc_credit_transfer(
+  p_from_client_id UUID,
+  p_to_client_id UUID,
+  p_amount NUMERIC,
+  p_reason TEXT
+) RETURNS JSONB;
 ```
 
-### Fáze 4: Posílit trigger (databáze)
+### Struktura návratové hodnoty
 
-Přepsat trigger s logováním pro diagnostiku:
+```typescript
+interface CreditOperationResult {
+  success: boolean;
+  transaction_id: string;
+  // Nový zůstatek
+  balance: {
+    entity_type: 'client' | 'group';
+    entity_id: string;
+    entity_name: string;
+    new_balance: number;
+    delta: number;
+  };
+  // Pro UI notifikace
+  message: string;
+  // Timestamp pro audit
+  timestamp: string;
+}
+```
+
+---
+
+## Fáze 2: Rozšířená tabulka transakcí
+
+### Migrace: Přidat audit sloupce
+
 ```sql
-CREATE OR REPLACE FUNCTION trg_sync_balance_on_transaction()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
+ALTER TABLE credit_transactions ADD COLUMN IF NOT EXISTS
+  source_type TEXT CHECK (source_type IN (
+    'training_session',
+    'sales_order',
+    'admin_panel',
+    'system_audit',
+    'refund',
+    'transfer',
+    'migration'
+  ));
+
+ALTER TABLE credit_transactions ADD COLUMN IF NOT EXISTS
+  source_id UUID;
+
+ALTER TABLE credit_transactions ADD COLUMN IF NOT EXISTS
+  idempotency_key TEXT UNIQUE;
+
+ALTER TABLE credit_transactions ADD COLUMN IF NOT EXISTS
+  balance_after NUMERIC;  -- Running balance pro instant display
+
+-- Index pro rychlé vyhledávání
+CREATE INDEX idx_credit_transactions_source
+  ON credit_transactions(source_type, source_id);
+```
+
+### Running Balance (klíčová optimalizace)
+
+Každá transakce si ukládá `balance_after` - zůstatek po provedení. Tím odpadá nutnost počítat SUM při každém čtení.
+
+```sql
+-- Trigger pro automatický výpočet running balance
+CREATE OR REPLACE FUNCTION trg_set_running_balance()
+RETURNS trigger AS $$
 DECLARE
-  v_group_id uuid;
-  v_old_balance numeric;
-  v_new_balance numeric;
+  v_previous_balance NUMERIC;
 BEGIN
-  -- Only process completed transactions
-  IF NEW.status != 'completed' THEN
-    RETURN NEW;
-  END IF;
-
-  -- Check if client is in a budget group
-  SELECT group_id INTO v_group_id
-  FROM client_budget_members
-  WHERE client_id = NEW.client_id;
+  -- Získat poslední zůstatek pro danou entitu
+  SELECT balance_after INTO v_previous_balance
+  FROM credit_transactions
+  WHERE (
+    (NEW.group_id IS NOT NULL AND group_id = NEW.group_id) OR
+    (NEW.group_id IS NULL AND client_id = NEW.client_id AND group_id IS NULL)
+  )
+  ORDER BY created_at DESC, id DESC
+  LIMIT 1;
   
-  IF v_group_id IS NOT NULL THEN
-    UPDATE client_budget_groups
-    SET shared_balance = shared_balance + NEW.amount,
-        updated_at = now()
-    WHERE id = v_group_id
-    RETURNING shared_balance INTO v_new_balance;
-    
-    -- Log for debugging
-    RAISE NOTICE 'Trigger: Updated group % balance by %, new balance: %', 
-                  v_group_id, NEW.amount, v_new_balance;
-  ELSE
-    UPDATE clients
-    SET credit_balance = credit_balance + NEW.amount,
-        updated_at = now()
-    WHERE id = NEW.client_id
-    RETURNING credit_balance INTO v_new_balance;
-    
-    RAISE NOTICE 'Trigger: Updated client % balance by %, new balance: %', 
-                  NEW.client_id, NEW.amount, v_new_balance;
-  END IF;
+  NEW.balance_after := COALESCE(v_previous_balance, 0) + NEW.amount;
   
   RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 ```
 
-### Fáze 5: Denní automatický audit (edge function)
+---
 
-Aktualizovat existující `daily-financial-audit` edge function pro automatickou opravu diskrepancí každou noc.
+## Fáze 3: Real-time synchronizace
+
+### Supabase Realtime
+
+```sql
+-- Povolit realtime pro credit_transactions
+ALTER PUBLICATION supabase_realtime ADD TABLE public.credit_transactions;
+```
+
+### Frontend hook: useCreditRealtime
+
+```typescript
+export function useCreditRealtime(clientId: string | undefined) {
+  const queryClient = useQueryClient();
+  
+  useEffect(() => {
+    if (!clientId) return;
+    
+    const channel = supabase
+      .channel(`credit:${clientId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'credit_transactions',
+          filter: `client_id=eq.${clientId}`,
+        },
+        (payload) => {
+          // Okamžitá aktualizace UI bez refetch
+          const newTx = payload.new as CreditTransaction;
+          
+          // Update cache optimisticky
+          queryClient.setQueryData(
+            ['credit_transactions', clientId],
+            (old: CreditTransaction[] = []) => [newTx, ...old]
+          );
+          
+          // Update balance okamžitě z balance_after
+          queryClient.setQueryData(
+            ['shared_budget_balance', clientId],
+            (old: SharedBudgetInfo) => ({
+              ...old,
+              sharedBalance: newTx.balance_after,
+              displayBalance: newTx.balance_after,
+            })
+          );
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [clientId, queryClient]);
+}
+```
 
 ---
 
-## Soubory k úpravě
+## Fáze 4: Zjednodušení completion flow
 
-| Soubor | Změna |
-|--------|-------|
-| `src/pages/ClientDetail.tsx` | Opravit výpočet `creditBalance` |
-| `src/hooks/useCreditOperations.ts` | Snížit `staleTime` na 5s |
-| Databáze (migrace) | Opravit existující diskrepance |
-| Databáze (migrace) | Posílit trigger s logováním |
+### Současný stav (složitý)
+
+```text
+useCompleteTrainingAtomic
+    │
+    ├── 1. supabase.rpc('rpc_complete_training_session')
+    │       └── 250 řádků SQL
+    │           ├── Loop přes účastníky
+    │           ├── INSERT credit_transactions (každý účastník)
+    │           ├── UPDATE training_sessions
+    │           └── UPDATE training_participants
+    │
+    ├── 2. POST-UPDATE: Loop přes účastníky (frontend)
+    │       └── UPDATE training_participants.payment_method
+    │
+    ├── 3. FIFO Credit Lots (volitelně)
+    │       └── supabase.rpc('rpc_deduct_credit_fifo')
+    │
+    └── 4. Sync workout entries
+            └── syncWorkoutEntriesToStats()
+```
+
+### Nový stav (zjednodušený)
+
+```text
+useCompleteTraining
+    │
+    └── supabase.rpc('rpc_complete_training_v2')
+            │
+            ├── 1. Validate (session exists, not completed)
+            ├── 2. INSERT participants s price_share
+            ├── 3. FOR each credit participant:
+            │       └── CALL rpc_credit_deduct()
+            ├── 4. UPDATE session status
+            └── 5. RETURN {success, balances, transactions}
+            
+        [Trigger automatically broadcasts to Realtime]
+```
 
 ---
 
-## Očekávaný výsledek
+## Fáze 5: Odstranění cached balance sloupců
 
-Po implementaci:
-- ✅ Tomáš Stibor zobrazí správných 4000 Kč
-- ✅ Dnešní trénink se zobrazí v "Poslední pohyby"
-- ✅ Všech 6 klientů s diskrepancí bude opraveno
-- ✅ Budoucí transakce budou správně reflektovány v UI
-- ✅ Automatický audit každou noc detekuje a opraví problémy
+### Migrační strategie
+
+1. **Fáze A (nyní)**: UI čte pouze z `balance_after` v poslední transakci
+2. **Fáze B (za měsíc)**: Deprecate `clients.credit_balance`
+3. **Fáze C (za 3 měsíce)**: Drop column
+
+```sql
+-- Fáze A: View pro kompatibilitu
+CREATE OR REPLACE VIEW vw_effective_balances AS
+SELECT 
+  client_id,
+  balance_after as current_balance,
+  created_at as last_updated
+FROM credit_transactions
+WHERE (client_id, created_at) IN (
+  SELECT client_id, MAX(created_at)
+  FROM credit_transactions
+  WHERE group_id IS NULL
+  GROUP BY client_id
+);
+```
 
 ---
 
-## Technické poznámky
+## Fáze 6: Klientský portál - Real-time
 
-- Ledger (view `vw_client_ledger_balances`) je **jediný spolehlivý zdroj pravdy**
-- Uložené `credit_balance` sloupce slouží pouze jako cache pro rychlé čtení
-- Cache invalidation je kritická - `refetchType: 'all'` v `useCompleteTrainingAtomic` již funguje správně
-- Problém Tomáše Stibora je způsoben tím, že UI čte ze špatného zdroje, ne že data by neexistovala
+### Sdílený hook pro obě strany
+
+```typescript
+// src/hooks/useCreditBalance.ts
+export function useCreditBalance(clientId: string | undefined) {
+  const [balance, setBalance] = useState<number | null>(null);
+  
+  // Initial fetch
+  const { data: initialData } = useQuery({
+    queryKey: ['credit_balance', clientId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('credit_transactions')
+        .select('balance_after')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data?.balance_after ?? 0;
+    },
+    enabled: !!clientId,
+    staleTime: 0, // Vždy čerstvé
+  });
+  
+  // Real-time updates
+  useCreditRealtime(clientId);
+  
+  return {
+    balance: balance ?? initialData ?? 0,
+    isLoading: initialData === undefined,
+  };
+}
+```
+
+### Použití v klientském portálu
+
+```typescript
+// ClientPortalCredit.tsx
+export default function ClientPortalCredit() {
+  const { clientId } = useClientPortal();
+  const { balance } = useCreditBalance(clientId);
+  
+  // Balance se aktualizuje okamžitě při změně
+  return (
+    <CreditBalanceDisplay balance={balance} />
+  );
+}
+```
+
+---
+
+## Fáze 7: Audit a monitoring
+
+### Automatický denní audit (vylepšený)
+
+```typescript
+// daily-financial-audit/index.ts (vylepšení)
+async function auditBalances() {
+  // 1. Porovnat running balance vs SUM
+  const { data: discrepancies } = await supabase.rpc('rpc_audit_running_balances');
+  
+  // 2. Pokud nalezeny, přepočítat running balance
+  if (discrepancies.length > 0) {
+    await supabase.rpc('rpc_recalculate_running_balances', {
+      client_ids: discrepancies.map(d => d.client_id)
+    });
+  }
+  
+  // 3. Notifikovat admina pokud > 0 chyb
+  if (discrepancies.length > 0) {
+    await sendSlackAlert({
+      text: `⚠️ Credit audit: ${discrepancies.length} discrepancies fixed`,
+      details: discrepancies,
+    });
+  }
+}
+```
+
+### UI Dashboard pro audit
+
+```typescript
+// V Settings přidat CreditHealthDashboard
+- Aktuální stav: ✅ Všechny zůstatky v pořádku
+- Poslední audit: 7.2.2026 03:00
+- Počet transakcí dnes: 47
+- Celkový obrat dnes: +12 500 Kč / -8 200 Kč
+- [Spustit manuální audit]
+```
+
+---
+
+## Shrnutí změn
+
+### Databáze
+
+| Změna | Popis |
+|-------|-------|
+| `credit_transactions.balance_after` | Running balance pro instant display |
+| `credit_transactions.source_type` | Audit trail |
+| `credit_transactions.source_id` | Reference na zdroj |
+| `rpc_credit_add/deduct/refund/transfer` | Jednotné API |
+| Realtime enabled | WebSocket broadcast |
+| `trg_set_running_balance` | Automatický running balance |
+
+### Frontend
+
+| Změna | Popis |
+|-------|-------|
+| `useCreditBalance` | Jednotný hook pro obě strany |
+| `useCreditRealtime` | WebSocket subscription |
+| Odstranit `staleTime` | Vždy čerstvá data |
+| Optimistic updates | Okamžitá odezva UI |
+
+### Backend Functions
+
+| Změna | Popis |
+|-------|-------|
+| `rpc_complete_training_v2` | Zjednodušená verze |
+| `rpc_process_sale_v2` | Volá `rpc_credit_deduct` |
+| `daily-financial-audit` | Vylepšený s notifikacemi |
+
+---
+
+## Očekávané přínosy
+
+1. **100% konzistence** - Running balance eliminuje diskrepance
+2. **Okamžitá aktualizace** - WebSocket místo polling
+3. **Jednodušší debugging** - Každá transakce má source
+4. **Méně kódu** - 4 RPC funkce místo 10+
+5. **Stejný zůstatek všude** - Admin i klient vidí totéž
+6. **Automatická oprava** - Denní audit s notifikací
+
+---
+
+## Technická poznámka
+
+### Kompatibilita
+
+- Zachovat zpětnou kompatibilitu s `credit_balance` sloupcem během přechodu
+- Nové RPC funkce vracejí stejný formát jako stávající
+- Postupná migrace: nejdřív nové funkce, pak přepínání UI
+
+### Výkon
+
+- Running balance: O(1) místo O(n) pro čtení zůstatku
+- Realtime: Eliminuje 95% polling requestů
+- Index na `source_type, source_id`: Rychlé dohledání transakcí
+
