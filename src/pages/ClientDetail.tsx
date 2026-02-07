@@ -4,7 +4,8 @@ import { format } from 'date-fns';
 import { startOfMonth, isAfter } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useClient, useUpdateClient, useArchiveClient } from '@/hooks/useClients';
-import { useSharedBudgetBalance, useCreditTransactions, useSharedBudgetTransactions } from '@/hooks/useCreditOperations';
+import { useCreditTransactions, useSharedBudgetTransactions } from '@/hooks/useCreditOperations';
+import { useCreditBalance } from '@/hooks/useCreditBalance';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { ClientDetailSkeleton } from '@/components/skeletons';
 import { CreateTrainingDialog } from '@/components/trainings/CreateTrainingDialog';
@@ -22,7 +23,7 @@ import { ClientSummaryStrip } from '@/components/clients/ClientSummaryStrip';
 import { ClientDetailTabs } from '@/components/clients/ClientDetailTabs';
 import { ClientHealthAlert } from '@/components/clients/ClientHealthAlert';
 import { ClientActionsSheet } from '@/components/clients/ClientActionsSheet';
- import { ClientCreditHeroCard } from '@/components/clients/ClientCreditHeroCard';
+import { ClientCreditHeroCard } from '@/components/clients/ClientCreditHeroCard';
 import { useFeedbackEvaluation } from '@/hooks/useFeedbackEvaluation';
 
 
@@ -31,10 +32,13 @@ export default function ClientDetail() {
   const queryClient = useQueryClient();
   const { id } = useParams();
   const { data: client, isLoading: clientLoading } = useClient(id);
-  const { data: sharedBudgetInfo } = useSharedBudgetBalance(id);
+  
+  // NEW: Use unified credit balance hook with real-time updates
+  const creditData = useCreditBalance(id);
+  
   const { data: sessions = [] } = useTrainingSessions(id);
   const { data: creditTransactions = [] } = useCreditTransactions(id);
-  const { data: sharedTransactions = [] } = useSharedBudgetTransactions(sharedBudgetInfo?.groupId);
+  const { data: sharedTransactions = [] } = useSharedBudgetTransactions(creditData.groupId);
   const { data: portalAccess } = useClientPortalAccess(id);
   const { evaluation: feedbackEval } = useFeedbackEvaluation(id);
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(id);
@@ -47,12 +51,9 @@ export default function ClientDetail() {
   const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
 
-  // Derived data
-  const isSharedBudget = sharedBudgetInfo?.isShared ?? false;
-  // FIXED: Always use sharedBalance from useSharedBudgetBalance hook
-  // The hook now reads from vw_client_ledger_balances view (ledger source of truth)
-  // for BOTH individual clients and shared budget groups
-  const creditBalance = sharedBudgetInfo?.sharedBalance ?? client?.credit_balance ?? 0;
+  // Derived data - now from unified credit hook with real-time updates
+  const isSharedBudget = creditData.isShared;
+  const creditBalance = creditData.balance;
   
   // Unpaid trainings count and amount
   const unpaidCount = unpaidTrainings.length;
@@ -176,7 +177,7 @@ export default function ClientDetail() {
        <ClientCreditHeroCard
          creditBalance={creditBalance}
          isSharedBudget={isSharedBudget}
-         budgetGroupName={sharedBudgetInfo?.groupName}
+         budgetGroupName={creditData.groupName}
          transactions={allTransactions}
          unpaidCount={unpaidCount}
          unpaidAmount={unpaidAmount}
@@ -197,8 +198,8 @@ export default function ClientDetail() {
         sessions={sessions}
         transactions={allTransactions as any}
         isSharedBudget={isSharedBudget}
-        budgetGroupId={sharedBudgetInfo?.groupId}
-        budgetGroupName={sharedBudgetInfo?.groupName}
+        budgetGroupId={creditData.groupId}
+        budgetGroupName={creditData.groupName}
         creditBalance={creditBalance}
         onAddNote={handleAddNote}
         onArchive={handleArchive}
@@ -212,7 +213,7 @@ export default function ClientDetail() {
         <ClientActionsSheet
           client={client}
           isSharedBudget={isSharedBudget}
-          budgetGroupId={sharedBudgetInfo?.groupId}
+          budgetGroupId={creditData.groupId}
           onAddTraining={() => setIsTrainingDialogOpen(true)}
           onAddNote={handleAddNote}
         />
