@@ -23,7 +23,7 @@ import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useProducts, Product } from '@/hooks/useProducts';
 import { useClients } from '@/hooks/useClients';
 import { useSalesCart } from '@/hooks/useSalesCart';
-import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
+import { useCreditBalance } from '@/hooks/useCreditBalance';
 import { processSale, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
 import { cn } from '@/lib/utils';
 import { featureTracker } from '@/hooks/useFeatureTracking';
@@ -55,10 +55,9 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
   // Shared cart hook
   const cart = useSalesCart({ clientId: selectedClient || null });
 
-  // Get shared budget balance for selected client
-  const { data: sharedBudget } = useSharedBudgetBalance(selectedClient || undefined);
+  // Get credit balance from unified source (real-time, handles groups)
+  const { balance: effectiveBalance, isShared, groupName } = useCreditBalance(selectedClient || undefined);
   const selectedClientData = clients.find(c => c.id === selectedClient);
-  const effectiveBalance = sharedBudget?.displayBalance ?? selectedClientData?.credit_balance ?? 0;
   const hasCreditTopup = cart.items.some(item => item.product.kind === 'credit_topup');
 
   const addToCart = useCallback(() => {
@@ -172,13 +171,15 @@ export function QuickProductSale({ collapsed = false }: QuickProductSaleProps) {
 
           {selectedClientData && (
             <div className="p-2.5 sm:p-3 rounded-xl bg-secondary/50 text-xs sm:text-sm">
-              <span className="text-muted-foreground">Kredit: </span>
+              <span className="text-muted-foreground">
+                Kredit{isShared && groupName ? ` (${groupName})` : ''}: 
+              </span>
               <span className={cn(
                 "font-semibold",
-                (selectedClientData.credit_balance || 0) < 0 ? "text-destructive" : 
-                (selectedClientData.credit_balance || 0) < 500 ? "text-warning" : "text-success"
+                effectiveBalance < 0 ? "text-destructive" : 
+                effectiveBalance < 500 ? "text-warning" : "text-success"
               )}>
-                {formatCurrency(selectedClientData.credit_balance || 0)}
+                {formatCurrency(effectiveBalance)}
               </span>
             </div>
           )}

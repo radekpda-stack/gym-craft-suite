@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { toast } from '@/hooks/use-toast';
 
 /**
  * Real-time credit transaction subscription hook.
@@ -33,6 +34,8 @@ interface UseCreditRealtimeOptions {
   onTransaction?: (tx: CreditTransaction) => void;
   /** Enable/disable the subscription */
   enabled?: boolean;
+  /** Show toast notifications for balance changes */
+  showNotifications?: boolean;
 }
 
 /**
@@ -43,12 +46,17 @@ export function useCreditRealtime(
   clientId: string | undefined,
   options: UseCreditRealtimeOptions = {}
 ) {
-  const { onTransaction, enabled = true } = options;
+  const { onTransaction, enabled = true, showNotifications = false } = options;
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const lastTxIdRef = useRef<string | null>(null);
 
   const handleNewTransaction = useCallback((payload: { new: CreditTransaction }) => {
     const newTx = payload.new;
+    
+    // Prevent duplicate processing
+    if (lastTxIdRef.current === newTx.id) return;
+    lastTxIdRef.current = newTx.id;
     
     // Update transactions list cache (prepend new transaction)
     queryClient.setQueryData(
@@ -82,6 +90,31 @@ export function useCreditRealtime(
         ['credit_balance', clientId],
         newTx.balance_after
       );
+      
+      // Update v2 balance cache
+      queryClient.setQueryData(
+        ['credit_balance_v2', clientId],
+        (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            balance: newTx.balance_after,
+            isExhausted: (newTx.balance_after ?? 0) <= 0,
+            isNegative: (newTx.balance_after ?? 0) < 0,
+            lastUpdated: newTx.created_at,
+          };
+        }
+      );
+      
+      // Show notification for external balance changes
+      if (showNotifications && newTx.amount !== 0) {
+        const isCredit = newTx.amount > 0;
+        toast({
+          title: isCredit ? '💰 Kredit navýšen' : '📉 Kredit odečten',
+          description: `${Math.abs(newTx.amount).toLocaleString('cs-CZ')} Kč${newTx.description ? ` - ${newTx.description}` : ''}`,
+          variant: isCredit ? 'default' : 'default',
+        });
+      }
     }
 
     // Invalidate related queries for full consistency
@@ -90,7 +123,7 @@ export function useCreditRealtime(
 
     // Call optional callback
     onTransaction?.(newTx);
-  }, [clientId, queryClient, onTransaction]);
+  }, [clientId, queryClient, onTransaction, showNotifications]);
 
   useEffect(() => {
     if (!clientId || !enabled) return;
@@ -139,12 +172,17 @@ export function useCreditRealtimeGroup(
   groupId: string | undefined,
   options: UseCreditRealtimeOptions = {}
 ) {
-  const { onTransaction, enabled = true } = options;
+  const { onTransaction, enabled = true, showNotifications = false } = options;
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const lastTxIdRef = useRef<string | null>(null);
 
   const handleNewTransaction = useCallback((payload: { new: CreditTransaction }) => {
     const newTx = payload.new;
+    
+    // Prevent duplicate processing
+    if (lastTxIdRef.current === newTx.id) return;
+    lastTxIdRef.current = newTx.id;
     
     // Update group transactions cache
     queryClient.setQueryData(
@@ -163,12 +201,28 @@ export function useCreditRealtimeGroup(
         queryKey: ['shared_budget_balance'],
         refetchType: 'all'
       });
+      
+      // Invalidate v2 balance queries
+      queryClient.invalidateQueries({ 
+        queryKey: ['credit_balance_v2'],
+        refetchType: 'all'
+      });
 
       // Update group balance directly
       queryClient.setQueryData(
         ['group_balance', groupId],
         newTx.balance_after
       );
+      
+      // Show notification for external balance changes
+      if (showNotifications && newTx.amount !== 0) {
+        const isCredit = newTx.amount > 0;
+        toast({
+          title: isCredit ? '💰 Skupinový kredit navýšen' : '📉 Skupinový kredit odečten',
+          description: `${Math.abs(newTx.amount).toLocaleString('cs-CZ')} Kč${newTx.description ? ` - ${newTx.description}` : ''}`,
+          variant: isCredit ? 'default' : 'default',
+        });
+      }
     }
 
     // Invalidate related queries
@@ -176,7 +230,7 @@ export function useCreditRealtimeGroup(
     queryClient.invalidateQueries({ queryKey: ['pending_payments'] });
 
     onTransaction?.(newTx);
-  }, [groupId, queryClient, onTransaction]);
+  }, [groupId, queryClient, onTransaction, showNotifications]);
 
   useEffect(() => {
     if (!groupId || !enabled) return;

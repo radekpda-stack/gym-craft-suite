@@ -10,7 +10,7 @@ import { ClientSearchSelect } from '@/components/ui/client-search-select';
 import { useProducts, Product } from '@/hooks/useProducts';
 import { useClients } from '@/hooks/useClients';
 import { useSalesCart, CartItem } from '@/hooks/useSalesCart';
-import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
+import { useCreditBalance } from '@/hooks/useCreditBalance';
 import { processSale, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
 import { cn } from '@/lib/utils';
 import { featureTracker } from '@/hooks/useFeatureTracking';
@@ -39,10 +39,9 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Get shared budget balance for selected client
-  const { data: sharedBudget } = useSharedBudgetBalance(selectedClient || undefined);
+  // Get credit balance from unified source (real-time, handles groups)
+  const { balance: effectiveBalance, isShared, groupName } = useCreditBalance(selectedClient || undefined);
   const selectedClientData = clients.find(c => c.id === selectedClient);
-  const effectiveBalance = sharedBudget?.displayBalance ?? selectedClientData?.credit_balance ?? 0;
 
   // Update cart validation when client changes
   useEffect(() => {
@@ -151,13 +150,15 @@ export function NewSaleDialog({ open, onOpenChange }: NewSaleDialogProps) {
 
           {selectedClientData && (
             <div className="p-2.5 sm:p-3 rounded-xl bg-secondary/50 text-xs sm:text-sm">
-              <span className="text-muted-foreground">Kredit: </span>
+              <span className="text-muted-foreground">
+                Kredit{isShared && groupName ? ` (${groupName})` : ''}: 
+              </span>
               <span className={cn(
                 "font-semibold",
-                (selectedClientData.credit_balance || 0) < 0 ? "text-destructive" : 
-                (selectedClientData.credit_balance || 0) < 500 ? "text-warning" : "text-success"
+                effectiveBalance < 0 ? "text-destructive" : 
+                effectiveBalance < 500 ? "text-warning" : "text-success"
               )}>
-                {(selectedClientData.credit_balance || 0).toLocaleString('cs-CZ')} Kč
+                {effectiveBalance.toLocaleString('cs-CZ')} Kč
               </span>
             </div>
           )}
