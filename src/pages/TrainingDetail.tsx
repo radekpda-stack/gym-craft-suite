@@ -44,6 +44,7 @@ import { TagValidationAlert } from '@/components/trainings/TagValidationAlert';
 import { CompactTagSelector } from '@/components/trainings/CompactTagSelector';
 import { Badge } from '@/components/ui/badge';
 import { useTrainingFeedback } from '@/hooks/useTrainingFeedback';
+import { useCreditBalanceValue } from '@/hooks/useCreditBalance';
 import { useFeedbackRequest } from '@/hooks/useFeedbackLink';
 import { useUndoTrainingDelete } from '@/hooks/useUndoActions';
 import { useTrainingSummary } from '@/hooks/useTrainingSummary';
@@ -80,8 +81,8 @@ export default function TrainingDetail() {
   // Client data - depends on training but prefetched, so should be instant
   const { data: client } = useClient(training?.client_id);
   
-  // Get fresh client credit balance from client object
-  const clientCreditBalance = client?.credit_balance ?? 0;
+  // Get fresh client credit balance from running balance (real-time)
+  const clientCreditBalance = useCreditBalanceValue(training?.client_id);
   
   // Related data - all prefetched from AgendaItem hover/touch
   const { data: trainingTags = [] } = useTrainingSessionTags(id);

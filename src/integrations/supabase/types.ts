@@ -11893,6 +11893,10 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_validate_credit_operation: {
+        Args: { p_amount: number; p_client_id: string; p_operation: string }
+        Returns: Json
+      }
       seed_circuit_templates_for_user: {
         Args: { p_user_id: string }
         Returns: {
