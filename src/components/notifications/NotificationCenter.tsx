@@ -1,17 +1,14 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { Bell, Check, MessageSquare, ChevronDown, ChevronRight, Search, X, Utensils, FileText, PartyPopper } from "lucide-react";
+import { useState, useMemo, useCallback, useRef } from "react";
+import { Bell, Check, MessageSquare, Search, X, Filter, BellOff, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
@@ -33,39 +30,18 @@ import { supabase } from "@/integrations/supabase/client";
 import type { TrainingFeedback } from "@/hooks/useTrainingFeedback";
 import { NotificationEmptyState } from "./NotificationEmptyState";
 import { UnifiedNotificationItem } from "./UnifiedNotificationItem";
-import { InlineNotificationSettings } from "./InlineNotificationSettings";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Category section config
-const CATEGORY_SECTIONS: Record<NotificationCategory, {
-  label: string;
-  icon: typeof Bell;
-  color: string;
-  bgColor: string;
-  emoji: string;
-}> = {
-  activity: {
-    label: "Klientská aktivita",
-    icon: Utensils,
-    color: "text-green-600 dark:text-green-400",
-    bgColor: "bg-green-100 dark:bg-green-900/30",
-    emoji: "🍎",
-  },
-  forms: {
-    label: "Zpětná vazba & Formuláře",
-    icon: FileText,
-    color: "text-blue-600 dark:text-blue-400",
-    bgColor: "bg-blue-100 dark:bg-blue-900/30",
-    emoji: "📝",
-  },
-  events: {
-    label: "Důležité události",
-    icon: PartyPopper,
-    color: "text-amber-600 dark:text-amber-400",
-    bgColor: "bg-amber-100 dark:bg-amber-900/30",
-    emoji: "🎉",
-  },
-};
+// Tab definitions
+const TABS = [
+  { key: 'all' as const, label: 'Vše', icon: Bell },
+  { key: 'activity' as const, label: 'Aktivita', emoji: '🍎' },
+  { key: 'forms' as const, label: 'Formuláře', emoji: '📝' },
+  { key: 'events' as const, label: 'Události', emoji: '🎉' },
+  { key: 'messages' as const, label: 'Zprávy', icon: MessageSquare },
+];
+
+type TabKey = 'all' | NotificationCategory | 'messages';
 
 function getDateLabel(dateStr: string) {
   const date = parseISO(dateStr);
@@ -74,7 +50,6 @@ function getDateLabel(dateStr: string) {
   return formatDistanceToNow(date, { addSuffix: true, locale: cs });
 }
 
-// Detect touch device
 function isTouchDevice(): boolean {
   if (typeof window === 'undefined') return false;
   return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -110,7 +85,6 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   
   const totalUnread = unreadCount + unreadConversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
-  // Touch device detection
   const isTouch = useMemo(() => isTouchDevice(), []);
 
   const handleMarkRead = useCallback((id: string) => {
@@ -141,24 +115,19 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const [anniversaryDialogOpen, setAnniversaryDialogOpen] = useState(false);
   const [selectedAnniversaryNotification, setSelectedAnniversaryNotification] = useState<UnifiedNotification | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabKey>('all');
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["messages", "activity", "forms", "events"]));
+  const [showSearch, setShowSearch] = useState(false);
 
-  // Pending action system - action executes AFTER sheet closes
+  // Pending action system
   const pendingActionRef = useRef<PendingActionType | null>(null);
 
-  // Load feedback data and open dialog - defined as useCallback so it's stable
   const loadAndOpenFeedback = useCallback(async (notification: UnifiedNotification) => {
     const trainingId = notification.entity_type === 'training' ? notification.entity_id : null;
-    
     if (!trainingId) {
-      if (notification.client_id) {
-        navigate(`/clients/${notification.client_id}?tab=history`);
-      }
+      if (notification.client_id) navigate(`/clients/${notification.client_id}?tab=history`);
       return;
     }
-    
     setLoadingFeedback(true);
     try {
       const { data: feedbacks } = await supabase
@@ -167,7 +136,6 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
         .eq('training_session_id', trainingId)
         .order('created_at', { ascending: false })
         .limit(1);
-
       const feedback = feedbacks?.[0];
       if (feedback) {
         const { data: training } = await supabase
@@ -175,17 +143,12 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
           .select('date, client_id')
           .eq('id', trainingId)
           .maybeSingle();
-
         let clientName = 'Neznámý klient';
         if (training?.client_id) {
           const { data: client } = await supabase
-            .from('clients')
-            .select('name')
-            .eq('id', training.client_id)
-            .maybeSingle();
+            .from('clients').select('name').eq('id', training.client_id).maybeSingle();
           clientName = client?.name || clientName;
         }
-
         setSelectedFeedback(feedback as TrainingFeedback);
         setFeedbackMeta({ clientName, trainingDate: training?.date });
         setFeedbackDialogOpen(true);
@@ -200,42 +163,19 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     }
   }, [navigate]);
 
-  // Execute pending action after sheet closes
   const flushPendingAction = useCallback(async () => {
     const action = pendingActionRef.current;
     if (!action) return;
     pendingActionRef.current = null;
-
-    // Small delay to ensure sheet animation completes
     await new Promise(resolve => setTimeout(resolve, 50));
-
     switch (action.type) {
-      case 'nutrition':
-        setSelectedNutritionNotification(action.notification);
-        setNutritionDialogOpen(true);
-        break;
-      case 'workout':
-        setSelectedWorkoutNotification(action.notification);
-        setWorkoutDialogOpen(true);
-        break;
-      case 'birthday':
-        setSelectedBirthdayNotification(action.notification);
-        setBirthdayDialogOpen(true);
-        break;
-      case 'anniversary':
-        setSelectedAnniversaryNotification(action.notification);
-        setAnniversaryDialogOpen(true);
-        break;
-      case 'profile':
-        setSelectedProfileNotification(action.notification);
-        setProfileUpdateDialogOpen(true);
-        break;
-      case 'feedback':
-        await loadAndOpenFeedback(action.notification);
-        break;
-      case 'navigate':
-        navigate(action.path);
-        break;
+      case 'nutrition': setSelectedNutritionNotification(action.notification); setNutritionDialogOpen(true); break;
+      case 'workout': setSelectedWorkoutNotification(action.notification); setWorkoutDialogOpen(true); break;
+      case 'birthday': setSelectedBirthdayNotification(action.notification); setBirthdayDialogOpen(true); break;
+      case 'anniversary': setSelectedAnniversaryNotification(action.notification); setAnniversaryDialogOpen(true); break;
+      case 'profile': setSelectedProfileNotification(action.notification); setProfileUpdateDialogOpen(true); break;
+      case 'feedback': await loadAndOpenFeedback(action.notification); break;
+      case 'navigate': navigate(action.path); break;
     }
   }, [navigate, loadAndOpenFeedback]);
 
@@ -244,63 +184,61 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     onOpenChange?.(open);
     if (!open) {
       setSearchQuery("");
-      setSettingsExpanded(false);
-      // Execute pending action after sheet closes
-      requestAnimationFrame(() => {
-        flushPendingAction();
-      });
+      setShowSearch(false);
+      requestAnimationFrame(() => { flushPendingAction(); });
     }
   }, [onOpenChange, flushPendingAction]);
 
-  const toggleSection = (section: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(section)) {
-      newExpanded.delete(section);
-    } else {
-      newExpanded.add(section);
-    }
-    setExpandedSections(newExpanded);
-  };
-
   // Filter notifications by search query
   const filteredNotifications = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return { activity, forms, events };
-    }
-    
-    const query = searchQuery.toLowerCase();
-    const filter = (notifications: UnifiedNotification[]) =>
-      notifications.filter(
-        (n) =>
-          n.title.toLowerCase().includes(query) ||
-          n.message.toLowerCase().includes(query)
+    const filterFn = (notifications: UnifiedNotification[]) => {
+      if (!searchQuery.trim()) return notifications;
+      const query = searchQuery.toLowerCase();
+      return notifications.filter(n =>
+        n.title.toLowerCase().includes(query) ||
+        n.message.toLowerCase().includes(query)
       );
-
-    return {
-      activity: filter(activity),
-      forms: filter(forms),
-      events: filter(events),
     };
-  }, [activity, forms, events, searchQuery]);
+    return {
+      activity: filterFn(activity),
+      forms: filterFn(forms),
+      events: filterFn(events),
+      all: filterFn(all),
+    };
+  }, [activity, forms, events, all, searchQuery]);
 
-  // Handle chat notification click - direct navigation (no dialog)
+  // Current view based on active tab
+  const currentNotifications = useMemo(() => {
+    switch (activeTab) {
+      case 'activity': return filteredNotifications.activity;
+      case 'forms': return filteredNotifications.forms;
+      case 'events': return filteredNotifications.events;
+      case 'messages': return []; // Messages rendered separately
+      default: return filteredNotifications.all;
+    }
+  }, [activeTab, filteredNotifications]);
+
+  // Tab counts
+  const tabCounts = useMemo(() => ({
+    all: all.filter(n => !n.is_read).length + unreadConversations.reduce((s, c) => s + c.unreadCount, 0),
+    activity: activity.filter(n => !n.is_read).length,
+    forms: forms.filter(n => !n.is_read).length,
+    events: events.filter(n => !n.is_read).length,
+    messages: unreadConversations.reduce((s, c) => s + c.unreadCount, 0),
+  }), [all, activity, forms, events, unreadConversations]);
+
   const handleChatClick = (clientId: string, conversationId: string) => {
     markMessagesRead.mutate({ conversationId });
     pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}?tab=chat` };
     setSheetOpen(false);
   };
 
-  // Mark all as read
   const handleMarkAllAsRead = useCallback(() => {
-    if (unreadCount > 0) {
-      markAllRead.mutate();
-    }
-    if (unreadConversations.length > 0) {
-      markAllMessagesRead.mutate();
-    }
+    if (unreadCount > 0) markAllRead.mutate();
+    if (unreadConversations.length > 0) markAllMessagesRead.mutate();
   }, [unreadCount, markAllRead, unreadConversations.length, markAllMessagesRead]);
 
-  // Unified click handler - sets pending action and closes sheet
+  // Unified click handler
   const handleNotificationClick = useCallback((notification: UnifiedNotification) => {
     const isFeedbackNotification = ['feedback_received', 'feedback_red_flag'].includes(notification.type);
     const isNutritionNotification = notification.type === 'nutrition_entry_added' || notification.type === 'client_nutrition_started';
@@ -314,209 +252,83 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
     const trainingId = notification.entity_type === 'training' ? notification.entity_id : null;
     const clientId = notification.client_id || (notification.entity_type === 'client' ? notification.entity_id : null);
 
-    // Mark as read first
     if (!notification.is_read && !notification.id.startsWith('aggregated-')) {
       markRead.mutate(notification.id);
     }
 
-    // Birthday → BirthdayDetailDialog
-    if (isBirthdayNotification && clientId) {
-      pendingActionRef.current = { type: 'birthday', notification };
-      setSheetOpen(false);
-      return;
-    }
+    if (isBirthdayNotification && clientId) { pendingActionRef.current = { type: 'birthday', notification }; setSheetOpen(false); return; }
+    if (isAnniversaryNotification && clientId) { pendingActionRef.current = { type: 'anniversary', notification }; setSheetOpen(false); return; }
+    if (isWeightNotification && clientId) { pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}?tab=progress` }; setSheetOpen(false); return; }
+    if (isDiagnosticNotification && clientId) { pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}?tab=profile` }; setSheetOpen(false); return; }
+    if (isNutritionNotification && clientId) { pendingActionRef.current = { type: 'nutrition', notification }; setSheetOpen(false); return; }
+    if (isProfileUpdateNotification) { pendingActionRef.current = { type: 'profile', notification }; setSheetOpen(false); return; }
+    if (isWorkoutLogNotification && notification.entity_id) { pendingActionRef.current = { type: 'workout', notification }; setSheetOpen(false); return; }
+    if (isFeedbackNotification && trainingId) { pendingActionRef.current = { type: 'feedback', notification }; setSheetOpen(false); return; }
+    if (trainingId) { pendingActionRef.current = { type: 'navigate', path: `/trainings/${trainingId}` }; setSheetOpen(false); return; }
+    if (clientId) { pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}` }; setSheetOpen(false); }
+  }, [markRead]);
 
-    // Anniversary → AnniversaryDetailDialog
-    if (isAnniversaryNotification && clientId) {
-      pendingActionRef.current = { type: 'anniversary', notification };
-      setSheetOpen(false);
-      return;
-    }
-
-    // Weight → Navigate to client progress tab
-    if (isWeightNotification && clientId) {
-      pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}?tab=progress` };
-      setSheetOpen(false);
-      return;
-    }
-
-    // Diagnostic → Navigate to client profile
-    if (isDiagnosticNotification && clientId) {
-      pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}?tab=profile` };
-      setSheetOpen(false);
-      return;
-    }
-
-    // Nutrition notifications → Open nutrition dialog
-    if (isNutritionNotification && clientId) {
-      pendingActionRef.current = { type: 'nutrition', notification };
-      setSheetOpen(false);
-      return;
-    }
-
-    // Profile update notifications → Open detail dialog
-    if (isProfileUpdateNotification) {
-      pendingActionRef.current = { type: 'profile', notification };
-      setSheetOpen(false);
-      return;
-    }
-
-    // Workout log notifications → Open workout detail dialog
-    if (isWorkoutLogNotification && notification.entity_id) {
-      pendingActionRef.current = { type: 'workout', notification };
-      setSheetOpen(false);
-      return;
-    }
-
-    // Feedback notifications → Open feedback dialog
-    if (isFeedbackNotification && trainingId) {
-      pendingActionRef.current = { type: 'feedback', notification };
-      setSheetOpen(false);
-      return;
-    }
+  const handleItemClick = useCallback((item: UnifiedNotification) => {
+    if (!item.is_read && !item.id.startsWith('aggregated-')) markRead.mutate(item.id);
     
-    // Training entity → Navigate to training detail
-    if (trainingId) {
-      pendingActionRef.current = { type: 'navigate', path: `/trainings/${trainingId}` };
-      setSheetOpen(false);
-      return;
-    }
-    
-    // Fallback: Navigate to client profile
-    if (clientId) {
-      pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}` };
-      setSheetOpen(false);
-    }
-  }, [markRead]);
-
-  // Handle nutrition item click (for aggregated items)
-  const handleNutritionItemClick = useCallback((item: UnifiedNotification) => {
-    if (!item.is_read && !item.id.startsWith('aggregated-')) {
-      markRead.mutate(item.id);
-    }
-    pendingActionRef.current = { type: 'nutrition', notification: item };
-    setSheetOpen(false);
-  }, [markRead]);
-
-  // Handle workout item click (for aggregated items)
-  const handleWorkoutItemClick = useCallback((item: UnifiedNotification) => {
-    if (!item.is_read && !item.id.startsWith('aggregated-')) {
-      markRead.mutate(item.id);
-    }
-    pendingActionRef.current = { type: 'workout', notification: item };
-    setSheetOpen(false);
-  }, [markRead]);
-
-  // Handle feedback item click (for aggregated items)
-  const handleFeedbackItemClick = useCallback((item: UnifiedNotification) => {
-    if (!item.is_read && !item.id.startsWith('aggregated-')) {
-      markRead.mutate(item.id);
-    }
-    pendingActionRef.current = { type: 'feedback', notification: item };
-    setSheetOpen(false);
-  }, [markRead]);
-
-  // Handle event item click (birthdays, anniversaries)
-  const handleEventItemClick = useCallback((item: UnifiedNotification) => {
-    if (!item.is_read && !item.id.startsWith('aggregated-')) {
-      markRead.mutate(item.id);
-    }
-    
-    if (item.type === 'birthday') {
+    if (item.type === 'client_workout_logged') {
+      pendingActionRef.current = { type: 'workout', notification: item };
+    } else if (item.type === 'nutrition_entry_added' || item.type === 'client_nutrition_started') {
+      pendingActionRef.current = { type: 'nutrition', notification: item };
+    } else if (item.type === 'feedback_received' || item.type === 'feedback_red_flag') {
+      pendingActionRef.current = { type: 'feedback', notification: item };
+    } else if (item.type === 'birthday') {
       pendingActionRef.current = { type: 'birthday', notification: item };
     } else if (item.type === 'client_anniversary') {
       pendingActionRef.current = { type: 'anniversary', notification: item };
+    } else {
+      handleNotificationClick(item);
+      return;
     }
     setSheetOpen(false);
-  }, [markRead]);
+  }, [markRead, handleNotificationClick]);
 
   const hasAnyNotifications = all.length > 0 || unreadConversations.length > 0;
 
-  const renderCategorySection = (
-    category: NotificationCategory,
-    notifications: UnifiedNotification[]
-  ) => {
-    if (notifications.length === 0) return null;
-
-    const config = CATEGORY_SECTIONS[category];
-    const Icon = config.icon;
-    const unreadInSection = notifications.filter(n => !n.is_read).length;
-
-    return (
-      <Collapsible
-        key={category}
-        open={expandedSections.has(category)}
-        onOpenChange={() => toggleSection(category)}
-      >
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-muted/50 transition-colors">
-          <div className="flex items-center gap-2">
-            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", config.bgColor)}>
-              <Icon className={cn("w-4 h-4", config.color)} />
+  // Render message cards
+  const renderMessages = () => (
+    <div className="space-y-2">
+      {unreadConversations.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <MessageSquare className="w-10 h-10 mx-auto mb-3 opacity-20" />
+          <p className="text-sm font-medium">Žádné nepřečtené zprávy</p>
+          <p className="text-xs mt-1 opacity-70">Všechny konverzace jsou aktuální</p>
+        </div>
+      ) : (
+        unreadConversations.map((conv) => (
+          <motion.div
+            key={conv.conversationId}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => handleChatClick(conv.clientId, conv.conversationId)}
+            className="flex items-center gap-3 p-3 rounded-2xl bg-primary/5 border border-primary/15 hover:bg-primary/10 hover:border-primary/25 cursor-pointer transition-all group"
+          >
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+              {conv.clientName.charAt(0)}
             </div>
-            <div className="text-left">
-              <p className="text-sm font-medium">{config.label}</p>
-              <p className="text-xs text-muted-foreground">
-                {notifications.length} {notifications.length === 1 ? "položka" : "položek"}
-              </p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-sm truncate">{conv.clientName}</p>
+                <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold shrink-0">
+                  {conv.unreadCount}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{conv.lastMessage}</p>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {unreadInSection > 0 && (
-              <Badge 
-                variant="secondary" 
-                className="text-[10px]"
-              >
-                {unreadInSection} nové
-              </Badge>
-            )}
-            {expandedSections.has(category) ? (
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            )}
-          </div>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2 space-y-2">
-          <AnimatePresence mode="popLayout">
-            {notifications.map((notification) => (
-              <motion.div
-                key={notification.id}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                layout
-              >
-                <UnifiedNotificationItem
-                  notification={notification}
-                  onMarkRead={handleMarkRead}
-                  onDelete={handleDelete}
-                  onClick={() => handleNotificationClick(notification)}
-                  onItemClick={(item: UnifiedNotification) => {
-                    if (category === 'activity') {
-                      if (item.type === 'client_workout_logged') {
-                        handleWorkoutItemClick(item);
-                      } else {
-                        handleNutritionItemClick(item);
-                      }
-                    } else if (category === 'forms') {
-                      if (item.type === 'feedback_received' || item.type === 'feedback_red_flag') {
-                        handleFeedbackItemClick(item);
-                      } else {
-                        handleNotificationClick(item);
-                      }
-                    } else if (category === 'events') {
-                      handleEventItemClick(item);
-                    }
-                  }}
-                  enableSwipe={!isTouch}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </CollapsibleContent>
-      </Collapsible>
-    );
-  };
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <span className="text-[10px] text-muted-foreground">{getDateLabel(conv.lastMessageAt)}</span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          </motion.div>
+        ))
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -526,223 +338,251 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="w-5 h-5" />
               {totalUnread > 0 && (
-                <Badge 
-                  className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-destructive text-destructive-foreground text-xs"
-                >
+                <span className="absolute -top-0.5 -right-0.5 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold animate-in zoom-in-50">
                   {totalUnread > 99 ? "99+" : totalUnread}
-                </Badge>
+                </span>
               )}
             </Button>
           )}
         </SheetTrigger>
-        <SheetContent className="w-full sm:max-w-md p-0 flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden z-[80]">
-          {/* Header */}
-          <SheetHeader className="px-4 py-3 border-b flex flex-row items-center justify-between shrink-0 pr-12">
-            <SheetTitle className="text-lg">Notifikace</SheetTitle>
-            <div className="flex items-center gap-1">
-              {totalUnread > 0 && (
+        <SheetContent className="w-full sm:max-w-[440px] p-0 flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden z-[80] gap-0">
+          {/* Premium Header */}
+          <div className="shrink-0 bg-gradient-to-b from-primary/8 to-transparent">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 pr-12">
+              <div>
+                <h2 className="text-xl font-bold tracking-tight">Notifikace</h2>
+                {totalUnread > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {totalUnread} nepřečtených
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
-                  size="sm"
-                  onClick={handleMarkAllAsRead}
-                  disabled={markAllRead.isPending || markAllMessagesRead.isPending}
-                  className="text-xs h-8"
+                  size="icon"
+                  className="h-8 w-8 rounded-full"
+                  onClick={() => setShowSearch(!showSearch)}
                 >
-                  <Check className="w-3.5 h-3.5 mr-1" />
-                  Vše přečteno
+                  <Search className="w-4 h-4" />
                 </Button>
-              )}
+                {totalUnread > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleMarkAllAsRead}
+                    disabled={markAllRead.isPending || markAllMessagesRead.isPending}
+                    className="text-xs h-8 rounded-full gap-1.5 text-primary hover:text-primary"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    Vše přečteno
+                  </Button>
+                )}
+              </div>
             </div>
-          </SheetHeader>
 
-          {/* Search Bar */}
-          <div className="px-4 py-2 border-b shrink-0">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Hledat v notifikacích..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-8 h-9 text-sm"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            {/* Search bar - animated */}
+            <AnimatePresence>
+              {showSearch && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden px-5"
                 >
-                  <X className="w-4 h-4" />
-                </button>
+                  <div className="relative pb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      placeholder="Hledat v notifikacích..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 pr-8 h-9 text-sm rounded-xl bg-background/80"
+                      autoFocus
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
               )}
+            </AnimatePresence>
+
+            {/* Tab Navigation - pill style */}
+            <div className="px-5 pb-3">
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+                {TABS.map((tab) => {
+                  const count = tabCounts[tab.key];
+                  const isActive = activeTab === tab.key;
+                  // Hide messages tab if no conversations
+                  if (tab.key === 'messages' && conversations.length === 0) return null;
+                  
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveTab(tab.key)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0',
+                        isActive
+                          ? 'bg-foreground text-background shadow-sm'
+                          : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                      )}
+                    >
+                      {'emoji' in tab ? (
+                        <span className="text-sm leading-none">{tab.emoji}</span>
+                      ) : tab.icon ? (
+                        <tab.icon className="w-3.5 h-3.5" />
+                      ) : null}
+                      <span>{tab.label}</span>
+                      {count > 0 && (
+                        <span className={cn(
+                          'inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[9px] font-bold',
+                          isActive
+                            ? 'bg-background/20 text-background'
+                            : 'bg-primary/15 text-primary'
+                        )}>
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
-          {/* Content - flex-1 with min-h-0 for proper overflow */}
+          {/* Content */}
           <ScrollArea className="flex-1 min-h-0">
-            <div className="p-3 space-y-3">
+            <div className="px-4 py-3 space-y-2">
               {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <div className="w-10 h-10 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                  <p className="text-xs text-muted-foreground">Načítám notifikace…</p>
                 </div>
+              ) : activeTab === 'messages' ? (
+                renderMessages()
               ) : !hasAnyNotifications ? (
-                <NotificationEmptyState onOpenSettings={() => setSettingsExpanded(true)} />
+                <NotificationEmptyState />
+              ) : currentNotifications.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  {searchQuery ? (
+                    <>
+                      <Search className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                      <p className="text-sm font-medium">Žádné výsledky pro „{searchQuery}"</p>
+                      <p className="text-xs mt-1 opacity-70">Zkuste jiný hledaný výraz</p>
+                    </>
+                  ) : (
+                    <>
+                      <BellOff className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                      <p className="text-sm font-medium">Žádné notifikace v této kategorii</p>
+                    </>
+                  )}
+                </div>
               ) : (
                 <>
-                  {/* Unread Messages Section */}
-                  {unreadConversations.length > 0 && (
-                    <Collapsible 
-                      open={expandedSections.has("messages")} 
-                      onOpenChange={() => toggleSection("messages")}
-                    >
-                      <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <MessageSquare className="w-4 h-4 text-primary" />
+                  {/* Show unread messages in "all" tab */}
+                  {activeTab === 'all' && unreadConversations.length > 0 && (
+                    <div className="mb-3">
+                      <div className="flex items-center gap-2 mb-2 px-1">
+                        <MessageSquare className="w-3.5 h-3.5 text-primary" />
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Zprávy</span>
+                      </div>
+                      {unreadConversations.slice(0, 2).map((conv) => (
+                        <motion.div
+                          key={conv.conversationId}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          onClick={() => handleChatClick(conv.clientId, conv.conversationId)}
+                          className="flex items-center gap-3 p-3 mb-1.5 rounded-2xl bg-primary/5 border border-primary/15 hover:bg-primary/10 cursor-pointer transition-all"
+                        >
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                            {conv.clientName.charAt(0)}
                           </div>
-                          <div className="text-left">
-                            <p className="text-sm font-medium">Zprávy</p>
-                            <p className="text-xs text-muted-foreground">
-                              {unreadConversations.length} nepřečtených konverzací
-                            </p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm truncate">{conv.clientName}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{conv.lastMessage}</p>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="destructive" className="text-[10px]">
-                            {unreadConversations.reduce((sum, c) => sum + c.unreadCount, 0)}
-                          </Badge>
-                          {expandedSections.has("messages") ? (
-                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                          )}
-                        </div>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="mt-2 space-y-2">
-                        {unreadConversations.map((conv) => (
-                          <div
-                            key={conv.conversationId}
-                            onClick={() => handleChatClick(conv.clientId, conv.conversationId)}
-                            className="flex items-start gap-3 p-3 rounded-xl border bg-primary/5 border-primary/20 hover:border-primary/40 cursor-pointer transition-colors"
-                          >
-                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary shrink-0">
-                              {conv.clientName.charAt(0)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium text-sm truncate">{conv.clientName}</p>
-                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0 shrink-0">
-                                  {conv.unreadCount}
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                                {conv.lastMessage}
-                              </p>
-                              <p className="text-[10px] text-muted-foreground mt-1">
-                                {getDateLabel(conv.lastMessageAt)}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
-
-                  {/* Category Sections */}
-                  {renderCategorySection('activity', filteredNotifications.activity)}
-                  {renderCategorySection('forms', filteredNotifications.forms)}
-                  {renderCategorySection('events', filteredNotifications.events)}
-
-                  {/* No results for search */}
-                  {searchQuery && 
-                   filteredNotifications.activity.length === 0 && 
-                   filteredNotifications.forms.length === 0 &&
-                   filteredNotifications.events.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Search className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Žádné výsledky pro "{searchQuery}"</p>
+                          <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                            {conv.unreadCount}
+                          </span>
+                        </motion.div>
+                      ))}
+                      {unreadConversations.length > 2 && (
+                        <button
+                          onClick={() => setActiveTab('messages')}
+                          className="w-full text-xs text-primary font-medium py-1.5 hover:underline"
+                        >
+                          +{unreadConversations.length - 2} dalších zpráv
+                        </button>
+                      )}
                     </div>
                   )}
+
+                  {/* Notification items */}
+                  <AnimatePresence mode="popLayout">
+                    {currentNotifications.map((notification, i) => (
+                      <motion.div
+                        key={notification.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -80 }}
+                        transition={{ delay: i * 0.03 }}
+                        layout
+                      >
+                        <UnifiedNotificationItem
+                          notification={notification}
+                          onMarkRead={handleMarkRead}
+                          onDelete={handleDelete}
+                          onClick={() => handleNotificationClick(notification)}
+                          onItemClick={handleItemClick}
+                          enableSwipe={!isTouch}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </>
               )}
             </div>
           </ScrollArea>
-
-          {/* Inline Settings */}
-          <div className="shrink-0 pb-safe">
-            <InlineNotificationSettings
-              isExpanded={settingsExpanded}
-              onToggle={() => setSettingsExpanded(!settingsExpanded)}
-            />
-          </div>
         </SheetContent>
       </Sheet>
 
-      {/* Dialogs with higher z-index to appear above everything */}
+      {/* Dialogs */}
       <FeedbackDetailDialog
         feedback={selectedFeedback}
         open={feedbackDialogOpen}
-        onOpenChange={(open) => {
-          setFeedbackDialogOpen(open);
-          if (!open) {
-            setSelectedFeedback(null);
-            setFeedbackMeta({});
-          }
-        }}
+        onOpenChange={(open) => { setFeedbackDialogOpen(open); if (!open) { setSelectedFeedback(null); setFeedbackMeta({}); }}}
         clientName={feedbackMeta.clientName}
         trainingDate={feedbackMeta.trainingDate}
       />
-
       <ProfileUpdateDetailDialog
         open={profileUpdateDialogOpen}
-        onOpenChange={(open) => {
-          setProfileUpdateDialogOpen(open);
-          if (!open) {
-            setSelectedProfileNotification(null);
-          }
-        }}
+        onOpenChange={(open) => { setProfileUpdateDialogOpen(open); if (!open) setSelectedProfileNotification(null); }}
         notification={selectedProfileNotification}
       />
-
       <NutritionEntryDetailDialog
         open={nutritionDialogOpen}
-        onOpenChange={(open) => {
-          setNutritionDialogOpen(open);
-          if (!open) {
-            setSelectedNutritionNotification(null);
-          }
-        }}
+        onOpenChange={(open) => { setNutritionDialogOpen(open); if (!open) setSelectedNutritionNotification(null); }}
         notification={selectedNutritionNotification}
       />
-
       <WorkoutLogDetailDialog
         open={workoutDialogOpen}
-        onOpenChange={(open) => {
-          setWorkoutDialogOpen(open);
-          if (!open) {
-            setSelectedWorkoutNotification(null);
-          }
-        }}
+        onOpenChange={(open) => { setWorkoutDialogOpen(open); if (!open) setSelectedWorkoutNotification(null); }}
         notification={selectedWorkoutNotification}
       />
-
       <BirthdayDetailDialog
         open={birthdayDialogOpen}
-        onOpenChange={(open) => {
-          setBirthdayDialogOpen(open);
-          if (!open) {
-            setSelectedBirthdayNotification(null);
-          }
-        }}
+        onOpenChange={(open) => { setBirthdayDialogOpen(open); if (!open) setSelectedBirthdayNotification(null); }}
         notification={selectedBirthdayNotification}
       />
-
       <AnniversaryDetailDialog
         open={anniversaryDialogOpen}
-        onOpenChange={(open) => {
-          setAnniversaryDialogOpen(open);
-          if (!open) {
-            setSelectedAnniversaryNotification(null);
-          }
-        }}
+        onOpenChange={(open) => { setAnniversaryDialogOpen(open); if (!open) setSelectedAnniversaryNotification(null); }}
         notification={selectedAnniversaryNotification}
       />
     </>

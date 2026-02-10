@@ -5,12 +5,11 @@ import {
   CreditCard, Cake, Trophy, Dumbbell, TrendingDown, 
   AlertTriangle, Clock, Gift, MessageSquare, Medal, 
   Target, Stethoscope, Utensils, Scale, Bike, 
-  Footprints, PersonStanding
+  Footprints, PersonStanding, Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow, isToday, isYesterday, parseISO } from 'date-fns';
+import { formatDistanceToNow, isToday, isYesterday, parseISO, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import type { NotificationCategory, UnifiedNotification } from '@/hooks/useAggregatedNotifications';
 
@@ -40,6 +39,8 @@ const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   nutrition_inactive: AlertTriangle,
   client_weight_added: Scale,
   client_workout_logged: Dumbbell,
+  client_profile_updated: PersonStanding,
+  client_nutrition_started: Sparkles,
 };
 
 const WORKOUT_TYPE_ICONS: Record<string, { icon: typeof Dumbbell; emoji: string }> = {
@@ -55,76 +56,70 @@ const WORKOUT_TYPE_ICONS: Record<string, { icon: typeof Dumbbell; emoji: string 
   other: { icon: Dumbbell, emoji: '🏋️' },
 };
 
-const CATEGORY_STYLES: Record<NotificationCategory, { bg: string; border: string; icon: string; badge: string }> = {
+// Category accent colors using semantic tokens
+const CATEGORY_ACCENT: Record<NotificationCategory, {
+  dot: string;
+  iconBg: string;
+  iconColor: string;
+  unreadBg: string;
+  unreadBorder: string;
+}> = {
   activity: {
-    bg: 'bg-green-50 dark:bg-green-900/20',
-    border: 'border-green-200 dark:border-green-800/50',
-    icon: 'text-green-600 dark:text-green-400',
-    badge: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
+    dot: 'bg-success',
+    iconBg: 'bg-success/10',
+    iconColor: 'text-success',
+    unreadBg: 'bg-success/5',
+    unreadBorder: 'border-success/15',
   },
   forms: {
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
-    border: 'border-blue-200 dark:border-blue-800/50',
-    icon: 'text-blue-600 dark:text-blue-400',
-    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
+    dot: 'bg-primary',
+    iconBg: 'bg-primary/10',
+    iconColor: 'text-primary',
+    unreadBg: 'bg-primary/5',
+    unreadBorder: 'border-primary/15',
   },
   events: {
-    bg: 'bg-amber-50 dark:bg-amber-900/20',
-    border: 'border-amber-200 dark:border-amber-800/50',
-    icon: 'text-amber-600 dark:text-amber-400',
-    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+    dot: 'bg-warning',
+    iconBg: 'bg-warning/10',
+    iconColor: 'text-warning',
+    unreadBg: 'bg-warning/5',
+    unreadBorder: 'border-warning/15',
   },
 };
 
-function getDateLabel(dateStr: string) {
+function getSmartDate(dateStr: string): string {
   const date = parseISO(dateStr);
-  if (isToday(date)) return 'Dnes';
-  if (isYesterday(date)) return 'Včera';
+  if (isToday(date)) return format(date, 'HH:mm', { locale: cs });
+  if (isYesterday(date)) return 'včera';
   return formatDistanceToNow(date, { addSuffix: true, locale: cs });
 }
 
-// Extract client name from notification message
-function getClientNameFromMessage(message: string, type: string): string {
+function getClientNameFromMessage(message: string, _type: string): string {
   const workoutMatch = message.match(/^(.+?)\s+si zapsal/);
   if (workoutMatch) return workoutMatch[1];
-  
   const feedbackMatch = message.match(/^(.+?):\s+💪/);
   if (feedbackMatch) return feedbackMatch[1];
-
   const nutritionMatch = message.match(/^(.+?)\s+přidal/);
   if (nutritionMatch) return nutritionMatch[1];
-  
   const genericMatch = message.match(/^(.+?)(?::|–|-)/);
   if (genericMatch) return genericMatch[1].trim();
-  
   return message.split(':')[0] || message;
 }
 
-// Extract workout type from metadata or message
-function getWorkoutTypeInfo(notification: UnifiedNotification): { icon: typeof Dumbbell; emoji: string; label: string } {
+function getWorkoutTypeInfo(notification: UnifiedNotification) {
   const metadata = notification.metadata as Record<string, unknown> | null;
   const workoutType = (metadata?.workout_type as string) || 'other';
   const typeInfo = WORKOUT_TYPE_ICONS[workoutType.toLowerCase()] || WORKOUT_TYPE_ICONS.other;
-  
-  return {
-    ...typeInfo,
-    label: workoutType,
-  };
+  return { ...typeInfo, label: workoutType };
 }
 
-// Extract feedback preview from message
 function getFeedbackPreview(notification: UnifiedNotification): string | null {
   const metadata = notification.metadata as Record<string, unknown> | null;
-  
   if (metadata?.muscle_soreness !== undefined && metadata?.body_feeling !== undefined) {
-    return `Svalovka ${metadata.muscle_soreness} | Pocit ${metadata.body_feeling}`;
+    return `Svalovka ${metadata.muscle_soreness} · Pocit ${metadata.body_feeling}`;
   }
-  
   const match = notification.message.match(/💪\s*Svalovka[:\s]+(\d+)[^📊]*📊[^:]+[:\s]+(\d+)/);
-  if (match) {
-    return `Svalovka ${match[1]} | Pocit ${match[2]}`;
-  }
-  
+  if (match) return `Svalovka ${match[1]} · Pocit ${match[2]}`;
   return null;
 }
 
@@ -148,43 +143,30 @@ export function UnifiedNotificationItem({
   const [isExpanded, setIsExpanded] = useState(false);
   const x = useMotionValue(0);
   const background = useTransform(
-    x,
-    [-100, 0, 100],
+    x, [-100, 0, 100],
     ['hsl(var(--destructive))', 'transparent', 'hsl(var(--success))']
   );
   const leftOpacity = useTransform(x, [0, 40, 100], [0, 0.5, 1]);
   const rightOpacity = useTransform(x, [-100, -40, 0], [1, 0.5, 0]);
 
-  // Touch tracking for reliable click detection
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const didDragRef = useRef(false);
 
   const Icon = NOTIFICATION_ICONS[notification.type] || Bell;
-  const styles = CATEGORY_STYLES[notification.category];
+  const accent = CATEGORY_ACCENT[notification.category];
 
-  const handleDragStart = useCallback(() => {
-    didDragRef.current = true;
-  }, []);
+  const handleDragStart = useCallback(() => { didDragRef.current = true; }, []);
 
-  const handleDragEnd = useCallback(
-    (_: any, info: PanInfo) => {
-      const threshold = 80;
-      if (info.offset.x > threshold) {
-        if (!notification.is_read) {
-          onMarkRead(notification.id);
-        }
-      } else if (info.offset.x < -threshold) {
-        onDelete(notification.id);
-      }
-      // Reset drag flag after a short delay
-      setTimeout(() => {
-        didDragRef.current = false;
-      }, 100);
-    },
-    [notification.id, notification.is_read, onMarkRead, onDelete]
-  );
+  const handleDragEnd = useCallback((_: any, info: PanInfo) => {
+    const threshold = 80;
+    if (info.offset.x > threshold) {
+      if (!notification.is_read) onMarkRead(notification.id);
+    } else if (info.offset.x < -threshold) {
+      onDelete(notification.id);
+    }
+    setTimeout(() => { didDragRef.current = false; }, 100);
+  }, [notification.id, notification.is_read, onMarkRead, onDelete]);
 
-  // Handle pointer events for reliable click on touch devices
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     touchStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
     didDragRef.current = false;
@@ -192,26 +174,17 @@ export function UnifiedNotificationItem({
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     if (!touchStartRef.current) return;
-    
     const deltaX = Math.abs(e.clientX - touchStartRef.current.x);
     const deltaY = Math.abs(e.clientY - touchStartRef.current.y);
     const deltaTime = Date.now() - touchStartRef.current.time;
-    
-    // If movement is small and time is short, treat as click
     const isClick = deltaX < 10 && deltaY < 10 && deltaTime < 300 && !didDragRef.current;
-    
     touchStartRef.current = null;
-    
     if (isClick) {
-      if (notification.isAggregated) {
-        setIsExpanded(!isExpanded);
-      } else {
-        onClick?.();
-      }
+      if (notification.isAggregated) setIsExpanded(!isExpanded);
+      else onClick?.();
     }
   }, [notification.isAggregated, isExpanded, onClick]);
 
-  // Handle sub-item clicks
   const handleSubItemClick = useCallback((e: React.MouseEvent | React.TouchEvent, item: UnifiedNotification) => {
     e.stopPropagation();
     e.preventDefault();
@@ -221,19 +194,19 @@ export function UnifiedNotificationItem({
   const displayMessage = notification.message.replace(/\s*ID:\s*[a-f0-9-]+/i, '');
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
+    <div className="relative overflow-hidden rounded-2xl mb-1.5">
       {/* Swipe Background */}
       {enableSwipe && (
         <motion.div 
-          className="absolute inset-0 flex items-center justify-between px-4 rounded-xl"
+          className="absolute inset-0 flex items-center justify-between px-5 rounded-2xl"
           style={{ background }}
         >
           <motion.div style={{ opacity: leftOpacity }} className="text-white flex items-center gap-2">
             <Check className="w-5 h-5" />
-            <span className="text-sm font-medium">Přečteno</span>
+            <span className="text-xs font-semibold">Přečteno</span>
           </motion.div>
           <motion.div style={{ opacity: rightOpacity }} className="text-white flex items-center gap-2">
-            <span className="text-sm font-medium">Smazat</span>
+            <span className="text-xs font-semibold">Smazat</span>
             <Trash2 className="w-5 h-5" />
           </motion.div>
         </motion.div>
@@ -251,78 +224,89 @@ export function UnifiedNotificationItem({
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         className={cn(
-          'relative flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer select-none',
-          'hover:shadow-sm active:scale-[0.99]',
+          'relative flex items-start gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer select-none',
+          'active:scale-[0.98]',
           notification.is_read 
-            ? 'bg-background border-border' 
-            : cn(styles.bg, styles.border)
+            ? 'bg-background border-border/50 hover:bg-muted/40' 
+            : cn(accent.unreadBg, accent.unreadBorder, 'hover:shadow-sm')
         )}
       >
-        {/* Icon */}
-        <div className={cn(
-          'shrink-0 w-9 h-9 rounded-lg flex items-center justify-center',
-          notification.is_read ? 'bg-muted' : styles.bg,
-          notification.is_read ? 'text-muted-foreground' : styles.icon
-        )}>
-          <Icon className="w-4.5 h-4.5" />
+        {/* Icon with accent */}
+        <div className="relative shrink-0">
+          <div className={cn(
+            'w-10 h-10 rounded-xl flex items-center justify-center',
+            notification.is_read ? 'bg-muted' : accent.iconBg
+          )}>
+            <Icon className={cn(
+              'w-[18px] h-[18px]',
+              notification.is_read ? 'text-muted-foreground' : accent.iconColor
+            )} />
+          </div>
+          {/* Unread dot */}
+          {!notification.is_read && (
+            <span className={cn('absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-background', accent.dot)} />
+          )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm leading-tight line-clamp-1">
+              <p className={cn(
+                'text-sm leading-snug line-clamp-1',
+                notification.is_read ? 'font-medium text-muted-foreground' : 'font-semibold text-foreground'
+              )}>
                 {notification.title}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
                 {displayMessage}
               </p>
             </div>
 
             {notification.isAggregated && notification.aggregatedCount && (
-              <Badge className={cn('text-[10px] shrink-0', styles.badge)}>
+              <span className={cn(
+                'inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-lg text-[10px] font-bold shrink-0',
+                notification.is_read 
+                  ? 'bg-muted text-muted-foreground' 
+                  : cn(accent.iconBg, accent.iconColor)
+              )}>
                 {notification.aggregatedCount}
-              </Badge>
+              </span>
             )}
           </div>
 
+          {/* Footer: time + actions */}
           <div className="flex items-center justify-between mt-2">
-            <p className="text-[10px] text-muted-foreground">
-              {getDateLabel(notification.created_at)}
-            </p>
+            <span className="text-[10px] text-muted-foreground font-medium">
+              {getSmartDate(notification.created_at)}
+            </span>
 
-            {/* Inline Actions */}
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-              {!notification.is_read && (
+            <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+              {!notification.is_read && !notification.id.startsWith('aggregated-') && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMarkRead(notification.id);
-                  }}
+                  className="h-6 w-6 rounded-full"
+                  onClick={(e) => { e.stopPropagation(); onMarkRead(notification.id); }}
                 >
                   <Check className="w-3 h-3" />
                 </Button>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(notification.id);
-                }}
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
+              {!notification.id.startsWith('aggregated-') && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 rounded-full text-muted-foreground hover:text-destructive"
+                  onClick={(e) => { e.stopPropagation(); onDelete(notification.id); }}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              )}
               {notification.isAggregated && (
-                isExpanded ? (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                )
+                <ChevronDown className={cn(
+                  'w-4 h-4 text-muted-foreground transition-transform',
+                  isExpanded && 'rotate-180'
+                )} />
               )}
             </div>
           </div>
@@ -335,7 +319,8 @@ export function UnifiedNotificationItem({
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          className="ml-6 mt-2 space-y-1.5 border-l-2 border-muted pl-3"
+          transition={{ duration: 0.2 }}
+          className="ml-5 mt-1 space-y-1 border-l-2 border-muted-foreground/15 pl-4 pb-1"
         >
           {notification.aggregatedItems.map((item) => {
             const isWorkout = item.type === 'client_workout_logged';
@@ -351,35 +336,26 @@ export function UnifiedNotificationItem({
                 onClick={(e) => handleSubItemClick(e, item)}
                 onTouchEnd={(e) => handleSubItemClick(e, item)}
                 className={cn(
-                  'flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer w-full text-left',
-                  'hover:bg-muted/80 active:bg-muted transition-colors group',
-                  item.is_read ? 'bg-background' : 'bg-muted/50'
+                  'flex items-center gap-2.5 p-2.5 rounded-xl text-sm cursor-pointer w-full text-left',
+                  'hover:bg-muted/70 active:bg-muted transition-colors group',
+                  !item.is_read && 'bg-muted/30'
                 )}
               >
-                {/* Type Icon/Emoji */}
                 {isWorkout && workoutInfo && (
-                  <span className="text-base shrink-0" title={workoutInfo.label}>
-                    {workoutInfo.emoji}
-                  </span>
+                  <span className="text-base shrink-0">{workoutInfo.emoji}</span>
                 )}
-                {isFeedback && (
-                  <span className="text-base shrink-0">📬</span>
-                )}
-                {!isWorkout && !isFeedback && (
-                  <span className="text-base shrink-0">📝</span>
-                )}
+                {isFeedback && <span className="text-base shrink-0">📬</span>}
+                {!isWorkout && !isFeedback && <span className="text-base shrink-0">📝</span>}
                 
-                {/* Client Name */}
                 <span className={cn(
-                  "flex-1 truncate font-medium",
-                  !item.is_read && "text-foreground"
+                  "flex-1 truncate",
+                  !item.is_read ? "font-semibold text-foreground" : "font-medium text-muted-foreground"
                 )}>
                   {clientName}
                 </span>
                 
-                {/* Workout Type Label or Feedback Preview */}
                 {isWorkout && workoutInfo && (
-                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md shrink-0">
                     {workoutInfo.label}
                   </span>
                 )}
@@ -389,13 +365,11 @@ export function UnifiedNotificationItem({
                   </span>
                 )}
                 
-                {/* Date */}
                 <span className="text-[10px] text-muted-foreground shrink-0">
-                  {getDateLabel(item.created_at)}
+                  {getSmartDate(item.created_at)}
                 </span>
                 
-                {/* Chevron */}
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0 group-hover:text-foreground transition-colors" />
               </button>
             );
           })}
