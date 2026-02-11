@@ -22,6 +22,7 @@ import { LogoutConfirmDialog } from './common/LogoutConfirmDialog';
 import { useClientPortalDemo } from '@/hooks/useClientPortalDemo';
 import { DemoModeBanner } from './DemoModeBanner';
 import { AvatarCelebration } from './celebrations';
+import { useUnreadChatCount } from '@/hooks/useUnreadChatCount';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,6 +103,9 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   const effectiveClientProfile = isDemo ? demoClientProfile : clientProfile;
   const effectiveClientId = isDemo ? demoClientId : clientId;
   const effectiveIsAuthenticated = isDemo ? true : isAuthenticated;
+
+  // Unread chat count
+  const { data: unreadCount } = useUnreadChatCount(effectiveClientId);
 
   // Show credentials dialog when needed (after initial load) - not in demo mode
   useEffect(() => {
@@ -245,6 +249,11 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
                   "w-5 h-5",
                   !isActive && "text-muted-foreground group-hover:text-foreground"
                 )} />
+                {item.trackName === 'chat' && !!unreadCount && unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
                 
                 {/* Tooltip */}
                 <span className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-lg">
@@ -309,6 +318,11 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
                   "w-5 h-5 transition-transform shrink-0",
                   isActive && "scale-110"
                 )} />
+                {item.trackName === 'chat' && !!unreadCount && unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-1 min-w-[16px] h-[16px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-0.5">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
                 <span className="text-[9px] font-medium whitespace-nowrap">{item.label}</span>
                 {isActive && (
                   <motion.div
