@@ -53,7 +53,7 @@ export function TrainingPrepSection({
   currentTrainingId,
   trainingDate,
 }: TrainingPrepSectionProps) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [showPreviousTraining, setShowPreviousTraining] = useState(false);
   
   // Client profile data
