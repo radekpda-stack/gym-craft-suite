@@ -8,6 +8,7 @@ import { FinanceStatsSection } from '@/components/statistics/FinanceStatsSection
 import { ClientStatsSection } from '@/components/statistics/ClientStatsSection';
 import { TrainingStatsSection } from '@/components/statistics/TrainingStatsSection';
 import { CareerStatsSection } from '@/components/statistics/CareerStatsSection';
+import { ExecutiveSummaryCard } from '@/components/statistics/ExecutiveSummaryCard';
 import { StatsPeriodSelector, StatsPeriodRange, getDefaultPeriodRange } from '@/components/statistics/StatsPeriodSelector';
 
 export default function Statistics() {
@@ -33,6 +34,11 @@ export default function Statistics() {
             Kompletní přehled vaší práce
           </p>
         </div>
+      </div>
+
+      {/* Executive Summary - Business overview above tabs */}
+      <div className="mb-4">
+        <ExecutiveSummaryCard />
       </div>
 
       {/* Period Selector - Global for all tabs */}
