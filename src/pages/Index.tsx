@@ -5,13 +5,12 @@ import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardActions } from '@/components/dashboard/DashboardActions';
+import { SmartDailyPlanCard } from '@/components/dashboard/SmartDailyPlanCard';
 import { TodayTimelineCompact } from '@/components/dashboard/TodayTimelineCompact';
 import { ActionCenterCard } from '@/components/dashboard/ActionCenterCard';
 import { FollowupsSection } from '@/components/dashboard/FollowupsSection';
 import { PendingPerformancesCard } from '@/components/performance/PendingPerformancesCard';
-import { WeeklyQuickStats } from '@/components/dashboard/WeeklyQuickStats';
-import { FinanceSummaryCard } from '@/components/dashboard/FinanceSummaryCard';
-import { CashflowForecastCard } from '@/components/dashboard/CashflowForecastCard';
+import { WeekOverviewCard } from '@/components/dashboard/WeekOverviewCard';
 import { DashboardInsightsRefactored } from '@/components/dashboard/DashboardInsightsRefactored';
 import { useUnassignedSessions } from '@/hooks/useUnassignedSessions';
 import { useAllUnresolvedFollowups } from '@/hooks/useTrainingFollowups';
@@ -40,18 +39,21 @@ export default function Index() {
     <div className="min-h-screen animate-fade-in">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4">
         
-        {/* ═══════════════════════════════════════════════════════════════════
-            HERO ZONE - Premium Morning Briefing with Status Bar + Metrics
-        ═══════════════════════════════════════════════════════════════════ */}
+        {/* ═══ HERO - Morning Briefing ═══ */}
         <section>
           <SectionErrorBoundary section="Hlavička" compact>
             <DashboardHeader data={data} isLoading={isLoading} />
           </SectionErrorBoundary>
         </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            TODAY TIMELINE - Enhanced with NOW indicator and quick actions
-        ═══════════════════════════════════════════════════════════════════ */}
+        {/* ═══ SMART DAILY PLAN - Proactive coaching assistant ═══ */}
+        <section>
+          <SectionErrorBoundary section="Denní plán" compact>
+            <SmartDailyPlanCard />
+          </SectionErrorBoundary>
+        </section>
+
+        {/* ═══ TODAY TIMELINE ═══ */}
         <section>
           <SectionErrorBoundary section="Dnešní tréninky" compact>
             <TodayTimelineCompact 
@@ -61,9 +63,7 @@ export default function Index() {
           </SectionErrorBoundary>
         </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            ACTION CENTER - Unified alerts with direct actions
-        ═══════════════════════════════════════════════════════════════════ */}
+        {/* ═══ ACTION CENTER ═══ */}
         {hasAnyActions && (
           <section>
             <SectionErrorBoundary section="Vyžaduje akci" compact>
@@ -80,9 +80,7 @@ export default function Index() {
           </section>
         )}
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            FOLLOWUPS SECTION - Inline view with direct actions
-        ═══════════════════════════════════════════════════════════════════ */}
+        {/* ═══ FOLLOWUPS ═══ */}
         {followupCount > 0 && (
           <section>
             <SectionErrorBoundary section="Připomenutí" compact>
@@ -100,21 +98,19 @@ export default function Index() {
           </section>
         )}
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            INSIGHT ZONE - Simplified weekly stats + smart insights
-        ═══════════════════════════════════════════════════════════════════ */}
+        {/* ═══ CONSOLIDATED OVERVIEW - Stats + Finance + Cashflow ═══ */}
         <section className="space-y-3">
-          {/* Weekly Quick Stats - Replaces complex BusinessYieldScore */}
           {data && (
-            <SectionErrorBoundary section="Týdenní přehled" compact>
-              <WeeklyQuickStats 
+            <SectionErrorBoundary section="Přehled" compact>
+              <WeekOverviewCard
+                finance={data.finance}
                 weeklySummary={data.weeklySummary}
                 isLoading={isLoading}
               />
             </SectionErrorBoundary>
           )}
 
-          {/* Dashboard Insights - Enhanced styling */}
+          {/* Dashboard Insights */}
           {data && (
             <SectionErrorBoundary section="Postřehy" compact>
               <DashboardInsightsRefactored
@@ -128,22 +124,6 @@ export default function Index() {
               />
             </SectionErrorBoundary>
           )}
-
-          {/* Finance Summary Card */}
-          {data && (
-            <SectionErrorBoundary section="Finance" compact>
-              <FinanceSummaryCard 
-                finance={data.finance} 
-                weeklySummary={data.weeklySummary}
-                isLoading={isLoading}
-              />
-            </SectionErrorBoundary>
-          )}
-
-          {/* Cashflow Forecast */}
-          <SectionErrorBoundary section="Cashflow" compact>
-            <CashflowForecastCard />
-          </SectionErrorBoundary>
         </section>
         
       </div>
