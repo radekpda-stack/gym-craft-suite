@@ -104,6 +104,8 @@ function demoTrainingToSession(demoTraining: ReturnType<typeof useDemoMode>['dem
     pain_notes: null,
     client_rpe: null,
     training_load: null,
+    session_notes: null,
+    next_session_focus: null,
   };
 }
 

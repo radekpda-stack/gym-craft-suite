@@ -22,6 +22,7 @@ import {
   useCancelTrainingSession,
 } from '@/hooks/useTrainingSessions';
 import { useCompleteTrainingAtomic } from '@/hooks/useCompleteTrainingAtomic';
+import { PreSessionCheckinCard } from '@/components/trainings/PreSessionCheckinCard';
 
 import { useTrainingSessionTags, useUpdateTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { useTrainingPrices, getTrainingPrice, useAppSettings, TrainingPrices } from '@/hooks/useAppSettings';
@@ -112,6 +113,7 @@ export default function TrainingDetail() {
   
   // Complete dialog state - now uses individual payments per participant
   const [completeNotes, setCompleteNotes] = useState('');
+  const [nextSessionFocus, setNextSessionFocus] = useState('');
   const [participantPayments, setParticipantPayments] = useState<ParticipantPayment[]>([]);
   
   // Dialog-local tag state for inline editing within complete dialog
@@ -256,6 +258,7 @@ export default function TrainingDetail() {
 
   const openCompleteDialog = () => {
     setCompleteNotes(training.notes || '');
+    setNextSessionFocus(training.next_session_focus || '');
     
     // Build participant payments from existing participants or create with primary client
     const participantCount = existingParticipants.length > 0 
@@ -369,6 +372,17 @@ export default function TrainingDetail() {
         notes: completeNotes || undefined,
       });
       
+      // Save session_notes and next_session_focus
+      if (completeNotes || nextSessionFocus) {
+        await updateTraining.mutateAsync({
+          id: training.id,
+          input: {
+            session_notes: completeNotes || null,
+            next_session_focus: nextSessionFocus || null,
+          },
+        });
+      }
+      
       // Track training completion
       trackFeature('training_complete', 'trainings', {
         metadata: {
@@ -481,6 +495,41 @@ export default function TrainingDetail() {
         onFieldUpdate={handleFieldUpdate}
       />
 
+      {/* Pre-session check-in - only for scheduled or in_progress */}
+      {(training.status === 'scheduled' || training.status === 'in_progress') && client && (
+        <PreSessionCheckinCard
+          sessionId={training.id}
+          clientId={training.client_id}
+          clientName={client.name}
+        />
+      )}
+
+      {/* Previous session focus reminder */}
+      {training.next_session_focus && training.status !== 'completed' && (
+        <div className="rounded-2xl p-4 bg-primary/5 border border-primary/20">
+          <p className="text-xs font-medium text-primary mb-1">📌 Zaměření z minulého tréninku</p>
+          <p className="text-sm text-foreground">{training.next_session_focus}</p>
+        </div>
+      )}
+      {/* Session notes for completed trainings */}
+      {training.status === 'completed' && (training.session_notes || training.next_session_focus) && (
+        <div className="rounded-2xl p-4 bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm space-y-3">
+          {training.session_notes && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">📝 Poznámky k tréninku</p>
+              <p className="text-sm text-foreground">{training.session_notes}</p>
+            </div>
+          )}
+          {training.next_session_focus && (
+            <div>
+              <p className="text-xs font-medium text-primary mb-1">📌 Zaměření příštího tréninku</p>
+              <p className="text-sm text-foreground">{training.next_session_focus}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      
       {/* Status banner for partial/warning completions */}
       {(training as any).completion_status === 'partial' && (
         <Alert variant="default" className="border-warning bg-warning/10">
@@ -539,6 +588,8 @@ export default function TrainingDetail() {
         onPriceChange={handleParticipantPriceChange}
         notes={completeNotes}
         onNotesChange={setCompleteNotes}
+        nextFocus={nextSessionFocus}
+        onNextFocusChange={setNextSessionFocus}
         onComplete={handleComplete}
         isSubmitting={isSubmitting || completeTrainingAtomic.isPending}
         canComplete={dialogTagValidation.isValid && participantPayments.length > 0}

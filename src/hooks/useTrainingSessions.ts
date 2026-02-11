@@ -53,6 +53,9 @@ export interface TrainingSession {
   // RPE and Training Load fields
   client_rpe: number | null;
   training_load: number | null;
+  // Session diary fields
+  session_notes: string | null;
+  next_session_focus: string | null;
 }
 
 export interface CreateTrainingInput {
@@ -95,6 +98,8 @@ export interface UpdateTrainingInput {
   prep_notes?: string;
   pain_reported?: boolean;
   pain_notes?: string;
+  session_notes?: string;
+  next_session_focus?: string;
 }
 
 export function useTrainingSessions(clientId?: string) {
@@ -142,6 +147,8 @@ export function useTrainingSessions(clientId?: string) {
           pain_notes: null,
           client_rpe: null,
           training_load: null,
+          session_notes: null,
+          next_session_focus: null,
         };
         
         if (clientId && demoSession.client_id !== clientId) {
