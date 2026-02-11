@@ -78,7 +78,6 @@ export function usePrefetchTrainingDetail() {
             training_session_id,
             client_id,
             payment_method,
-            payment_amount,
             created_at,
             clients (id, name)
           `)

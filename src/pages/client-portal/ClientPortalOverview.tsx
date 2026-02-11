@@ -12,6 +12,8 @@ import { ClientQuickStats } from '@/components/client-portal/dashboard/ClientQui
 import { OverallPerformanceCard } from '@/components/client-portal/dashboard/OverallPerformanceCard';
 import { LeaderboardPreviewCard } from '@/components/client-portal/dashboard/LeaderboardPreviewCard';
 import { MyExercisesWidget } from '@/components/client-portal/dashboard/MyExercisesWidget';
+import { MyTrainerCard } from '@/components/client-portal/dashboard/MyTrainerCard';
+import { PendingHomeworkWidget } from '@/components/client-portal/dashboard/PendingHomeworkWidget';
 
 export default function ClientPortalOverview() {
   const { clientProfile, clientId } = useClientPortal();
@@ -47,13 +49,19 @@ export default function ClientPortalOverview() {
       {/* 6. Quick Actions - Dynamic shortcuts */}
       <ClientQuickActions />
 
-      {/* 7. Leaderboard Preview - Compare with others */}
+      {/* 7. My Trainer Card */}
+      <MyTrainerCard />
+
+      {/* 8. Pending Homework */}
+      <PendingHomeworkWidget />
+
+      {/* 9. Leaderboard Preview - Compare with others */}
       <LeaderboardPreviewCard />
 
-      {/* 8. My Exercises Progress - Interactive sparkline cards */}
+      {/* 10. My Exercises Progress - Interactive sparkline cards */}
       <MyExercisesWidget />
 
-      {/* 9. Active Challenges (only if any) - moved to bottom */}
+      {/* 11. Active Challenges (only if any) - moved to bottom */}
       <ActiveChallengeWidget />
     </div>
   );
