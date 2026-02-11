@@ -1,11 +1,12 @@
 ## Porovnání klientů (Cohort benchmarks)
 
-**Stav:** `useExercisePercentiles` a `useExerciseLeaderboard` existují, ale chybí možnost porovnat skupinu klientů mezi sebou systematicky.
+**Stav:** ✅ Implementováno
 
-**Návrh:**
+**Co bylo přidáno:**
 
-- V Performance Hub záložka "Porovnání" -- vybrat 2-4 klienty a vidět křivky progresu vedle sebe
-- Benchmark karty: "Jak si klient X vede vs průměr všech klientů" v klíčových cvicích
-- Využít existující `MultiClientComparison` komponentu a rozšířit
-
-**Přínos:** Trenér vidí, kdo zaostává a kdo exceluje.
+- Nová záložka "Porovnání" v Performance Hub (top-level tab)
+- Benchmark karty: výběr klienta → srovnání jeho výkonů vs průměr všech klientů v klíčových cvicích
+- Vizuální indikátory (nad/na/pod průměrem) s procentuálním rozdílem
+- Existující `MultiClientComparison` (2-4 klienti, křivky progresu vedle sebe) integrován pod benchmarky
+- Hook `useCohortBenchmarks` pro výpočet srovnání klient vs průměr
+- Komponenta `CohortBenchmarkView` kombinuje benchmark karty + multi-client porovnání
