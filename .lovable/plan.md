@@ -1,59 +1,75 @@
 
-# Oprava klikani na notifikace v Notifikacnim centru
+# Oprava chyb nalezených v logu aplikace
 
-## Identifikovany problem
+## Nalezené chyby
 
-Analyzou kodu jsem zjistil dva hlavni duvody, proc kliknuti na notifikace nefunguje:
+### 1. app_events - chybí INSERT RLS politika (KRITICKÉ)
+Tabulka `app_events` má pouze SELECT politiku. Analytický kód (sledování výkonu, chyb) se pokouší zapisovat do této tabulky každých 5 sekund, ale zápis je blokován RLS. Toto generuje desítky chyb za minutu v databázových logách.
 
-### 1. Slozity system detekce kliku (hlavni pricina)
-Komponenta `UnifiedNotificationItem` pouziva vlastni detekci kliku pres `onPointerDown`/`onPointerUp` s velmi prisnymi prahovymi hodnotami:
-- Pohyb prstu musi byt mensi nez 10px v obou osach
-- Cas stisku musi byt kratsi nez 300ms
+**Dopad:** Zbytečná zátěž databáze, žádná analytická data se neukládají.
 
-Na dotykovych zarizeni i pri beznem "tapnuti" prst casto ujede o vice nez 10px, coz zpusobi, ze klik NENI rozpoznan a nic se nestane.
+### 2. client_portal_activity - chybí INSERT politika pro klientský portál
+Stávající politika `Clients can view and create own activity` používá `cmd: ALL`, ale `qual` podmínka (`client_id = get_client_id_for_user(auth.uid())`) se pravděpodobně neaplikuje správně jako `WITH CHECK` pro INSERT. Klientský portál tak nemůže zapisovat aktivitu.
 
-### 2. Konflikt udalosti u agregovanych notifikaci
-Kdyz uzivatel klikne na podpolozku agregovane notifikace (napr. konkretni zaznam stravy), soucasne se spusti i `onPointerUp` na rodicovskem prvku, ktery zbytecne prepina rozbaleni/sbaleni skupiny.
+**Dopad:** Žádná data o aktivitě klientů na portálu se neukládají.
 
-### 3. Nespolehlivy flush po zavreni sheetu
-`flushPendingAction` se vola v `handleSheetOpenChange`, ale Radix Dialog (na kterem je Sheet postaven) nemusi vzdy zavolat `onOpenChange` pri programatickem zavreni pres `setSheetOpen(false)`.
+### 3. Select.Item s prázdnou hodnotou na stránce /performance
+Chyba z logu: *"A Select.Item must have a value prop that is not an empty string."* Na stránce výkonu se vykreslují cviky v Select komponentě, kde některý cvik může mít prázdné ID.
 
----
+**Dopad:** Crash komponenty na stránce výkonu.
 
-## Reseni
-
-### A. Nahrazeni pointer-based detekce standardnim onClick
-
-Odstranit slozitou logiku s `onPointerDown`/`onPointerUp`/`touchStartRef`/`didDragRef` a nahradit ji standardnim React `onClick` handlerem na hlavnim prvku notifikace. Framer Motion drag system jiz spravne blokuje `onClick` pri tazeni, takze swipe a klik se nebudou krizit.
-
-### B. Oprava konfliktu u agregovanych podpolozek
-
-Na sub-item buttony pridat `onPointerDown` s `e.stopPropagation()` aby se zabranilo registraci pointer eventu na rodicovskem prvku.
-
-### C. Pridani useEffect safety netu pro flushPendingAction
-
-Pridat `useEffect` v `NotificationCenter`, ktery sleduje `sheetOpen` a pri zmene na `false` zavola `flushPendingAction`. Toto zarucuje, ze akce se provede i kdyz Radix `onOpenChange` nefiruje.
+### 4. "Rendered more hooks" v WorkoutExerciseManager (vyřešeno)
+Tato chyba je z 2. února a po kontrole kódu vypadá, že hooks jsou nyní volány korektně (nepodmíněně). Pravděpodobně již opraveno předchozí změnou.
 
 ---
 
-## Technicke zmeny
+## Plán oprav
 
-### Soubor 1: `src/components/notifications/UnifiedNotificationItem.tsx`
-- Odstranit `touchStartRef`, `didDragRef`, `handlePointerDown`, `handlePointerUp`
-- Pridat standardni `onClick` handler na hlavni `motion.div`
-- Upravit `handleDragEnd` aby nastavil flag blokujici nasledny onClick
-- Sub-item buttony: pridat `onPointerDown={(e) => e.stopPropagation()}`
-- Odstranit duplicitni `onTouchEnd` handler na sub-item buttonech (onClick staci)
+### Krok 1: Přidat INSERT RLS politiku pro app_events
+SQL migrace:
+```sql
+CREATE POLICY "Users can insert own events"
+ON public.app_events FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+```
 
-### Soubor 2: `src/components/notifications/NotificationCenter.tsx`
-- Pridat `useEffect` sledujici `sheetOpen` s volanim `flushPendingAction` pri zavreni
-- Zachovat stavajici logiku v `handleSheetOpenChange` jako primarni cestu
+### Krok 2: Opravit client_portal_activity RLS
+Rozdělit `ALL` politiku na specifické SELECT a INSERT politiky s korektním `WITH CHECK`:
+```sql
+-- Drop the combined ALL policy
+DROP POLICY "Clients can view and create own activity" ON public.client_portal_activity;
+
+-- Separate SELECT policy
+CREATE POLICY "Clients can view own activity"
+ON public.client_portal_activity FOR SELECT
+USING (client_id = get_client_id_for_user(auth.uid()));
+
+-- Separate INSERT policy with WITH CHECK
+CREATE POLICY "Clients can insert own activity"
+ON public.client_portal_activity FOR INSERT
+WITH CHECK (client_id = get_client_id_for_user(auth.uid()));
+```
+
+### Krok 3: Ochrana proti prázdným hodnotám v Select na /performance
+V souboru `src/components/performance/AddPerformanceSheet.tsx` přidat filtr, aby cviky s prázdným ID nebyly vykreslovány jako SelectItem:
+```tsx
+{activeExercises
+  .filter(exercise => exercise.id) // Odfiltrovat prázdné ID
+  .map((exercise) => (
+    <SelectItem key={exercise.id} value={exercise.id}>
+```
 
 ---
 
-## Dopad
+## Upravené soubory
 
-- Kliknuti na notifikaci bude fungovat spolehive na mobilu i desktopu
-- Otevre se spravny detail dialog (strava, feedback, trenink atd.)
-- Swipe gesta zustanou funkcni na desktopu
-- Zadne zmeny v UI vzhledu - pouze oprava spolehlive interakce
+| Soubor | Změna |
+|--------|-------|
+| Databázová migrace | INSERT politika pro `app_events`, oprava `client_portal_activity` |
+| `src/components/performance/AddPerformanceSheet.tsx` | Filtr prázdných exercise ID v SelectItem |
+
+## Očekávaný výsledek
+- Databázové logy přestanou být zahlceny RLS chybami (desítky za minutu zmizí)
+- Analytická data se budou správně ukládat
+- Klientský portál bude korektně zapisovat aktivitu
+- Stránka /performance přestane padat při prázdných cvicích
