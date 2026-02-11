@@ -133,244 +133,143 @@ export function useCompleteTrainingAtomic() {
         throw new Error(result.error || 'Nepodařilo se dokončit trénink');
       }
 
-      // Update individual participant payment methods in training_participants table.
-      // IMPORTANT: This is a best-effort post-step; it must NOT fail the whole completion.
-      const postUpdateErrors: Array<{ client_id: string; message: string }> = [];
-      for (const participant of params.participants) {
-        const { error: updateError } = await supabase
-          .from('training_participants')
-          .update({ payment_method: participant.payment_method })
-          .eq('training_session_id', params.sessionId)
-          .eq('client_id', participant.client_id);
+      // ── FAST PATH: Return result immediately, run post-steps in background ──
+      // All operations below are best-effort and must NOT block the UI.
 
-        if (updateError) {
-          console.warn('Post-RPC participant update failed:', {
-            sessionId: params.sessionId,
-            clientId: participant.client_id,
-            updateError,
-          });
-          postUpdateErrors.push({
-            client_id: participant.client_id,
-            message: updateError.message || 'Unknown error',
-          });
-        }
-      }
+      const backgroundTasks = async () => {
+        try {
+          // 1. Update participant payment methods in parallel
+          await Promise.all(params.participants.map(async (participant) => {
+            const { error: updateError } = await supabase
+              .from('training_participants')
+              .update({ payment_method: participant.payment_method })
+              .eq('training_session_id', params.sessionId)
+              .eq('client_id', participant.client_id);
 
-      if (postUpdateErrors.length > 0) {
-        (result as any).postUpdateErrors = postUpdateErrors;
-      }
+            if (updateError) {
+              console.warn('Post-RPC participant update failed:', participant.client_id, updateError.message);
+            }
+          }));
 
-      // NEW: Use FIFO credit lot deduction for credit payments (only if client has credit lots)
-      const creditParticipants = params.participants.filter(p => p.payment_method === 'credit');
-      const participantCount = params.participants.length;
-      const serviceId = getServiceIdForParticipants(participantCount);
-      
-      const clientsSwitchedToNewPricing: string[] = [];
-      const fifoDeductionErrors: string[] = [];
+          // 2. FIFO credit deductions + price lock checks in parallel
+          const creditParticipants = params.participants.filter(p => p.payment_method === 'credit');
+          const participantCount = params.participants.length;
+          const serviceId = getServiceIdForParticipants(participantCount);
 
-      for (const participant of creditParticipants) {
-        // First check if client has any credit lots - only use FIFO for clients with lots
-        const { data: clientLots } = await supabase
-          .from('credit_lots')
-          .select('id')
-          .eq('client_id', participant.client_id)
-          .eq('user_id', user.id)
-          .gt('balance_czk_remaining', 0)
-          .limit(1);
+          await Promise.all(creditParticipants.map(async (participant) => {
+            // Check if client has credit lots
+            const { data: clientLots } = await supabase
+              .from('credit_lots')
+              .select('id')
+              .eq('client_id', participant.client_id)
+              .eq('user_id', user.id)
+              .gt('balance_czk_remaining', 0)
+              .limit(1);
 
-        // Only call FIFO deduction if client has credit lots
-        if (clientLots && clientLots.length > 0) {
-          const { data: fifoResult, error: fifoError } = await supabase.rpc('rpc_deduct_credit_fifo', {
-            p_client_id: participant.client_id,
-            p_training_session_id: params.sessionId,
-            p_service_id: serviceId,
-            p_user_id: user.id,
-          });
+            if (clientLots && clientLots.length > 0) {
+              const { error: fifoError } = await supabase.rpc('rpc_deduct_credit_fifo', {
+                p_client_id: participant.client_id,
+                p_training_session_id: params.sessionId,
+                p_service_id: serviceId,
+                p_user_id: user.id,
+              });
+              if (fifoError) console.error('FIFO deduction error:', fifoError);
+            }
 
-          if (fifoError) {
-            console.error('FIFO deduction error:', fifoError);
-            fifoDeductionErrors.push(participant.client_id);
-          } else if (fifoResult && typeof fifoResult === 'object' && 'success' in fifoResult && !fifoResult.success) {
-            console.warn('FIFO deduction failed:', (fifoResult as any).error);
-            fifoDeductionErrors.push(participant.client_id);
-          }
-        }
-        // If client has no lots, credit deduction was already handled by main RPC
-
-        // Check if client's OLD lot is now depleted and they should switch to new pricing
-        const { data: clientData } = await supabase
-          .from('clients')
-          .select('id, name, price_lock_mode, locked_price_list_id')
-          .eq('id', participant.client_id)
-          .single();
-
-        if (clientData?.price_lock_mode === 'lock_old_until_depleted') {
-          // Check if OLD lots are depleted
-          const { data: oldLots } = await supabase
-            .from('credit_lots')
-            .select('balance_czk_remaining')
-            .eq('client_id', participant.client_id)
-            .eq('price_list_id', '00000000-0000-0000-0000-000000000001') // OLD
-            .gt('balance_czk_remaining', 0);
-
-          if (!oldLots || oldLots.length === 0) {
-            // All OLD lots depleted - switch to new pricing
-            await supabase
+            // Check price lock mode
+            const { data: clientData } = await supabase
               .from('clients')
-              .update({ 
-                price_lock_mode: 'none',
-                locked_price_list_id: null,
-              })
-              .eq('id', participant.client_id);
-            
-            clientsSwitchedToNewPricing.push(clientData.name);
-          }
-        }
-      }
+              .select('id, name, price_lock_mode, locked_price_list_id')
+              .eq('id', participant.client_id)
+              .single();
 
-      // Store switched clients in result for notification
-      if (clientsSwitchedToNewPricing.length > 0) {
-        (result as any).clientsSwitchedToNewPricing = clientsSwitchedToNewPricing;
-      }
+            if (clientData?.price_lock_mode === 'lock_old_until_depleted') {
+              const { data: oldLots } = await supabase
+                .from('credit_lots')
+                .select('balance_czk_remaining')
+                .eq('client_id', participant.client_id)
+                .eq('price_list_id', '00000000-0000-0000-0000-000000000001')
+                .gt('balance_czk_remaining', 0);
 
-      if (fifoDeductionErrors.length > 0) {
-        (result as any).fifoDeductionErrors = fifoDeductionErrors;
-      }
-      
-      // Check for training milestones for each participant
-      for (const participant of params.participants) {
-        const { data: clientData } = await supabase
-          .from('clients')
-          .select('name')
-          .eq('id', participant.client_id)
-          .single();
-        
-        if (clientData?.name) {
-          checkTrainingStreak(user.id, participant.client_id, clientData.name);
-        }
-      }
+              if (!oldLots || oldLots.length === 0) {
+                await supabase
+                  .from('clients')
+                  .update({ price_lock_mode: 'none', locked_price_list_id: null })
+                  .eq('id', participant.client_id);
+              }
+            }
+          }));
 
-      // Auto-sync workout entries to exercise_entries for all participants
-      // This ensures exercise history is recorded for each participant individually
-      try {
-        const { data: sessionData } = await supabase
-          .from('training_sessions')
-          .select('client_id, date')
-          .eq('id', params.sessionId)
-          .single();
-        
-        if (sessionData) {
-          await syncWorkoutEntriesToStats({
-            trainingSessionId: params.sessionId,
-            clientId: sessionData.client_id,
-            trainingDate: sessionData.date,
-          });
+          // 3. Training streak checks + workout sync in parallel
+          await Promise.all([
+            // Streak checks
+            ...params.participants.map(async (participant) => {
+              const { data: clientData } = await supabase
+                .from('clients')
+                .select('name')
+                .eq('id', participant.client_id)
+                .single();
+              if (clientData?.name) {
+                checkTrainingStreak(user.id, participant.client_id, clientData.name);
+              }
+            }),
+            // Workout entries sync
+            (async () => {
+              const { data: sessionData } = await supabase
+                .from('training_sessions')
+                .select('client_id, date')
+                .eq('id', params.sessionId)
+                .single();
+              if (sessionData) {
+                await syncWorkoutEntriesToStats({
+                  trainingSessionId: params.sessionId,
+                  clientId: sessionData.client_id,
+                  trainingDate: sessionData.date,
+                });
+              }
+            })(),
+          ]);
+        } catch (bgError) {
+          console.warn('Background post-completion tasks error:', bgError);
         }
-      } catch (syncError) {
-        console.warn('Auto-sync workout entries failed:', syncError);
-        // Don't fail the completion - sync can be done manually
-      }
+      };
+
+      // Fire and forget – don't await
+      backgroundTasks();
       
       return result;
     },
     onSuccess: (result, params) => {
-      // CRITICAL: Granulární invalidace pro každého účastníka tréninku
-      // Toto zajistí okamžitou aktualizaci zůstatků a PRs v UI
+      // Invalidate per-participant caches
       for (const participant of params.participants) {
-        queryClient.invalidateQueries({ 
-          queryKey: ["clients", participant.client_id],
-          refetchType: 'all',
-        });
-        queryClient.invalidateQueries({ 
-          queryKey: ["credit_transactions", participant.client_id],
-          refetchType: 'all',
-        });
-        queryClient.invalidateQueries({ 
-          queryKey: ["shared_budget_balance", participant.client_id],
-          refetchType: 'all',
-        });
-        // Invalidovat PRs pro každého účastníka
-        queryClient.invalidateQueries({ 
-          queryKey: ["client-exercise-prs", participant.client_id],
-          refetchType: 'all',
-        });
+        queryClient.invalidateQueries({ queryKey: ["clients", participant.client_id], refetchType: 'all' });
+        queryClient.invalidateQueries({ queryKey: ["credit_transactions", participant.client_id], refetchType: 'all' });
+        queryClient.invalidateQueries({ queryKey: ["shared_budget_balance", participant.client_id], refetchType: 'all' });
+        queryClient.invalidateQueries({ queryKey: ["client-exercise-prs", participant.client_id], refetchType: 'all' });
       }
       
-      // Invalidate all relevant queries atomically with refetchType
-      queryClient.invalidateQueries({ queryKey: ["training_sessions"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["training_session"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["clients"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["credit_transactions"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["budget_groups"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["training_participants"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["shared_budget"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["unpaid-trainings"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["today-alerts"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["credit-signal-stats"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["clients_price_status"], refetchType: 'all' });
-      
-      // Invalidate credit lots queries
-      queryClient.invalidateQueries({ queryKey: ["credit_lots"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["credit_consumptions"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ["credit_summary"], refetchType: 'all' });
-      
-      // Globální invalidace PRs
-      queryClient.invalidateQueries({ queryKey: ["client-exercise-prs"], refetchType: 'all' });
-
-      // Notify about clients switched to new pricing
-      const switchedClients = (result as any).clientsSwitchedToNewPricing as string[] | undefined;
-      if (switchedClients && switchedClients.length > 0) {
-        toast({ 
-          title: "Přechod na nové ceny",
-          description: `${switchedClients.join(', ')} vyčerpal/a předplacený kredit a přechází na nové ceny.`,
-          variant: "default",
-          duration: 8000,
-        });
-      }
-      
-      // Warn about FIFO deduction errors
-      const fifoErrors = (result as any).fifoDeductionErrors as string[] | undefined;
-      if (fifoErrors && fifoErrors.length > 0) {
-        toast({ 
-          title: "Varování: Chyba při FIFO stržení",
-          description: `U ${fifoErrors.length} klientů se nepodařilo správně strhnout kredit.`,
-          variant: "destructive",
-        });
-      }
-
-      // Warn about post-RPC participant update issues (non-blocking)
-      const postUpdateErrors = (result as any).postUpdateErrors as Array<{ client_id: string; message: string }> | undefined;
-      if (postUpdateErrors && postUpdateErrors.length > 0) {
-        toast({
-          title: 'Trénink dokončen (s varováním)',
-          description: `Nepodařilo se uložit platbu u ${postUpdateErrors.length} účastníků.`,
-          variant: 'destructive',
-        });
+      // Batch invalidate global queries
+      const globalKeys = [
+        "training_sessions", "training_session", "clients", "credit_transactions",
+        "budget_groups", "training_participants", "shared_budget", "unpaid-trainings",
+        "today-alerts", "shared_budget_balance", "credit-signal-stats", "clients_price_status",
+        "credit_lots", "credit_consumptions", "credit_summary", "client-exercise-prs",
+      ];
+      for (const key of globalKeys) {
+        queryClient.invalidateQueries({ queryKey: [key], refetchType: 'all' });
       }
       
       if (result.idempotent) {
-        toast({ 
-          title: "Trénink již byl dokončen",
-          description: "Žádné další změny nebyly provedeny.",
-        });
+        toast({ title: "Trénink již byl dokončen", description: "Žádné další změny nebyly provedeny." });
       } else {
-        const deductedCount = result.deductions?.filter(d => d.deducted).length || 0;
         const creditTotal = params.participants
           .filter(p => p.payment_method === 'credit')
           .reduce((sum, p) => sum + p.price_share, 0);
         
-        if (creditTotal > 0) {
-          toast({ 
-            title: "Trénink dokončen",
-            description: `Z kreditu odečteno: ${creditTotal} Kč`,
-          });
-        } else {
-          toast({ 
-            title: "Trénink dokončen",
-            description: "Žádné kredity nebyly odečteny",
-          });
-        }
+        toast({ 
+          title: "Trénink dokončen",
+          description: creditTotal > 0 ? `Z kreditu odečteno: ${creditTotal} Kč` : "Žádné kredity nebyly odečteny",
+        });
       }
     },
     onError: (error: Error) => {
