@@ -1,108 +1,177 @@
 
-# Kompletní vyladění kreditového systému na bankovní kvalitu
 
-## ✅ DOKONČENO - 8. února 2026
+# Zrychleni a modernizace karty treningu a dokoncovani
 
-### Co bylo implementováno:
+## Analyza soucasneho stavu
 
-#### Fáze 1: Unifikace zdrojů dat v UI ✅
-- `TrainingDetail.tsx` - Přepnuto na `useCreditBalanceValue` hook
-- `NewSaleDialog.tsx` - Přepnuto na `useCreditBalance` hook (s podporou skupin)
-- `QuickProductSale.tsx` - Přepnuto na `useCreditBalance` hook (s podporou skupin)
-- Všechny komponenty nyní čtou z running balance (jediný zdroj pravdy)
+### Co trener dnes musi udelat pro dokonceni:
+1. Otevrit kartu treningu ze rozvrhu
+2. Scrollovat pres "Priprava" sekci (zbytecne pri dokoncovani)
+3. Scrollovat ke "Klasifikace" (tagy, RPE)
+4. Scrollovat ke "Cviky" 
+5. Scrollovat ke "Rychle akce" (uplne dole!)
+6. Klik "DOKONCIT TRENINK" → otevre dialog
+7. V dialogu: zkontrolovat/doplnit tagy (pokud chybi)
+8. V dialogu: zkontrolovat platby
+9. Volitelne: pridat poznamky
+10. Klik "Dokoncit"
 
-#### Fáze 2: Předoperační validace ✅
-- Nová RPC funkce `rpc_validate_credit_operation` pro kontrolu limitu dluhu
-- Upravena `rpc_credit_deduct` s validací max dluhu -10 000 Kč
-- Vrací jasnou chybovou hlášku při překročení limitu
+### Identifikovane problemy:
 
-#### Fáze 3: Real-time notifikace ✅
-- Vylepšen `useCreditRealtime` hook s volitelnou `showNotifications` option
-- Toast notifikace při změně zůstatku (dobití/odečtení)
-- Podpora pro individuální i skupinové účty
-- Prevence duplicitních notifikací pomocí `lastTxIdRef`
+**A) Prilis mnoho scrollovani**
+- "Rychle akce" (hlavni CTA) je az pod cviky, casto mimo obrazovku
+- Trener musi scrollovat nahoru i dolu aby nasel co potrebuje
+- Na mobilu je to 3-5 screenu obsahu
 
-#### Fáze 4: Vylepšení cache synchronizace ✅
-- Automatická aktualizace `credit_balance_v2` cache při real-time událostech
-- Invalidace všech souvisejících queries při skupinových změnách
-- Zero staleTime - vždy čerstvá data
+**B) Duplicita v completion dialogu**
+- Tagy se edituji na karte I v dialogu
+- Popis "Zkontrolujte tagy a platby" ale tagy uz mohou byt vyplnene z karty
+- Dialog opakuje informace ktere uz trener videl
+
+**C) Platebni sekce je tezkopadna**
+- 5 platebnih tlacitiek na jeden radek = male tlacitka, tezke trefit na mobilu
+- Animated pill indikator pridava vizualni "noise" bez praktickeho vyznamu
+- Input pro cenu neni dobre viditelny
+
+**D) QuickActions a ActionBar jsou oddelene**
+- `QuickActionsSection` je v hlavnim obsahu (scrollovatelny)
+- `TrainingActionBar` (sticky bottom) neni vyuzivan v TrainingDetail
+- Hlavni akce neni vzdy viditelna
+
+**E) Prilis mnoho sekcí naraz**
+- PrepSection, Participants, PRs, Tags, Exercises, QuickSale, QuickActions
+- Vsechno je na jedne dlouhe strance
+- Chybi vizualni hierarchie "co je dulezite NYNI"
 
 ---
 
-## Aktuální stav systému
+## Navrhovane zmeny
 
-### Co funguje správně:
-- **Running balance**: Všech 588+ transakcí má správně vypočítaný `balance_after`
-- **Zero discrepancies**: Audit potvrdil 0 rozdílů mezi uloženými zůstatky a ledgerem
-- **Real-time synchronizace**: WebSocket subscriptions fungují pro okamžité aktualizace
-- **Skupinové rozpočty**: Všech 8 skupin má synchronizované zůstatky
-- **Denní audit**: Edge function `daily-financial-audit` automaticky detekuje a opravuje problémy
-- **Jednotný zdroj dat**: Všechny UI komponenty používají `useCreditBalance` hook
-- **Validace dluhu**: Max dluh -10 000 Kč s jasnou chybovou hláškou
+### 1. Sticky bottom action bar (KRITICKE)
 
----
-
-## Architektura
+Pridat fixni spodni listu se stavem treningu a hlavni akci, aby "Dokoncit" bylo vzdy dostupne bez scrollovani.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                   EVENT SOURCING ARCHITEKTURA                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │              COMMAND: RPC Operace                        │   │
-│   │  ─────────────────────────────────────────────────────   │   │
-│   │  • rpc_credit_add (dobití)                               │   │
-│   │  • rpc_credit_deduct (trénink, prodej) + validace dluhu  │   │
-│   │  • rpc_credit_refund (zrušení, vratka)                   │   │
-│   │  • rpc_credit_transfer (převod mezi účty)                │   │
-│   └──────────────────────┬──────────────────────────────────┘   │
-│                          │                                       │
-│                          ▼                                       │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │       credit_transactions + balance_after (immutable)    │   │
-│   └──────────────────────┬──────────────────────────────────┘   │
-│                          │                                       │
-│            ┌─────────────┴─────────────┐                        │
-│            ▼                           ▼                        │
-│   ┌─────────────────────┐   ┌─────────────────────┐             │
-│   │  useCreditBalance   │   │  REALTIME BROADCAST │             │
-│   │  (unified hook)     │   │  WebSocket → Toast  │             │
-│   └─────────────────────┘   └─────────────────────┘             │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────┐
+│  ✓ Tagy OK  │  900 Kč  │  RPE 7│
+│  ═══════════════════════════════│
+│  [DOKONCIT TRENINK]             │
+└─────────────────────────────────┘
 ```
 
+- Zobrazuje stav pripravenosti (tagy ✓/✗, RPE, cena)
+- Hlavni tlacitko je VZDY viditelne
+- Kliknuti otevre zjednoduseny completion sheet
+- Na mobilu: `safe-area-bottom` pro iPhone notch
+
+### 2. Zjednoduseny completion flow (Bottom Sheet misto Dialog)
+
+Nahradit `Dialog` za `Sheet` (bottom sheet na mobilu), ktery obsahuje POUZE to, co trener jeste nevyplnil:
+
+**Krok 1 - Smart completion sheet:**
+- Pokud tagy CHYBI → zobrazit CompactTagSelector
+- Pokud tagy OK → preskocit, jen zobrazit shrnuti
+- Platebni metoda: vetsi tlacitka (3 sloupce misto 5)
+- RPE: pokud chybi, zobrazit inline
+- Poznamky: collapsible, ne vzdy viditelne
+
+**Krok 2 - Jednim klikem:**
+- Tlacitko "Dokoncit" s animovanym loading state
+- Summary overlay se zobrazi po uspesnem dokonceni
+
+### 3. Preusporadani karty treningu
+
+Nova hierarchie sekcí:
+
+```
+1. HeroHeader (beze zmeny - kompaktni, OK)
+2. TAGS + RPE (presunout NAD cviky, je to meta-info)
+   → Kompaktnější: 1 radek typ + partie, RPE vedle
+3. EXERCISES (hlavni obsah - dominantni)
+4. PREP SECTION (ve výchozím stavu SBALENE)
+   → Otevira se klepnutim, ne automaticky
+5. PARTICIPANTS (zobrazit jen pokud > 1)
+6. QUICK SALE (beze zmeny)
+7. [STICKY BOTTOM BAR - Dokončit]
+```
+
+### 4. Vylepšeni ParticipantPaymentCard
+
+- Zvetsit platebni tlacitka na 3 sloupce (Kredit, Hotove, Jine)
+- "Jine" rozbali dropdown s Karta/Banka/Pozdeji
+- Odstranit animovany pill - nahradit jednoduchym aktivnim stavem
+- Zobrazit kreditovy zustatek vyrazneji
+- Editace ceny: vetsi input, jasnejsi design
+
+```
+┌─────────────────────────────────┐
+│ 👤 Jan Novak          900 Kč   │
+│ Kredit: 4 200 → 3 300 Kč      │
+│ ┌─────────┬─────────┬────────┐ │
+│ │💰KREDIT │💵HOTOVĚ │  JINÉ  │ │
+│ └─────────┴─────────┴────────┘ │
+└─────────────────────────────────┘
+```
+
+### 5. Smart defaults a auto-completion
+
+- Pokud klient ma `payment_mode = 'credit'` a dostatek kreditu → automaticky vybrat kredit, netrebovat potvrzeni
+- Pokud vsechny tagy uz jsou vyplnene a RPE nastaveno → skip tag sekci v dialogu kompletne
+- Pokud 1 ucastnik, kredit staci → "Quick complete" - jedno kliknuti dokoncí vše
+
+### 6. Vizualni vylepseni
+
+- **Tags sekce**: kompaktnejsi, jednorádkovy layout pro typ + partie
+- **RPE**: integrovany primo do tag řádku (ne samostatna sekce)
+- **Completion sheet**: gradient header s ikonami stavu
+- **Platební tlačítka**: vetsi touch target (min 48px vyska)
+- **Prep sekce**: defaultne sbalena s badge poctu upozorneni
+
 ---
 
-## Testovací scénáře
+## Technicke zmeny
 
-Po implementaci ověřit:
+### Soubory k uprave:
 
-1. **Dokončení tréninku** → Okamžitá aktualizace zůstatku na kartě klienta ✅
-2. **Prodej produktu** → Správné odečtení z individuálního i skupinového účtu ✅
-3. **Dobití kreditu** → Viditelné v "Poslední pohyby" bez refreshe ✅
-4. **Zrušení tréninku** → Vratka kreditu se zobrazí okamžitě ✅
-5. **Klientský portál** → Stejný zůstatek jako v admin rozhraní ✅
-6. **Více zařízení** → Real-time sync mezi tabletem a telefonem ✅
-7. **Překročení dluhu** → Jasná chybová hláška při pokusu o překročení -10 000 Kč ✅
-
----
-
-## Soubory změněné
-
-| Soubor | Změna |
+| Soubor | Zmena |
 |--------|-------|
-| `src/pages/TrainingDetail.tsx` | Import `useCreditBalanceValue`, nahrazení `client?.credit_balance` |
-| `src/components/sales/NewSaleDialog.tsx` | Přepnuto na `useCreditBalance` s podporou skupin |
-| `src/components/sales/QuickProductSale.tsx` | Přepnuto na `useCreditBalance` s podporou skupin |
-| `src/hooks/useCreditRealtime.ts` | Přidány toast notifikace, prevence duplicit |
-| Databáze | `rpc_validate_credit_operation`, vylepšená `rpc_credit_deduct` |
+| `TrainingDetailView.tsx` | Preusporadat sekce, prep defaultne sbalena |
+| `TrainingDetail.tsx` | Nahradit Dialog za Sheet, pridat sticky bar |
+| `ParticipantPaymentCard.tsx` | 3-sloupcovy layout, vetsi tlacitka, bez pill animace |
+| `CompactTagGridSelector.tsx` | Kompaktnejsi layout, RPE inline |
+| `QuickActionsSection.tsx` | Zjednodusit, presunout do sticky baru |
+| `InlineRPESelector.tsx` | Vetsi touch targets, vizualni upgrade |
+
+### Nové komponenty:
+
+| Komponenta | Popis |
+|------------|-------|
+| `TrainingStatusBar.tsx` | Sticky spodni lista s pripravenosti a CTA |
+| `SmartCompletionSheet.tsx` | Bottom sheet ktery zobrazuje jen co chybi |
+
+### Logika Smart Completion:
+
+```typescript
+// Urcit co jeste chybi
+const completionState = {
+  tagsReady: tagValidation.isValid,
+  rpeSet: coachRPE !== null,
+  paymentsSet: true, // auto-filled z defaults
+  canQuickComplete: tagValidation.isValid && coachRPE !== null 
+    && participantPayments.every(p => p.payment_method === 'credit'),
+};
+
+// Pokud vse pripraveno → quick complete bez sheetu
+// Pokud neco chybi → sheet s chybejicimi sekcemi
+```
 
 ---
 
-## Budoucí vylepšení (volitelná)
+## Ocekavany vysledek
 
-- [ ] Dashboard widget `CreditHealthWidget` pro rychlý přehled zdraví systému
-- [ ] Slack/Email notifikace při automatické opravě diskrepancí
-- [ ] Export transakční historie do PDF pro účetnictví
+- **Pred**: 7-10 klepnuti, 3-5 screenu scrollovani
+- **Po**: 2-4 klepnuti, 0 scrollovani (sticky bar vzdy viditelny)
+- Trener dokoncí 90% treninkl jedním klepnutím (smart defaults)
+- Platebni sekce je prehlednejsi a snazsi na dotek
+- Karta treningu je vizuálne cistejsi s jasnou hierarchii
+
