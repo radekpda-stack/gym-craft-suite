@@ -13,7 +13,9 @@ import {
   Users,
   Check,
   Zap,
+  AlertTriangle,
 } from 'lucide-react';
+import { useScheduleClientContext } from '@/hooks/useScheduleClientContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -73,6 +75,7 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
   onOpenFeedback,
 }: TodayTimelineCompactProps) {
   const navigate = useNavigate();
+  const { contextMap } = useScheduleClientContext();
 
   // Calculate NOW position
   const now = new Date();
@@ -245,38 +248,67 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
                   </div>
 
                   {/* Content */}
-                  <button
-                    onClick={() => navigate(`/trainings/${training.id}`)}
-                    className="flex-1 min-w-0 text-left"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-muted-foreground tabular-nums">
-                        {training.time || '—'}
-                      </span>
-                      <span className={cn(
-                        'font-medium truncate',
-                        isCancelled && 'text-muted-foreground'
-                      )}>
-                        {training.clientName || 'Nepřiřazeno'}
-                      </span>
-                      {(training.participantCount || 1) > 1 && (
-                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 gap-0.5 shrink-0">
-                          <Users className="w-2.5 h-2.5" />
-                          {training.participantCount}×
-                        </Badge>
-                      )}
-                    </div>
-                    {isNext && !isCurrentSlot && relativeTime && (
-                      <span className="text-xs text-primary font-medium">
-                        {relativeTime}
-                      </span>
-                    )}
-                    {isCurrentSlot && !isCompleted && (
-                      <span className="text-xs text-destructive font-medium">
-                        Probíhá právě teď
-                      </span>
-                    )}
-                  </button>
+                  {(() => {
+                    const ctx = contextMap.get(training.clientId);
+                    return (
+                      <button
+                        onClick={() => navigate(`/trainings/${training.id}`)}
+                        className="flex-1 min-w-0 text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                            {training.time || '—'}
+                          </span>
+                          {/* Readiness dot */}
+                          {ctx && !isCompleted && !isCancelled && (
+                            <span className={cn(
+                              'w-2 h-2 rounded-full shrink-0',
+                              ctx.hasRecentPain ? 'bg-destructive' :
+                              ctx.lastRpe != null && ctx.lastRpe >= 8 ? 'bg-warning' : 'bg-success'
+                            )} />
+                          )}
+                          <span className={cn(
+                            'font-medium truncate',
+                            isCancelled && 'text-muted-foreground'
+                          )}>
+                            {training.clientName || 'Nepřiřazeno'}
+                          </span>
+                          {(training.participantCount || 1) > 1 && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 gap-0.5 shrink-0">
+                              <Users className="w-2.5 h-2.5" />
+                              {training.participantCount}×
+                            </Badge>
+                          )}
+                          {/* Credit badge */}
+                          {ctx && ctx.paymentMode !== 'cash_only' && ctx.creditBalance != null && ctx.creditBalance > 0 && !isCompleted && (
+                            <span className={cn(
+                              'text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0',
+                              ctx.creditBalance < 800 ? 'bg-warning/10 text-warning' : 'bg-muted/50 text-muted-foreground'
+                            )}>
+                              {ctx.creditBalance} Kč
+                            </span>
+                          )}
+                        </div>
+                        {/* Context row - feedback notes */}
+                        {ctx?.recentFeedbackNote && !isCompleted && !isCancelled && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
+                            <span className="text-[11px] text-warning truncate">{ctx.recentFeedbackNote}</span>
+                          </div>
+                        )}
+                        {isNext && !isCurrentSlot && relativeTime && (
+                          <span className="text-xs text-primary font-medium">
+                            {relativeTime}
+                          </span>
+                        )}
+                        {isCurrentSlot && !isCompleted && (
+                          <span className="text-xs text-destructive font-medium">
+                            Probíhá právě teď
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })()}
 
                   {/* Quick Actions */}
                   <div className="flex items-center gap-1 shrink-0">
