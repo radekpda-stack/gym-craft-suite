@@ -71,7 +71,7 @@ export function CartPanel({
   const activeIndex = PAYMENT_METHODS.findIndex(m => m.value === paymentMethod);
 
   return (
-    <div className="card-floating rounded-xl p-4 space-y-4">
+    <div data-cart-panel className="card-floating rounded-xl p-4 space-y-4">
       {/* Header with clear button */}
       <div className="flex items-center justify-between">
         <Label className="flex items-center gap-2 text-sm font-semibold">
