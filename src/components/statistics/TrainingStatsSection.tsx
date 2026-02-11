@@ -8,6 +8,7 @@ import { TrainingDurationCard } from './TrainingDurationCard';
 import { GlobalTagDistributionCard } from './GlobalTagDistributionCard';
 import { InteractiveHeatmapCard } from './InteractiveHeatmapCard';
 import { PeriodComparisonCard } from './PeriodComparisonCard';
+import { SmartBusinessInsights } from './SmartBusinessInsights';
 import { FeedbackTagCorrelation } from '@/components/feedback/FeedbackTagCorrelation';
 import type { StatsPeriodRange } from './StatsPeriodSelector';
 import { differenceInDays } from 'date-fns';
@@ -62,6 +63,9 @@ export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps)
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
+      {/* Smart Insights */}
+      <SmartBusinessInsights tab="training" maxItems={2} />
+
       {/* Period Comparison Card - uses global periodRange */}
       <PeriodComparisonCard periodRange={periodRange} />
 

@@ -1,6 +1,6 @@
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
-import { InsightsBar, generateClientInsights } from './InsightsBar';
+import { SmartBusinessInsights } from './SmartBusinessInsights';
 import { ClientHealthDashboard } from './ClientHealthDashboard';
 import { ClientLTVRankingCard } from './ClientLTVRankingCard';
 import { ClientTenureCard } from './ClientTenureCard';
@@ -27,16 +27,6 @@ export function ClientStatsSection({ periodRange }: ClientStatsSectionProps) {
 
   const isLoading = analyticsLoading || statsLoading;
 
-  // Generate insights
-  const insights = generateClientInsights(
-    {
-      activeClients30Days: analytics?.activeClients30Days,
-      churnedClients: analytics?.churnedClientsCount,
-      newClients: analytics?.newClientsCount,
-    },
-    analytics?.retentionRate
-  );
-
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -54,10 +44,8 @@ export function ClientStatsSection({ periodRange }: ClientStatsSectionProps) {
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Insight Bar */}
-      {insights.length > 0 && (
-        <InsightsBar insights={insights} />
-      )}
+      {/* Smart Insights */}
+      <SmartBusinessInsights tab="client" maxItems={3} />
 
       {/* Client Health Dashboard - consolidated view with all key metrics */}
       <ClientHealthDashboard periodRange={periodRange} />

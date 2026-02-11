@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useAnnualStats } from '@/hooks/useAnnualStats';
 import { useBusinessAnalytics } from '@/hooks/useBusinessAnalytics';
 import { useMonthlyIncomeGoal } from '@/hooks/useAppSettings';
-import { InsightsBar, generateFinanceInsights } from './InsightsBar';
+import { SmartBusinessInsights } from './SmartBusinessInsights';
+import { ProfitLossCard } from './ProfitLossCard';
 import { CancellationStatsCard } from './CancellationStatsCard';
 import { FinanceHeroKPI } from './FinanceHeroKPI';
 import { MonthlyIncomeCard } from './MonthlyIncomeCard';
@@ -40,12 +41,6 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
   const [activeModal, setActiveModal] = useState<FinanceModal>(null);
 
   const isLoading = statsLoading || analyticsLoading;
-
-  // Generate insights - must be before any conditional return
-  const insights = generateFinanceInsights(
-    stats ? { ...stats, pendingPayments: stats.pendingPayments } : null,
-    analytics?.vsLastMonth
-  );
 
   const hasPendingPayments = (stats?.pendingPayments?.count || 0) > 0;
 
@@ -93,10 +88,11 @@ export function FinanceStatsSection({ periodRange }: FinanceStatsSectionProps) {
           <QuickFinancialReportButton variant="outline" />
         </div>
 
-        {/* Insight Bar */}
-        {insights.length > 0 && (
-          <InsightsBar insights={insights} />
-        )}
+        {/* Smart Insights */}
+        <SmartBusinessInsights tab="finance" maxItems={3} />
+
+        {/* Profit & Loss Card */}
+        <ProfitLossCard periodRange={periodRange} />
 
         {/* Hero KPI Cards - always use 'received' mode */}
         <FinanceHeroKPI

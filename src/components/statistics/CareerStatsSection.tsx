@@ -1,14 +1,17 @@
 /**
- * Career Stats Section - Executive dashboard with key business metrics
- * Uses periodRange for period-based stats + lifetime milestones
+ * Career Stats Section - Business Dashboard with key metrics, trends, and forecasts
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLifetimeStats } from "@/hooks/useLifetimeStats";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { StatInfoTooltip } from "./StatInfoTooltip";
 import { CareerMilestonesTimeline } from "./CareerMilestonesTimeline";
+import { HourlyRateTrendCard } from "./HourlyRateTrendCard";
+import { CapacityUtilizationCard } from "./CapacityUtilizationCard";
+import { RevenuePerClientCard } from "./RevenuePerClientCard";
+import { RevenueForecastCard } from "./RevenueForecastCard";
+import { SmartBusinessInsights } from "./SmartBusinessInsights";
 import { 
   Trophy, 
   Dumbbell, 
@@ -24,60 +27,13 @@ interface CareerStatsSectionProps {
   periodRange?: StatsPeriodRange;
 }
 
-// KPI Card component with floating style
-function KPICard({ 
-  icon: Icon, 
-  label, 
-  value, 
-  subValue,
-  iconColor = "text-primary",
-  iconBg = "bg-primary/10",
-  borderColor = "border-primary/20"
-}: { 
-  icon: React.ElementType; 
-  label: string; 
-  value: string | number; 
-  subValue?: string;
-  iconColor?: string;
-  iconBg?: string;
-  borderColor?: string;
-}) {
-  return (
-    <Card className={cn(
-      "relative overflow-hidden transition-all duration-200",
-      "bg-card/80 backdrop-blur-md",
-      "hover:shadow-md hover:-translate-y-0.5",
-      "border shadow-sm",
-      borderColor
-    )}>
-      {/* Background gradient */}
-      <div className={cn("absolute inset-0 opacity-20 bg-gradient-to-br to-transparent", iconBg)} />
-      
-      <CardContent className="relative p-4">
-        <div className="flex items-start gap-3">
-          <div className={cn("p-2.5 rounded-xl shrink-0 shadow-sm", iconBg)}>
-            <Icon className={cn("h-5 w-5", iconColor)} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest truncate">{label}</p>
-            <p className="text-xl font-bold text-foreground tabular-nums">{value}</p>
-            {subValue && (
-              <p className="text-[10px] text-muted-foreground">{subValue}</p>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function LoadingSkeleton() {
   return (
     <div className="space-y-4">
-      <Skeleton className="h-24 rounded-xl" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <Skeleton className="h-16 rounded-xl" />
+      <div className="grid grid-cols-2 gap-3">
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-24 rounded-xl" />
+          <Skeleton key={i} className="h-28 rounded-xl" />
         ))}
       </div>
       <Skeleton className="h-64 rounded-xl" />
@@ -110,66 +66,35 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <Card className={cn(
-        "relative overflow-hidden",
-        "bg-card/80 backdrop-blur-md",
-        "border-primary/20 shadow-lg shadow-primary/5"
-      )}>
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
-        <CardContent className="relative py-5">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-primary/20 shadow-lg shadow-primary/20 ring-1 ring-primary/30">
-              <Trophy className="h-7 w-7 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-foreground">Kariérní přehled</h2>
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                Od {startDate}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Smart Insights */}
+      <SmartBusinessInsights tab="career" maxItems={2} />
 
-      {/* Lifetime KPI Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KPICard
-          icon={Dumbbell}
-          label="Celkem tréninků"
-          value={stats.totalTrainings.toLocaleString('cs-CZ')}
-          iconColor="text-primary"
-          iconBg="bg-primary/10"
-          borderColor="border-primary/20"
-        />
-        <KPICard
-          icon={Clock}
-          label="Celkem hodin"
-          value={`${stats.totalHours.toLocaleString('cs-CZ')} h`}
-          iconColor="text-accent"
-          iconBg="bg-accent/10"
-          borderColor="border-accent/20"
-        />
-        <KPICard
-          icon={Users}
-          label="Unikátních klientů"
-          value={stats.uniqueClients}
-          subValue="se kterými jste trénoval/a"
-          iconColor="text-primary"
-          iconBg="bg-primary/10"
-          borderColor="border-primary/20"
-        />
-        <KPICard
-          icon={Banknote}
-          label="Hodinová sazba"
-          value={formatCurrency(stats.avgHourlyRate)}
-          subValue="průměrně"
-          iconColor="text-emerald-500"
-          iconBg="bg-emerald-500/10"
-          borderColor="border-emerald-500/20"
-        />
+      {/* Business Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <HourlyRateTrendCard />
+        <RevenuePerClientCard />
+        <CapacityUtilizationCard />
+        {/* Lifetime summary compact card */}
+        <Card className="bg-card/80 backdrop-blur-md border-border/50 hover:shadow-md transition-all duration-200">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Celkem tréninků</p>
+                <p className="text-2xl font-bold tabular-nums mt-1">{stats.totalTrainings.toLocaleString('cs-CZ')}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {stats.totalHours.toLocaleString('cs-CZ')} h • {stats.uniqueClients} klientů • od {startDate}
+                </p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-primary/10">
+                <Trophy className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Revenue Forecast */}
+      <RevenueForecastCard />
 
       {/* Career Milestones Timeline */}
       <CareerMilestonesTimeline />
@@ -182,10 +107,6 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
               <Dumbbell className="h-4 w-4 text-primary" />
             </div>
             Rozdělení podle typu (celkem)
-            <StatInfoTooltip
-              title="Typy tréninků"
-              description="Distribuce všech tréninků podle jejich hlavního zaměření."
-            />
           </CardTitle>
         </CardHeader>
         <CardContent>
