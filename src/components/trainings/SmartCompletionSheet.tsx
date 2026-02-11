@@ -58,6 +58,10 @@ interface SmartCompletionSheetProps {
   notes: string;
   onNotesChange: (notes: string) => void;
   
+  // Next session focus
+  nextFocus: string;
+  onNextFocusChange: (focus: string) => void;
+  
   // Actions
   onComplete: () => void;
   isSubmitting: boolean;
@@ -79,6 +83,8 @@ export function SmartCompletionSheet({
   onPriceChange,
   notes,
   onNotesChange,
+  nextFocus,
+  onNextFocusChange,
   onComplete,
   isSubmitting,
   canComplete,
@@ -211,16 +217,28 @@ export function SmartCompletionSheet({
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <ChevronDown className={cn("w-3 h-3 transition-transform", showNotes && "rotate-180")} />
-              Poznámky
+              Poznámky k tréninku
             </button>
             {showNotes && (
-              <Textarea
-                value={notes}
-                onChange={(e) => onNotesChange(e.target.value)}
-                placeholder="Přidat poznámku..."
-                rows={2}
-                className="mt-1.5 text-sm resize-none bg-secondary/30 border-border/50"
-              />
+              <div className="space-y-3 mt-1.5">
+                <Textarea
+                  value={notes}
+                  onChange={(e) => onNotesChange(e.target.value)}
+                  placeholder="Co fungovalo, co ne, postřehy..."
+                  rows={2}
+                  className="text-sm resize-none bg-secondary/30 border-border/50"
+                />
+                <div>
+                  <Label className="text-xs text-muted-foreground">Zaměření příštího tréninku</Label>
+                  <Textarea
+                    value={nextFocus}
+                    onChange={(e) => onNextFocusChange(e.target.value)}
+                    placeholder="Na co se zaměřit příště..."
+                    rows={1}
+                    className="text-sm resize-none bg-secondary/30 border-border/50 mt-1"
+                  />
+                </div>
+              </div>
             )}
           </div>
         </div>

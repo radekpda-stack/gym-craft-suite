@@ -7845,6 +7845,74 @@ export type Database = {
           },
         ]
       }
+      pre_session_checkins: {
+        Row: {
+          client_id: string
+          created_at: string
+          energy_level: number | null
+          id: string
+          notes: string | null
+          pain_area: string | null
+          pain_notes: string | null
+          sleep_quality: number | null
+          training_session_id: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          energy_level?: number | null
+          id?: string
+          notes?: string | null
+          pain_area?: string | null
+          pain_notes?: string | null
+          sleep_quality?: number | null
+          training_session_id: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          energy_level?: number | null
+          id?: string
+          notes?: string | null
+          pain_area?: string | null
+          pain_notes?: string | null
+          sleep_quality?: number | null
+          training_session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_session_checkins_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_session_checkins_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_ledger_balances"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "pre_session_checkins_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_product_sales_report"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "pre_session_checkins_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_items: {
         Row: {
           created_at: string | null
@@ -10385,6 +10453,7 @@ export type Database = {
           is_generated: boolean | null
           is_high_intensity_test: boolean | null
           is_late_cancellation: boolean | null
+          next_session_focus: string | null
           notes: string | null
           pain_notes: string | null
           pain_reported: boolean | null
@@ -10432,6 +10501,7 @@ export type Database = {
           is_generated?: boolean | null
           is_high_intensity_test?: boolean | null
           is_late_cancellation?: boolean | null
+          next_session_focus?: string | null
           notes?: string | null
           pain_notes?: string | null
           pain_reported?: boolean | null
@@ -10479,6 +10549,7 @@ export type Database = {
           is_generated?: boolean | null
           is_high_intensity_test?: boolean | null
           is_late_cancellation?: boolean | null
+          next_session_focus?: string | null
           notes?: string | null
           pain_notes?: string | null
           pain_reported?: boolean | null
