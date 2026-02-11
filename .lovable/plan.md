@@ -1,177 +1,211 @@
 
-
-# Zrychleni a modernizace karty treningu a dokoncovani
+# Chytrejsi, hezci a intuitivnejsi aplikace pro trenera
 
 ## Analyza soucasneho stavu
 
-### Co trener dnes musi udelat pro dokonceni:
-1. Otevrit kartu treningu ze rozvrhu
-2. Scrollovat pres "Priprava" sekci (zbytecne pri dokoncovani)
-3. Scrollovat ke "Klasifikace" (tagy, RPE)
-4. Scrollovat ke "Cviky" 
-5. Scrollovat ke "Rychle akce" (uplne dole!)
-6. Klik "DOKONCIT TRENINK" → otevre dialog
-7. V dialogu: zkontrolovat/doplnit tagy (pokud chybi)
-8. V dialogu: zkontrolovat platby
-9. Volitelne: pridat poznamky
-10. Klik "Dokoncit"
-
-### Identifikovane problemy:
-
-**A) Prilis mnoho scrollovani**
-- "Rychle akce" (hlavni CTA) je az pod cviky, casto mimo obrazovku
-- Trener musi scrollovat nahoru i dolu aby nasel co potrebuje
-- Na mobilu je to 3-5 screenu obsahu
-
-**B) Duplicita v completion dialogu**
-- Tagy se edituji na karte I v dialogu
-- Popis "Zkontrolujte tagy a platby" ale tagy uz mohou byt vyplnene z karty
-- Dialog opakuje informace ktere uz trener videl
-
-**C) Platebni sekce je tezkopadna**
-- 5 platebnih tlacitiek na jeden radek = male tlacitka, tezke trefit na mobilu
-- Animated pill indikator pridava vizualni "noise" bez praktickeho vyznamu
-- Input pro cenu neni dobre viditelny
-
-**D) QuickActions a ActionBar jsou oddelene**
-- `QuickActionsSection` je v hlavnim obsahu (scrollovatelny)
-- `TrainingActionBar` (sticky bottom) neni vyuzivan v TrainingDetail
-- Hlavni akce neni vzdy viditelna
-
-**E) Prilis mnoho sekcí naraz**
-- PrepSection, Participants, PRs, Tags, Exercises, QuickSale, QuickActions
-- Vsechno je na jedne dlouhe strance
-- Chybi vizualni hierarchie "co je dulezite NYNI"
+Aplikace ma solidni zaklad: dashboard s Morning Briefing, Action Center, Smart Alerts, Coaching Tips, Client Readiness scoring a Insights system. Nicmene mnoho z techto "chytrych" funkci je roztrousenych, reaktivnich (zobrazuji az kdyz je problem) a chybi jim proaktivni charakter - tzn. aplikace ti nerekne "co delat dal" sama od sebe.
 
 ---
 
-## Navrhovane zmeny
+## Oblast 1: Proaktivni denni plan ("Co delat dnes")
 
-### 1. Sticky bottom action bar (KRITICKE)
+### Problem
+Dashboard ukazuje timeline treningu a akce k vyrizeni, ale nerekne trenérovi: "Zacni timhle, potom udelej tohle." Trener musi sam premyslet, co je dulezite.
 
-Pridat fixni spodni listu se stavem treningu a hlavni akci, aby "Dokoncit" bylo vzdy dostupne bez scrollovani.
+### Reseni: Smart Daily Planner Card
+Nova komponenta na dashboardu, ktera generuje serazeny seznam dnesních ukolu podle priority:
 
-```
-┌─────────────────────────────────┐
-│  ✓ Tagy OK  │  900 Kč  │  RPE 7│
-│  ═══════════════════════════════│
-│  [DOKONCIT TRENINK]             │
-└─────────────────────────────────┘
-```
-
-- Zobrazuje stav pripravenosti (tagy ✓/✗, RPE, cena)
-- Hlavni tlacitko je VZDY viditelne
-- Kliknuti otevre zjednoduseny completion sheet
-- Na mobilu: `safe-area-bottom` pro iPhone notch
-
-### 2. Zjednoduseny completion flow (Bottom Sheet misto Dialog)
-
-Nahradit `Dialog` za `Sheet` (bottom sheet na mobilu), ktery obsahuje POUZE to, co trener jeste nevyplnil:
-
-**Krok 1 - Smart completion sheet:**
-- Pokud tagy CHYBI → zobrazit CompactTagSelector
-- Pokud tagy OK → preskocit, jen zobrazit shrnuti
-- Platebni metoda: vetsi tlacitka (3 sloupce misto 5)
-- RPE: pokud chybi, zobrazit inline
-- Poznamky: collapsible, ne vzdy viditelne
-
-**Krok 2 - Jednim klikem:**
-- Tlacitko "Dokoncit" s animovanym loading state
-- Summary overlay se zobrazi po uspesnem dokonceni
-
-### 3. Preusporadani karty treningu
-
-Nova hierarchie sekcí:
+1. **Pripravit se na dalsi trenink** - Jmeno klienta, readiness skore, coaching tip (z existujicich hooku `useClientReadiness` + `useLastTraining`)
+2. **Vyresit financni akce** - Neuhrazene treninky, nizkych kredity
+3. **Zkontrolovat feedbacky** - Nevyhodnocene feedbacky z vcera
+4. **Odeslat follow-upy** - Pripomenuti klientum
 
 ```
-1. HeroHeader (beze zmeny - kompaktni, OK)
-2. TAGS + RPE (presunout NAD cviky, je to meta-info)
-   → Kompaktnější: 1 radek typ + partie, RPE vedle
-3. EXERCISES (hlavni obsah - dominantni)
-4. PREP SECTION (ve výchozím stavu SBALENE)
-   → Otevira se klepnutim, ne automaticky
-5. PARTICIPANTS (zobrazit jen pokud > 1)
-6. QUICK SALE (beze zmeny)
-7. [STICKY BOTTOM BAR - Dokončit]
+┌─────────────────────────────────────┐
+│  🧠 Tvuj plan na dnes              │
+│                                     │
+│  1. 09:00 Jan Novak                 │
+│     ⚠️ Hlasil bolest kolene (7/10)  │
+│     💡 Zeptej se na aktualni stav   │
+│                                     │
+│  2. 10:30 Petra Svobodova           │
+│     ✅ Readiness 85% - muzes pridat │
+│                                     │
+│  3. 💰 3 neuhrazene treninky        │
+│     → Pripomen platbu               │
+│                                     │
+│  4. 📋 2 feedbacky k vyhodnoceni    │
+│     → Otevrit                       │
+└─────────────────────────────────────┘
 ```
 
-### 4. Vylepšeni ParticipantPaymentCard
-
-- Zvetsit platebni tlacitka na 3 sloupce (Kredit, Hotove, Jine)
-- "Jine" rozbali dropdown s Karta/Banka/Pozdeji
-- Odstranit animovany pill - nahradit jednoduchym aktivnim stavem
-- Zobrazit kreditovy zustatek vyrazneji
-- Editace ceny: vetsi input, jasnejsi design
-
-```
-┌─────────────────────────────────┐
-│ 👤 Jan Novak          900 Kč   │
-│ Kredit: 4 200 → 3 300 Kč      │
-│ ┌─────────┬─────────┬────────┐ │
-│ │💰KREDIT │💵HOTOVĚ │  JINÉ  │ │
-│ └─────────┴─────────┴────────┘ │
-└─────────────────────────────────┘
-```
-
-### 5. Smart defaults a auto-completion
-
-- Pokud klient ma `payment_mode = 'credit'` a dostatek kreditu → automaticky vybrat kredit, netrebovat potvrzeni
-- Pokud vsechny tagy uz jsou vyplnene a RPE nastaveno → skip tag sekci v dialogu kompletne
-- Pokud 1 ucastnik, kredit staci → "Quick complete" - jedno kliknuti dokoncí vše
-
-### 6. Vizualni vylepseni
-
-- **Tags sekce**: kompaktnejsi, jednorádkovy layout pro typ + partie
-- **RPE**: integrovany primo do tag řádku (ne samostatna sekce)
-- **Completion sheet**: gradient header s ikonami stavu
-- **Platební tlačítka**: vetsi touch target (min 48px vyska)
-- **Prep sekce**: defaultne sbalena s badge poctu upozorneni
+### Technicke zmeny
+- Nova komponenta `SmartDailyPlanCard.tsx`
+- Pouziva existujici hooky: `useDashboardViewModel`, `useClientReadiness`, `useLastTraining`, `usePendingFeedbackTrainings`
+- Pridat do `Index.tsx` jako prvni sekci po DashboardHeader
 
 ---
 
-## Technicke zmeny
+## Oblast 2: Kontextove informace o klientovi v rozvrhu
 
-### Soubory k uprave:
+### Problem
+Rozvrh (`SchedulePage`) ukazuje jen jmeno klienta a cas. Trener nevi, jaky je stav klienta, nez na trenink klikne.
+
+### Reseni: Obohacene karty v rozvrhu
+Pridat do `AgendaItem` micro-indikatory:
+
+- **Readiness dot** (zelena/zluta/cervena) vedle jmena
+- **Posledni feedback summary** - jednoradkovy text pod casem
+- **Coaching tip badge** - pokud existuje varování z posledniho treninku
+- **Kredit indikator** - maly badge s aktualnim zustatkem
+
+```
+┌───────────────────────────────────────┐
+│  09:00  🟢 Jan Novak         900 Kč  │
+│         Posledne: silovy, nohy       │
+│         RPE 7, bez problemu          │
+├───────────────────────────────────────┤
+│  10:30  🟡 Petra Svobodova   1200 Kč │
+│         ⚠️ Hlasila bolest zad (5/10) │
+│         Zvaz upravit objem           │
+└───────────────────────────────────────┘
+```
+
+### Technicke zmeny
+- Upravit `AgendaItem.tsx` - pridat hook `useLastTraining` a `useClientReadiness`
+- Pridat kompaktni sub-row s kontextem
+- Data se cachuji, nebude to spomalovat
+
+---
+
+## Oblast 3: AI-powered shruti klienta
+
+### Problem
+Karta klienta ma mnoho tabu a dat. Trener musi klikat, aby ziskal celkovy obraz.
+
+### Reseni: Client AI Summary
+Pridat na kartu klienta "Quick Summary" - 2-3 vety generovane z dostupnych dat pomoci Lovable AI:
+
+```
+"Jan trenuje 2x tydne, posledni 3 mesice stabilne. Jeho bench press 
+rostl o 15% za mesic. Posledne hlasil mirnou bolest kolene - sleduj."
+```
+
+### Technicke zmeny
+- Nova edge funkce `generate-client-summary` pouzivajici Lovable AI (gemini-2.5-flash)
+- Vstup: posledni treninky, feedbacky, PR trend, readiness score
+- Cachovat vysledek na 24h v databazi (nova tabulka `client_ai_summaries`)
+- Zobrazit na karte klienta v "Prehled" tabu
+
+---
+
+## Oblast 4: Chytre navrhy pri vytvareni treninku
+
+### Problem
+Pri tvorbe noveho treninku trener zacina od nuly - vybira klienta, cas, typ. Aplikace nenapovi.
+
+### Reseni: Smart Suggestions v CreateTrainingSheet
+1. **Auto-suggest cas** - podle nejcastejsiho casu klienta
+2. **Doporuceny typ treninku** - rotovat parti (pokud posledne byly nohy, navrhnout horni telo)
+3. **Navrhnout delku** - podle historie
+4. **Upozornit na kolize** - "Tento klient ma jiz trenink ve 14:00"
+
+### Technicke zmeny
+- Novy hook `useTrainingSuggestions(clientId)` ktery analyzuje historii
+- Integrace do `CreateTrainingSheet.tsx` a `TrainingForm.tsx`
+
+---
+
+## Oblast 5: Vizualni modernizace dashboardu
+
+### Problem
+Dashboard ma 6+ karet pod sebou - dlouhy scroll, kazda karta vypada jinak.
+
+### Reseni: Vizualni konsolidace
+
+1. **Spojit WeeklyQuickStats + FinanceSummaryCard** do jednoho "Prehled tydne" s horizontalnim scrollem na mobilu
+2. **Insights integrovany primo do karet** misto samostatne sekce - napriklad insight o prijmech rovnou v Finance karte
+3. **Cashflow Forecast** presunout do Finance karty jako collapsible sekci
+4. **Pridat animovane prechody mezi sekcemi** - staggered fade-in
+5. **Zjednodusit prazdne stavy** - misto velke prazdne ikony jen jednoradkovy text
+
+### Technicke zmeny
+- Refactor `Index.tsx` - mene sekcí, vice konsolidace
+- Nova `WeekOverviewCard.tsx` ktera kombinuje stats + finance
+- Presunout CashflowForecast do FinanceSummaryCard
+
+---
+
+## Oblast 6: Chytra navigace a zkratky
+
+### Problem
+Trener musi navigovat pres menu do konkretnich sekci. Zadna kontextova navigace.
+
+### Reseni: Kontextove akce na dashboardu
+
+1. **Quick Actions integrovane do karet** - "Dokoncit" tlacitko primo na Timeline karte uz existuje, pridat "Vytvorit" na prazdny den
+2. **Command Palette vylepseni** - pridat prikazy jako "Ukaz mi dnesni klienty", "Kdo ma nizky kredit?", "Dalsi trenink s Janem"
+3. **Swipe gesta v timeline** - swipe doprava na trenink = rychle dokonceni (jako v klientech)
+
+### Technicke zmeny
+- Rozsirit `CommandPalette.tsx` o smart commands
+- Pridat swipe do `TodayTimelineCompact.tsx`
+
+---
+
+## Oblast 7: Lepsi mobilni UX
+
+### Problem
+Na mobilu jsou nektere karty prilis velke a vyzaduji hodne scrollovani.
+
+### Reseni
+1. **Collapsible sekce** - Insights, Finance, Cashflow defaultne sbalene na mobilu
+2. **Horizontalni scroll pro metriky** - misto grid 3x1 pouzit horizontalni posun
+3. **Bottom sheet pro detail** - kliknuti na metriku na dashboardu otevre sheet zdola misto navigace
+4. **Vetsi touch targets** - minimalne 44px pro vsechny interaktivni elementy
+
+### Technicke zmeny
+- Pridat responsive logiku (media query / `useIsMobile`) do dashboard karet
+- Implementovat `useMediaQuery` pro podminene sbaleni sekcí
+
+---
+
+## Prioritizace implementace
+
+| Priorita | Oblast | Dopad | Slozitost |
+|----------|--------|-------|-----------|
+| 1 | Smart Daily Planner Card | Vysoky - trener vi co delat | Stredni |
+| 2 | Kontextove info v rozvrhu | Vysoky - mene klikani | Nizka |
+| 3 | Vizualni konsolidace dashboardu | Stredni - cistejsi UI | Stredni |
+| 4 | Chytre navrhy pri tvorbe treninku | Stredni - rychlejsi prace | Stredni |
+| 5 | Lepsi mobilni UX | Stredni - pohodlnejsi | Nizka |
+| 6 | Chytra navigace | Nizky - power users | Nizka |
+| 7 | AI summary klienta | Vysoky - ale vyzaduje edge fn | Vysoka |
+
+---
+
+## Soubory k uprave
 
 | Soubor | Zmena |
 |--------|-------|
-| `TrainingDetailView.tsx` | Preusporadat sekce, prep defaultne sbalena |
-| `TrainingDetail.tsx` | Nahradit Dialog za Sheet, pridat sticky bar |
-| `ParticipantPaymentCard.tsx` | 3-sloupcovy layout, vetsi tlacitka, bez pill animace |
-| `CompactTagGridSelector.tsx` | Kompaktnejsi layout, RPE inline |
-| `QuickActionsSection.tsx` | Zjednodusit, presunout do sticky baru |
-| `InlineRPESelector.tsx` | Vetsi touch targets, vizualni upgrade |
-
-### Nové komponenty:
-
-| Komponenta | Popis |
-|------------|-------|
-| `TrainingStatusBar.tsx` | Sticky spodni lista s pripravenosti a CTA |
-| `SmartCompletionSheet.tsx` | Bottom sheet ktery zobrazuje jen co chybi |
-
-### Logika Smart Completion:
-
-```typescript
-// Urcit co jeste chybi
-const completionState = {
-  tagsReady: tagValidation.isValid,
-  rpeSet: coachRPE !== null,
-  paymentsSet: true, // auto-filled z defaults
-  canQuickComplete: tagValidation.isValid && coachRPE !== null 
-    && participantPayments.every(p => p.payment_method === 'credit'),
-};
-
-// Pokud vse pripraveno → quick complete bez sheetu
-// Pokud neco chybi → sheet s chybejicimi sekcemi
-```
+| `src/pages/Index.tsx` | Pridat SmartDailyPlanCard, konsolidovat sekce |
+| `src/components/dashboard/SmartDailyPlanCard.tsx` | NOVA - proaktivni denni plan |
+| `src/components/dashboard/WeekOverviewCard.tsx` | NOVA - spojeni stats + finance |
+| `src/components/calendar/AgendaItem.tsx` | Pridat readiness dot + coaching context |
+| `src/hooks/useSmartDailyPlan.ts` | NOVY - agregace denniho planu |
+| `src/hooks/useTrainingSuggestions.ts` | NOVY - navrhy pro novy trenink |
+| `src/components/trainings/CreateTrainingSheet.tsx` | Integrace suggestions |
+| `src/components/dashboard/TodayTimelineCompact.tsx` | Swipe gesta, readiness dot |
+| `src/components/dashboard/FinanceSummaryCard.tsx` | Integrace cashflow forecast |
+| `src/components/search/CommandPalette.tsx` | Smart commands |
 
 ---
 
 ## Ocekavany vysledek
 
-- **Pred**: 7-10 klepnuti, 3-5 screenu scrollovani
-- **Po**: 2-4 klepnuti, 0 scrollovani (sticky bar vzdy viditelny)
-- Trener dokoncí 90% treninkl jedním klepnutím (smart defaults)
-- Platebni sekce je prehlednejsi a snazsi na dotek
-- Karta treningu je vizuálne cistejsi s jasnou hierarchii
-
+- Trener rano otevre aplikaci a OKAMZITE vi, co ma delat
+- Kazdy trenink v rozvrhu ukazuje kontext klienta BEZ klikani
+- Dashboard je kompaktnejsi, mene scrollovani
+- Pri tvorbe treninku aplikace navrhovne optimalni parametry
+- Na mobilu je aplikace pohodlnejsi s mensim scrollovanim
+- Celkovy dojem: "Aplikace mi pomaha, ne jen ukazuje data"
