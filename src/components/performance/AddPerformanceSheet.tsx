@@ -168,7 +168,7 @@ export function AddPerformanceSheet({
                 <SelectValue placeholder="Vyberte cvik" />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
-                {activeExercises.map((exercise) => (
+                {activeExercises.filter(exercise => exercise.id).map((exercise) => (
                   <SelectItem key={exercise.id} value={exercise.id}>
                     <span className="flex items-center gap-2">
                       {exercise.is_time_based ? (
