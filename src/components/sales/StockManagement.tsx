@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useProducts, useCreateProduct, useUpdateProduct, Product } from '@/hooks/useProducts';
+import { useStockVelocity } from '@/hooks/useStockVelocity';
 import { StockReceiveDialog } from '@/components/settings/StockReceiveDialog';
 import { StockSearchAndFilters, StockFilter, StockSortOption, StockTypeFilter } from './StockSearchAndFilters';
 import { LowStockBanner } from './LowStockBanner';
@@ -48,6 +49,7 @@ const normalizeText = (text: string) =>
 
 export function StockManagement() {
   const { data: products = [], isLoading } = useProducts();
+  const { data: velocityMap } = useStockVelocity();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
 
@@ -634,6 +636,19 @@ export function StockManagement() {
                           )}>
                             {product.stock_quantity || 0} ks
                           </span>
+                          {velocityMap?.[product.id] && velocityMap[product.id].daysRemaining !== null && (
+                            <>
+                              <span>•</span>
+                              <span className={cn(
+                                "tabular-nums",
+                                velocityMap[product.id].daysRemaining! < 7 ? "text-destructive font-medium" :
+                                velocityMap[product.id].daysRemaining! < 14 ? "text-warning font-medium" :
+                                "text-muted-foreground"
+                              )}>
+                                ~{velocityMap[product.id].daysRemaining} dní
+                              </span>
+                            </>
+                          )}
                         </>
                       )}
                     </div>

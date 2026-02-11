@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { 
   Loader2, 
   Package, 
@@ -27,6 +27,8 @@ import { ProductSearchAndFilters } from './ProductSearchAndFilters';
 import { CartPanel } from './CartPanel';
 import { FavoriteProducts } from './FavoriteProducts';
 import { RecentSales } from './RecentSales';
+import { ClientPurchaseSuggestions } from './ClientPurchaseSuggestions';
+import { MobileCartBar } from './MobileCartBar';
 import { useRecentSales, RecentSale } from '@/hooks/useRecentSales';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
@@ -495,6 +497,14 @@ export function SalesRegister() {
           )}
         </div>
 
+        {/* Client Purchase Suggestions */}
+        <ClientPurchaseSuggestions
+          clientId={selectedClient || undefined}
+          products={products}
+          onAddToCart={(product) => cart.addItem(product)}
+          getCartQuantity={(productId) => cart.getItem(productId)?.quantity || 0}
+        />
+
         {/* Recent Sales - Quick Repeat */}
         <RecentSales onRepeatSale={handleRepeatSale} />
 
@@ -676,6 +686,18 @@ export function SalesRegister() {
           noClient={noClient}
         />
       </div>
+
+      {/* Mobile sticky cart bar */}
+      <MobileCartBar
+        itemCount={cart.items.reduce((sum, i) => sum + i.quantity, 0)}
+        total={cart.totals.totalAfterDiscount}
+        isProcessing={isProcessing}
+        checkoutDisabled={checkoutDisabled}
+        onCheckout={handleSale}
+        onScrollToCart={() => {
+          document.querySelector('[data-cart-panel]')?.scrollIntoView({ behavior: 'smooth' });
+        }}
+      />
     </div>
   );
 }
