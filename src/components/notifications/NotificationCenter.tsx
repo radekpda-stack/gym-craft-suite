@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { Bell, Check, MessageSquare, Search, X, Filter, BellOff, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -188,6 +188,14 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
       requestAnimationFrame(() => { flushPendingAction(); });
     }
   }, [onOpenChange, flushPendingAction]);
+
+  // Safety net: flush pending action when sheet closes, even if onOpenChange doesn't fire
+  useEffect(() => {
+    if (!sheetOpen && pendingActionRef.current) {
+      const timer = setTimeout(() => { flushPendingAction(); }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [sheetOpen, flushPendingAction]);
 
   // Filter notifications by search query
   const filteredNotifications = useMemo(() => {

@@ -149,13 +149,12 @@ export function UnifiedNotificationItem({
   const leftOpacity = useTransform(x, [0, 40, 100], [0, 0.5, 1]);
   const rightOpacity = useTransform(x, [-100, -40, 0], [1, 0.5, 0]);
 
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-  const didDragRef = useRef(false);
+  const draggedRef = useRef(false);
 
   const Icon = NOTIFICATION_ICONS[notification.type] || Bell;
   const accent = CATEGORY_ACCENT[notification.category];
 
-  const handleDragStart = useCallback(() => { didDragRef.current = true; }, []);
+  const handleDragStart = useCallback(() => { draggedRef.current = true; }, []);
 
   const handleDragEnd = useCallback((_: any, info: PanInfo) => {
     const threshold = 80;
@@ -164,28 +163,21 @@ export function UnifiedNotificationItem({
     } else if (info.offset.x < -threshold) {
       onDelete(notification.id);
     }
-    setTimeout(() => { didDragRef.current = false; }, 100);
+    // Keep draggedRef true briefly so the subsequent onClick is suppressed
+    setTimeout(() => { draggedRef.current = false; }, 300);
   }, [notification.id, notification.is_read, onMarkRead, onDelete]);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    touchStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
-    didDragRef.current = false;
-  }, []);
-
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    if (!touchStartRef.current) return;
-    const deltaX = Math.abs(e.clientX - touchStartRef.current.x);
-    const deltaY = Math.abs(e.clientY - touchStartRef.current.y);
-    const deltaTime = Date.now() - touchStartRef.current.time;
-    const isClick = deltaX < 10 && deltaY < 10 && deltaTime < 300 && !didDragRef.current;
-    touchStartRef.current = null;
-    if (isClick) {
-      if (notification.isAggregated) setIsExpanded(!isExpanded);
-      else onClick?.();
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    // Suppress click if it was actually a drag/swipe
+    if (draggedRef.current) return;
+    if (notification.isAggregated) {
+      setIsExpanded(!isExpanded);
+    } else {
+      onClick?.();
     }
   }, [notification.isAggregated, isExpanded, onClick]);
 
-  const handleSubItemClick = useCallback((e: React.MouseEvent | React.TouchEvent, item: UnifiedNotification) => {
+  const handleSubItemClick = useCallback((e: React.MouseEvent, item: UnifiedNotification) => {
     e.stopPropagation();
     e.preventDefault();
     onItemClick?.(item);
@@ -221,8 +213,7 @@ export function UnifiedNotificationItem({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         style={{ x }}
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
+        onClick={handleClick}
         className={cn(
           'relative flex items-start gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer select-none',
           'active:scale-[0.98]',
@@ -333,8 +324,8 @@ export function UnifiedNotificationItem({
               <button
                 key={item.id}
                 type="button"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => handleSubItemClick(e, item)}
-                onTouchEnd={(e) => handleSubItemClick(e, item)}
                 className={cn(
                   'flex items-center gap-2.5 p-2.5 rounded-xl text-sm cursor-pointer w-full text-left',
                   'hover:bg-muted/70 active:bg-muted transition-colors group',
