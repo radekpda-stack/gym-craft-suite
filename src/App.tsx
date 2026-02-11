@@ -90,6 +90,7 @@ const queryClient = new QueryClient({
       gcTime: 1000 * 60 * 10, // 10 minutes - keep in cache
       refetchOnWindowFocus: false, // Reduce unnecessary refetches
       retry: 1, // Only retry once on failure
+      refetchOnMount: false, // Don't refetch if data is still fresh
     },
   },
 });

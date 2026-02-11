@@ -1,6 +1,5 @@
 import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { PageTransition } from './PageTransition';
@@ -91,11 +90,9 @@ export function Layout({ children }: LayoutProps) {
         </div>
         
         {/* Content area - optimized padding for all devices */}
-        <AnimatePresence mode="wait">
-          <PageTransition key={location.pathname}>
-            {children}
-          </PageTransition>
-        </AnimatePresence>
+        <PageTransition key={location.pathname}>
+          {children}
+        </PageTransition>
       </main>
 
 
