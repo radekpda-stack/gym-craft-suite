@@ -1,75 +1,103 @@
 
-# Oprava chyb nalezených v logu aplikace
 
-## Nalezené chyby
+# Vylepšení pro lepší práci s klienty a sběr dat
 
-### 1. app_events - chybí INSERT RLS politika (KRITICKÉ)
-Tabulka `app_events` má pouze SELECT politiku. Analytický kód (sledování výkonu, chyb) se pokouší zapisovat do této tabulky každých 5 sekund, ale zápis je blokován RLS. Toto generuje desítky chyb za minutu v databázových logách.
-
-**Dopad:** Zbytečná zátěž databáze, žádná analytická data se neukládají.
-
-### 2. client_portal_activity - chybí INSERT politika pro klientský portál
-Stávající politika `Clients can view and create own activity` používá `cmd: ALL`, ale `qual` podmínka (`client_id = get_client_id_for_user(auth.uid())`) se pravděpodobně neaplikuje správně jako `WITH CHECK` pro INSERT. Klientský portál tak nemůže zapisovat aktivitu.
-
-**Dopad:** Žádná data o aktivitě klientů na portálu se neukládají.
-
-### 3. Select.Item s prázdnou hodnotou na stránce /performance
-Chyba z logu: *"A Select.Item must have a value prop that is not an empty string."* Na stránce výkonu se vykreslují cviky v Select komponentě, kde některý cvik může mít prázdné ID.
-
-**Dopad:** Crash komponenty na stránce výkonu.
-
-### 4. "Rendered more hooks" v WorkoutExerciseManager (vyřešeno)
-Tato chyba je z 2. února a po kontrole kódu vypadá, že hooks jsou nyní volány korektně (nepodmíněně). Pravděpodobně již opraveno předchozí změnou.
+Po důkladné analýze aplikace navrhuji 5 konkrétních vylepšení, která zlepší sběr dat a pomohou s progresem klientů.
 
 ---
 
-## Plán oprav
+## 1. Tréninkový deník trenéra - poznámky k tréninku
 
-### Krok 1: Přidat INSERT RLS politiku pro app_events
-SQL migrace:
-```sql
-CREATE POLICY "Users can insert own events"
-ON public.app_events FOR INSERT
-WITH CHECK (auth.uid() = user_id);
-```
+**Problem:** Tabulka `training_sessions` má sloupec `session_notes`, ale v UI chybí snadný způsob, jak při dokončení tréninku rychle zapsat poznámky (co fungovalo, co ne, na co se zaměřit příště).
 
-### Krok 2: Opravit client_portal_activity RLS
-Rozdělit `ALL` politiku na specifické SELECT a INSERT politiky s korektním `WITH CHECK`:
-```sql
--- Drop the combined ALL policy
-DROP POLICY "Clients can view and create own activity" ON public.client_portal_activity;
+**Řešení:** Při dokončení tréninku (CompletionDialog) přidat textové pole "Poznámky k tréninku" a pole "Zaměření příštího tréninku". Tyto poznámky se pak zobrazí:
+- Na kartě klienta v historii tréninků
+- Při plánování dalšího tréninku jako připomínka
 
--- Separate SELECT policy
-CREATE POLICY "Clients can view own activity"
-ON public.client_portal_activity FOR SELECT
-USING (client_id = get_client_id_for_user(auth.uid()));
-
--- Separate INSERT policy with WITH CHECK
-CREATE POLICY "Clients can insert own activity"
-ON public.client_portal_activity FOR INSERT
-WITH CHECK (client_id = get_client_id_for_user(auth.uid()));
-```
-
-### Krok 3: Ochrana proti prázdným hodnotám v Select na /performance
-V souboru `src/components/performance/AddPerformanceSheet.tsx` přidat filtr, aby cviky s prázdným ID nebyly vykreslovány jako SelectItem:
-```tsx
-{activeExercises
-  .filter(exercise => exercise.id) // Odfiltrovat prázdné ID
-  .map((exercise) => (
-    <SelectItem key={exercise.id} value={exercise.id}>
-```
+**Přínos:** Trenér má kontext z minulého tréninku vždy po ruce, nemusí si pamatovat.
 
 ---
 
-## Upravené soubory
+## 2. Quick Check-in před tréninkem
 
-| Soubor | Změna |
-|--------|-------|
-| Databázová migrace | INSERT politika pro `app_events`, oprava `client_portal_activity` |
-| `src/components/performance/AddPerformanceSheet.tsx` | Filtr prázdných exercise ID v SelectItem |
+**Problém:** Readiness score (`useClientReadiness`) se počítá z feedbacku PO tréninku. Ale trenér potřebuje vědět, jak se klient cítí PŘED tréninkem, aby mohl upravit plán.
 
-## Očekávaný výsledek
-- Databázové logy přestanou být zahlceny RLS chybami (desítky za minutu zmizí)
-- Analytická data se budou správně ukládat
-- Klientský portál bude korektně zapisovat aktivitu
-- Stránka /performance přestane padat při prázdných cvicích
+**Řešení:** Nová mini-karta "Jak se dnes cítíš?" zobrazená v rozvrhu/agendě před tréninkem. Trenér ťukne na klienta a rychle zaznamená:
+- Energetická úroveň (1-5 smajlíky)
+- Bolest/omezení (volitelné - výběr oblasti)
+- Kvalita spánku minulou noc (1-5)
+
+Data se uloží do nové tabulky `pre_session_checkins` a propojí s readiness score.
+
+**Přínos:** Trenér upraví intenzitu tréninku v reálném čase na základě aktuálního stavu klienta.
+
+---
+
+## 3. Automatické sledování progresních cílů
+
+**Problém:** Klienti mají `training_goals` (pole cílů), ale nikde se nesleduje progress směrem k těmto cílům. Cíle jsou jen statický text.
+
+**Řešení:** Rozšířit systém cílů o měřitelné milníky:
+- Ke každému cíli přiřadit metriku (např. "zhubnutí" → váha, "síla" → 1RM bench)
+- Automaticky sledovat změny z existujících dat (měření, exercise entries)
+- Na kartě klienta zobrazit progress bar k cíli
+
+Nová tabulka `client_goals` s polemi: `client_id`, `goal_text`, `metric_type`, `start_value`, `target_value`, `current_value`, `deadline`, `status`.
+
+**Přínos:** Klient i trenér vidí měřitelný pokrok, ne jen subjektivní pocit.
+
+---
+
+## 4. Tréninkové šablony na míru s auto-doporučením
+
+**Problém:** Periodizace (`useClientPeriodization`) detekuje fázi tréninku, ale nepropojuje se s plánováním. Trenér musí sám rozhodovat, jaký trénink dát.
+
+**Řešení:** Na základě aktuální fáze periodizace + readiness + historie navrhnout "doporučený typ tréninku":
+- Fáze akumulace + vysoká readiness → "Silový trénink – vysoký objem"
+- Fáze deload + nízká readiness → "Mobilita + regenerace"
+- Stagnace na cviku X (z analytiky) → "Změnit cvik X za alternativu Y"
+
+Doporučení se zobrazí jako karta v rozvrhu při plánování tréninku a na dashboardu u dnešních tréninků.
+
+**Přínos:** Data-driven rozhodování místo intuice. Trenér dostane podklad, ne příkaz.
+
+---
+
+## 5. Klientský Progress Report (měsíční PDF/karta)
+
+**Problém:** Data o klientovi existují rozptýlená v různých sekcích (cviky, měření, feedback, strava). Chybí konsolidovaný přehled pro klienta "takhle jsi se posunul za měsíc".
+
+**Řešení:** Automaticky generovaný měsíční report pro každého klienta obsahující:
+- Počet tréninků a docházka vs minulý měsíc
+- Nové PR a zlepšení ve cvicích (top 3)
+- Změny v měření (váha, obvody) pokud existují
+- Průměrné RPE a trend pocitů z feedbacků
+- Splněné/nesplněné cíle
+
+Report jako karta na kartě klienta + export PDF + volitelné sdílení přes klientský portál.
+
+**Přínos:** Klient vidí svůj pokrok, což zvyšuje motivaci a retenci. Trenér má nástroj pro konzultace.
+
+---
+
+## Prioritizace
+
+| Priorita | Vylepšení | Náročnost | Přínos |
+|----------|-----------|-----------|--------|
+| 1 | Quick Check-in před tréninkem | Střední (nová tabulka + UI) | Okamžitě lepší tréninky |
+| 2 | Tréninkový deník - poznámky | Nízká (sloupec už existuje) | Kontinuita mezi tréninky |
+| 3 | Měřitelné cíle klientů | Střední (nová tabulka + UI) | Motivace a retence |
+| 4 | Auto-doporučení tréninku | Vysoká (propojení více systémů) | Chytřejší plánování |
+| 5 | Měsíční Progress Report | Střední (agregace dat + PDF) | Profesionální prezentace |
+
+---
+
+## Doporučení
+
+Navrhuji začít s **prioritami 1 a 2** (Quick Check-in + Poznámky k tréninku), protože:
+- Okamžitě zlepší kvalitu každého tréninku
+- Sbírají nová data, která se využijí v dalších vylepšeních
+- Nízká až střední náročnost implementace
+
+Chcete implementovat všech 5 vylepšení postupně, nebo se zaměřit na konkrétní z nich?
+
