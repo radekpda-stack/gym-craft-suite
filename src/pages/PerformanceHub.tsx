@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Zap, Dumbbell, ClipboardCheck, Trophy, Plus, List, BarChart3, Users, Medal } from 'lucide-react';
+import { Zap, Dumbbell, ClipboardCheck, Trophy, Plus, List, BarChart3, Users, Medal, GitCompareArrows } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ExerciseListView } from '@/components/exercises/ExerciseListView';
@@ -14,6 +14,7 @@ import { CategoryCards } from '@/components/performance/CategoryCards';
 import { ClientProgressLeaderboard } from '@/components/performance/ClientProgressLeaderboard';
 import { RecentExercisesChips } from '@/components/performance/RecentExercisesChips';
 import { ClientProgressView } from '@/components/performance/ClientProgressView';
+import { CohortBenchmarkView } from '@/components/performance/CohortBenchmarkView';
 import { FloatingActionButton, FABAction } from '@/components/ui/floating-action-button';
 import { ExerciseFormDialog } from '@/components/exercises/ExerciseFormDialog';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
@@ -21,7 +22,7 @@ import { useModuleSettings } from '@/hooks/useModuleSettings';
 import { usePerformanceOverview } from '@/hooks/usePerformanceOverview';
 import { useExercisesWithUsage } from '@/hooks/useExerciseStats';
 
-type PerformanceTab = 'overview' | 'clients' | 'library' | 'analytics' | 'pr-history' | 'tests' | 'challenges';
+type PerformanceTab = 'overview' | 'clients' | 'comparison' | 'library' | 'analytics' | 'pr-history' | 'tests' | 'challenges';
 
 export default function PerformanceHub() {
   usePageTracking('performance');
@@ -68,7 +69,7 @@ export default function PerformanceHub() {
   ];
 
   // Calculate tab count for dynamic grid
-  const tabCount = 2 + (testsEnabled ? 1 : 0) + (challengesEnabled ? 1 : 0); // overview, library, (analytics is nested), tests?, challenges?
+  const tabCount = 3 + (testsEnabled ? 1 : 0) + (challengesEnabled ? 1 : 0); // overview, library, comparison, (analytics is nested), tests?, challenges?
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6 pb-32">
@@ -118,6 +119,10 @@ export default function PerformanceHub() {
           <TabsTrigger value="library" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <List className="w-4 h-4" />
             <span className="hidden sm:inline">Knihovna</span>
+          </TabsTrigger>
+          <TabsTrigger value="comparison" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <GitCompareArrows className="w-4 h-4" />
+            <span className="hidden sm:inline">Porovnání</span>
           </TabsTrigger>
           <TabsTrigger value="analytics" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <BarChart3 className="w-4 h-4" />
@@ -189,6 +194,11 @@ export default function PerformanceHub() {
             </div>
             <ExerciseListView exercises={exercises} isLoading={exercisesLoading} />
           </div>
+        </TabsContent>
+
+        {/* Comparison Tab */}
+        <TabsContent value="comparison" className="mt-6">
+          <CohortBenchmarkView />
         </TabsContent>
 
         {/* Analytics Tab */}
