@@ -1,211 +1,188 @@
 
-# Chytrejsi, hezci a intuitivnejsi aplikace pro trenera
+
+# Chytrejsi karta Prodeje - navrh zmen a uprav
 
 ## Analyza soucasneho stavu
 
-Aplikace ma solidni zaklad: dashboard s Morning Briefing, Action Center, Smart Alerts, Coaching Tips, Client Readiness scoring a Insights system. Nicmene mnoho z techto "chytrych" funkci je roztrousenych, reaktivnich (zobrazuji az kdyz je problem) a chybi jim proaktivni charakter - tzn. aplikace ti nerekne "co delat dal" sama od sebe.
+Modul Prodeje je funkcne solidni - ma pokladnu, historii, sklad a statistiky. Ale chybi mu "inteligence" - nenapovida trenérovi, co prodat, neupozornuje na prilezitosti a nezjednodusuje rutinni operace.
+
+### Identifikovane problemy:
+
+1. **Hero header zabira misto ale nerika nic uzitecneho** - mesicni trzby a pocet prodeju jsou staticke cisla bez kontextu ("je to dobre nebo spatne?")
+2. **Pokladna vyzaduje prilis mnoho kroku** - vybrat klienta, scrollovat produkty, pridat do kosiku, vybrat platbu, dokoncit
+3. **Zadne chytre navrhy** - aplikace nevi, ze klient XY kupuje vzdy protein po treninku, nebo ze je patek a prodeje jsou typicky vyssi
+4. **RecentSales a FavoriteProducts jsou oddelene** - zabíraji kazdý vlastni kartu, ale mohly by byt kompaktnejsi
+5. **Statistiky nemaji akcni doporuceni** - ukazuji grafy, ale nereknou "zvys cenu X" nebo "objednej Y"
+6. **Sklad nema predikci** - nerekne kdy dojdou zasoby na zaklade prodejniho tempa
 
 ---
 
-## Oblast 1: Proaktivni denni plan ("Co delat dnes")
+## Navrhovane zmeny
 
-### Problem
-Dashboard ukazuje timeline treningu a akce k vyrizeni, ale nerekne trenérovi: "Zacni timhle, potom udelej tohle." Trener musi sam premyslet, co je dulezite.
+### 1. Smart Sales Hero s kontextovymi KPI
 
-### Reseni: Smart Daily Planner Card
-Nova komponenta na dashboardu, ktera generuje serazeny seznam dnesních ukolu podle priority:
+Nahradit staticke badges dynamickymi, kontextovymi informacemi:
 
-1. **Pripravit se na dalsi trenink** - Jmeno klienta, readiness skore, coaching tip (z existujicich hooku `useClientReadiness` + `useLastTraining`)
-2. **Vyresit financni akce** - Neuhrazene treninky, nizkych kredity
-3. **Zkontrolovat feedbacky** - Nevyhodnocene feedbacky z vcera
-4. **Odeslat follow-upy** - Pripomenuti klientum
+```
+┌──────────────────────────────────────────┐
+│  Prodej                                  │
+│                                          │
+│  Dnes: 1 250 Kc (+15% vs vcera)         │
+│  ┌────────┬────────┬──────────┐          │
+│  │ 3 prod.│ 2 low  │ Top: Pro.│          │
+│  └────────┴────────┴──────────┘          │
+│                                          │
+│  💡 Petra Novakova ma trenink za 30 min  │
+│     - obvykle kupuje protein (85%)       │
+└──────────────────────────────────────────┘
+```
+
+**Zmeny:**
+- Pridat dnesni trzby s porovnanim vs. vcera (ne jen mesicni)
+- Zobrazit "smart tip" - napriklad pripravit produkt pro dalsiho klienta
+- Novy hook `useSalesSmartTips` ktery kombinuje data z rozvrhu, historie nakupu a skladu
+
+### 2. Chytra napoveda v pokladne - "Doporucene pro klienta"
+
+Po vyber klienta zobrazit mini-sekci "Tento klient obvykle kupuje":
+
+```
+┌──────────────────────────────────────┐
+│ 👤 Jan Novak                         │
+│ Kredit: 4 200 Kc                     │
+│                                      │
+│ Obvykle kupuje:                      │
+│ ┌──────────┬──────────┬──────────┐   │
+│ │ Protein  │ Tyčinka  │ BCAA     │   │
+│ │ 12× za   │ 8× za   │ 5× za   │   │
+│ │ 3 měs.   │ 3 měs.  │ 3 měs.  │   │
+│ └──────────┴──────────┴──────────┘   │
+└──────────────────────────────────────┘
+```
+
+**Zmeny:**
+- Novy hook `useClientPurchaseHistory(clientId)` - analyzuje sales_order_items pro klienta
+- Zobrazit top 3 nejcasteji kupovane produkty s jednim kliknutim pridani do kosiku
+- Integrace do SalesRegister pod klientskou kartu
+
+### 3. Spojena sekce "Rychly pristup" (Recent + Favorites)
+
+Misto dvou oddelených karet spojit do jedne kompaktni sekce s horizontalnim scrollem:
+
+```
+┌─────────────────────────────────────────┐
+│ ⚡ Rychly pristup                       │
+│                                         │
+│ Posledni:  [Protein 65Kc] [Tycinka 35] │
+│ Top prod.: [BCAA 89Kc] [Gainer 120Kc]  │
+└─────────────────────────────────────────┘
+```
+
+**Zmeny:**
+- Spojit RecentSales a FavoriteProducts do `QuickAccessBar`
+- Horizontalni scroll na mobilu
+- Kompaktnejsi - pill-style tlacitka misto plnych karet
+
+### 4. Smart Insights ve statistikach
+
+Pridat akcni doporuceni do SalesInsights:
+
+- "Protein XY ma marzi jen 12% - zvaz zvyseni ceny nebo zmenu dodavatele"
+- "BCAA se proda za ~8 dni pri aktualnim tempu. Objednej do petku."
+- "V patek prodavate 2x vice nez v pondeli - zvaz akci na pondeli"
+- "Klient Jan Novak utratil 3x vice nez prumer - nabidni vernostni slevu"
+
+**Zmeny:**
+- Rozsirit `SalesInsights.tsx` o dalsi typy insights (stock prediction, pricing, customer value)
+- Pridat "stock velocity" vypocet - kolik dnu zasoby vydrzi
+- Pridat detekci "best day of week" pro cilene akce
+
+### 5. Predikce zasob ve Skladu
+
+Pridat do StockManagement sloupec/badge "Vydrzi ~X dní" na zaklade prodejniho tempa:
+
+```
+┌──────────────────────────────────────────────┐
+│ Protein WPC 80     15 ks    Vydrzi ~12 dni   │
+│ ████████░░░░░░░░░  ⚠️ Objednej do 5 dni     │
+│                                              │
+│ BCAA Amino         32 ks    Vydrzi ~45 dni   │
+│ █████████████░░░░  ✅ OK                     │
+└──────────────────────────────────────────────┘
+```
+
+**Zmeny:**
+- Novy hook `useStockVelocity` - pocita prumerny denni prodej za poslednich 30 dni
+- Pridat "daysRemaining" badge do produktovych karet ve skladu
+- Barevne kodovani: cervena (< 7 dni), zluta (7-14), zelena (14+)
+
+### 6. Mobilni sticky kosik na Pokladne
+
+Na mobilu je kosik pod produkty (nutnost scrollovat dolu). Pridat sticky mini-bar:
 
 ```
 ┌─────────────────────────────────────┐
-│  🧠 Tvuj plan na dnes              │
-│                                     │
-│  1. 09:00 Jan Novak                 │
-│     ⚠️ Hlasil bolest kolene (7/10)  │
-│     💡 Zeptej se na aktualni stav   │
-│                                     │
-│  2. 10:30 Petra Svobodova           │
-│     ✅ Readiness 85% - muzes pridat │
-│                                     │
-│  3. 💰 3 neuhrazene treninky        │
-│     → Pripomen platbu               │
-│                                     │
-│  4. 📋 2 feedbacky k vyhodnoceni    │
-│     → Otevrit                       │
+│ 🛒 2 polozky • 165 Kc  [ZAPLATIT]  │
 └─────────────────────────────────────┘
 ```
 
-### Technicke zmeny
-- Nova komponenta `SmartDailyPlanCard.tsx`
-- Pouziva existujici hooky: `useDashboardViewModel`, `useClientReadiness`, `useLastTraining`, `usePendingFeedbackTrainings`
-- Pridat do `Index.tsx` jako prvni sekci po DashboardHeader
+**Zmeny:**
+- Na mobilu (lg breakpoint dolu) pridat fixed bottom bar kdyz je kosik neprazdny
+- Klik na bar scrollne ke kosiku nebo otevre sheet
+- Na desktopu beze zmeny (kosik je sticky v pravem sloupci)
 
 ---
 
-## Oblast 2: Kontextove informace o klientovi v rozvrhu
+## Technicke zmeny
 
-### Problem
-Rozvrh (`SchedulePage`) ukazuje jen jmeno klienta a cas. Trener nevi, jaky je stav klienta, nez na trenink klikne.
+### Nove soubory:
 
-### Reseni: Obohacene karty v rozvrhu
-Pridat do `AgendaItem` micro-indikatory:
+| Soubor | Popis |
+|--------|-------|
+| `src/hooks/useSalesSmartTips.ts` | Kombinuje data z rozvrhu + historie nakupu + sklad pro chytre tipy |
+| `src/hooks/useClientPurchaseHistory.ts` | Analyzuje nejcastejsi nakupy klienta |
+| `src/hooks/useStockVelocity.ts` | Pocita prodejni tempo a predikci zasob |
+| `src/components/sales/QuickAccessBar.tsx` | Spojena kompaktni sekce pro rychly pristup |
+| `src/components/sales/ClientPurchaseSuggestions.tsx` | "Obvykle kupuje" sekce |
+| `src/components/sales/MobileCartBar.tsx` | Sticky kosik na mobilu |
 
-- **Readiness dot** (zelena/zluta/cervena) vedle jmena
-- **Posledni feedback summary** - jednoradkovy text pod casem
-- **Coaching tip badge** - pokud existuje varování z posledniho treninku
-- **Kredit indikator** - maly badge s aktualnim zustatkem
-
-```
-┌───────────────────────────────────────┐
-│  09:00  🟢 Jan Novak         900 Kč  │
-│         Posledne: silovy, nohy       │
-│         RPE 7, bez problemu          │
-├───────────────────────────────────────┤
-│  10:30  🟡 Petra Svobodova   1200 Kč │
-│         ⚠️ Hlasila bolest zad (5/10) │
-│         Zvaz upravit objem           │
-└───────────────────────────────────────┘
-```
-
-### Technicke zmeny
-- Upravit `AgendaItem.tsx` - pridat hook `useLastTraining` a `useClientReadiness`
-- Pridat kompaktni sub-row s kontextem
-- Data se cachuji, nebude to spomalovat
-
----
-
-## Oblast 3: AI-powered shruti klienta
-
-### Problem
-Karta klienta ma mnoho tabu a dat. Trener musi klikat, aby ziskal celkovy obraz.
-
-### Reseni: Client AI Summary
-Pridat na kartu klienta "Quick Summary" - 2-3 vety generovane z dostupnych dat pomoci Lovable AI:
-
-```
-"Jan trenuje 2x tydne, posledni 3 mesice stabilne. Jeho bench press 
-rostl o 15% za mesic. Posledne hlasil mirnou bolest kolene - sleduj."
-```
-
-### Technicke zmeny
-- Nova edge funkce `generate-client-summary` pouzivajici Lovable AI (gemini-2.5-flash)
-- Vstup: posledni treninky, feedbacky, PR trend, readiness score
-- Cachovat vysledek na 24h v databazi (nova tabulka `client_ai_summaries`)
-- Zobrazit na karte klienta v "Prehled" tabu
-
----
-
-## Oblast 4: Chytre navrhy pri vytvareni treninku
-
-### Problem
-Pri tvorbe noveho treninku trener zacina od nuly - vybira klienta, cas, typ. Aplikace nenapovi.
-
-### Reseni: Smart Suggestions v CreateTrainingSheet
-1. **Auto-suggest cas** - podle nejcastejsiho casu klienta
-2. **Doporuceny typ treninku** - rotovat parti (pokud posledne byly nohy, navrhnout horni telo)
-3. **Navrhnout delku** - podle historie
-4. **Upozornit na kolize** - "Tento klient ma jiz trenink ve 14:00"
-
-### Technicke zmeny
-- Novy hook `useTrainingSuggestions(clientId)` ktery analyzuje historii
-- Integrace do `CreateTrainingSheet.tsx` a `TrainingForm.tsx`
-
----
-
-## Oblast 5: Vizualni modernizace dashboardu
-
-### Problem
-Dashboard ma 6+ karet pod sebou - dlouhy scroll, kazda karta vypada jinak.
-
-### Reseni: Vizualni konsolidace
-
-1. **Spojit WeeklyQuickStats + FinanceSummaryCard** do jednoho "Prehled tydne" s horizontalnim scrollem na mobilu
-2. **Insights integrovany primo do karet** misto samostatne sekce - napriklad insight o prijmech rovnou v Finance karte
-3. **Cashflow Forecast** presunout do Finance karty jako collapsible sekci
-4. **Pridat animovane prechody mezi sekcemi** - staggered fade-in
-5. **Zjednodusit prazdne stavy** - misto velke prazdne ikony jen jednoradkovy text
-
-### Technicke zmeny
-- Refactor `Index.tsx` - mene sekcí, vice konsolidace
-- Nova `WeekOverviewCard.tsx` ktera kombinuje stats + finance
-- Presunout CashflowForecast do FinanceSummaryCard
-
----
-
-## Oblast 6: Chytra navigace a zkratky
-
-### Problem
-Trener musi navigovat pres menu do konkretnich sekci. Zadna kontextova navigace.
-
-### Reseni: Kontextove akce na dashboardu
-
-1. **Quick Actions integrovane do karet** - "Dokoncit" tlacitko primo na Timeline karte uz existuje, pridat "Vytvorit" na prazdny den
-2. **Command Palette vylepseni** - pridat prikazy jako "Ukaz mi dnesni klienty", "Kdo ma nizky kredit?", "Dalsi trenink s Janem"
-3. **Swipe gesta v timeline** - swipe doprava na trenink = rychle dokonceni (jako v klientech)
-
-### Technicke zmeny
-- Rozsirit `CommandPalette.tsx` o smart commands
-- Pridat swipe do `TodayTimelineCompact.tsx`
-
----
-
-## Oblast 7: Lepsi mobilni UX
-
-### Problem
-Na mobilu jsou nektere karty prilis velke a vyzaduji hodne scrollovani.
-
-### Reseni
-1. **Collapsible sekce** - Insights, Finance, Cashflow defaultne sbalene na mobilu
-2. **Horizontalni scroll pro metriky** - misto grid 3x1 pouzit horizontalni posun
-3. **Bottom sheet pro detail** - kliknuti na metriku na dashboardu otevre sheet zdola misto navigace
-4. **Vetsi touch targets** - minimalne 44px pro vsechny interaktivni elementy
-
-### Technicke zmeny
-- Pridat responsive logiku (media query / `useIsMobile`) do dashboard karet
-- Implementovat `useMediaQuery` pro podminene sbaleni sekcí
-
----
-
-## Prioritizace implementace
-
-| Priorita | Oblast | Dopad | Slozitost |
-|----------|--------|-------|-----------|
-| 1 | Smart Daily Planner Card | Vysoky - trener vi co delat | Stredni |
-| 2 | Kontextove info v rozvrhu | Vysoky - mene klikani | Nizka |
-| 3 | Vizualni konsolidace dashboardu | Stredni - cistejsi UI | Stredni |
-| 4 | Chytre navrhy pri tvorbe treninku | Stredni - rychlejsi prace | Stredni |
-| 5 | Lepsi mobilni UX | Stredni - pohodlnejsi | Nizka |
-| 6 | Chytra navigace | Nizky - power users | Nizka |
-| 7 | AI summary klienta | Vysoky - ale vyzaduje edge fn | Vysoka |
-
----
-
-## Soubory k uprave
+### Upravene soubory:
 
 | Soubor | Zmena |
 |--------|-------|
-| `src/pages/Index.tsx` | Pridat SmartDailyPlanCard, konsolidovat sekce |
-| `src/components/dashboard/SmartDailyPlanCard.tsx` | NOVA - proaktivni denni plan |
-| `src/components/dashboard/WeekOverviewCard.tsx` | NOVA - spojeni stats + finance |
-| `src/components/calendar/AgendaItem.tsx` | Pridat readiness dot + coaching context |
-| `src/hooks/useSmartDailyPlan.ts` | NOVY - agregace denniho planu |
-| `src/hooks/useTrainingSuggestions.ts` | NOVY - navrhy pro novy trenink |
-| `src/components/trainings/CreateTrainingSheet.tsx` | Integrace suggestions |
-| `src/components/dashboard/TodayTimelineCompact.tsx` | Swipe gesta, readiness dot |
-| `src/components/dashboard/FinanceSummaryCard.tsx` | Integrace cashflow forecast |
-| `src/components/search/CommandPalette.tsx` | Smart commands |
+| `src/pages/Sales.tsx` | Novy smart hero s kontextovymi KPI a tipem |
+| `src/components/sales/SalesRegister.tsx` | Integrace ClientPurchaseSuggestions + QuickAccessBar + MobileCartBar |
+| `src/components/sales/SalesInsights.tsx` | Dalsi typy insights (stock velocity, pricing, customer value, best day) |
+| `src/components/sales/StockManagement.tsx` | Pridat "daysRemaining" badge do produktovych karet |
+
+### Datove zdroje (bez DB zmen):
+
+Vsechny nove hooky pouzivaji existujici tabulky:
+- `sales_orders` + `sales_order_items` - historie nakupu klienta
+- `products` - zasoby a ceny
+- `training_sessions` - rozvrh (pro smart tipy)
+- `credit_transactions` - fallback data
+
+---
+
+## Prioritizace
+
+| Priorita | Zmena | Dopad |
+|----------|-------|-------|
+| 1 | ClientPurchaseSuggestions ("Obvykle kupuje") | Vysoky - zrychleni prodeju |
+| 2 | QuickAccessBar (spojeni Recent + Favorites) | Stredni - cistejsi UI |
+| 3 | MobileCartBar (sticky kosik) | Vysoky - mobilni UX |
+| 4 | Smart Hero s tipem | Stredni - proaktivni informace |
+| 5 | Stock Velocity predikce | Stredni - chytrejsi sklad |
+| 6 | Rozsirene Insights | Nizsi - analyticke doporuceni |
 
 ---
 
 ## Ocekavany vysledek
 
-- Trener rano otevre aplikaci a OKAMZITE vi, co ma delat
-- Kazdy trenink v rozvrhu ukazuje kontext klienta BEZ klikani
-- Dashboard je kompaktnejsi, mene scrollovani
-- Pri tvorbe treninku aplikace navrhovne optimalni parametry
-- Na mobilu je aplikace pohodlnejsi s mensim scrollovanim
-- Celkovy dojem: "Aplikace mi pomaha, ne jen ukazuje data"
+- Trener po vybreni klienta OKAMZITE vidi co obvykle kupuje (1-click pridani)
+- Na mobilu je kosik vzdy dostupny bez scrollovani
+- Dashboard prodeje ukazuje kontextove informace ("dnes +15%", "priprav protein pro Petra")
+- Sklad upozornuje kolik dni zasoby vydrzi, ne jen ze jsou nizke
+- Statistiky doporucuji konkretni akce, ne jen ukazuji cisla
+
