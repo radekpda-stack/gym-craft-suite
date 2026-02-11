@@ -255,7 +255,7 @@ export function TrainingDetailView({
   const isCanceled = training.status === 'canceled';
 
   return (
-    <div className="space-y-4 pb-6">
+    <div className="space-y-4 pb-32">
       {/* HERO HEADER */}
       <TrainingHeroHeader
         training={training}
@@ -354,33 +354,7 @@ export function TrainingDetailView({
         </Form>
       )}
 
-      {/* PREP SECTION - only for scheduled/in_progress */}
-      {(isScheduled || isInProgress) && (
-        <TrainingPrepSection
-          client={client}
-          clientId={training.client_id}
-          currentTrainingId={training.id}
-          trainingDate={training.date.split('T')[0]}
-        />
-      )}
-
-      {/* PARTICIPANTS - for scheduled/in_progress */}
-      {(isScheduled || isInProgress) && (
-        <TrainingParticipantsManager
-          trainingId={training.id}
-          primaryClientId={training.client_id}
-          primaryClientName={client?.name || 'Primární klient'}
-          currentParticipantCount={training.participant_count || 1}
-          isEditable={true}
-        />
-      )}
-
-      {/* PARTICIPANTS PRs - for scheduled/in_progress */}
-      {(isScheduled || isInProgress) && participants.length > 0 && (
-        <ParticipantsPRsSection participants={participants} />
-      )}
-
-      {/* TAGS - Compact Grid Selector */}
+      {/* TAGS - Compact Grid Selector (moved ABOVE exercises) */}
       <div className="relative rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4">
         <CompactTagGridSelector
           trainingType={training.training_type}
@@ -432,6 +406,32 @@ export function TrainingDetailView({
           participants={participants}
         />
       </div>
+
+      {/* PREP SECTION - collapsed by default, only for scheduled/in_progress */}
+      {(isScheduled || isInProgress) && (
+        <TrainingPrepSection
+          client={client}
+          clientId={training.client_id}
+          currentTrainingId={training.id}
+          trainingDate={training.date.split('T')[0]}
+        />
+      )}
+
+      {/* PARTICIPANTS - for scheduled/in_progress */}
+      {(isScheduled || isInProgress) && (
+        <TrainingParticipantsManager
+          trainingId={training.id}
+          primaryClientId={training.client_id}
+          primaryClientName={client?.name || 'Primární klient'}
+          currentParticipantCount={training.participant_count || 1}
+          isEditable={true}
+        />
+      )}
+
+      {/* PARTICIPANTS PRs - for scheduled/in_progress */}
+      {(isScheduled || isInProgress) && participants.length > 0 && (
+        <ParticipantsPRsSection participants={participants} />
+      )}
 
       {/* QUICK SALE - for scheduled/in_progress */}
       {(isScheduled || isInProgress) && participants.length > 0 && (

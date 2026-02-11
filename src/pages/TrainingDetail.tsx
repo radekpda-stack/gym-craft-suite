@@ -31,17 +31,14 @@ import { useTags } from '@/hooks/useTags';
 import { validateTrainingTags } from '@/hooks/useTrainingTagValidation';
 import { TrainingDetailView } from '@/components/trainings/TrainingDetailView';
 import { 
-  ParticipantPaymentCard, 
   ParticipantPayment, 
   IndividualPaymentMethod,
   getDefaultPaymentMethod,
-  calculatePaymentSummary,
 } from '@/components/trainings/ParticipantPaymentCard';
 import { useTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import { useBudgetGroups } from '@/hooks/useClientBudgetGroups';
 import { TrainingFeedbackSection } from '@/components/feedback/TrainingFeedbackSection';
 import { TagValidationAlert } from '@/components/trainings/TagValidationAlert';
-import { CompactTagSelector } from '@/components/trainings/CompactTagSelector';
 import { Badge } from '@/components/ui/badge';
 import { useTrainingFeedback } from '@/hooks/useTrainingFeedback';
 import { useCreditBalanceValue } from '@/hooks/useCreditBalance';
@@ -49,6 +46,8 @@ import { useFeedbackRequest } from '@/hooks/useFeedbackLink';
 import { useUndoTrainingDelete } from '@/hooks/useUndoActions';
 import { useTrainingSummary } from '@/hooks/useTrainingSummary';
 import { TrainingSummaryOverlay } from '@/components/trainings/TrainingSummaryOverlay';
+import { TrainingStatusBar } from '@/components/trainings/TrainingStatusBar';
+import { SmartCompletionSheet } from '@/components/trainings/SmartCompletionSheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,14 +58,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { usePageTracking, useFeatureTracking } from '@/hooks/useFeatureTracking';
 
 export default function TrainingDetail() {
@@ -405,8 +396,10 @@ export default function TrainingDetail() {
     return participantPayments.reduce((sum, p) => sum + p.price_share, 0);
   };
   
-  // Calculate payment summary for display
-  const paymentSummary = calculatePaymentSummary(participantPayments);
+  // Total price for status bar
+  const statusBarTotalPrice = participantPayments.length > 0
+    ? participantPayments.reduce((sum, p) => sum + p.price_share, 0)
+    : getTrainingPrice(training.participant_count || 1, trainingPrices);
   
   // Handler to update individual participant payment method
   const handleParticipantPaymentChange = (clientId: string, method: IndividualPaymentMethod) => {
@@ -524,146 +517,45 @@ export default function TrainingDetail() {
         />
       )}
 
-      {/* Complete Training Dialog - Premium glassmorphism design */}
-      <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="max-w-md p-0 gap-0 max-h-[85vh] flex flex-col bg-card/95 backdrop-blur-xl border-border/50 shadow-2xl">
-          {/* Premium header with success gradient */}
-          <DialogHeader className="relative px-4 pt-4 pb-3 shrink-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-success/15 via-success/5 to-transparent rounded-t-2xl pointer-events-none" />
-            <div className="relative flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-success/20 ring-1 ring-success/30">
-                <CheckCircle className="w-5 h-5 text-success" />
-              </div>
-              <div>
-                <DialogTitle className="text-base font-semibold">Dokončit trénink</DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">
-                  Zkontrolujte tagy a platby
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-          
-          {/* Scrollable content area */}
-          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
-            {/* Compact tag selection - floating card */}
-            {!dialogTagValidation.isValid && (
-              <div className="p-3 bg-warning/5 backdrop-blur-sm rounded-xl border border-warning/30 space-y-3">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-warning shrink-0" />
-                  <span className="text-xs font-medium text-warning">Doplňte povinné tagy</span>
-                </div>
-                <CompactTagSelector
-                  selectedTagIds={dialogTagIds}
-                  onChange={setDialogTagIds}
-                  trainingType={dialogTrainingType}
-                  missingTypes={dialogTagValidation.missingTypes}
-                />
-              </div>
-            )}
-            
-            {dialogTagValidation.isValid && dialogTagIds.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 py-1">
-                {allTags.filter(t => dialogTagIds.includes(t.id)).map(tag => (
-                  <Badge
-                    key={tag.id}
-                    variant="secondary"
-                    className="text-[10px] py-0.5 px-2"
-                    style={{ 
-                      backgroundColor: `${tag.color}20`,
-                      borderColor: tag.color,
-                      color: tag.color 
-                    }}
-                  >
-                    {tag.name}
-                  </Badge>
-                ))}
-              </div>
-            )}
+      {/* Smart Completion Sheet - replaces old Dialog */}
+      <SmartCompletionSheet
+        open={showCompleteDialog}
+        onOpenChange={setShowCompleteDialog}
+        completionState={{
+          tagsReady: dialogTagValidation.isValid,
+          rpeSet: training.rpe !== null && training.rpe !== undefined,
+          missingTypes: dialogTagValidation.missingTypes,
+        }}
+        dialogTagIds={dialogTagIds}
+        onDialogTagIdsChange={setDialogTagIds}
+        dialogTrainingType={dialogTrainingType}
+        allTags={allTags.map(t => ({ id: t.id, name: t.name, color: t.color || '#888' }))}
+        coachRPE={training.rpe || null}
+        onCoachRPEChange={async (rpe) => {
+          await handleFieldUpdate('rpe', String(rpe));
+        }}
+        participantPayments={participantPayments}
+        onPaymentMethodChange={handleParticipantPaymentChange}
+        onPriceChange={handleParticipantPriceChange}
+        notes={completeNotes}
+        onNotesChange={setCompleteNotes}
+        onComplete={handleComplete}
+        isSubmitting={isSubmitting || completeTrainingAtomic.isPending}
+        canComplete={dialogTagValidation.isValid && participantPayments.length > 0}
+      />
 
-            {/* Participants section - floating card */}
-            <div className="space-y-2.5">
-              <div className="flex items-center gap-2">
-                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Účastníci
-                </Label>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                  {participantPayments.length}
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                {participantPayments.map((participant) => (
-                  <ParticipantPaymentCard
-                    key={participant.client_id}
-                    participant={participant}
-                    onChange={handleParticipantPaymentChange}
-                    onPriceChange={handleParticipantPriceChange}
-                    disabled={isSubmitting || completeTrainingAtomic.isPending}
-                    allowPriceEdit={true}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Payment summary - premium style */}
-            {paymentSummary.length > 0 && (
-              <div className="p-3 rounded-xl bg-primary/5 backdrop-blur-sm border border-primary/20">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Celkem k úhradě</span>
-                  <span className="text-lg font-bold text-primary tabular-nums">{getExpectedPrice()} Kč</span>
-                </div>
-              </div>
-            )}
-
-            {/* Notes - minimal */}
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Poznámky (volitelné)</Label>
-              <Textarea
-                value={completeNotes}
-                onChange={(e) => setCompleteNotes(e.target.value)}
-                placeholder="Přidat poznámku k tréninku..."
-                rows={2}
-                className="text-sm resize-none bg-secondary/30 border-border/50"
-              />
-            </div>
-          </div>
-
-          {/* Fixed footer with glassmorphism */}
-          <div className="shrink-0 border-t border-border/50 bg-card/80 backdrop-blur-sm px-4 py-3 flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowCompleteDialog(false)} 
-              disabled={isSubmitting || completeTrainingAtomic.isPending}
-              className="flex-1"
-              size="sm"
-            >
-              Zrušit
-            </Button>
-            <Button 
-              onClick={handleComplete} 
-              disabled={
-                !dialogTagValidation.isValid ||
-                isSubmitting ||
-                completeTrainingAtomic.isPending ||
-                participantPayments.length === 0
-              }
-              className="flex-1 bg-success hover:bg-success/90 shadow-lg shadow-success/20"
-              size="sm"
-            >
-              {(isSubmitting || completeTrainingAtomic.isPending) ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                  Dokončuji...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                  Dokončit
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Sticky Status Bar - always visible for scheduled trainings */}
+      {(training.status === 'scheduled' || training.status === 'in_progress') && (
+        <TrainingStatusBar
+          status={training.status}
+          tagsReady={tagValidation.isValid}
+          rpeSet={training.rpe !== null && training.rpe !== undefined}
+          totalPrice={statusBarTotalPrice}
+          rpe={training.rpe || null}
+          onComplete={openCompleteDialog}
+          isLoading={isSubmitting || completeTrainingAtomic.isPending}
+        />
+      )}
 
       {/* Cancel Training Dialog - Kept for legacy, Quick Actions handles this now */}
       

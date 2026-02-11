@@ -73,17 +73,18 @@ export function InlineRPESelector({
         </div>
       )}
       
-      <div className="flex gap-0.5">
+      <div className="flex gap-1">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((rpe) => (
           <button
             key={rpe}
             type="button"
             onClick={() => onChange(rpe)}
             className={cn(
-              'w-7 h-7 rounded-md text-xs font-semibold transition-all duration-100',
+              'w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-xs font-bold transition-all duration-100',
               'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1',
+              'active:scale-95',
               value === rpe
-                ? cn(RPE_COLORS[rpe], 'text-white shadow-sm scale-110 z-10')
+                ? cn(RPE_COLORS[rpe], 'text-white shadow-md scale-105 z-10')
                 : 'bg-muted/60 hover:bg-muted text-muted-foreground hover:scale-105'
             )}
           >
