@@ -1,94 +1,124 @@
 
-# Audit klientského portálu -- Chyby a vylepšení
+# Audit statistik: Nalezené chyby a chybějící data
 
-## Nalezené chyby
-
-### 1. KRITICKÁ: `training_participants.payment_amount` neexistuje
-Databázové logy ukazují opakovanou chybu: *"column training_participants.payment_amount does not exist"*. Chyba je v souboru `src/hooks/usePrefetchTrainingDetail.ts` (řádek 81), kde se dotazuje na sloupec `payment_amount`, který v tabulce neexistuje. Tato chyba se opakuje při každém otevření detailu tréninku.
-
-**Oprava:** Odstranit `payment_amount` z SELECT dotazu v prefetch hooku.
+Po důkladné analýze hooků, komponent a databázových logů jsem identifikoval tyto problémy a chybějící funkce.
 
 ---
 
-## Návrhy vylepšení pro komfort klientů
+## CHYBY K OPRAVĚ
 
-### 2. Chybí "Pull-to-refresh" / tlačítko pro obnovení dat
-Na žádné stránce portálu není možnost ručně obnovit data. Klient musí celou stránku refreshovat v prohlížeči, pokud chce vidět aktuální stav (např. po tom, co trenér něco změnil).
+### 1. KRITICKÁ: `payment_amount` chyba stále v DB logech
+Ačkoliv kód v `usePrefetchTrainingDetail.ts` byl opraven, databázové logy ukazují, že chyba `column training_participants.payment_amount does not exist` se stále opakuje (10+ výskytů v posledních logech). Je třeba prohledat VŠECHNY soubory, které dotazují `training_participants`, a ověřit, že žádný jiný hook/komponenta nemá starý SELECT.
 
-**Řešení:** Přidat na klíčové stránky (Přehled, Deník, Pokrok) tlačítko pro refresh nebo implementovat pull-to-refresh gesto na mobilu.
-
-### 3. Chybí zobrazení trenérova jména a kontaktu
-Klient nikde na portálu nevidí jméno svého trenéra ani kontaktní údaje. Pokud potřebuje kontaktovat trenéra mimo chat, nemá jak.
-
-**Řešení:** Do záhlaví nebo profilu přidat kartu "Můj trenér" se jménem a volitelně kontaktem.
-
-### 4. Stránka Pokrok je příliš dlouhá a nestrukturovaná
-Stránka `ClientPortalProgress` zobrazuje vše najednou (PRs, asymetrie, benchmarky, grafy váhy, tuku, cviků, kardia) bez kategorizace. Na mobilu je to velmi dlouhý scroll.
-
-**Řešení:** Rozdělit do záložek nebo sbalitelných sekcí (Síla / Tělo / Kardio), aby klient rychle našel, co ho zajímá.
-
-### 5. Chat nemá notifikaci o nových zprávách
-Chat funguje, ale klient nemá žádné upozornění na novou zprávu od trenéra kromě obecného notifikačního centra. Na mobilním bottom baru u ikony Chatu chybí badge s počtem nepřečtených zpráv.
-
-**Řešení:** Přidat badge s počtem nepřečtených zpráv na ikonu Chatu v navigaci.
-
-### 6. Nutriční deník -- chybí denní souhrn makroživin
-Klient vidí jednotlivé záznamy jídel, ale chybí jednoduchý přehledový panel s celkovými kaloriemi a makry za den (pokud je AI enrichment k dispozici).
-
-**Řešení:** Na vrch stránky Nutričního deníku přidat kompaktní kartu s denním shrnutím: kalorie, bílkoviny, sacharidy, tuky.
-
-### 7. Docházka -- chybí vizualizace (kalendářní heatmapa)
-Stránka Docházka zobrazuje seznam tréninků, ale chybí vizuální přehled (heatmapa nebo kalendář), který by klientovi ukázal vzorce docházky.
-
-**Řešení:** Přidat kompaktní kalendářní heatmapu (styl GitHub contributions) ukazující intenzitu tréninků po dnech.
-
-### 8. Domácí tréninky -- chybí přímý odkaz z dashboardu
-Sekce "Domácí tréninky" (homework) je schovaná a není dostupná přes hlavní navigaci ani z dashboardu. Klient ji těžko najde.
-
-**Řešení:** Pokud má klient čekající domácí tréninky, zobrazit je jako kartu na dashboardu a přidat odkaz do navigace.
+**Soubory k prověření:** Všechny hooky pracující s `training_participants`.
 
 ---
 
-## Prioritizace
+### 2. BUG: `useAnnualStats` používá `.single()` bez ochrany (řádek 111)
+Při režimu `'all'` se dotazuje na nejstarší trénink pomocí `.single()`. Pokud trenér nemá žádné tréninky, dotaz selže místo graceful fallbacku.
 
-| Priorita | Položka | Typ | Náročnost |
-|----------|---------|-----|-----------|
-| 1 | payment_amount chyba | Bug fix | Nízká |
-| 2 | Badge nepřečtených zpráv v navigaci | Vylepšení | Nízká |
-| 3 | Karta "Můj trenér" | Vylepšení | Nízká |
-| 4 | Domácí tréninky na dashboardu | Vylepšení | Nízká |
-| 5 | Denní souhrn makroživin v nutričním deníku | Vylepšení | Střední |
-| 6 | Kalendářní heatmapa docházky | Vylepšení | Střední |
-| 7 | Strukturované záložky v Pokroku | Vylepšení | Střední |
-| 8 | Pull-to-refresh / tlačítko obnovení | Vylepšení | Nízká |
+**Oprava:** Nahradit `.single()` za `.maybeSingle()`.
 
 ---
 
-## Technický plán implementace
+### 3. BUG: `useAnnualStats` -- `training_participants` JOIN nevrací data
+Na řádku 307-311 se dotazuje `training_participants` s JOIN na `training_sessions!inner`, ale výsledek se filtruje jako `p.training_session_id === t.id` (řádek 323), přičemž pole `training_session_id` NENÍ v SELECT dotazu. Tím pádem `trainingParticipants` je vždy prázdný array a multi-participant tréninky se nikdy nezapočítají správně do `clientTrainingCounts` a `clientSpent`.
 
-### Krok 1: Oprava payment_amount (bug)
-Soubor: `src/hooks/usePrefetchTrainingDetail.ts`
-- Odstranit `payment_amount` ze SELECT dotazu na řádku 81
+**Dopad:** Statistiky "Top klienti podle tréninků" a "Top klienti podle útraty" jsou CHYBNÉ pro skupinové tréninky -- nezapočítávají se účastníci, pouze `client_id` ze session.
 
-### Krok 2: Badge nepřečtených zpráv
-Soubor: `src/components/client-portal/ClientPortalLayout.tsx`
-- Vytvořit hook `useUnreadChatCount` (dotaz na `chat_messages` kde `is_read = false` a `sender_type = 'trainer'`)
-- Na mobilní i desktopové navigaci přidat číselný badge na ikonu Chatu
-
-### Krok 3: Karta "Můj trenér"
-Soubor: nový `src/components/client-portal/dashboard/MyTrainerCard.tsx`
-- Načíst jméno trenéra z `clientAccount.trainer_id` -> tabulka profilu
-- Zobrazit na dashboardu pod Quick Actions s možností přejít na chat
-
-### Krok 4: Domácí tréninky na dashboardu
-Soubor: nový `src/components/client-portal/dashboard/PendingHomeworkWidget.tsx`
-- Použít existující `useClientAssignedWorkouts` hook
-- Zobrazit počet čekajících úkolů s odkazem na `/zona/homework`
-- Přidat do `ClientPortalOverview.tsx`
-
-### Krok 5-8: Další vylepšení
-Implementace denního souhrnu, heatmapy, strukturovaných záložek a refresh tlačítka podle prioritizace.
+**Oprava:** Přidat `training_session_id` do SELECT nebo použít správný přístup k JOIN datům.
 
 ---
 
-Doporučuji začít s kroky 1-4 (nízká náročnost, vysoký dopad na komfort klientů).
+### 4. BUG: `useCardioStatsNew` -- dvojité počítání kardio dat
+Hook sbírá data z `cardio_entries` A `exercise_entries` s kardio metrikami. Pokud je stejná aktivita zaznamenána v obou tabulkách (což je možné), dojde k duplicitnímu započítání vzdálenosti, času a tepové frekvence.
+
+**Oprava:** Přidat deduplikaci nebo jasné oddělení zdrojů dat.
+
+---
+
+### 5. BUG: `useFinancialStats` -- `totalCredit` nesprávný výpočet
+Na řádku 98-100 se `totalCredit` počítá jako `payments - |trainings| - |products|`. Toto není credit balance, ale přibližný odhad, který nebere v úvahu refundy, manuální transakce a skupinové rozpočty. Pro souhrnnou statistiku by měl výpočet zahrnovat VŠECHNY typy transakcí.
+
+---
+
+### 6. BUG: `useCancellationStats` -- hardcoded DEFAULT_TRAINING_PRICE = 800 Kč
+Na řádku 123 je výchozí cena za pozdní zrušení 800 Kč, ale od února 2026 platí nový ceník (900 Kč za 1 osobu). Toto by mělo být aktualizováno na 900 Kč.
+
+---
+
+### 7. BUG: `useGlobalTrainingTagStats` -- nepřesný avgPerWeek pro `'all'`
+Na řádku 101-102 se pro režim `'all'` předpokládá 365 dní. Ve skutečnosti by se měl vypočítat skutečný počet dní od nejstaršího tréninku.
+
+---
+
+### 8. BUG: `useBusinessAnalytics` -- N+1 dotazů na DB
+Hook provádí 6 sekvenčních dotazů v `for` smyčce (řádky 202-220 a 245-278) pro trend příjmů a retenci -- celkem 12 extra DB dotazů. Toto výrazně zpomaluje načítání statistik.
+
+**Oprava:** Načíst data jedním dotazem a seskupit na frontendu.
+
+---
+
+## CHYBĚJÍCÍ STATISTIKY
+
+### 9. Cvičební statistiky: Chybí periodový filtr
+`ExerciseStatsSection` nemá `periodRange` prop -- vždy zobrazuje data za celý rok (`useAnnualStats('year')`), zatímco Finance a Tréninky respektují globální periodový selektor.
+
+**Oprava:** Přidat `periodRange` prop a předat jej do hooků.
+
+---
+
+### 10. Finance: `useProfitByPeriod` počítá POUZE produktový zisk
+Hook na řádcích 22-27 filtruje jen `type === 'product'`. Profit & Loss graf nezahrnuje příjmy z tréninků ani provozní náklady z `business_expenses`. Výsledný "zisk" je tedy jen marže na produktech, NE celkový zisk trenéra.
+
+**Oprava:** Do výpočtu přidat i tréninkové příjmy a odečíst business_expenses.
+
+---
+
+### 11. Finance: `useIncomeByPeriod` nezahrnuje produktové příjmy
+Na řádcích 53-54 je `products: 0` -- produktové příjmy se NIKDY nenaplní, ačkoliv interface `IncomeDataPoint` pole `products` definuje. Grafy tedy ukazují pouze přijaté platby (dobití kreditu), ne skutečné příjmy.
+
+---
+
+### 12. Chybí: Hodinová sazba v čase (trend)
+`HourlyRateTrendCard` existuje v komponentách, ale není jasné, zda se zobrazuje v `FinanceStatsSection`. Hodinová sazba (příjem/hodiny) je klíčová metrika pro trenéra OSVČ.
+
+---
+
+### 13. Chybí: Kapacitní vytíženost jako součást statistik
+`useCapacityUtilization` existuje, ale v statistikách tréninků chybí vizualizace -- kolik % kapacity trenér využívá (skutečné vs. maximální tréninky).
+
+---
+
+## PLÁN IMPLEMENTACE
+
+### Fáze 1: Kritické opravy (priorita)
+1. Prohledat a opravit VŠECHNY výskyty `payment_amount` v celé codebase
+2. Opravit `.single()` na `.maybeSingle()` v `useAnnualStats`
+3. Opravit chybějící `training_session_id` v `useAnnualStats` participant query
+4. Aktualizovat DEFAULT_TRAINING_PRICE na 900 Kč v `useCancellationStats`
+
+### Fáze 2: Datová přesnost
+5. Opravit `useGlobalTrainingTagStats` -- správný výpočet dní pro `'all'`
+6. Opravit `useIncomeByPeriod` -- doplnit produktové příjmy
+7. Opravit `useProfitByPeriod` -- zahrnout tréninkové příjmy a náklady
+8. Přidat `periodRange` do `ExerciseStatsSection`
+
+### Fáze 3: Výkonnost
+9. Optimalizovat `useBusinessAnalytics` -- eliminovat N+1 dotazy
+
+---
+
+## Technické detaily
+
+| # | Soubor | Typ | Dopad |
+|---|--------|-----|-------|
+| 1 | Celá codebase | Bug fix | Odstranění DB chyb |
+| 2 | `useAnnualStats.ts:111` | Bug fix | Crash prevence |
+| 3 | `useAnnualStats.ts:307-337` | Bug fix | Chybné top klienti |
+| 4 | `useCancellationStats.ts:123` | Bug fix | Špatná cena |
+| 5 | `useGlobalTrainingTagStats.ts:101` | Bug fix | Nepřesný průměr |
+| 6 | `useIncomeByPeriod.ts` | Missing data | Chybí produkty v grafu |
+| 7 | `useProfitByPeriod.ts` | Missing data | Neúplný P&L |
+| 8 | `ExerciseStatsSection.tsx` | Missing feature | Chybí filtr období |
+| 9 | `useBusinessAnalytics.ts` | Performance | 12 zbytečných DB dotazů |
