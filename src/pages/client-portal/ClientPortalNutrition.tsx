@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { useClientPortal } from '@/contexts/ClientPortalContext';
 import { useClientPortalPageTracking } from '@/hooks/useClientPortalAnalytics';
 import { Apple, Plus, Loader2, MessageSquare } from 'lucide-react';
+import { RefreshButton } from '@/components/client-portal/common/RefreshButton';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleFoodForm } from '@/components/client-portal/nutrition/SimpleFoodForm';
 import { TodayEntries } from '@/components/client-portal/nutrition/TodayEntries';
+import { ClientDayNutritionSummary } from '@/components/client-portal/nutrition/ClientDayNutritionSummary';
 import { EditEntryDialog } from '@/components/client-portal/nutrition/EditEntryDialog';
 import { WeekStrip } from '@/components/client-portal/nutrition/WeekStrip';
 import { WaterGoalWidget, calculateDailyWaterIntake } from '@/components/client-portal/nutrition/WaterGoalWidget';
@@ -479,9 +481,12 @@ export default function ClientPortalNutrition() {
   return (
     <div className="space-y-4 pb-6">
       {/* Header */}
-      <div className="px-1">
-        <h1 className="text-xl font-bold">Nutriční deník</h1>
-        <p className="text-sm text-muted-foreground">Jednoduché sledování stravy</p>
+      <div className="flex items-center justify-between px-1">
+        <div>
+          <h1 className="text-xl font-bold">Nutriční deník</h1>
+          <p className="text-sm text-muted-foreground">Jednoduché sledování stravy</p>
+        </div>
+        <RefreshButton />
       </div>
 
       {isLoading ? (
@@ -559,6 +564,11 @@ export default function ClientPortalNutrition() {
             </div>
           )}
 
+          {/* AI Nutrition Summary */}
+          {dayData?.food && dayData.food.length > 0 && (
+            <ClientDayNutritionSummary foodEntries={dayData.food} />
+          )}
+
           {/* Quick Stats Row */}
           <div className="grid grid-cols-3 gap-2">
             <div className="bg-muted/50 rounded-xl p-3 text-center">
@@ -566,11 +576,11 @@ export default function ClientPortalNutrition() {
               <div className="text-[10px] text-muted-foreground uppercase">Jídel</div>
             </div>
             <div className="bg-muted/50 rounded-xl p-3 text-center">
-              <div className="text-2xl font-bold text-blue-500">{waterMl}</div>
+              <div className="text-2xl font-bold text-primary">{waterMl}</div>
               <div className="text-[10px] text-muted-foreground uppercase">ml vody</div>
             </div>
             <div className="bg-muted/50 rounded-xl p-3 text-center">
-              <div className="text-2xl font-bold text-amber-600">{todayCoffeeCount}</div>
+              <div className="text-2xl font-bold text-primary">{todayCoffeeCount}</div>
               <div className="text-[10px] text-muted-foreground uppercase">Kávy</div>
             </div>
           </div>

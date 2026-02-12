@@ -14,6 +14,8 @@ import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { PeriodChips, TrendIcon } from '@/components/client-portal/common/SharedComponents';
+import { AttendanceHeatmap } from '@/components/client-portal/attendance/AttendanceHeatmap';
+import { RefreshButton } from '@/components/client-portal/common/RefreshButton';
 
 const periodOptions: { value: PeriodDays; label: string }[] = [
   { value: 30, label: '30 dní' },
@@ -51,10 +53,11 @@ export default function ClientPortalAttendance() {
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
           <Calendar className="w-5 h-5 text-primary" />
         </div>
-        <div className="min-w-0">
+        <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold">Docházka</h1>
           <p className="text-muted-foreground text-sm">Historie absolvovaných tréninků</p>
         </div>
+        <RefreshButton />
       </div>
 
       {/* Error Alert */}
@@ -275,6 +278,11 @@ export default function ClientPortalAttendance() {
             </CardContent>
           </Card>
         </motion.div>
+      )}
+
+      {/* Attendance Heatmap */}
+      {stats && stats.sessions.length > 0 && (
+        <AttendanceHeatmap sessions={stats.sessions} isLoading={isLoading} />
       )}
 
       {/* Period Selector & Sessions List */}
