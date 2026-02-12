@@ -120,7 +120,7 @@ export function useCancellationStats(periodRange?: StatsPeriodRange) {
       });
 
       // Default training price for late cancellation deduction
-      const DEFAULT_TRAINING_PRICE = 800;
+      const DEFAULT_TRAINING_PRICE = 900;
 
       // Process cancellations
       // IMPORTANT: is_late_cancellation = true means credit was ALWAYS deducted

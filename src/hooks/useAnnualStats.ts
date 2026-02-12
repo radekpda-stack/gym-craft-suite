@@ -108,9 +108,9 @@ export function useAnnualStats(
           .eq('user_id', user.id)
           .order('date', { ascending: true })
           .limit(1)
-          .single();
-        
-        startDate = firstTraining ? new Date(firstTraining.date) : subMonths(new Date(), 12);
+           .maybeSingle();
+         
+         startDate = firstTraining ? new Date(firstTraining.date) : subMonths(new Date(), 12);
       }
 
       const startStr = format(startDate, 'yyyy-MM-dd');
@@ -303,25 +303,25 @@ export function useAnnualStats(
       const activeClients = clients.filter(c => !c.is_archived);
       const archivedClients = clients.filter(c => c.is_archived);
 
-      // Get training participants for client stats
-      const { data: participantsData } = await supabase
-        .from('training_participants')
-        .select('client_id, price_share, training_sessions!inner(status, date)')
-        .gte('training_sessions.date', startStr)
-        .lte('training_sessions.date', endStr);
+      // Get training participants for client stats - include training_session_id for matching
+       const { data: participantsData } = await supabase
+         .from('training_participants')
+         .select('client_id, price_share, training_session_id, training_sessions!inner(status, date)')
+         .gte('training_sessions.date', startStr)
+         .lte('training_sessions.date', endStr);
 
-      const participants = participantsData || [];
-      
-      // Top clients by trainings - combine training_sessions.client_id + training_participants
-      const clientTrainingCounts: Record<string, number> = {};
-      const clientSpent: Record<string, number> = {};
-      
-      // For each completed training, determine who participated and how much they spent
-      completedTrainings.forEach((t: any) => {
-        // Find participants for this training
-        const trainingParticipants = participants.filter(
-          (p: any) => p.training_session_id === t.id
-        );
+       const participants = participantsData || [];
+       
+       // Top clients by trainings - combine training_sessions.client_id + training_participants
+       const clientTrainingCounts: Record<string, number> = {};
+       const clientSpent: Record<string, number> = {};
+       
+       // For each completed training, determine who participated and how much they spent
+       completedTrainings.forEach((t: any) => {
+         // Find participants for this training using training_session_id
+         const trainingParticipants = participants.filter(
+           (p: any) => p.training_session_id === t.id
+         );
         
         if (trainingParticipants.length > 0) {
           // Multi-participant training - use price_share from each participant

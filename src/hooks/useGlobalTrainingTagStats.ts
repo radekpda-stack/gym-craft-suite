@@ -97,10 +97,16 @@ export function useGlobalTrainingTagStats(dateRange: GlobalDateRange = 30) {
         new Date(s.date) >= startOfMonth
       ).length;
 
-      // Calculate avg per week
-      const totalDays = dateRange === 'all' 
-        ? 365 // Assume 1 year for "all"
-        : dateRange;
+      // Calculate avg per week - for 'all', compute actual days from oldest session
+       let totalDays: number;
+       if (dateRange === 'all' && (sessions || []).length > 0) {
+         const sortedDates = (sessions || []).map(s => new Date(s.date).getTime()).sort((a, b) => a - b);
+         totalDays = Math.max(1, Math.ceil((Date.now() - sortedDates[0]) / (1000 * 60 * 60 * 24)));
+       } else if (dateRange === 'all') {
+         totalDays = 365;
+       } else {
+         totalDays = dateRange;
+       }
       const weeks = Math.max(1, totalDays / 7);
       const avgPerWeek = (sessions || []).length / weeks;
 

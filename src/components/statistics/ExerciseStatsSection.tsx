@@ -11,9 +11,16 @@ import { Card } from '@/components/ui/card';
 import { VolumeStatsCard } from './VolumeStatsCard';
 import { CardioStatsCard } from './CardioStatsCard';
 import { StatInfoTooltip } from './StatInfoTooltip';
+import type { StatsPeriodRange } from './StatsPeriodSelector';
 
-export function ExerciseStatsSection() {
-  const { data: stats, isLoading } = useAnnualStats('year');
+interface ExerciseStatsSectionProps {
+  periodRange?: StatsPeriodRange;
+}
+
+export function ExerciseStatsSection({ periodRange }: ExerciseStatsSectionProps) {
+  // Use periodRange to determine stats period
+  const statsPeriod = periodRange?.type === 'all' ? 'all' : periodRange?.type === 'custom' || periodRange ? 'custom' : 'year';
+  const { data: stats, isLoading } = useAnnualStats(statsPeriod, periodRange?.start, periodRange?.end);
   const { data: intensityStats, isLoading: intensityLoading } = useTrainingIntensityStats();
   const { data: monthlyPRs } = useMonthlyPRCount();
   const [showPRsModal, setShowPRsModal] = useState(false);

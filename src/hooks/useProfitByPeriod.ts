@@ -18,11 +18,11 @@ export function useProfitByPeriod(period: ProfitPeriod) {
     queryFn: async (): Promise<ProfitDataPoint[]> => {
       const now = new Date();
 
-      // Fetch product transactions
+      // Fetch ALL relevant credit transactions (training income + product income)
       const { data: transactions, error: transError } = await supabase
         .from("credit_transactions")
         .select("*")
-        .eq("type", "product")
+        .in("type", ["product", "training", "canceled_training"])
         .order("created_at", { ascending: true });
 
       if (transError) throw transError;
@@ -33,6 +33,14 @@ export function useProfitByPeriod(period: ProfitPeriod) {
         .select("id, name, price, purchase_price");
 
       if (prodError) throw prodError;
+
+      // Fetch business expenses
+      const { data: expenses, error: expError } = await supabase
+        .from("business_expenses")
+        .select("id, amount, date")
+        .order("date", { ascending: true });
+
+      if (expError) throw expError;
 
       // Helper to calculate profit data for a period
       const calculatePeriodData = (
@@ -49,14 +57,24 @@ export function useProfitByPeriod(period: ProfitPeriod) {
         let costs = 0;
 
         periodTrans.forEach(t => {
+          // All transaction amounts represent revenue (trainings, products, cancellation fees)
           revenue += Math.abs(t.amount || 0);
-          if (t.product_id) {
+          
+          // Product costs (purchase price)
+          if (t.type === 'product' && t.product_id) {
             const product = products?.find(p => p.id === t.product_id);
             if (product) {
               costs += product.purchase_price || 0;
             }
           }
         });
+
+        // Add business expenses as costs
+        const periodExpenses = (expenses || []).filter(e => {
+          const date = new Date(e.date);
+          return date >= startDate && date <= endDate;
+        });
+        costs += periodExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
         return {
           label,
@@ -77,7 +95,7 @@ export function useProfitByPeriod(period: ProfitPeriod) {
           if (weekDays.length === 0) continue;
           
           const weekStart = weekDays[0];
-          const weekEnd = weekDays[weekDays.length - 1];
+          const weekEnd = new Date(weekDays[weekDays.length - 1]);
           weekEnd.setHours(23, 59, 59, 999);
           
           const label = format(weekStart, "d.M.", { locale: cs });
