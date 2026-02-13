@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useCreditBalanceValue } from '@/hooks/useCreditBalance';
 import { CreditCard, Search, Check, Wallet, Banknote, Building2, Receipt, AlertCircle, Users, Plus, Minus, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -89,14 +90,17 @@ export function UnifiedCreditModal({
   // Get unpaid trainings for selected client
   const { data: unpaidTrainings = [] } = useUnpaidTrainings(selectedClientId || undefined);
   
+  // Use ledger-based balance (single source of truth) instead of cached credit_balance column
+  const ledgerBalance = useCreditBalanceValue(selectedClientId || undefined);
+  
   // Determine the effective credit balance to display
   const effectiveCreditBalance = useMemo(() => {
     if (!selectedClient) return 0;
     if (sharedBudgetInfo?.isShared) {
       return sharedBudgetInfo.sharedBalance;
     }
-    return selectedClient.credit_balance || 0;
-  }, [selectedClient, sharedBudgetInfo]);
+    return ledgerBalance;
+  }, [selectedClient, sharedBudgetInfo, ledgerBalance]);
   
   // Personal debt logic removed - shared budget handles all transactions directly
   
