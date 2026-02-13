@@ -117,22 +117,18 @@ export function ProgressHeroCard({
       {volumeTrend !== 0 && (
         <div className={cn(
           'flex items-center gap-3 px-4 py-3 rounded-xl',
-          'bg-card/60 backdrop-blur-sm border border-border/30',
-          volumeTrend > 0 ? 'border-l-2 border-l-emerald-500' : 'border-l-2 border-l-amber-500'
+          'bg-card/60 backdrop-blur-sm border border-border/30 border-l-2 border-l-primary/50'
         )}>
           <TrendingUp className={cn(
-            'w-4 h-4',
-            volumeTrend > 0 ? 'text-emerald-500' : 'text-amber-500 rotate-180'
+            'w-4 h-4 text-muted-foreground',
+            volumeTrend < 0 && 'rotate-180'
           )} />
           <div className="flex-1">
             <p className="text-sm text-muted-foreground">
               Trend aktivity oproti předchozím 90 dnům
             </p>
           </div>
-          <span className={cn(
-            'text-sm font-semibold tabular-nums',
-            volumeTrend > 0 ? 'text-emerald-500' : 'text-amber-500'
-          )}>
+          <span className="text-sm font-semibold tabular-nums text-foreground">
             {volumeTrend > 0 ? '+' : ''}{volumeTrend}%
           </span>
         </div>

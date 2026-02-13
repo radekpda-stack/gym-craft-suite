@@ -21,7 +21,7 @@ function TrendIndicator({ value }: { value?: number }) {
   return (
     <span className={cn(
       "inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full",
-      isPositive ? "text-emerald-600 bg-emerald-500/10" : "text-red-500 bg-red-500/10"
+      "text-muted-foreground bg-muted/50"
     )}>
       <TrendingUp className={cn("w-2.5 h-2.5", !isPositive && "rotate-180")} />
       {isPositive ? '+' : ''}{value}%

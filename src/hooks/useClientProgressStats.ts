@@ -39,39 +39,48 @@ export interface ClientProgressStats {
   trainingsCount90d: number;
   activeSince: string | null;
   activeMonths: number;
-  volumeTrend: number; // procentuální změna objemu tréninků
+  volumeTrend: number;
   topExercises: ExerciseProgress[];
   recentPRs: RecentPR[];
   isLoading: boolean;
 }
 
+export type ProgressPeriod = '12m' | 'all';
+
 interface UseClientProgressStatsOptions {
   clientId: string | null;
   limit?: number;
+  period?: ProgressPeriod;
 }
 
-export function useClientProgressStats({ clientId, limit = 6 }: UseClientProgressStatsOptions) {
+export function useClientProgressStats({ clientId, limit = 6, period = '12m' }: UseClientProgressStatsOptions) {
   const { user } = useAuth();
   const now = new Date();
   const ninetyDaysAgo = format(subDays(now, 90), 'yyyy-MM-dd');
   const oneEightyDaysAgo = format(subDays(now, 180), 'yyyy-MM-dd');
   const thisMonthStart = format(subMonths(now, 0), 'yyyy-MM-01');
+  const periodStart = period === '12m' ? format(subMonths(now, 12), 'yyyy-MM-dd') : '2000-01-01';
 
   return useQuery({
-    queryKey: ['client-progress-stats', clientId, user?.id, limit],
+    queryKey: ['client-progress-stats', clientId, user?.id, limit, period],
     queryFn: async (): Promise<ClientProgressStats | null> => {
       if (!clientId || !user?.id) return null;
 
-      // Fetch client info and all relevant data in parallel
+      // Fetch client info and all relevant data in parallel (including cardio + skill)
       const [
         clientResult,
-        allEntriesResult,
-        prsThisMonthResult,
-        prsLast90DaysResult,
-        trainings90dResult,
-        prevTrainings90dResult,
+        strengthEntriesResult,
+        cardioEntriesResult,
+        skillEntriesResult,
+        prsThisMonthStrength,
+        prsThisMonthCardio,
+        trainings90dStrength,
+        trainings90dCardio,
+        trainings90dSkill,
+        prevTrainings90dStrength,
+        prevTrainings90dCardio,
+        prevTrainings90dSkill,
       ] = await Promise.all([
-        // Client info
         supabase
           .from('clients')
           .select('id, name, created_at')
@@ -79,16 +88,34 @@ export function useClientProgressStats({ clientId, limit = 6 }: UseClientProgres
           .eq('user_id', user.id)
           .single(),
 
-        // All exercise entries for this client (last 12 months for sparklines)
+        // Strength entries
         supabase
           .from('exercise_entries')
           .select('id, exercise_id, exercise_name, weight_kg, reps, time_seconds, distance_meters, is_pr, date, exercises(exercise_type_v2, is_time_based)')
           .eq('client_id', clientId)
           .eq('user_id', user.id)
-          .gte('date', format(subMonths(now, 12), 'yyyy-MM-dd'))
+          .gte('date', periodStart)
           .order('date', { ascending: true }),
 
-        // PRs this month
+        // Cardio entries
+        supabase
+          .from('cardio_entries')
+          .select('id, exercise_id, exercise_name, duration_seconds, distance_meters, avg_speed_kmh, avg_watts, is_pr, date')
+          .eq('client_id', clientId)
+          .eq('user_id', user.id)
+          .gte('date', periodStart)
+          .order('date', { ascending: true }),
+
+        // Skill entries (check if table exists via select)
+        supabase
+          .from('exercise_entries')
+          .select('id, exercise_id, exercise_name, weight_kg, reps, time_seconds, distance_meters, is_pr, date, exercises(exercise_type_v2, is_time_based)')
+          .eq('client_id', clientId)
+          .eq('user_id', user.id)
+          .gte('date', periodStart)
+          .limit(0), // placeholder - skill entries come from exercise_entries with exercise_type
+
+        // PRs this month - strength
         supabase
           .from('exercise_entries')
           .select('id')
@@ -97,15 +124,14 @@ export function useClientProgressStats({ clientId, limit = 6 }: UseClientProgres
           .eq('is_pr', true)
           .gte('date', thisMonthStart),
 
-        // PRs last 90 days
+        // PRs this month - cardio
         supabase
-          .from('exercise_entries')
-          .select('id, exercise_id, exercise_name, weight_kg, reps, time_seconds, distance_meters, date')
+          .from('cardio_entries')
+          .select('id')
           .eq('client_id', clientId)
           .eq('user_id', user.id)
           .eq('is_pr', true)
-          .gte('date', ninetyDaysAgo)
-          .order('date', { ascending: false }),
+          .gte('date', thisMonthStart),
 
         // Training count last 90 days
         supabase
@@ -115,7 +141,22 @@ export function useClientProgressStats({ clientId, limit = 6 }: UseClientProgres
           .eq('user_id', user.id)
           .gte('date', ninetyDaysAgo),
 
-        // Training count previous 90 days (for trend)
+        supabase
+          .from('cardio_entries')
+          .select('date')
+          .eq('client_id', clientId)
+          .eq('user_id', user.id)
+          .gte('date', ninetyDaysAgo),
+
+        supabase
+          .from('exercise_entries')
+          .select('date')
+          .eq('client_id', clientId)
+          .eq('user_id', user.id)
+          .gte('date', ninetyDaysAgo)
+          .limit(0), // skill placeholder
+
+        // Training count previous 90 days
         supabase
           .from('exercise_entries')
           .select('date')
@@ -123,6 +164,23 @@ export function useClientProgressStats({ clientId, limit = 6 }: UseClientProgres
           .eq('user_id', user.id)
           .gte('date', oneEightyDaysAgo)
           .lt('date', ninetyDaysAgo),
+
+        supabase
+          .from('cardio_entries')
+          .select('date')
+          .eq('client_id', clientId)
+          .eq('user_id', user.id)
+          .gte('date', oneEightyDaysAgo)
+          .lt('date', ninetyDaysAgo),
+
+        supabase
+          .from('exercise_entries')
+          .select('date')
+          .eq('client_id', clientId)
+          .eq('user_id', user.id)
+          .gte('date', oneEightyDaysAgo)
+          .lt('date', ninetyDaysAgo)
+          .limit(0), // skill placeholder
       ]);
 
       if (clientResult.error || !clientResult.data) {
@@ -130,13 +188,23 @@ export function useClientProgressStats({ clientId, limit = 6 }: UseClientProgres
       }
 
       const client = clientResult.data;
-      const allEntries = allEntriesResult.data || [];
-      const prsThisMonth = prsThisMonthResult.data?.length || 0;
-      const prsLast90d = prsLast90DaysResult.data || [];
+      const strengthEntries = strengthEntriesResult.data || [];
+      const cardioEntries = cardioEntriesResult.data || [];
 
-      // Count unique training days
-      const uniqueDays90d = new Set((trainings90dResult.data || []).map(e => e.date)).size;
-      const uniqueDaysPrev90d = new Set((prevTrainings90dResult.data || []).map(e => e.date)).size;
+      const prsThisMonth = (prsThisMonthStrength.data?.length || 0) + (prsThisMonthCardio.data?.length || 0);
+
+      // Count unique training days from all tables
+      const allDates90d = [
+        ...(trainings90dStrength.data || []).map(e => e.date),
+        ...(trainings90dCardio.data || []).map(e => e.date),
+      ];
+      const uniqueDays90d = new Set(allDates90d).size;
+
+      const allDatesPrev90d = [
+        ...(prevTrainings90dStrength.data || []).map(e => e.date),
+        ...(prevTrainings90dCardio.data || []).map(e => e.date),
+      ];
+      const uniqueDaysPrev90d = new Set(allDatesPrev90d).size;
 
       // Calculate volume trend
       let volumeTrend = 0;
@@ -147,101 +215,150 @@ export function useClientProgressStats({ clientId, limit = 6 }: UseClientProgres
         volumeTrend = 99;
       }
 
-      // Calculate active months
-      const firstEntryDate = allEntries[0]?.date;
-      const activeMonths = firstEntryDate 
+      // Calculate active months from earliest entry
+      const allDates = [
+        ...strengthEntries.map(e => e.date),
+        ...cardioEntries.map(e => e.date),
+      ].sort();
+      const firstEntryDate = allDates[0];
+      const activeMonths = firstEntryDate
         ? differenceInMonths(now, parseISO(firstEntryDate)) + 1
         : 0;
 
       // Group entries by exercise for sparklines
-      const exerciseGroups = new Map<string, typeof allEntries>();
-      allEntries.forEach(entry => {
+      const exerciseGroups = new Map<string, {
+        entries: { date: string; value: number; isPr: boolean }[];
+        name: string;
+        exerciseId: string | null;
+        type: 'strength' | 'cardio' | 'skill';
+        unit: string;
+        isInverted: boolean;
+      }>();
+
+      // Process strength entries
+      strengthEntries.forEach(entry => {
         const key = entry.exercise_id || entry.exercise_name;
-        if (!exerciseGroups.has(key)) {
-          exerciseGroups.set(key, []);
-        }
-        exerciseGroups.get(key)!.push(entry);
-      });
-
-      // Build top exercises with sparkline data
-      const topExercises: ExerciseProgress[] = [];
-      
-      exerciseGroups.forEach((entries, key) => {
-        if (entries.length < 2) return; // Need at least 2 entries for a trend
-
-        const firstEntry = entries[0];
-        const lastEntry = entries[entries.length - 1];
-        const exerciseData = firstEntry.exercises as any;
+        const exerciseData = entry.exercises as any;
         const isTimeBased = exerciseData?.is_time_based || false;
         const exerciseType = exerciseData?.exercise_type_v2 || 'strength';
 
-        // Determine primary metric
-        let firstValue = 0;
-        let lastValue = 0;
+        let value = 0;
         let unit = 'kg';
         let isInverted = false;
 
         if (isTimeBased || exerciseType === 'cardio') {
-          // Time-based: lower is better
-          firstValue = firstEntry.time_seconds || 0;
-          lastValue = lastEntry.time_seconds || 0;
+          value = entry.time_seconds || 0;
           unit = 's';
           isInverted = true;
-        } else if (firstEntry.weight_kg && firstEntry.weight_kg > 0) {
-          // Strength: weight
-          firstValue = firstEntry.weight_kg;
-          lastValue = lastEntry.weight_kg || 0;
+        } else if (entry.weight_kg && entry.weight_kg > 0) {
+          value = entry.weight_kg;
           unit = 'kg';
-        } else if (firstEntry.distance_meters && firstEntry.distance_meters > 0) {
-          // Distance-based
-          firstValue = firstEntry.distance_meters;
-          lastValue = lastEntry.distance_meters || 0;
+        } else if (entry.distance_meters && entry.distance_meters > 0) {
+          value = entry.distance_meters;
           unit = 'm';
-        } else if (firstEntry.reps) {
-          // Reps only
-          firstValue = firstEntry.reps;
-          lastValue = lastEntry.reps || 0;
+        } else if (entry.reps) {
+          value = entry.reps;
           unit = 'reps';
         }
 
-        if (firstValue === 0 && lastValue === 0) return;
+        if (value === 0) return;
 
-        // Calculate change percentage
+        if (!exerciseGroups.has(key)) {
+          exerciseGroups.set(key, {
+            entries: [],
+            name: entry.exercise_name,
+            exerciseId: entry.exercise_id,
+            type: mapExerciseType(exerciseType),
+            unit,
+            isInverted,
+          });
+        }
+        exerciseGroups.get(key)!.entries.push({
+          date: entry.date,
+          value,
+          isPr: entry.is_pr || false,
+        });
+      });
+
+      // Process cardio entries
+      cardioEntries.forEach(entry => {
+        const key = entry.exercise_id || `cardio-${entry.exercise_name}`;
+
+        // Primary metric: if distance exists, use pace (time/distance); else duration
+        let value = 0;
+        let unit = 's';
+        let isInverted = true; // lower time = better for cardio
+
+        if (entry.avg_watts && entry.avg_watts > 0) {
+          value = entry.avg_watts;
+          unit = 'W';
+          isInverted = false; // higher watts = better
+        } else if (entry.distance_meters && entry.distance_meters > 0 && entry.duration_seconds > 0) {
+          // Use speed (km/h) - higher is better
+          value = Math.round((entry.distance_meters / entry.duration_seconds) * 3.6 * 10) / 10;
+          unit = 'km/h';
+          isInverted = false;
+        } else {
+          value = entry.duration_seconds;
+          unit = 's';
+          isInverted = true;
+        }
+
+        if (value === 0) return;
+
+        if (!exerciseGroups.has(key)) {
+          exerciseGroups.set(key, {
+            entries: [],
+            name: entry.exercise_name,
+            exerciseId: entry.exercise_id,
+            type: 'cardio',
+            unit,
+            isInverted,
+          });
+        }
+        exerciseGroups.get(key)!.entries.push({
+          date: entry.date,
+          value,
+          isPr: entry.is_pr || false,
+        });
+      });
+
+      // Build top exercises with sparkline data
+      const topExercises: ExerciseProgress[] = [];
+
+      exerciseGroups.forEach((group) => {
+        if (group.entries.length < 2) return;
+
+        const sorted = group.entries.sort((a, b) => a.date.localeCompare(b.date));
+        const firstValue = sorted[0].value;
+        const lastValue = sorted[sorted.length - 1].value;
+
         let changePercent = 0;
         if (firstValue > 0) {
-          if (isInverted) {
-            // For time, improvement is decrease
+          if (group.isInverted) {
             changePercent = Math.round(((firstValue - lastValue) / firstValue) * 100);
           } else {
             changePercent = Math.round(((lastValue - firstValue) / firstValue) * 100);
           }
         }
 
-        // Build sparkline data
-        const sparklineData = entries.map(e => ({
-          date: e.date,
-          value: isTimeBased 
-            ? (e.time_seconds || 0)
-            : (e.weight_kg || e.distance_meters || e.reps || 0),
-        }));
-
-        // Count PRs for this exercise
-        const prCount = entries.filter(e => e.is_pr).length;
+        const sparklineData = sorted.map(e => ({ date: e.date, value: e.value }));
+        const prCount = sorted.filter(e => e.isPr).length;
 
         topExercises.push({
-          exerciseId: firstEntry.exercise_id,
-          exerciseName: firstEntry.exercise_name,
-          type: mapExerciseType(exerciseType),
+          exerciseId: group.exerciseId,
+          exerciseName: group.name,
+          type: group.type,
           firstValue,
           lastValue,
-          firstDate: firstEntry.date,
-          lastDate: lastEntry.date,
+          firstDate: sorted[0].date,
+          lastDate: sorted[sorted.length - 1].date,
           changePercent,
-          unit,
+          unit: group.unit,
           sparklineData,
-          entryCount: entries.length,
+          entryCount: sorted.length,
           prCount,
-          isInverted,
+          isInverted: group.isInverted,
         });
       });
 
@@ -249,32 +366,56 @@ export function useClientProgressStats({ clientId, limit = 6 }: UseClientProgres
       topExercises.sort((a, b) => b.entryCount - a.entryCount);
       const limitedExercises = topExercises.slice(0, limit);
 
-      // Build recent PRs list
-      const recentPRs: RecentPR[] = prsLast90d.slice(0, 10).map(pr => {
+      // Build recent PRs list from strength + cardio
+      const allPRs: RecentPR[] = [];
+
+      // Strength PRs
+      const strengthPRs = strengthEntries.filter(e => e.is_pr).slice(-20);
+      strengthPRs.forEach(pr => {
         const value = pr.weight_kg || pr.time_seconds || pr.distance_meters || pr.reps || 0;
         const unit = pr.weight_kg ? 'kg' : pr.time_seconds ? 's' : pr.distance_meters ? 'm' : 'reps';
-
-        return {
+        allPRs.push({
           id: pr.id,
           date: pr.date,
           exerciseName: pr.exercise_name,
           exerciseId: pr.exercise_id,
           value,
-          previousValue: null, // Would need additional query
+          previousValue: null,
           unit,
           changePercent: null,
-        };
+        });
       });
 
+      // Cardio PRs
+      const cardioPRs = cardioEntries.filter(e => e.is_pr);
+      cardioPRs.forEach(pr => {
+        const value = pr.avg_watts || pr.duration_seconds || 0;
+        const unit = pr.avg_watts ? 'W' : 's';
+        allPRs.push({
+          id: pr.id,
+          date: pr.date,
+          exerciseName: pr.exercise_name,
+          exerciseId: pr.exercise_id,
+          value,
+          previousValue: null,
+          unit,
+          changePercent: null,
+        });
+      });
+
+      // Sort PRs by date desc
+      allPRs.sort((a, b) => b.date.localeCompare(a.date));
+      const recentPRs = allPRs.slice(0, 10);
+
       // Count total PRs
-      const totalPRs = allEntries.filter(e => e.is_pr).length;
+      const totalPRs = strengthEntries.filter(e => e.is_pr).length + cardioEntries.filter(e => e.is_pr).length;
 
       return {
         clientId: client.id,
         clientName: client.name,
         totalPRs,
         prsThisMonth,
-        prsLast90Days: prsLast90d.length,
+        prsLast90Days: allPRs.filter(p => p.date >= ninetyDaysAgo).length,
         trainingsCount90d: uniqueDays90d,
         activeSince: firstEntryDate || null,
         activeMonths,
@@ -296,7 +437,7 @@ function mapExerciseType(type: string | null): 'strength' | 'cardio' | 'skill' {
   return 'strength';
 }
 
-// Hook for multiple clients overview
+// Hook for multiple clients overview - includes cardio + skill entries
 export function useAllClientsProgress() {
   const { user } = useAuth();
   const now = new Date();
@@ -307,8 +448,7 @@ export function useAllClientsProgress() {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      // Fetch clients with their recent activity
-      const [clientsResult, entriesResult] = await Promise.all([
+      const [clientsResult, strengthResult, cardioResult] = await Promise.all([
         supabase
           .from('clients')
           .select('id, name, is_archived')
@@ -321,14 +461,23 @@ export function useAllClientsProgress() {
           .select('client_id, is_pr, date')
           .eq('user_id', user.id)
           .gte('date', ninetyDaysAgo),
+
+        supabase
+          .from('cardio_entries')
+          .select('client_id, is_pr, date')
+          .eq('user_id', user.id)
+          .gte('date', ninetyDaysAgo),
       ]);
 
       const clients = clientsResult.data || [];
-      const entries = entriesResult.data || [];
+      const allEntries = [
+        ...(strengthResult.data || []),
+        ...(cardioResult.data || []),
+      ];
 
       // Aggregate per client
       const clientStats = new Map<string, { entries: number; prs: number; lastDate: string }>();
-      entries.forEach(e => {
+      allEntries.forEach(e => {
         if (!clientStats.has(e.client_id)) {
           clientStats.set(e.client_id, { entries: 0, prs: 0, lastDate: '' });
         }

@@ -113,9 +113,7 @@ function SparklineCard({ exercise, onClick }: { exercise: ExerciseProgress; onCl
         </div>
         <div className={cn(
           'flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium',
-          isPositive && 'bg-emerald-500/10 text-emerald-500',
-          isNegative && 'bg-destructive/10 text-destructive',
-          !isPositive && !isNegative && 'bg-muted text-muted-foreground'
+          'bg-muted text-muted-foreground'
         )}>
           <TrendIcon className="w-3 h-3" />
           <span className="tabular-nums">

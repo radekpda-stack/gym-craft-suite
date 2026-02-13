@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Zap, Dumbbell, ClipboardCheck, Trophy, Plus, List, BarChart3, Users, Medal, GitCompareArrows } from 'lucide-react';
+import { Zap, Dumbbell, ClipboardCheck, Trophy, Plus, List, BarChart3, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ExerciseListView } from '@/components/exercises/ExerciseListView';
@@ -14,7 +14,6 @@ import { CategoryCards } from '@/components/performance/CategoryCards';
 import { ClientProgressLeaderboard } from '@/components/performance/ClientProgressLeaderboard';
 import { RecentExercisesChips } from '@/components/performance/RecentExercisesChips';
 import { ClientProgressView } from '@/components/performance/ClientProgressView';
-import { CohortBenchmarkView } from '@/components/performance/CohortBenchmarkView';
 import { FloatingActionButton, FABAction } from '@/components/ui/floating-action-button';
 import { ExerciseFormDialog } from '@/components/exercises/ExerciseFormDialog';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
@@ -22,7 +21,7 @@ import { useModuleSettings } from '@/hooks/useModuleSettings';
 import { usePerformanceOverview } from '@/hooks/usePerformanceOverview';
 import { useExercisesWithUsage } from '@/hooks/useExerciseStats';
 
-type PerformanceTab = 'overview' | 'clients' | 'comparison' | 'library' | 'analytics' | 'pr-history' | 'tests' | 'challenges';
+type PerformanceTab = 'overview' | 'clients' | 'library' | 'analytics' | 'tests' | 'challenges';
 
 export default function PerformanceHub() {
   usePageTracking('performance');
@@ -30,8 +29,10 @@ export default function PerformanceHub() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isModuleEnabled } = useModuleSettings();
   
-  // Get initial tab from URL or default to 'overview'
-  const initialTab = (searchParams.get('tab') as PerformanceTab) || 'overview';
+  // Support legacy tab names via redirect
+  const rawTab = searchParams.get('tab');
+  const resolvedTab = rawTab === 'comparison' ? 'clients' : rawTab === 'pr-history' ? 'overview' : rawTab;
+  const initialTab = (resolvedTab as PerformanceTab) || 'overview';
   const [activeTab, setActiveTab] = useState<PerformanceTab>(initialTab);
   
   // Dialogs
@@ -68,14 +69,13 @@ export default function PerformanceHub() {
     },
   ];
 
-  // Calculate tab count for dynamic grid
-  const tabCount = 3 + (testsEnabled ? 1 : 0) + (challengesEnabled ? 1 : 0); // overview, library, comparison, (analytics is nested), tests?, challenges?
+  // Core tabs: overview, clients, library, analytics + optional tests, challenges
+  const coreTabCount = 4 + (testsEnabled ? 1 : 0) + (challengesEnabled ? 1 : 0);
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6 pb-32">
       {/* Hero Header Section */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-card/80 to-card/60 backdrop-blur-md border border-border/50 shadow-lg p-6">
-        {/* Background glow effect */}
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
         
@@ -92,7 +92,6 @@ export default function PerformanceHub() {
             </div>
           </div>
 
-          {/* Integrated Quick Search */}
           <ExerciseSearchCommand />
         </div>
       </div>
@@ -105,9 +104,9 @@ export default function PerformanceHub() {
         isLoading={overviewLoading}
       />
 
-      {/* Tabs */}
+      {/* Tabs - reduced to 4 core + optional */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full max-w-4xl mx-auto bg-secondary/30 backdrop-blur-sm p-1" style={{ gridTemplateColumns: `repeat(${tabCount + 3}, 1fr)` }}>
+        <TabsList className="grid w-full max-w-3xl mx-auto bg-secondary/30 backdrop-blur-sm p-1" style={{ gridTemplateColumns: `repeat(${coreTabCount}, 1fr)` }}>
           <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Zap className="w-4 h-4" />
             <span className="hidden sm:inline">Přehled</span>
@@ -120,17 +119,9 @@ export default function PerformanceHub() {
             <List className="w-4 h-4" />
             <span className="hidden sm:inline">Knihovna</span>
           </TabsTrigger>
-          <TabsTrigger value="comparison" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <GitCompareArrows className="w-4 h-4" />
-            <span className="hidden sm:inline">Porovnání</span>
-          </TabsTrigger>
           <TabsTrigger value="analytics" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <BarChart3 className="w-4 h-4" />
             <span className="hidden sm:inline">Analytika</span>
-          </TabsTrigger>
-          <TabsTrigger value="pr-history" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Medal className="w-4 h-4" />
-            <span className="hidden sm:inline">PR Historie</span>
           </TabsTrigger>
           {testsEnabled && (
             <TabsTrigger value="tests" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
@@ -146,9 +137,8 @@ export default function PerformanceHub() {
           )}
         </TabsList>
 
-        {/* Overview Tab - Dashboard View */}
+        {/* Overview Tab - includes PR History */}
         <TabsContent value="overview" className="mt-6 space-y-6">
-          {/* Category Cards */}
           <CategoryCards
             categories={overview?.categories || { strength: { count: 0, entries: 0 }, cardio: { count: 0, entries: 0 }, plyometric: { count: 0, entries: 0 } }}
             isLoading={overviewLoading}
@@ -158,25 +148,26 @@ export default function PerformanceHub() {
             }}
           />
 
-          {/* Client Progress Leaderboard */}
           <ClientProgressLeaderboard
             topClients={overview?.topClients || []}
             isLoading={overviewLoading}
           />
 
-          {/* Recent Exercises */}
           <RecentExercisesChips
             recentExercises={overview?.recentExercises || []}
             isLoading={overviewLoading}
           />
+
+          {/* PR History integrated into Overview */}
+          <PRHistoryContent />
         </TabsContent>
 
-        {/* Clients Tab - Client Progress View */}
+        {/* Clients Tab - merged with Comparison */}
         <TabsContent value="clients" className="mt-6">
           <ClientProgressView />
         </TabsContent>
 
-        {/* Library Tab - Exercise List */}
+        {/* Library Tab */}
         <TabsContent value="library" className="mt-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -196,19 +187,9 @@ export default function PerformanceHub() {
           </div>
         </TabsContent>
 
-        {/* Comparison Tab */}
-        <TabsContent value="comparison" className="mt-6">
-          <CohortBenchmarkView />
-        </TabsContent>
-
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="mt-6">
           <ExerciseAnalyticsView />
-        </TabsContent>
-
-        {/* PR History Tab */}
-        <TabsContent value="pr-history" className="mt-6">
-          <PRHistoryContent />
         </TabsContent>
 
         {/* Tests Tab */}
@@ -226,10 +207,8 @@ export default function PerformanceHub() {
         )}
       </Tabs>
 
-      {/* Floating Action Button */}
       <FloatingActionButton actions={fabActions} />
 
-      {/* New Exercise Dialog */}
       <ExerciseFormDialog
         open={showNewExerciseDialog}
         onOpenChange={setShowNewExerciseDialog}
