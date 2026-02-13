@@ -16,9 +16,10 @@ import {
   Percent,
   ChevronRight,
   PieChartIcon,
-  LineChart
+  LineChart,
+  CalendarDays
 } from 'lucide-react';
-import { format, subDays, subMonths, startOfDay, startOfMonth } from 'date-fns';
+import { format, subDays, subMonths, startOfDay, startOfMonth, getDay, getHours } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
@@ -46,6 +47,9 @@ import { cn } from '@/lib/utils';
 import { ProductSalesDetailModal } from './ProductSalesDetailModal';
 import { SalesInsights } from './SalesInsights';
 import { ComparisonBadge } from './ComparisonBadge';
+import { SalesHeatmap } from './SalesHeatmap';
+import { TopClientsChart } from './TopClientsChart';
+import { CategoryTrendChart } from './CategoryTrendChart';
 
 type Period = 'today' | 'week' | 'month' | 'year' | 'all';
 
@@ -114,6 +118,12 @@ function getDateRange(period: Period, offset = 0) {
   return { fromDate, toDate };
 }
 
+// Convert JS getDay (0=Sun) to Monday-first (0=Mon)
+function dowMondayFirst(date: Date): number {
+  const d = getDay(date);
+  return d === 0 ? 6 : d - 1;
+}
+
 // Fetch stats for a period
 async function fetchPeriodStats(period: Period, products: any[], offset = 0) {
   const { fromDate, toDate } = getDateRange(period, offset);
@@ -121,7 +131,7 @@ async function fetchPeriodStats(period: Period, products: any[], offset = 0) {
   // Try new sales_orders first
   let ordersQuery = supabase
     .from('sales_orders')
-    .select('id, total_amount, payment_method, payment_status, created_at')
+    .select('id, total_amount, payment_method, payment_status, created_at, client_id')
     .eq('payment_status', 'completed');
   
   if (fromDate) {
@@ -148,7 +158,7 @@ async function fetchPeriodStats(period: Period, products: any[], offset = 0) {
   if (!orders || orders.length === 0) {
     let legacyQuery = supabase
       .from('credit_transactions')
-      .select('*, products(id, name, price, category, purchase_price)')
+      .select('*, products(id, name, price, category, purchase_price), clients(first_name, last_name)')
       .eq('type', 'product');
     
     if (fromDate) {
@@ -174,6 +184,11 @@ async function fetchPeriodStats(period: Period, products: any[], offset = 0) {
   };
   const productStats: Record<string, { name: string; quantity: number; revenue: number; costs: number; category: string }> = {};
   const dailyData: Record<string, { date: string; revenue: number; count: number; profit: number; costs: number }> = {};
+  
+  // New data structures
+  const hourlyHeatmap: { dow: number; hour: number; count: number }[] = [];
+  const clientMap: Record<string, { name: string; orderCount: number; totalSpent: number }> = {};
+  const categoryTrendMap: Record<string, Record<string, number>> = {};
 
   if (orders && orders.length > 0) {
     totalOrders = orders.length;
@@ -185,12 +200,25 @@ async function fetchPeriodStats(period: Period, products: any[], offset = 0) {
         byPaymentMethod[method].revenue += order.total_amount || 0;
       }
 
+      const createdAt = new Date(order.created_at);
       const dateKey = order.created_at.split('T')[0];
       if (!dailyData[dateKey]) {
         dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0, profit: 0, costs: 0 };
       }
       dailyData[dateKey].revenue += order.total_amount || 0;
       dailyData[dateKey].count++;
+
+      // Heatmap
+      hourlyHeatmap.push({ dow: dowMondayFirst(createdAt), hour: getHours(createdAt), count: 1 });
+
+      // Client stats
+      if (order.client_id) {
+        if (!clientMap[order.client_id]) {
+          clientMap[order.client_id] = { name: order.client_id, orderCount: 0, totalSpent: 0 };
+        }
+        clientMap[order.client_id].orderCount++;
+        clientMap[order.client_id].totalSpent += order.total_amount || 0;
+      }
     });
 
     orderItems.forEach(item => {
@@ -213,8 +241,29 @@ async function fetchPeriodStats(period: Period, products: any[], offset = 0) {
           dailyData[dateKey].profit += item.line_total - itemCost;
           dailyData[dateKey].costs += itemCost;
         }
+        
+        // Category trend
+        const periodKey = period === 'today' || period === 'week'
+          ? dateKey
+          : format(new Date(dateKey), 'yyyy-MM');
+        const cat = CATEGORY_LABELS[item.products?.category || 'other'] || item.products?.category || 'Ostatní';
+        if (!categoryTrendMap[periodKey]) categoryTrendMap[periodKey] = {};
+        categoryTrendMap[periodKey][cat] = (categoryTrendMap[periodKey][cat] || 0) + item.line_total;
       }
     });
+
+    // Resolve client names for orders
+    if (Object.keys(clientMap).length > 0) {
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id, first_name, last_name')
+        .in('id', Object.keys(clientMap));
+      clients?.forEach(c => {
+        if (clientMap[c.id]) {
+          clientMap[c.id].name = `${c.first_name} ${c.last_name}`.trim();
+        }
+      });
+    }
   } else if (legacySales.length > 0) {
     totalOrders = legacySales.length;
     legacySales.forEach(sale => {
@@ -229,6 +278,7 @@ async function fetchPeriodStats(period: Period, products: any[], offset = 0) {
         byPaymentMethod[method].revenue += amount;
       }
 
+      const createdAt = new Date(sale.created_at);
       const dateKey = sale.created_at.split('T')[0];
       if (!dailyData[dateKey]) {
         dailyData[dateKey] = { date: dateKey, revenue: 0, count: 0, profit: 0, costs: 0 };
@@ -238,6 +288,21 @@ async function fetchPeriodStats(period: Period, products: any[], offset = 0) {
       dailyData[dateKey].profit += amount - purchasePrice;
       dailyData[dateKey].costs += purchasePrice;
 
+      // Heatmap
+      hourlyHeatmap.push({ dow: dowMondayFirst(createdAt), hour: getHours(createdAt), count: 1 });
+
+      // Client stats
+      if (sale.client_id) {
+        if (!clientMap[sale.client_id]) {
+          const clientName = sale.clients 
+            ? `${sale.clients.first_name} ${sale.clients.last_name}`.trim()
+            : sale.client_id;
+          clientMap[sale.client_id] = { name: clientName, orderCount: 0, totalSpent: 0 };
+        }
+        clientMap[sale.client_id].orderCount++;
+        clientMap[sale.client_id].totalSpent += amount;
+      }
+
       if (sale.product_id && sale.products) {
         const key = sale.product_id;
         if (!productStats[key]) {
@@ -246,6 +311,14 @@ async function fetchPeriodStats(period: Period, products: any[], offset = 0) {
         productStats[key].quantity++;
         productStats[key].revenue += amount;
         productStats[key].costs += purchasePrice;
+
+        // Category trend
+        const periodKey = period === 'today' || period === 'week'
+          ? dateKey
+          : format(new Date(dateKey), 'yyyy-MM');
+        const cat = CATEGORY_LABELS[sale.products?.category || 'other'] || sale.products?.category || 'Ostatní';
+        if (!categoryTrendMap[periodKey]) categoryTrendMap[periodKey] = {};
+        categoryTrendMap[periodKey][cat] = (categoryTrendMap[periodKey][cat] || 0) + amount;
       }
     });
   }
@@ -284,6 +357,37 @@ async function fetchPeriodStats(period: Period, products: any[], offset = 0) {
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   const avgProfit = totalOrders > 0 ? totalProfit / totalOrders : 0;
 
+  // Active days count & avg per day
+  const activeDays = Object.keys(dailyData).length;
+  const avgPerDay = activeDays > 0 ? totalRevenue / activeDays : 0;
+
+  // Client stats array
+  const clientStats = Object.values(clientMap).sort((a, b) => b.totalSpent - a.totalSpent);
+
+  // Category trend array
+  const allCategories = new Set<string>();
+  Object.values(categoryTrendMap).forEach(cats => {
+    Object.keys(cats).forEach(c => allCategories.add(c));
+  });
+  const categoryTrend = Object.entries(categoryTrendMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([periodKey, cats]) => ({
+      period: period === 'today' || period === 'week'
+        ? format(new Date(periodKey), 'd.M.', { locale: cs })
+        : format(new Date(periodKey + '-01'), 'MMM', { locale: cs }),
+      ...cats,
+    }));
+
+  // AOV trend
+  const aovTrend = trendData
+    .filter(d => d.count > 0)
+    .map(d => ({
+      label: period === 'year'
+        ? format(new Date(d.date), 'MMM', { locale: cs })
+        : format(new Date(d.date), 'd.M.', { locale: cs }),
+      aov: d.revenue / d.count,
+    }));
+
   return {
     totalRevenue,
     totalCosts,
@@ -296,6 +400,14 @@ async function fetchPeriodStats(period: Period, products: any[], offset = 0) {
     topProducts,
     trendData,
     categoryData,
+    // New fields
+    activeDays,
+    avgPerDay,
+    hourlyHeatmap,
+    clientStats,
+    categoryTrend,
+    categoryTrendCategories: Array.from(allCategories),
+    aovTrend,
   };
 }
 
@@ -411,8 +523,8 @@ export function SalesStatistics() {
         </div>
       ) : (
         <>
-          {/* KPI Cards - 4 main metrics */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* KPI Cards - 5 main metrics */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             {/* Tržby */}
             <div className={cn(
               "relative overflow-hidden rounded-xl p-4",
@@ -533,6 +645,27 @@ export function SalesStatistics() {
                 </div>
               </div>
             </div>
+
+            {/* NEW: Průměr / den */}
+            <div className={cn(
+              "relative overflow-hidden rounded-xl p-4",
+              "bg-card/80 backdrop-blur-md",
+              "border border-chart-2/20 shadow-sm",
+              "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5",
+              "col-span-2 lg:col-span-1"
+            )}>
+              <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-chart-2/20 to-transparent" />
+              <div className="relative">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <div className="p-1.5 rounded-lg bg-chart-2/10">
+                    <CalendarDays className="w-4 h-4 text-chart-2" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-widest">Průměr / den</span>
+                </div>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{formatCurrency(stats.avgPerDay)}</p>
+                <span className="text-[10px] text-muted-foreground">{stats.activeDays} aktivních dnů</span>
+              </div>
+            </div>
           </div>
 
           {/* AI Insights */}
@@ -549,7 +682,7 @@ export function SalesStatistics() {
             />
           )}
 
-          {/* Trend Chart - Full Width */}
+          {/* Trend Chart - Dual axis: revenue + count */}
           <div className="glass rounded-xl p-4">
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 className="w-4 h-4 text-muted-foreground" />
@@ -572,18 +705,26 @@ export function SalesStatistics() {
                     tickLine={false}
                   />
                   <YAxis 
+                    yAxisId="left"
                     className="text-xs fill-muted-foreground"
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(value) => value >= 1000 ? `${Math.round(value/1000)}k` : value}
+                  />
+                  <YAxis 
+                    yAxisId="right"
+                    orientation="right"
+                    className="text-xs fill-muted-foreground"
+                    axisLine={false}
+                    tickLine={false}
                   />
                   <Tooltip 
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         return (
                           <div className="glass rounded-lg p-2 border border-border">
-                            <p className="text-sm font-medium">{formatCurrency(payload[0].value as number)}</p>
-                            <p className="text-xs text-muted-foreground">{payload[0].payload.count} prodejů</p>
+                            <p className="text-sm font-medium">{formatCurrency(payload[0]?.value as number)}</p>
+                            <p className="text-xs text-muted-foreground">{payload[1]?.value} prodejů</p>
                           </div>
                         );
                       }
@@ -591,12 +732,23 @@ export function SalesStatistics() {
                     }}
                   />
                   <Area 
+                    yAxisId="left"
                     type="monotone" 
                     dataKey="revenue" 
                     stroke="hsl(var(--primary))" 
                     fillOpacity={1} 
                     fill="url(#colorRevenue)" 
                     strokeWidth={2}
+                    name="Tržby"
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="count"
+                    stroke="hsl(var(--chart-3))"
+                    strokeWidth={2}
+                    dot={{ fill: 'hsl(var(--chart-3))', r: 2 }}
+                    name="Počet"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -607,7 +759,7 @@ export function SalesStatistics() {
             )}
           </div>
 
-          {/* Payment Methods - Simplified to numbers */}
+          {/* Payment Methods */}
           <div className="glass rounded-xl p-4">
             <div className="flex items-center gap-2 mb-4">
               <CreditCard className="w-4 h-4 text-muted-foreground" />
@@ -644,7 +796,12 @@ export function SalesStatistics() {
             </div>
           </div>
 
-          {/* New Row: Category Chart + Margin Trend */}
+          {/* NEW: Heatmap */}
+          {stats.hourlyHeatmap.length > 0 && (
+            <SalesHeatmap data={stats.hourlyHeatmap} />
+          )}
+
+          {/* Category Chart + Margin Trend */}
           <div className="grid lg:grid-cols-2 gap-4">
             {/* Category Pie Chart */}
             {stats.categoryData && stats.categoryData.length > 0 && (
@@ -756,6 +913,14 @@ export function SalesStatistics() {
             )}
           </div>
 
+          {/* NEW: Category Trend */}
+          {stats.categoryTrend.length > 1 && (
+            <CategoryTrendChart 
+              data={stats.categoryTrend} 
+              categories={stats.categoryTrendCategories} 
+            />
+          )}
+
           {/* Products Bar Chart */}
           {productBarData.length > 0 && (
             <div className="glass rounded-xl p-4">
@@ -817,7 +982,59 @@ export function SalesStatistics() {
             </div>
           )}
 
-          {/* All Products Table - sorted by sales with clickable rows */}
+          {/* NEW: Top Clients */}
+          {stats.clientStats.length > 0 && (
+            <TopClientsChart data={stats.clientStats} />
+          )}
+
+          {/* NEW: AOV Trend */}
+          {stats.aovTrend.length > 1 && (
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <DollarSign className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-medium">Průměrná hodnota objednávky (AOV)</h3>
+              </div>
+              <ResponsiveContainer width="100%" height={180}>
+                <RechartsLineChart data={stats.aovTrend}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="label" 
+                    className="text-xs fill-muted-foreground"
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    className="text-xs fill-muted-foreground"
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => `${Math.round(v)} Kč`}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload?.length) {
+                        return (
+                          <div className="bg-popover border border-border rounded-lg p-2 shadow-lg">
+                            <p className="font-medium">{formatCurrency(payload[0].value as number)}</p>
+                            <p className="text-xs text-muted-foreground">průměr na objednávku</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="aov"
+                    stroke="hsl(var(--chart-4))"
+                    strokeWidth={2}
+                    dot={{ fill: 'hsl(var(--chart-4))', r: 3 }}
+                  />
+                </RechartsLineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* All Products Table */}
           {stats.topProducts.length > 0 && (
             <div className="glass rounded-xl p-4">
               <div className="flex items-center justify-between mb-4">
