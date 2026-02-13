@@ -122,7 +122,7 @@ export function ClientActionRequired() {
             )}
           </div>
           <h2 className="text-sm font-semibold">
-            {count === 1 ? 'Máš úkol k vyřízení' : `Máš ${count} úkoly k vyřízení`}
+            {count === 1 ? 'Máš úkol k vyřízení' : count < 5 ? `Máš ${count} úkoly k vyřízení` : `Máš ${count} úkolů k vyřízení`}
           </h2>
         </div>
 

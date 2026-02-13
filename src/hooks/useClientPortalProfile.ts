@@ -42,7 +42,7 @@ export function useClientPortalProfileData() {
           dietary_restrictions, created_at, training_start_date
         `)
         .eq("id", clientAccount.client_id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data as ClientProfileData;

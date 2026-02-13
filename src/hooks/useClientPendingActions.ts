@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useAvailableFeedbacks, PendingFeedback } from './useClientPortalFeedback';
 import { useClientPortalPendingPreDiagnostic } from './useClientPortalPendingPreDiagnostic';
 import { useClientPortalProfileData } from './useClientPortalProfile';
+import { usePortalBasePath } from './usePortalBasePath';
 import { formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -23,6 +24,7 @@ export function useClientPendingActions() {
   const availableFeedbacks = useAvailableFeedbacks();
   const { data: pendingPreDiagnostic, isLoading: preDiagLoading } = useClientPortalPendingPreDiagnostic();
   const { data: profile, isLoading: profileLoading } = useClientPortalProfileData();
+  const basePath = usePortalBasePath();
 
   const isLoading = preDiagLoading || profileLoading;
 
@@ -42,7 +44,7 @@ export function useClientPendingActions() {
         title: 'Zpětná vazba po tréninku',
         description: `Zbývá ${timeRemaining}`,
         urgency: 'high',
-        link: '/client/feedback',
+        link: `${basePath}/feedback`,
         expiresAt: feedback.feedback_expires_at,
         metadata: { trainingSessionId: feedback.training_session_id },
       });
@@ -89,7 +91,7 @@ export function useClientPendingActions() {
           title: `Doplnit profil (${percent}%)`,
           description: missingFields.slice(0, 3).join(', ') + (missingFields.length > 3 ? '...' : ''),
           urgency: 'low',
-          link: '/client/settings',
+          link: `${basePath}/settings`,
           metadata: { missingFields, completionPercent: percent },
         });
       }
