@@ -7,7 +7,7 @@ import { ExerciseListView } from '@/components/exercises/ExerciseListView';
 import { ExerciseAnalyticsView } from '@/components/exercises/ExerciseAnalyticsView';
 import { TestsContent } from '@/components/performance/TestsContent';
 import { ChallengesContent } from '@/components/performance/ChallengesContent';
-import { PRHistoryContent } from '@/components/performance/PRHistoryContent';
+import { RecentPRsCompact } from '@/components/performance/RecentPRsCompact';
 import { PerformanceKPIBar } from '@/components/performance/PerformanceKPIBar';
 import { ExerciseSearchCommand } from '@/components/performance/ExerciseSearchCommand';
 import { CategoryCards } from '@/components/performance/CategoryCards';
@@ -70,7 +70,7 @@ export default function PerformanceHub() {
   ];
 
   // Core tabs: overview, clients, library, analytics + optional tests, challenges
-  const coreTabCount = 4 + (testsEnabled ? 1 : 0) + (challengesEnabled ? 1 : 0);
+  // Tabs ready
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6 pb-32">
@@ -106,33 +106,33 @@ export default function PerformanceHub() {
 
       {/* Tabs - reduced to 4 core + optional */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full max-w-3xl mx-auto bg-secondary/30 backdrop-blur-sm p-1" style={{ gridTemplateColumns: `repeat(${coreTabCount}, 1fr)` }}>
-          <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Zap className="w-4 h-4" />
-            <span className="hidden sm:inline">Přehled</span>
+        <TabsList className="flex w-full max-w-3xl mx-auto bg-secondary/30 backdrop-blur-sm p-1 overflow-x-auto">
+          <TabsTrigger value="overview" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Zap className="w-4 h-4 shrink-0" />
+            <span className="text-xs truncate">Přehled</span>
           </TabsTrigger>
-          <TabsTrigger value="clients" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Klienti</span>
+          <TabsTrigger value="clients" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="text-xs truncate">Klienti</span>
           </TabsTrigger>
-          <TabsTrigger value="library" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <List className="w-4 h-4" />
-            <span className="hidden sm:inline">Knihovna</span>
+          <TabsTrigger value="library" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <List className="w-4 h-4 shrink-0" />
+            <span className="text-xs truncate">Knihovna</span>
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <BarChart3 className="w-4 h-4" />
-            <span className="hidden sm:inline">Analytika</span>
+          <TabsTrigger value="analytics" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <BarChart3 className="w-4 h-4 shrink-0" />
+            <span className="text-xs truncate">Analytika</span>
           </TabsTrigger>
           {testsEnabled && (
-            <TabsTrigger value="tests" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <ClipboardCheck className="w-4 h-4" />
-              <span className="hidden sm:inline">Testy</span>
+            <TabsTrigger value="tests" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <ClipboardCheck className="w-4 h-4 shrink-0" />
+              <span className="text-xs truncate">Testy</span>
             </TabsTrigger>
           )}
           {challengesEnabled && (
-            <TabsTrigger value="challenges" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Trophy className="w-4 h-4" />
-              <span className="hidden sm:inline">Výzvy</span>
+            <TabsTrigger value="challenges" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Trophy className="w-4 h-4 shrink-0" />
+              <span className="text-xs truncate">Výzvy</span>
             </TabsTrigger>
           )}
         </TabsList>
@@ -158,8 +158,8 @@ export default function PerformanceHub() {
             isLoading={overviewLoading}
           />
 
-          {/* PR History integrated into Overview */}
-          <PRHistoryContent />
+          {/* Recent PRs - compact */}
+          <RecentPRsCompact />
         </TabsContent>
 
         {/* Clients Tab - merged with Comparison */}
