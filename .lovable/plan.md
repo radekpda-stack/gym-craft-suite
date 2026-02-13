@@ -1,122 +1,134 @@
 
-# Hloubkový audit klientského portálu
+# Audit statistik -- kompletni prehled prace
 
-Po důkladné analýze kódu, hooků, navigace a komponent klientského portálu jsem identifikoval tyto problémy.
+## Nalezene chyby
 
----
+### 1. BUG: `ExerciseStatsSection` existuje, ale neni pouzita nikde
+Komponenta `ExerciseStatsSection.tsx` (cviky: RPE, PR, objem, kardio) je plne implementovana, ale **neni zarazena do zadne zalozky** na strance `Statistics.tsx`. Stranky maji 4 zalozky (Kariera, Finance, Treninky, Klienti) -- cviceni/vykon tam uplne chybi.
 
-## CHYBY K OPRAVĚ
+**Oprava:** Pridat 5. zalozku "Cviky" nebo integrovat klicove metriky (objem, PRs, kardio) do zalozky Treninky.
 
-### 1. HARDCODED NAVIGACE -- Akce klienta vedou na /client/ místo dynamického basePath
-V `useClientPendingActions.ts` (řádky 45 a 92) jsou hardcoded linky:
-- `link: '/client/feedback'`
-- `link: '/client/settings'`
+### 2. BUG: `ClientFeedbackCard` pouziva evaluacni barvy a texty
+V `ClientFeedbackCard.tsx` (radky 15-21) funkce `getScoreDisplay` vraci:
+- cervena: "Ke zlepseni"
+- zluta: "Dobre"
+- zelena: "Vyborne"
 
-Klienti přistupující přes `/zona/` prefix budou přesměrováni na nesprávnou cestu. Komponenta `ClientActionRequired` tyto linky přímo používá v `<Link to={action.link}>`.
+Toto porušuje analytickou filozofii projektu (zadne evaluacni prvky).
 
-**Stejný problém v `ClientQuickStats.tsx`** (řádky 78, 86) a `MyExercisesWidget.tsx` (řádek 41), kde `navigate('/zona/...')` je hardcoded -- nefunguje pro klienty na `/client/` prefixu.
+**Oprava:** Odstranit evaluacni texty, zobrazit pouze cislo a neutral progress bar.
 
-**Oprava:** Přesunout logiku basePath do hooku nebo předávat basePath jako parametr. Ideálně vytvořit helper `usePortalBasePath()`.
+### 3. BUG: `CohortRetentionCard` pouziva zeleno-cervene hodnoceni retence
+V `CohortRetentionCard.tsx` (radky 14-27) funkce `getRetentionColor` prirazuje:
+- 80%+ = zelena (`bg-success`)
+- 20- = cervena (`bg-destructive/70`)
 
----
+Toto je evaluacni semafor -- porušeni design pravidel.
 
-### 2. BUG: `useClientCredit` čte z tabulky clients -- nesynchronizovaný zdroj dat
-Hook `useClientCredit` v `useClientPortalData.ts` (řádek 15-19) čte `credit_balance` přímo z tabulky `clients` pomocí `.single()`. Tento zdroj dat je potenciálně zastaralý oproti ledger views (`vw_client_ledger_balances`), které byly právě implementovány jako "source of truth" v dashboardu trenéra.
+**Oprava:** Pouzit neutralni skalu intenzity (monochrom/primary gradace).
 
-HeroStatsRow na dashboardu portálu správně používá `useClientCreditStats` (který čte z ledger), ale `useClientCredit` je stále importován a mohl by být použit jinde.
+### 4. BUG: `FinanceChartsSection` trend ma zeleno-cervene barvy
+Radky 123-134: `text-emerald-600` / `text-destructive` pro trend. Porušeni pravidel.
 
-**Oprava:** Deprecovat `useClientCredit` a nahradit všechny jeho výskyty za `useClientCreditStats`.
+**Oprava:** Nahradit neutralnimi `text-muted-foreground`.
 
----
+### 5. BUG: `PeriodComparisonCard` pouziva evaluacni barvy
+`TrendIndicator` (radky 18-22): `text-emerald-600` / `text-destructive`.
 
-### 3. BUG: `useClientConsistency` v useClientPortalData.ts -- streak počítání je nefunkční
-Funkce `useClientConsistency` (řádky 199-241) obsahuje nefunkční logiku pro výpočet streak:
-- Cyklus na řádku 222-227 vždy okamžitě provede `break` po první iteraci
-- Proměnná `checkDate` se nikdy nepoužije k porovnání s `completedDates`
-- `weeklyData` se nikdy nenaplní (prázdný array)
-- Výsledný `streak` je ve skutečnosti jen `completedDates.size` (celkový počet dokončených tréninků), ne skutečný streak
+**Oprava:** Sjednotit na neutralni barvy.
 
-**Oprava:** Implementovat skutečný výpočet streak na základě po sobě jdoucích týdnů s alespoň jedním tréninkem.
+### 6. BUG: `VolumeStatsCard` pouziva evaluacni barvy trendu
+Radky 82-89: `text-success` / `text-destructive` pro trend objemu.
 
----
+**Oprava:** Neutralni barvy.
 
-### 4. BUG: `.single()` v READ dotazech portálu mohou selhat
-Několik hooků používaných klientským portálem obsahuje `.single()` v SELECT dotazech, kde by chybějící data mohla způsobit crash:
+### 7. BUG: `CapacityUtilizationCard` - hardcoded "176 slotu"
+Radek 56: `z odhadovaných 176 slotů` (22 dnu * 8 treninku). Tento odhad neni konfigurovatelny a muze byt pro konkretniho trenera nerealisticky.
 
-| Soubor | Řádek | Riziko |
-|---|---|---|
-| `useClientPortalAuth.ts` | 68 | Crash pokud klient neexistuje v clients |
-| `useClientPortalProfile.ts` | 45 | Crash pokud klient neexistuje |
-| `useClientOnboardingStatus.ts` | 34 | Crash pokud klient neexistuje |
-| `useClientPortalBenchmarks.ts` | 172 | Crash pokud klient neexistuje |
-| `useClientPortalData.ts` | 19 | Crash pokud klient neexistuje |
-| `useClientDashboardMetrics.ts` | 91, 171 | Crash pokud klient neexistuje |
+**Oprava:** Zobrazit pouze pocet treninku a procento bez falesne presneho maxima.
 
-**Oprava:** Nahradit `.single()` za `.maybeSingle()` ve všech SELECT dotazech, kde klient nemusí existovat. Ponechat `.single()` u INSERT/UPDATE `.select().single()` vzorů (ty jsou v pořádku).
+### 8. BUG: `useBusinessHealthMetrics` -- hodinova sazba = pocet treninku
+Radek 97: `const hours = mTrainings.length; // ~1h per training`. Kazdy trenink se pocita jako 1 hodina bez ohledu na skutecnou `duration` (ktera muze byt 30, 60, 90 minut).
+
+**Oprava:** Pouzit skutecnou `duration` z treninku pro vypocet hodinove sazby.
 
 ---
 
-### 5. BUG: OverallPerformanceCard používá evaluační barvy
-Komponenta `OverallPerformanceCard.tsx` (řádky 14-35) klasifikuje výkon klientů jako "Pod průměrem" (červená), "Průměr", "Nad průměr" a "Top X%" (zelená). Toto **porušuje analytickou filozofii** projektu, která zakazuje evaluační prvky (zelená/červená hodnocení, procentuální indikátory, hodnotící text).
+## Co vyradit (zbytecne/duplicitni)
 
-**Oprava:** Změnit na neutrální, srovnávací prezentaci bez hodnotícího framingu. Místo "Pod průměrem" zobrazit "25. percentil" apod.
+### 9. `LifetimeStatsSection` je duplicitni s `CareerStatsSection`
+Komponenta `LifetimeStatsSection.tsx` existuje jako starsí verze kariernich statistik se stejnymi daty (useLifetimeStats). `CareerStatsSection` ji nahrazuje. `LifetimeStatsSection` neni nikde importovana.
 
----
+**Oprava:** Smazat soubor `LifetimeStatsSection.tsx` jako mrtvy kod.
 
-### 6. RESPONSIVITA: Čeština v plurálu -- gramaticky chybné texty
-V `ClientActionRequired.tsx` (řádek 125):
-```
-{count === 1 ? 'Máš úkol k vyřízení' : `Máš ${count} úkoly k vyřízení`}
-```
-Pro 5+ je správný tvar "úkolů", ne "úkoly". Stejný problém v `PendingHomeworkWidget.tsx` (řádek 29).
+### 10. Karta "Rozlozeni prijmu" (donut chart v `FinanceChartsSection`) je zbytecna
+Donut chart ukazuje Treninky vs Produkty -- tato informace uz je v `ProfitLossCard` a v `FinanceHeroKPI`. Trojite zobrazeni stejne metriky.
 
-**Oprava:** Použít správnou českou pluralizaci (1 = úkol, 2-4 = úkoly, 5+ = úkolů).
+**Oprava:** Odstranit donut chart z `FinanceChartsSection`, ponechat pouze trend graf.
 
 ---
 
-### 7. NAVIGACE: `ClientPortalLayout` -- tooltip bez z-index
-Desktopové sidebaru tooltipy (řádek 259) nemají explicitní z-index:
-```tsx
-<span className="absolute left-full ml-2 ... opacity-0 group-hover:opacity-100">
-```
-Toto může kolidovat s ostatními překryvnými prvky. Podle paměti projektu by Tooltip měl mít `z-[60]`.
+## Co pridat/vylepsit (nevyuzita data)
+
+### 11. Chybi: Feedback metriky z bohatych dat
+Tabulka `training_feedback` obsahuje 40+ sloupcu, ale statistiky pouzivaji pouze `body_feel` a `session_fit`. Nevyuzita data:
+- `sleep_quality`, `sleep_hours` -- prumerna kvalita spanku klientu
+- `energy_rating` / `energy_level` -- energeticke trendy
+- `pain` + `is_red_flag` -- pocet red flagu za obdobi
+- `doms_level` -- trendy svalovych bolesti
+- `readiness_level` -- pripravenost na trenink
+- `enjoyment_level` -- mira zazitkove spokojenosti
+
+**Vylepseni:** Rozširit `ClientFeedbackCard` o shrnuti spanku, energie a poctu red-flagu.
+
+### 12. Chybi: Treninkova zatez (RPE + objem) v sekci Treninky
+Tabulka `training_sessions` obsahuje `rpe`, `total_volume`, `training_load`, ale zalozka Treninky tyto data nevyuziva. Pritom `ExerciseStatsSection` (ktera neni zarazena) uz RPE a objem cástecne zpracovava.
+
+**Vylepseni:** Pridat prumerné RPE a celkovy objem do zalozky Treninky (integraci kart z `ExerciseStatsSection`).
+
+### 13. Chybi: Statistika poznamek a medii trenera
+Tabulky `trainer_notes`, `client_media` existuji a data se sbírají v `useAnnualStats` (totalPhotos, totalVoiceNotes), ale nikde se nezobrazuji.
+
+**Vylepseni:** Pridat do Kariera compaktni metriku "X poznamek, Y fotek, Z hlasovych zprav" jako social proof prace trenera.
 
 ---
 
-## CHYBĚJÍCÍ FUNKCE
+## Plan implementace
 
-### 8. Dashboard: useClientCredit je redundantní s useClientCreditStats
-Existují dva odlišné hooky pro kredit klienta v portálu -- `useClientCredit` (čte z clients tabulky) a `useClientCreditStats` (čte z ledger views). To vytváří riziko nekonzistence dat mezi různými stránkami portálu.
+### Faze 1: Oprava chyb (kriticke)
+1. Integrace `ExerciseStatsSection` karet (RPE, PRs, objem, kardio) do zalozky Treninky
+2. Oprava hodinove sazby v `useBusinessHealthMetrics` -- pouzit skutecnou `duration`
+3. Smazani mrtvého kódu `LifetimeStatsSection.tsx`
 
----
+### Faze 2: Evaluacni barvy (design compliance)
+4. `ClientFeedbackCard` -- odstranit evaluacni texty a barvy
+5. `CohortRetentionCard` -- neutralni skala
+6. `FinanceChartsSection` -- neutralni trend barvy
+7. `PeriodComparisonCard` -- neutralni trend
+8. `VolumeStatsCard` -- neutralni trend
 
-## PLÁN IMPLEMENTACE
-
-### Fáze 1: Kritické opravy navigace a dat
-1. Vytvořit helper `usePortalBasePath()` a nahradit všechny hardcoded `/client/` a `/zona/` cesty
-2. Nahradit `.single()` za `.maybeSingle()` ve všech SELECT dotazech portálu (6 souborů)
-3. Deprecovat `useClientCredit` ve prospěch `useClientCreditStats`
-
-### Fáze 2: Logické opravy
-4. Přepsat `useClientConsistency` streak logiku
-5. Opravit českou pluralizaci v `ClientActionRequired` a `PendingHomeworkWidget`
-6. Odstranit evaluační barvy/texty z `OverallPerformanceCard`
-
-### Fáze 3: UI/Responsivita
-7. Přidat z-index na sidebar tooltipy
+### Faze 3: Vylepseni obsahu
+9. Rozsireni feedback metriky o spanek, energii a red-flagy
+10. Odstraneni duplicitniho donut chartu
+11. Oprava kapacity (bez hardcoded 176)
+12. Pridani metriky poznamek/medii do Kariéry
 
 ---
 
-## Technické detaily
+## Technicke detaily
 
-| # | Soubor | Typ | Priorita |
-|---|--------|-----|----------|
-| 1 | `useClientPendingActions.ts` | Hardcoded navigace | Vysoká |
-| 1 | `ClientQuickStats.tsx` | Hardcoded navigace | Vysoká |
-| 1 | `MyExercisesWidget.tsx` | Hardcoded navigace | Vysoká |
-| 2 | `useClientPortalData.ts` | Zastaralý zdroj dat | Vysoká |
-| 3 | `useClientPortalData.ts:199-241` | Nefunkční streak | Střední |
-| 4 | 6 souborů | .single() crash risk | Střední |
-| 5 | `OverallPerformanceCard.tsx` | Porušení design rules | Nízká |
-| 6 | `ClientActionRequired.tsx`, `PendingHomeworkWidget.tsx` | Pluralizace | Nízká |
-| 7 | `ClientPortalLayout.tsx:259` | Z-index tooltip | Nízká |
+| # | Soubor | Typ zmeny | Priorita |
+|---|--------|-----------|----------|
+| 1 | `Statistics.tsx` | Pridani cviku do Treninky | Vysoka |
+| 1 | `TrainingStatsSection.tsx` | Integrace RPE, PRs, objem | Vysoka |
+| 2 | `ClientFeedbackCard.tsx` | Evaluacni barvy | Vysoka |
+| 3 | `CohortRetentionCard.tsx` | Evaluacni barvy | Vysoka |
+| 4 | `FinanceChartsSection.tsx` | Evaluacni barvy + donut | Stredni |
+| 5 | `PeriodComparisonCard.tsx` | Evaluacni barvy | Stredni |
+| 6 | `VolumeStatsCard.tsx` | Evaluacni barvy | Stredni |
+| 7 | `CapacityUtilizationCard.tsx` | Hardcoded kapacita | Nizka |
+| 8 | `useBusinessHealthMetrics.ts` | Hodinova sazba bug | Vysoka |
+| 9 | `LifetimeStatsSection.tsx` | Smazat mrtvy kod | Nizka |
+| 10 | `ClientFeedbackCard.tsx` | Rozsireni o sleep/energy/flags | Stredni |
+| 11 | `CareerStatsSection.tsx` | Metrika poznamek/medii | Nizka |
+
