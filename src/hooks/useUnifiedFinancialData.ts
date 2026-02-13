@@ -52,6 +52,34 @@ export function useUnifiedFinancialData(period: FinancialPeriod) {
       // For ACCRUAL mode: we need to calculate income based on service dates
       // For CASH mode: we calculate based on transaction dates (when payment was received)
 
+      // Fetch business expenses for the period (shared across both modes)
+      const { data: { user } } = await supabase.auth.getUser();
+      let expensesData: { amount: number; date: string }[] = [];
+      if (user) {
+        const { data: expenses } = await supabase
+          .from('business_expenses')
+          .select('amount, date')
+          .eq('user_id', user.id)
+          .gte('date', format(startDate, 'yyyy-MM-dd'))
+          .order('date', { ascending: true });
+        expensesData = expenses || [];
+      }
+
+      // Helper to add business expenses to grouped data
+      const addExpensesToGroupedData = (groupedData: Map<string, { income: number; costs: number }>) => {
+        expensesData.forEach((e) => {
+          const date = new Date(e.date);
+          const key = groupBy === 'day'
+            ? format(date, 'd.M.')
+            : format(date, 'MMM', { locale: cs });
+
+          if (!groupedData.has(key)) {
+            groupedData.set(key, { income: 0, costs: 0 });
+          }
+          groupedData.get(key)!.costs += e.amount;
+        });
+      };
+
       if (accountingMode === 'accrual') {
         // ACCRUAL: Use training session dates for training income, transaction dates for products
         
@@ -120,6 +148,9 @@ export function useUnifiedFinancialData(period: FinancialPeriod) {
           }
         });
 
+        // Add business expenses
+        addExpensesToGroupedData(groupedData);
+
         // Convert to array
         const result: FinancialDataPoint[] = [];
         groupedData.forEach((value, key) => {
@@ -173,6 +204,9 @@ export function useUnifiedFinancialData(period: FinancialPeriod) {
             data.costs += t.products.purchase_price;
           }
         });
+
+        // Add business expenses
+        addExpensesToGroupedData(groupedData);
 
         // Convert to array
         const result: FinancialDataPoint[] = [];
