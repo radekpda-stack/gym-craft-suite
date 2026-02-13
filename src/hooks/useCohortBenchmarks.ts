@@ -9,6 +9,7 @@ interface ExerciseBenchmark {
   unit: string;
   diffPercent: number;
   clientCount: number;
+  isInverted: boolean;
 }
 
 interface CohortBenchmarkData {
@@ -21,7 +22,7 @@ interface CohortBenchmarkData {
 
 /**
  * Compares a single client's best performance against the average of all trainer's clients
- * for each exercise they have in common.
+ * for each exercise they have in common. Includes strength + cardio entries.
  */
 export function useCohortBenchmarks(clientId: string | null) {
   const { user } = useAuth();
@@ -31,55 +32,122 @@ export function useCohortBenchmarks(clientId: string | null) {
     queryFn: async (): Promise<CohortBenchmarkData | null> => {
       if (!clientId || !user?.id) return null;
 
-      // Fetch all exercise entries for all clients of this trainer
-      const { data: allEntries, error } = await supabase
-        .from('exercise_entries')
-        .select('client_id, exercise_name, weight_kg, reps, time_seconds, distance_meters')
-        .eq('user_id', user.id);
+      // Fetch entries from both strength and cardio tables
+      const [strengthResult, cardioResult] = await Promise.all([
+        supabase
+          .from('exercise_entries')
+          .select('client_id, exercise_name, weight_kg, reps, time_seconds, distance_meters, exercises(is_time_based, exercise_type_v2)')
+          .eq('user_id', user.id),
 
-      if (error || !allEntries || allEntries.length === 0) return null;
+        supabase
+          .from('cardio_entries')
+          .select('client_id, exercise_name, duration_seconds, distance_meters, avg_watts')
+          .eq('user_id', user.id),
+      ]);
 
-      // Group by exercise → client → best value
-      const exerciseMap = new Map<string, Map<string, number>>();
+      const strengthEntries = strengthResult.data || [];
+      const cardioEntries = cardioResult.data || [];
 
-      allEntries.forEach(entry => {
-        const value = entry.weight_kg || entry.time_seconds || entry.distance_meters || entry.reps || 0;
+      if (strengthEntries.length === 0 && cardioEntries.length === 0) return null;
+
+      // exerciseName -> { clientId -> bestValue, isInverted, unit }
+      const exerciseMap = new Map<string, { clients: Map<string, number>; isInverted: boolean; unit: string }>();
+
+      // Process strength entries
+      strengthEntries.forEach(entry => {
+        const exerciseData = entry.exercises as any;
+        const isTimeBased = exerciseData?.is_time_based || false;
+        const exerciseType = exerciseData?.exercise_type_v2 || 'strength';
+
+        let value = 0;
+        let unit = 'kg';
+        let isInverted = false;
+
+        if (isTimeBased || exerciseType === 'cardio') {
+          value = entry.time_seconds || 0;
+          unit = 's';
+          isInverted = true;
+        } else if (entry.weight_kg) {
+          value = entry.weight_kg;
+          unit = 'kg';
+        } else if (entry.distance_meters) {
+          value = entry.distance_meters;
+          unit = 'm';
+        } else if (entry.reps) {
+          value = entry.reps;
+          unit = 'reps';
+        }
+
         if (value === 0) return;
 
         if (!exerciseMap.has(entry.exercise_name)) {
-          exerciseMap.set(entry.exercise_name, new Map());
+          exerciseMap.set(entry.exercise_name, { clients: new Map(), isInverted, unit });
         }
-        const clientMap = exerciseMap.get(entry.exercise_name)!;
-        const current = clientMap.get(entry.client_id) || 0;
-        // For simplicity, take max (works for strength; time-based would need min but we keep it consistent)
-        clientMap.set(entry.client_id, Math.max(current, value));
+        const group = exerciseMap.get(entry.exercise_name)!;
+        const current = group.clients.get(entry.client_id) || 0;
+
+        // For inverted (time), lower is better -> use Math.min; for others use Math.max
+        if (current === 0) {
+          group.clients.set(entry.client_id, value);
+        } else {
+          group.clients.set(
+            entry.client_id,
+            group.isInverted ? Math.min(current, value) : Math.max(current, value)
+          );
+        }
       });
 
-      // Determine unit per exercise (first entry)
-      const unitMap = new Map<string, string>();
-      allEntries.forEach(entry => {
-        if (unitMap.has(entry.exercise_name)) return;
-        if (entry.weight_kg) unitMap.set(entry.exercise_name, 'kg');
-        else if (entry.time_seconds) unitMap.set(entry.exercise_name, 's');
-        else if (entry.distance_meters) unitMap.set(entry.exercise_name, 'm');
-        else if (entry.reps) unitMap.set(entry.exercise_name, 'reps');
+      // Process cardio entries
+      cardioEntries.forEach(entry => {
+        // Use avg_watts if available (higher = better), else duration (lower = better)
+        let value = 0;
+        let unit = 's';
+        let isInverted = true;
+
+        if (entry.avg_watts && entry.avg_watts > 0) {
+          value = entry.avg_watts;
+          unit = 'W';
+          isInverted = false;
+        } else if (entry.duration_seconds > 0) {
+          value = entry.duration_seconds;
+          unit = 's';
+          isInverted = true;
+        }
+
+        if (value === 0) return;
+
+        const key = `cardio:${entry.exercise_name}`;
+        if (!exerciseMap.has(key)) {
+          exerciseMap.set(key, { clients: new Map(), isInverted, unit });
+        }
+        const group = exerciseMap.get(key)!;
+        const current = group.clients.get(entry.client_id) || 0;
+
+        if (current === 0) {
+          group.clients.set(entry.client_id, value);
+        } else {
+          group.clients.set(
+            entry.client_id,
+            group.isInverted ? Math.min(current, value) : Math.max(current, value)
+          );
+        }
       });
 
       // Build benchmarks for exercises where the selected client has data
       const exercises: ExerciseBenchmark[] = [];
       const allClientIds = new Set<string>();
 
-      exerciseMap.forEach((clientMap, exerciseName) => {
-        const clientValue = clientMap.get(clientId);
+      exerciseMap.forEach((group, exerciseName) => {
+        const clientValue = group.clients.get(clientId);
         if (clientValue === undefined) return;
-        if (clientMap.size < 2) return; // Need at least 2 clients
+        if (group.clients.size < 2) return;
 
-        clientMap.forEach((_, cId) => allClientIds.add(cId));
+        group.clients.forEach((_, cId) => allClientIds.add(cId));
 
         // Calculate average excluding the target client
         let sum = 0;
         let count = 0;
-        clientMap.forEach((val, cId) => {
+        group.clients.forEach((val, cId) => {
           if (cId !== clientId) {
             sum += val;
             count++;
@@ -87,17 +155,29 @@ export function useCohortBenchmarks(clientId: string | null) {
         });
 
         const avgValue = count > 0 ? Math.round(sum / count) : 0;
-        const diffPercent = avgValue > 0
-          ? Math.round(((clientValue - avgValue) / avgValue) * 100)
-          : 0;
+
+        // For inverted metrics, being lower than avg is BETTER (positive diff)
+        let diffPercent = 0;
+        if (avgValue > 0) {
+          if (group.isInverted) {
+            // Lower is better: if client is below avg, that's positive
+            diffPercent = Math.round(((avgValue - clientValue) / avgValue) * 100);
+          } else {
+            diffPercent = Math.round(((clientValue - avgValue) / avgValue) * 100);
+          }
+        }
+
+        // Clean display name (remove cardio: prefix)
+        const displayName = exerciseName.startsWith('cardio:') ? exerciseName.slice(7) : exerciseName;
 
         exercises.push({
-          exerciseName,
+          exerciseName: displayName,
           clientValue: Math.round(clientValue),
           avgValue,
-          unit: unitMap.get(exerciseName) || 'kg',
+          unit: group.unit,
           diffPercent,
-          clientCount: clientMap.size,
+          clientCount: group.clients.size,
+          isInverted: group.isInverted,
         });
       });
 

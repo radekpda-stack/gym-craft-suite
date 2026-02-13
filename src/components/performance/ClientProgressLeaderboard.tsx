@@ -126,7 +126,7 @@ export function ClientProgressLeaderboard({ topClients, isLoading }: ClientProgr
         {topClients.map((client, index) => {
           const progressPercent = (client.entriesCount / maxEntries) * 100;
           const TrendIcon = client.trend > 0 ? TrendingUp : client.trend < 0 ? TrendingDown : Minus;
-          const trendColor = client.trend > 0 ? 'text-emerald-500' : client.trend < 0 ? 'text-destructive' : 'text-muted-foreground';
+          const trendColor = 'text-muted-foreground';
           const rankStyle = RANK_STYLES[index] || RANK_STYLES[4];
           const isTopThree = index < 3;
 
