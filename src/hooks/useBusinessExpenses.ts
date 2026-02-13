@@ -158,6 +158,8 @@ export function useCreateExpense() {
       queryClient.invalidateQueries({ queryKey: ['expense-stats'] });
       queryClient.invalidateQueries({ queryKey: ['profit-by-period'] });
       queryClient.invalidateQueries({ queryKey: ['annual-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['period-expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['unified-financial-data'] });
       toast({
         title: 'Náklad přidán',
         description: 'Náklad byl úspěšně zaznamenán.',
@@ -197,6 +199,8 @@ export function useUpdateExpense() {
       queryClient.invalidateQueries({ queryKey: ['expense-stats'] });
       queryClient.invalidateQueries({ queryKey: ['profit-by-period'] });
       queryClient.invalidateQueries({ queryKey: ['annual-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['period-expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['unified-financial-data'] });
       toast({
         title: 'Náklad upraven',
         description: 'Změny byly uloženy.',
@@ -233,6 +237,8 @@ export function useDeleteExpense() {
       queryClient.invalidateQueries({ queryKey: ['expense-stats'] });
       queryClient.invalidateQueries({ queryKey: ['profit-by-period'] });
       queryClient.invalidateQueries({ queryKey: ['annual-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['period-expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['unified-financial-data'] });
       toast({
         title: 'Náklad smazán',
         description: 'Náklad byl odstraněn.',
