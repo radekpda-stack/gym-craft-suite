@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { toLocalISOString } from '@/utils/dateUtils';
 import { Search, Plus, Dumbbell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
@@ -287,7 +288,7 @@ export default function Trainings() {
       
       const result = await createTraining.mutateAsync({
         client_id: data.client_id,
-        date: new Date(data.date).toISOString(),
+        date: toLocalISOString(data.date),
         duration: data.duration,
         notes: data.notes,
         status: data.status,

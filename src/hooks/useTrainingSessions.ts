@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toLocalISOString } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { featureTracker } from "@/hooks/useFeatureTracking";
@@ -358,7 +359,7 @@ export function useCreateTrainingSession() {
         if (childDates.length > 0) {
           const childSessions = childDates.map(date => ({
             client_id: input.client_id,
-            date: date.toISOString(),
+            date: toLocalISOString(date.toString()),
             duration: input.duration || 60,
             notes: input.notes || "",
             subjective_rating: null,

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toLocalISOString } from "@/utils/dateUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EnhancedTrainingForm, EnhancedTrainingFormValues } from "./EnhancedTrainingForm";
 import { useClients } from "@/hooks/useClients";
@@ -76,7 +77,7 @@ export function CreateTrainingDialog({
       
       const result = await createTraining.mutateAsync({
         client_id: data.client_id,
-        date: new Date(data.date).toISOString(),
+        date: toLocalISOString(data.date),
         duration: data.duration,
         notes: data.notes,
         status: 'scheduled',
