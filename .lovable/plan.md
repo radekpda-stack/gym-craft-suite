@@ -1,122 +1,84 @@
 
 
-# Audit a redesign sekce Vykonnost
+# Vylepšení statistik prodeje -- analýza a plán
 
-## Souhrn nalezenych problemu
+## Aktualni stav
 
-### 1. Prilis mnoho zalozek -- kognitivni pretizeni
-Aktualne az 8 zalozek (Prehled, Klienti, Knihovna, Porovnani, Analytika, PR Historie, Testy, Vyzvy). Trener musi hadat, kde co najde. Mnoho funkci je duplikovano mezi zalozkami (napr. porovnani klientu je v "Klienti" I v "Porovnani").
+Statistiky prodeje (`SalesStatistics.tsx`, 913 radku) uz obsahuji:
+- 4 KPI karty (trzby, naklady, zisk, pocet prodeju) se srovnanim s predchozim obdobim
+- Area chart -- trzby v case
+- Platebni metody (grid)
+- Kolacovy graf kategorii
+- Line chart -- trend marze
+- Sloupcovy graf prodeju podle produktu
+- Tabulka nejprodavanejsich produktu
+- Sekce Postrehy (SalesInsights)
 
-**Navrh:** Zredukovat na 4 hlavni zalozky:
-- **Prehled** (dashboard s KPI, top klienty, nedavne cviky)
-- **Klienti** (jednotlivy klient + porovnani -- slouci "Klienti" a "Porovnani")
-- **Knihovna** (seznam cviku)
-- **Analytika** (akcni vhledy -- stagnace, mezery, atd.)
+## Dostupna data (realna)
 
-PR Historie se presune jako podsekce do Klientu (kdyz je klient vybrany) a jako globalni prehled do Prehledu. Testy a Vyzvy zustanou volitelne.
+| Metrika | Hodnota |
+|---|---|
+| Celkem objednavek | 88 |
+| Trzby celkem | 22 072 Kc |
+| Unikatnich klientu | 22 |
+| Aktivnich dnu | 39 |
+| Obdobi | 26.12.2025 -- 13.2.2026 |
+| Platebni metody | kredit (53), hotovost (33), karta (2) |
+| Kategorii | supplement, bar, water, service, snack, drink |
 
-### 2. BUG: Evaluacni barvy v Leaderboardu a Sparkline karte
-`ClientProgressLeaderboard` (radek 129): `text-emerald-500` / `text-destructive` pro trendy.
-`ProgressSparklineGrid` (radky 115-119): `bg-emerald-500/10 text-emerald-500` / `bg-destructive/10 text-destructive`.
-`ProgressHeroCard` (radky 121-136): `text-emerald-500` / `text-amber-500` pro volume trend.
-`PerformanceKPIBar` (radky 22-25): `text-emerald-600` / `text-red-500` pro trend.
+## Co chybi -- navrhovane zmeny
 
-**Oprava:** Nahradit vse neutralnimi barvami `text-muted-foreground` / `text-foreground`.
+### 1. Heatmapa prodejnich hodin (DEN x HODINA)
+Data `DOW + HOUR` uz mame. Chybi vizualizace -- heatmapa grid ukazujici, kdy se nejvic prodava (pondeli--nedele x 6:00--20:00). Trenérovi to umozni pripravit se na silne hodiny.
 
-### 3. BUG: `useClientProgressStats` ignoruje cardio a skill entries
-Hook nacita data **pouze z `exercise_entries`** (silove cviky). Tabulky `cardio_entries` a `skill_entries` jsou kompletne ignorovany. Trener tak nevidi historii kardia ani plyometrie klienta.
+### 2. Top klienti -- sloupcovy graf
+Mame data o 22 klientech s utratou. Aktualne se nikde nezobrazuji. Pridat horizontalni bar chart "Klienti podle utraty" s top 10 klienty.
 
-**Oprava:** Rozsirit hook o nacitani ze vsech tri tabulek (stejne jako uz dela `usePerformanceOverview`).
+### 3. Prumerny prodej na den (KPI karta)
+Vypocet: trzby / pocet aktivnich dnu. Pridat jako 5. KPI kartu nebo nahradit "pocet prodeju" dvema mensimi metrikami (pocet + prumer/den).
 
-### 4. BUG: `useAllClientsProgress` ignoruje cardio a skill entries
-Stejny problem -- klienti kteri delaji predevsim kardio/plyo se ukazuji s 0 zaznamy.
+### 4. Trend poctu prodeju (druha krivka v area chartu)
+Existujici area chart ukazuje jen trzby. Pridat druhou krivku (count) s vlastni Y osou -- umoznuje porovnat, zda rust trzeb je tazen objemem nebo cenami.
 
-**Oprava:** Nacitat ze vsech tri tabulek.
+### 5. Srovnani kategorii v case (Stacked Area / Stacked Bar)
+Data o kategoriich mame. Pridat stacked bar chart ukazujici, jak se meni podil kategorii (supplement vs. water vs. bar...) v jednotlivych tydnech/mesicich.
 
-### 5. BUG: `useCohortBenchmarks` ignoruje cardio a skill entries
-Benchmark porovnani nacita **pouze z `exercise_entries`**. Kardio a skill cviky nejsou srovnavany.
-
-**Oprava:** Zahrnout vsechny tri tabulky do benchmarku.
-
-### 6. Chybi: Celkova historie klienta (timeline)
-Trener chce videt "co klient delal u me za celou dobu". Aktualne `useClientProgressStats` nacita jen poslednich 12 mesicu. Chybi moznost prepnout na "vse".
-
-**Oprava:** Pridat period selector (12m / vse) do ClientProgressView.
-
-### 7. Chybi: Rychly prehled klienta bez vyberu
-Na zalozce Klienti je nutne nejdriv vybrat klienta z dropdownu. Chybi vizualni prehled -- napr. seznam klientu s mini-statistikami (celkem PR, posledni trenink, trend), ze ktereho trener primo klikne.
-
-**Oprava:** Pred vyberem klienta zobrazit kompaktni seznam klientu s klicovymi metrikami.
-
-### 8. Chybi: Jednotky u benchmarku pro casove cviky
-`useCohortBenchmarks` pouziva `Math.max` pro vsechny cviky, ale u casovych cviku (beh) by melo byt `Math.min` (nizsi cas = lepsi). Vysledek: benchmark casovych cviku je prevraceny.
-
-**Oprava:** Detekovat casove cviky a pouzit `Math.min` + obraceny diffPercent.
+### 6. Prumerná hodnota objednávky (AOV) trend
+Data pro vypocet existuji (trzby/pocet za kazdy den). Pridat malou line chartku zobrazujici vyvoj prumerne objednavky v case.
 
 ---
 
-## Plan implementace
+## Technicke detaily implementace
 
-### Faze 1: Kriticke bugy (data)
+### Upravene soubory
+- `src/components/sales/SalesStatistics.tsx` -- hlavni soubor, pridani novych sekci
+- `src/components/sales/SalesStatistics.tsx` (funkce `fetchPeriodStats`) -- rozsireni o data pro heatmapu, klienty a AOV
 
-**1. Rozsirit `useClientProgressStats` o cardio + skill entries**
-- Pridat paralelni dotazy na `cardio_entries` a `skill_entries`
-- Normalizovat data do spolecneho formatu ExerciseProgress
-- Zajistit spravne urceni unit a isInverted pro kazdy typ
+### Nove komponenty (doporucene vyextrahovat)
+- `src/components/sales/SalesHeatmap.tsx` -- heatmapa hodin (grid 7x15)
+- `src/components/sales/TopClientsChart.tsx` -- horizontalni bar chart klientu
+- `src/components/sales/CategoryTrendChart.tsx` -- stacked area/bar kategorii
 
-**2. Rozsirit `useAllClientsProgress` o cardio + skill entries**
-- Pridat dotazy na `cardio_entries` a `skill_entries`
-- Agregovat pocty zaznamu a PR ze vsech tabulek
+### Datove zmeny
+- Rozsireni `fetchPeriodStats()` o:
+  - `hourlyHeatmap: { dow: number; hour: number; count: number }[]` -- agregace z `sales_orders.created_at`
+  - `clientStats: { name: string; orderCount: number; totalSpent: number }[]` -- GROUP BY client_id
+  - `categoryTrend: { period: string; [category]: number }[]` -- GROUP BY date + category
+  - `aovTrend: { label: string; aov: number }[]` -- prumer na den
 
-**3. Rozsirit `useCohortBenchmarks` o cardio + skill entries**
-- Pridat nacitani ze vsech tri tabulek
-- Pouzit `Math.min` pro casove cviky misto `Math.max`
-- Obratit diffPercent logiku pro casove cviky
+### Poradi sekci (po uprave)
+1. KPI karty (5 karet: trzby, naklady, zisk, pocet, prumer/den)
+2. Postrehy (SalesInsights -- beze zmen)
+3. Trzby v case (area chart s dvojitou krivkou: trzby + pocet)
+4. Platebni metody
+5. **NOVY** -- Heatmapa prodejnich hodin
+6. Kategorie produktu (pie) + Trend marze (line) -- beze zmen
+7. **NOVY** -- Srovnani kategorii v case (stacked bar)
+8. Prodeje podle produktu (bar) -- beze zmen
+9. **NOVY** -- Top klienti podle utraty (horizontal bar)
+10. **NOVY** -- AOV trend (mala line chartka)
+11. Tabulka nejprodavanejsich -- beze zmen
 
-### Faze 2: Evaluacni barvy (design compliance)
-
-**4. `PerformanceKPIBar` -- neutralni trend barvy**
-- TrendIndicator: nahradit `text-emerald-600`/`text-red-500` za `text-muted-foreground`
-
-**5. `ClientProgressLeaderboard` -- neutralni trend barvy**
-- Radek 129: nahradit evaluacni barvy za neutralni
-
-**6. `ProgressSparklineGrid` -- neutralni trend badge**
-- Radky 115-119: nahradit zeleno-cervene badge za neutralni
-
-**7. `ProgressHeroCard` -- neutralni volume trend**
-- Radky 121-136: sjednotit na neutralni barvy
-
-### Faze 3: UX vylepseni
-
-**8. Redukce zalozek z 8 na 4+2**
-- Slouciit "Porovnani" do zalozky "Klienti" (uz tam porovnani existuje jako sub-tab)
-- Presunout "PR Historie" jako podsekci do "Prehledu"
-- Zachovat Testy a Vyzvy jako volitelne
-- Vysledek: Prehled | Klienti | Knihovna | Analytika | (Testy) | (Vyzvy)
-
-**9. Klientsky prehled -- seznam misto prazdneho stavu**
-- V ClientProgressView pred vyberem klienta zobrazit clickable seznam klientu s mini-statistikami (PR count, entries, posledni aktivita)
-- Kliknutim na klienta se rovnou vybere
-
-**10. Podpora zobrazeni cele historie**
-- Pridat period selector do ClientProgressView (12 mesicu / vse)
-- Predavat parametr do `useClientProgressStats`
-
----
-
-## Technicke detaily
-
-| # | Soubor | Zmena |
-|---|--------|-------|
-| 1 | `useClientProgressStats.ts` | Pridat cardio_entries + skill_entries do dotazu |
-| 2 | `useClientProgressStats.ts` (useAllClientsProgress) | Pridat cardio + skill do agregace |
-| 3 | `useCohortBenchmarks.ts` | Pridat cardio + skill, opravit casove cviky |
-| 4 | `PerformanceKPIBar.tsx` | Neutralni trend barvy |
-| 5 | `ClientProgressLeaderboard.tsx` | Neutralni trend barvy |
-| 6 | `ProgressSparklineGrid.tsx` | Neutralni trend badge |
-| 7 | `ProgressHeroCard.tsx` | Neutralni volume trend |
-| 8 | `PerformanceHub.tsx` | Redukce zalozek, integrace PR Historie |
-| 9 | `ClientProgressView.tsx` | Seznam klientu misto prazdneho stavu, period selector |
-| 10 | `useClientProgressStats.ts` | Parametr pro rozsireni casoveho okna |
+### Knihovny
+Vsechno realizovatelne s `recharts` (uz nainstalovan). Heatmapa pomoci obycejneho CSS gridu s barevnou skalou.
 
