@@ -52,7 +52,7 @@ export function CapacityUtilizationCard() {
               {metrics.currentMonthTrainings} tréninků tento měsíc
             </p>
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              z odhadovaných 176 slotů
+              vytíženost kapacity
             </p>
           </div>
         </div>

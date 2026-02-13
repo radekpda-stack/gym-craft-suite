@@ -1,27 +1,42 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MessageCircle, TrendingUp, TrendingDown, Minus, Heart, Sparkles } from 'lucide-react';
+import { MessageCircle, Heart, Sparkles, Moon, Zap, AlertTriangle, BedDouble } from 'lucide-react';
 import { AnnualStatsData } from '@/hooks/useAnnualStats';
 
 interface ClientFeedbackCardProps {
   stats?: AnnualStatsData | null;
 }
 
+function MetricRow({ icon: Icon, label, value, max, unit }: {
+  icon: React.ElementType;
+  label: string;
+  value: number;
+  max: number;
+  unit?: string;
+}) {
+  if (value === 0) return null;
+  return (
+    <div className="flex items-center gap-3">
+      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs text-muted-foreground truncate">{label}</span>
+          <span className="text-sm font-semibold tabular-nums">
+            {value.toFixed(1)}{unit ? ` ${unit}` : `/${max}`}
+          </span>
+        </div>
+        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-primary/60 rounded-full transition-all duration-500"
+            style={{ width: `${Math.min((value / max) * 100, 100)}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ClientFeedbackCard({ stats }: ClientFeedbackCardProps) {
   const totalFeedback = stats?.totalFeedback || 0;
-  const avgBodyFeel = stats?.avgBodyFeel || 0;
-  const avgSessionFit = stats?.avgSessionFit || 0;
-
-  // Scores are on 1-10 scale
-  const getScoreDisplay = (score: number, max: number = 10) => {
-    const percentage = (score / max) * 100;
-    if (score === 0) return { color: 'text-muted-foreground', label: 'Bez dat' };
-    if (percentage >= 80) return { color: 'text-success', label: 'Výborné' };
-    if (percentage >= 60) return { color: 'text-warning', label: 'Dobré' };
-    return { color: 'text-destructive', label: 'Ke zlepšení' };
-  };
-
-  const bodyFeelDisplay = getScoreDisplay(avgBodyFeel, 10);
-  const sessionFitDisplay = getScoreDisplay(avgSessionFit, 10);
 
   if (totalFeedback === 0) {
     return (
@@ -47,60 +62,25 @@ export function ClientFeedbackCard({ stats }: ClientFeedbackCardProps) {
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <MessageCircle className="h-4 w-4 text-primary" />
           Zpětná vazba klientů
+          <span className="text-xs text-muted-foreground font-normal ml-auto">
+            {totalFeedback} odpovědí
+          </span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Total feedback count */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Celkem odpovědí</span>
-          <span className="text-lg font-semibold">{totalFeedback}</span>
-        </div>
-
-        {/* Body feel metric */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Heart className="h-4 w-4 text-destructive" />
-              <span className="text-sm">Pocit těla</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={`text-lg font-bold ${bodyFeelDisplay.color}`}>
-                {avgBodyFeel > 0 ? avgBodyFeel.toFixed(1) : '—'}
-              </span>
-              <span className="text-xs text-muted-foreground">/10</span>
-            </div>
+      <CardContent className="space-y-3">
+        <MetricRow icon={Heart} label="Pocit těla" value={stats?.avgBodyFeel || 0} max={10} />
+        <MetricRow icon={Sparkles} label="Session fit" value={stats?.avgSessionFit || 0} max={10} />
+        <MetricRow icon={Zap} label="Energie" value={stats?.avgEnergyRating || 0} max={10} />
+        <MetricRow icon={Moon} label="Kvalita spánku" value={stats?.avgSleepQuality || 0} max={10} />
+        <MetricRow icon={BedDouble} label="Ø spánek" value={stats?.avgSleepHours || 0} max={10} unit="h" />
+        
+        {(stats?.redFlagCount || 0) > 0 && (
+          <div className="flex items-center gap-3 pt-2 border-t border-border">
+            <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground">Red flagy</span>
+            <span className="text-sm font-semibold tabular-nums ml-auto">{stats?.redFlagCount}</span>
           </div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-destructive/70 to-destructive rounded-full transition-all duration-500"
-              style={{ width: `${(avgBodyFeel / 10) * 100}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">{bodyFeelDisplay.label}</p>
-        </div>
-
-        {/* Session fit metric - how well training matched client's needs */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-warning" />
-              <span className="text-sm">Sedí mi trénink</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={`text-lg font-bold ${sessionFitDisplay.color}`}>
-                {avgSessionFit > 0 ? avgSessionFit.toFixed(1) : '—'}
-              </span>
-              <span className="text-xs text-muted-foreground">/10</span>
-            </div>
-          </div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-warning/70 to-warning rounded-full transition-all duration-500"
-              style={{ width: `${(avgSessionFit / 10) * 100}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">{sessionFitDisplay.label}</p>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

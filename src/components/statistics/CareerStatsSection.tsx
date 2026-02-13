@@ -5,6 +5,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLifetimeStats } from "@/hooks/useLifetimeStats";
+import { useAnnualStats } from "@/hooks/useAnnualStats";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { CareerMilestonesTimeline } from "./CareerMilestonesTimeline";
 import { HourlyRateTrendCard } from "./HourlyRateTrendCard";
@@ -19,6 +20,9 @@ import {
   Users, 
   Calendar,
   Banknote,
+  FileText,
+  Camera,
+  Mic,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StatsPeriodRange } from "./StatsPeriodSelector";
@@ -43,6 +47,7 @@ function LoadingSkeleton() {
 
 export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
   const { data: stats, isLoading } = useLifetimeStats();
+  const { data: annualStats } = useAnnualStats('all');
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -91,6 +96,37 @@ export function CareerStatsSection({ periodRange }: CareerStatsSectionProps) {
             </div>
           </CardContent>
         </Card>
+        {/* Notes & Media compact card */}
+        {annualStats && (annualStats.totalMeasurements > 0 || annualStats.totalPhotos > 0 || annualStats.totalVoiceNotes > 0) && (
+          <Card className="bg-card/80 backdrop-blur-md border-border/50 hover:shadow-md transition-all duration-200">
+            <CardContent className="p-4">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">Dokumentace</p>
+              <div className="flex items-center gap-4 text-sm">
+                {annualStats.totalMeasurements > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-medium tabular-nums">{annualStats.totalMeasurements}</span>
+                    <span className="text-[10px] text-muted-foreground">měření</span>
+                  </div>
+                )}
+                {annualStats.totalPhotos > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-medium tabular-nums">{annualStats.totalPhotos}</span>
+                    <span className="text-[10px] text-muted-foreground">fotek</span>
+                  </div>
+                )}
+                {annualStats.totalVoiceNotes > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Mic className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-medium tabular-nums">{annualStats.totalVoiceNotes}</span>
+                    <span className="text-[10px] text-muted-foreground">záznamů</span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Revenue Forecast */}

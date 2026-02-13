@@ -15,10 +15,7 @@ function TrendIndicator({ value, label }: { value: number; label?: string }) {
   const isNeutral = value === 0;
   
   return (
-    <div className={cn(
-      "flex items-center gap-1 text-xs",
-      isNeutral ? "text-muted-foreground" : isPositive ? "text-emerald-600" : "text-destructive"
-    )}>
+    <div className="flex items-center gap-1 text-xs text-muted-foreground">
       {isNeutral ? (
         <Minus className="h-3 w-3" />
       ) : isPositive ? (
@@ -28,7 +25,7 @@ function TrendIndicator({ value, label }: { value: number; label?: string }) {
       )}
       <span>
         {isPositive ? '+' : ''}{value}%
-        {label && <span className="text-muted-foreground ml-1">{label}</span>}
+        {label && <span className="ml-1">{label}</span>}
       </span>
     </div>
   );

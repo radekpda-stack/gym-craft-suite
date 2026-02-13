@@ -65,7 +65,7 @@ export function useBusinessHealthMetrics() {
       const [trainingsRes, expensesRes, clientsRes] = await Promise.all([
         supabase
           .from('training_sessions')
-          .select('id, date, client_id, final_price, status')
+          .select('id, date, client_id, final_price, status, duration')
           .eq('user_id', user.id)
           .gte('date', months[0].start.toISOString())
           .eq('status', 'completed'),
@@ -93,7 +93,7 @@ export function useBusinessHealthMetrics() {
         const revenue = mTrainings.reduce((s, t) => s + (t.final_price || 0), 0);
         const expenseTotal = mExpenses.reduce((s, e) => s + e.amount, 0);
         const clientIds = new Set(mTrainings.map(t => t.client_id));
-        const hours = mTrainings.length; // ~1h per training
+        const hours = mTrainings.reduce((sum, t) => sum + ((t.duration || 60) / 60), 0);
         const hourlyRate = hours > 0 ? revenue / hours : 0;
         
         return {

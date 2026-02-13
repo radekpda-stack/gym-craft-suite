@@ -4,7 +4,6 @@ import {
   FinancePeriodType,
 } from '@/hooks/useFinanceAnalytics';
 import { formatCurrency } from '@/lib/formatters';
-import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { HelpCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import {
@@ -21,18 +20,11 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
 } from 'recharts';
 import type { StatsPeriodRange } from './StatsPeriodSelector';
 import { differenceInDays } from 'date-fns';
 import { useMemo } from 'react';
 
-const CHART_COLORS = [
-  'hsl(var(--primary))', 
-  'hsl(var(--chart-2))', 
-];
 
 interface FinanceChartsSectionProps {
   periodRange?: StatsPeriodRange;
@@ -61,10 +53,6 @@ export function FinanceChartsSection({ periodRange }: FinanceChartsSectionProps)
     value: item.value,
   })) || [];
 
-  const distributionData = [
-    { name: 'Tréninky', value: data?.trainingIncome || 0 },
-    { name: 'Produkty', value: data?.productIncome || 0 },
-  ].filter(d => d.value > 0);
 
   // Calculate period comparison percentages
   const getChangePercent = (current: number, previous: number) => {
@@ -120,17 +108,14 @@ export function FinanceChartsSection({ periodRange }: FinanceChartsSectionProps)
                 </UITooltip>
               </div>
               {data.previousPeriod && (
-                <div className={cn(
-                  "flex items-center gap-1 text-sm",
-                  totalChange >= 0 ? "text-emerald-600" : "text-destructive"
-                )}>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   {totalChange >= 0 ? (
                     <TrendingUp className="w-4 h-4" />
                   ) : (
                     <TrendingDown className="w-4 h-4" />
                   )}
                   <span>{totalChange >= 0 ? '+' : ''}{totalChange.toFixed(0)}%</span>
-                  <span className="text-muted-foreground text-xs">vs předchozí</span>
+                  <span className="text-xs">vs předchozí</span>
                 </div>
               )}
             </div>
@@ -182,74 +167,7 @@ export function FinanceChartsSection({ periodRange }: FinanceChartsSectionProps)
           </CardContent>
         </Card>
 
-        {/* Distribution Donut */}
-        {distributionData.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">Rozložení příjmů</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie
-                      data={distributionData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {distributionData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const d = payload[0].payload;
-                          const percentage = data.totalIncome > 0 
-                            ? ((d.value / data.totalIncome) * 100).toFixed(0) 
-                            : 0;
-                          return (
-                            <div className="bg-popover border border-border rounded-lg p-2 shadow-lg">
-                              <p className="text-sm font-medium">{d.name}</p>
-                              <p className="text-xs">{formatCurrency(d.value)}</p>
-                              <p className="text-xs text-muted-foreground">{percentage}%</p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex flex-col gap-3 min-w-[140px]">
-                  {distributionData.map((item, index) => {
-                    const percentage = data.totalIncome > 0 
-                      ? ((item.value / data.totalIncome) * 100).toFixed(0) 
-                      : 0;
-                    return (
-                      <div key={item.name} className="flex items-center gap-3">
-                        <div 
-                          className="w-3 h-3 rounded-full shrink-0" 
-                          style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                        />
-                        <div>
-                          <p className="text-sm font-medium">{item.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatCurrency(item.value)} ({percentage}%)
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Distribution donut removed - data already shown in ProfitLossCard and FinanceHeroKPI */}
       </div>
     </TooltipProvider>
   );

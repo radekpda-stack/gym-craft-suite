@@ -77,16 +77,16 @@ export function VolumeStatsCard() {
           <div className="text-right flex items-center gap-2">
             <div>
               <div className="text-2xl font-bold">{formatVolume(data.totalVolume)} kg</div>
-            <div className="flex items-center justify-end gap-1 text-xs">
+            <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
                 {trendPositive ? (
-                  <TrendingUp className="h-3 w-3 text-success" />
+                  <TrendingUp className="h-3 w-3" />
                 ) : (
-                  <TrendingDown className="h-3 w-3 text-destructive" />
+                  <TrendingDown className="h-3 w-3" />
                 )}
-                <span className={trendPositive ? 'text-success' : 'text-destructive'}>
+                <span>
                   {trendPositive ? '+' : ''}{data.trend}%
                 </span>
-                <span className="text-muted-foreground ml-1">vs. předchozí</span>
+                <span className="ml-1">vs. předchozí</span>
               </div>
             </div>
             <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
