@@ -1,124 +1,122 @@
 
-# Audit statistik: Nalezené chyby a chybějící data
+# Hloubkový audit klientského portálu
 
-Po důkladné analýze hooků, komponent a databázových logů jsem identifikoval tyto problémy a chybějící funkce.
+Po důkladné analýze kódu, hooků, navigace a komponent klientského portálu jsem identifikoval tyto problémy.
 
 ---
 
 ## CHYBY K OPRAVĚ
 
-### 1. KRITICKÁ: `payment_amount` chyba stále v DB logech
-Ačkoliv kód v `usePrefetchTrainingDetail.ts` byl opraven, databázové logy ukazují, že chyba `column training_participants.payment_amount does not exist` se stále opakuje (10+ výskytů v posledních logech). Je třeba prohledat VŠECHNY soubory, které dotazují `training_participants`, a ověřit, že žádný jiný hook/komponenta nemá starý SELECT.
+### 1. HARDCODED NAVIGACE -- Akce klienta vedou na /client/ místo dynamického basePath
+V `useClientPendingActions.ts` (řádky 45 a 92) jsou hardcoded linky:
+- `link: '/client/feedback'`
+- `link: '/client/settings'`
 
-**Soubory k prověření:** Všechny hooky pracující s `training_participants`.
+Klienti přistupující přes `/zona/` prefix budou přesměrováni na nesprávnou cestu. Komponenta `ClientActionRequired` tyto linky přímo používá v `<Link to={action.link}>`.
 
----
+**Stejný problém v `ClientQuickStats.tsx`** (řádky 78, 86) a `MyExercisesWidget.tsx` (řádek 41), kde `navigate('/zona/...')` je hardcoded -- nefunguje pro klienty na `/client/` prefixu.
 
-### 2. BUG: `useAnnualStats` používá `.single()` bez ochrany (řádek 111)
-Při režimu `'all'` se dotazuje na nejstarší trénink pomocí `.single()`. Pokud trenér nemá žádné tréninky, dotaz selže místo graceful fallbacku.
-
-**Oprava:** Nahradit `.single()` za `.maybeSingle()`.
-
----
-
-### 3. BUG: `useAnnualStats` -- `training_participants` JOIN nevrací data
-Na řádku 307-311 se dotazuje `training_participants` s JOIN na `training_sessions!inner`, ale výsledek se filtruje jako `p.training_session_id === t.id` (řádek 323), přičemž pole `training_session_id` NENÍ v SELECT dotazu. Tím pádem `trainingParticipants` je vždy prázdný array a multi-participant tréninky se nikdy nezapočítají správně do `clientTrainingCounts` a `clientSpent`.
-
-**Dopad:** Statistiky "Top klienti podle tréninků" a "Top klienti podle útraty" jsou CHYBNÉ pro skupinové tréninky -- nezapočítávají se účastníci, pouze `client_id` ze session.
-
-**Oprava:** Přidat `training_session_id` do SELECT nebo použít správný přístup k JOIN datům.
+**Oprava:** Přesunout logiku basePath do hooku nebo předávat basePath jako parametr. Ideálně vytvořit helper `usePortalBasePath()`.
 
 ---
 
-### 4. BUG: `useCardioStatsNew` -- dvojité počítání kardio dat
-Hook sbírá data z `cardio_entries` A `exercise_entries` s kardio metrikami. Pokud je stejná aktivita zaznamenána v obou tabulkách (což je možné), dojde k duplicitnímu započítání vzdálenosti, času a tepové frekvence.
+### 2. BUG: `useClientCredit` čte z tabulky clients -- nesynchronizovaný zdroj dat
+Hook `useClientCredit` v `useClientPortalData.ts` (řádek 15-19) čte `credit_balance` přímo z tabulky `clients` pomocí `.single()`. Tento zdroj dat je potenciálně zastaralý oproti ledger views (`vw_client_ledger_balances`), které byly právě implementovány jako "source of truth" v dashboardu trenéra.
 
-**Oprava:** Přidat deduplikaci nebo jasné oddělení zdrojů dat.
+HeroStatsRow na dashboardu portálu správně používá `useClientCreditStats` (který čte z ledger), ale `useClientCredit` je stále importován a mohl by být použit jinde.
 
----
-
-### 5. BUG: `useFinancialStats` -- `totalCredit` nesprávný výpočet
-Na řádku 98-100 se `totalCredit` počítá jako `payments - |trainings| - |products|`. Toto není credit balance, ale přibližný odhad, který nebere v úvahu refundy, manuální transakce a skupinové rozpočty. Pro souhrnnou statistiku by měl výpočet zahrnovat VŠECHNY typy transakcí.
+**Oprava:** Deprecovat `useClientCredit` a nahradit všechny jeho výskyty za `useClientCreditStats`.
 
 ---
 
-### 6. BUG: `useCancellationStats` -- hardcoded DEFAULT_TRAINING_PRICE = 800 Kč
-Na řádku 123 je výchozí cena za pozdní zrušení 800 Kč, ale od února 2026 platí nový ceník (900 Kč za 1 osobu). Toto by mělo být aktualizováno na 900 Kč.
+### 3. BUG: `useClientConsistency` v useClientPortalData.ts -- streak počítání je nefunkční
+Funkce `useClientConsistency` (řádky 199-241) obsahuje nefunkční logiku pro výpočet streak:
+- Cyklus na řádku 222-227 vždy okamžitě provede `break` po první iteraci
+- Proměnná `checkDate` se nikdy nepoužije k porovnání s `completedDates`
+- `weeklyData` se nikdy nenaplní (prázdný array)
+- Výsledný `streak` je ve skutečnosti jen `completedDates.size` (celkový počet dokončených tréninků), ne skutečný streak
+
+**Oprava:** Implementovat skutečný výpočet streak na základě po sobě jdoucích týdnů s alespoň jedním tréninkem.
 
 ---
 
-### 7. BUG: `useGlobalTrainingTagStats` -- nepřesný avgPerWeek pro `'all'`
-Na řádku 101-102 se pro režim `'all'` předpokládá 365 dní. Ve skutečnosti by se měl vypočítat skutečný počet dní od nejstaršího tréninku.
+### 4. BUG: `.single()` v READ dotazech portálu mohou selhat
+Několik hooků používaných klientským portálem obsahuje `.single()` v SELECT dotazech, kde by chybějící data mohla způsobit crash:
+
+| Soubor | Řádek | Riziko |
+|---|---|---|
+| `useClientPortalAuth.ts` | 68 | Crash pokud klient neexistuje v clients |
+| `useClientPortalProfile.ts` | 45 | Crash pokud klient neexistuje |
+| `useClientOnboardingStatus.ts` | 34 | Crash pokud klient neexistuje |
+| `useClientPortalBenchmarks.ts` | 172 | Crash pokud klient neexistuje |
+| `useClientPortalData.ts` | 19 | Crash pokud klient neexistuje |
+| `useClientDashboardMetrics.ts` | 91, 171 | Crash pokud klient neexistuje |
+
+**Oprava:** Nahradit `.single()` za `.maybeSingle()` ve všech SELECT dotazech, kde klient nemusí existovat. Ponechat `.single()` u INSERT/UPDATE `.select().single()` vzorů (ty jsou v pořádku).
 
 ---
 
-### 8. BUG: `useBusinessAnalytics` -- N+1 dotazů na DB
-Hook provádí 6 sekvenčních dotazů v `for` smyčce (řádky 202-220 a 245-278) pro trend příjmů a retenci -- celkem 12 extra DB dotazů. Toto výrazně zpomaluje načítání statistik.
+### 5. BUG: OverallPerformanceCard používá evaluační barvy
+Komponenta `OverallPerformanceCard.tsx` (řádky 14-35) klasifikuje výkon klientů jako "Pod průměrem" (červená), "Průměr", "Nad průměr" a "Top X%" (zelená). Toto **porušuje analytickou filozofii** projektu, která zakazuje evaluační prvky (zelená/červená hodnocení, procentuální indikátory, hodnotící text).
 
-**Oprava:** Načíst data jedním dotazem a seskupit na frontendu.
-
----
-
-## CHYBĚJÍCÍ STATISTIKY
-
-### 9. Cvičební statistiky: Chybí periodový filtr
-`ExerciseStatsSection` nemá `periodRange` prop -- vždy zobrazuje data za celý rok (`useAnnualStats('year')`), zatímco Finance a Tréninky respektují globální periodový selektor.
-
-**Oprava:** Přidat `periodRange` prop a předat jej do hooků.
+**Oprava:** Změnit na neutrální, srovnávací prezentaci bez hodnotícího framingu. Místo "Pod průměrem" zobrazit "25. percentil" apod.
 
 ---
 
-### 10. Finance: `useProfitByPeriod` počítá POUZE produktový zisk
-Hook na řádcích 22-27 filtruje jen `type === 'product'`. Profit & Loss graf nezahrnuje příjmy z tréninků ani provozní náklady z `business_expenses`. Výsledný "zisk" je tedy jen marže na produktech, NE celkový zisk trenéra.
+### 6. RESPONSIVITA: Čeština v plurálu -- gramaticky chybné texty
+V `ClientActionRequired.tsx` (řádek 125):
+```
+{count === 1 ? 'Máš úkol k vyřízení' : `Máš ${count} úkoly k vyřízení`}
+```
+Pro 5+ je správný tvar "úkolů", ne "úkoly". Stejný problém v `PendingHomeworkWidget.tsx` (řádek 29).
 
-**Oprava:** Do výpočtu přidat i tréninkové příjmy a odečíst business_expenses.
-
----
-
-### 11. Finance: `useIncomeByPeriod` nezahrnuje produktové příjmy
-Na řádcích 53-54 je `products: 0` -- produktové příjmy se NIKDY nenaplní, ačkoliv interface `IncomeDataPoint` pole `products` definuje. Grafy tedy ukazují pouze přijaté platby (dobití kreditu), ne skutečné příjmy.
-
----
-
-### 12. Chybí: Hodinová sazba v čase (trend)
-`HourlyRateTrendCard` existuje v komponentách, ale není jasné, zda se zobrazuje v `FinanceStatsSection`. Hodinová sazba (příjem/hodiny) je klíčová metrika pro trenéra OSVČ.
+**Oprava:** Použít správnou českou pluralizaci (1 = úkol, 2-4 = úkoly, 5+ = úkolů).
 
 ---
 
-### 13. Chybí: Kapacitní vytíženost jako součást statistik
-`useCapacityUtilization` existuje, ale v statistikách tréninků chybí vizualizace -- kolik % kapacity trenér využívá (skutečné vs. maximální tréninky).
+### 7. NAVIGACE: `ClientPortalLayout` -- tooltip bez z-index
+Desktopové sidebaru tooltipy (řádek 259) nemají explicitní z-index:
+```tsx
+<span className="absolute left-full ml-2 ... opacity-0 group-hover:opacity-100">
+```
+Toto může kolidovat s ostatními překryvnými prvky. Podle paměti projektu by Tooltip měl mít `z-[60]`.
+
+---
+
+## CHYBĚJÍCÍ FUNKCE
+
+### 8. Dashboard: useClientCredit je redundantní s useClientCreditStats
+Existují dva odlišné hooky pro kredit klienta v portálu -- `useClientCredit` (čte z clients tabulky) a `useClientCreditStats` (čte z ledger views). To vytváří riziko nekonzistence dat mezi různými stránkami portálu.
 
 ---
 
 ## PLÁN IMPLEMENTACE
 
-### Fáze 1: Kritické opravy (priorita)
-1. Prohledat a opravit VŠECHNY výskyty `payment_amount` v celé codebase
-2. Opravit `.single()` na `.maybeSingle()` v `useAnnualStats`
-3. Opravit chybějící `training_session_id` v `useAnnualStats` participant query
-4. Aktualizovat DEFAULT_TRAINING_PRICE na 900 Kč v `useCancellationStats`
+### Fáze 1: Kritické opravy navigace a dat
+1. Vytvořit helper `usePortalBasePath()` a nahradit všechny hardcoded `/client/` a `/zona/` cesty
+2. Nahradit `.single()` za `.maybeSingle()` ve všech SELECT dotazech portálu (6 souborů)
+3. Deprecovat `useClientCredit` ve prospěch `useClientCreditStats`
 
-### Fáze 2: Datová přesnost
-5. Opravit `useGlobalTrainingTagStats` -- správný výpočet dní pro `'all'`
-6. Opravit `useIncomeByPeriod` -- doplnit produktové příjmy
-7. Opravit `useProfitByPeriod` -- zahrnout tréninkové příjmy a náklady
-8. Přidat `periodRange` do `ExerciseStatsSection`
+### Fáze 2: Logické opravy
+4. Přepsat `useClientConsistency` streak logiku
+5. Opravit českou pluralizaci v `ClientActionRequired` a `PendingHomeworkWidget`
+6. Odstranit evaluační barvy/texty z `OverallPerformanceCard`
 
-### Fáze 3: Výkonnost
-9. Optimalizovat `useBusinessAnalytics` -- eliminovat N+1 dotazy
+### Fáze 3: UI/Responsivita
+7. Přidat z-index na sidebar tooltipy
 
 ---
 
 ## Technické detaily
 
-| # | Soubor | Typ | Dopad |
-|---|--------|-----|-------|
-| 1 | Celá codebase | Bug fix | Odstranění DB chyb |
-| 2 | `useAnnualStats.ts:111` | Bug fix | Crash prevence |
-| 3 | `useAnnualStats.ts:307-337` | Bug fix | Chybné top klienti |
-| 4 | `useCancellationStats.ts:123` | Bug fix | Špatná cena |
-| 5 | `useGlobalTrainingTagStats.ts:101` | Bug fix | Nepřesný průměr |
-| 6 | `useIncomeByPeriod.ts` | Missing data | Chybí produkty v grafu |
-| 7 | `useProfitByPeriod.ts` | Missing data | Neúplný P&L |
-| 8 | `ExerciseStatsSection.tsx` | Missing feature | Chybí filtr období |
-| 9 | `useBusinessAnalytics.ts` | Performance | 12 zbytečných DB dotazů |
+| # | Soubor | Typ | Priorita |
+|---|--------|-----|----------|
+| 1 | `useClientPendingActions.ts` | Hardcoded navigace | Vysoká |
+| 1 | `ClientQuickStats.tsx` | Hardcoded navigace | Vysoká |
+| 1 | `MyExercisesWidget.tsx` | Hardcoded navigace | Vysoká |
+| 2 | `useClientPortalData.ts` | Zastaralý zdroj dat | Vysoká |
+| 3 | `useClientPortalData.ts:199-241` | Nefunkční streak | Střední |
+| 4 | 6 souborů | .single() crash risk | Střední |
+| 5 | `OverallPerformanceCard.tsx` | Porušení design rules | Nízká |
+| 6 | `ClientActionRequired.tsx`, `PendingHomeworkWidget.tsx` | Pluralizace | Nízká |
+| 7 | `ClientPortalLayout.tsx:259` | Z-index tooltip | Nízká |
