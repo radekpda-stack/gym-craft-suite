@@ -72,6 +72,13 @@ export interface AnnualStatsData {
   totalFeedback: number;
   avgBodyFeel: number;
   avgSessionFit: number;
+  avgSleepQuality: number;
+  avgSleepHours: number;
+  avgEnergyRating: number;
+  redFlagCount: number;
+  avgDomsLevel: number;
+  avgReadinessLevel: number;
+  avgEnjoymentLevel: number;
   
   // Feature usage
   totalFeatureUsage: number;
@@ -187,7 +194,7 @@ export function useAnnualStats(
         // Feedback
         supabase
           .from('training_feedback')
-          .select('id, body_feel, session_fit')
+          .select('id, body_feel, session_fit, sleep_quality, sleep_hours, energy_rating, is_red_flag, doms_level, readiness_level, enjoyment_level')
           .gte('created_at', startDate.toISOString())
           .lte('created_at', endDate.toISOString()),
         
@@ -532,6 +539,32 @@ export function useAnnualStats(
       const avgSessionFit = feedback.length > 0
         ? feedback.reduce((sum, f) => sum + (f.session_fit || 0), 0) / feedback.filter(f => f.session_fit).length
         : 0;
+      
+      const feedbackWithSleep = feedback.filter(f => f.sleep_quality);
+      const avgSleepQuality = feedbackWithSleep.length > 0
+        ? feedbackWithSleep.reduce((sum, f) => sum + (f.sleep_quality || 0), 0) / feedbackWithSleep.length
+        : 0;
+      const feedbackWithSleepHours = feedback.filter(f => f.sleep_hours);
+      const avgSleepHours = feedbackWithSleepHours.length > 0
+        ? feedbackWithSleepHours.reduce((sum, f) => sum + (f.sleep_hours || 0), 0) / feedbackWithSleepHours.length
+        : 0;
+      const feedbackWithEnergy = feedback.filter(f => f.energy_rating);
+      const avgEnergyRating = feedbackWithEnergy.length > 0
+        ? feedbackWithEnergy.reduce((sum, f) => sum + (f.energy_rating || 0), 0) / feedbackWithEnergy.length
+        : 0;
+      const redFlagCount = feedback.filter(f => f.is_red_flag).length;
+      const feedbackWithDoms = feedback.filter(f => f.doms_level);
+      const avgDomsLevel = feedbackWithDoms.length > 0
+        ? feedbackWithDoms.reduce((sum, f) => sum + (f.doms_level || 0), 0) / feedbackWithDoms.length
+        : 0;
+      const feedbackWithReadiness = feedback.filter(f => f.readiness_level);
+      const avgReadinessLevel = feedbackWithReadiness.length > 0
+        ? feedbackWithReadiness.reduce((sum, f) => sum + (f.readiness_level || 0), 0) / feedbackWithReadiness.length
+        : 0;
+      const feedbackWithEnjoyment = feedback.filter(f => f.enjoyment_level);
+      const avgEnjoymentLevel = feedbackWithEnjoyment.length > 0
+        ? feedbackWithEnjoyment.reduce((sum, f) => sum + (f.enjoyment_level || 0), 0) / feedbackWithEnjoyment.length
+        : 0;
 
       // Feature usage stats
       const featureCounts: Record<string, number> = {};
@@ -595,6 +628,13 @@ export function useAnnualStats(
         totalFeedback: feedback.length,
         avgBodyFeel: Math.round(avgBodyFeel * 10) / 10,
         avgSessionFit: Math.round(avgSessionFit * 10) / 10,
+        avgSleepQuality: Math.round(avgSleepQuality * 10) / 10,
+        avgSleepHours: Math.round(avgSleepHours * 10) / 10,
+        avgEnergyRating: Math.round(avgEnergyRating * 10) / 10,
+        redFlagCount,
+        avgDomsLevel: Math.round(avgDomsLevel * 10) / 10,
+        avgReadinessLevel: Math.round(avgReadinessLevel * 10) / 10,
+        avgEnjoymentLevel: Math.round(avgEnjoymentLevel * 10) / 10,
         
         totalFeatureUsage: featureUsage.length,
         topFeatures,

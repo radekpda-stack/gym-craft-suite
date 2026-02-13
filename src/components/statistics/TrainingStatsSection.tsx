@@ -10,6 +10,9 @@ import { InteractiveHeatmapCard } from './InteractiveHeatmapCard';
 import { PeriodComparisonCard } from './PeriodComparisonCard';
 import { SmartBusinessInsights } from './SmartBusinessInsights';
 import { FeedbackTagCorrelation } from '@/components/feedback/FeedbackTagCorrelation';
+import { VolumeStatsCard } from './VolumeStatsCard';
+import { CardioStatsCard } from './CardioStatsCard';
+import { RecentPRsList, useMonthlyPRCount } from './RecentPRsList';
 import type { StatsPeriodRange } from './StatsPeriodSelector';
 import { differenceInDays } from 'date-fns';
 
@@ -93,6 +96,11 @@ export function TrainingStatsSection({ periodRange }: TrainingStatsSectionProps)
         bodyPartDistribution={stats.bodyPartDistribution}
         intensityDistribution={stats.intensityDistribution}
       />
+
+      {/* Exercise Stats: Volume + Cardio + PRs */}
+      <VolumeStatsCard />
+      <CardioStatsCard />
+      <RecentPRsList limit={5} />
 
       {/* Feedback by Training Tags - correlates feedback with tag types */}
       <FeedbackTagCorrelation 

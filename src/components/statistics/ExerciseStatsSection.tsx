@@ -48,9 +48,9 @@ export function ExerciseStatsSection({ periodRange }: ExerciseStatsSectionProps)
   const totalPRs = stats?.totalPRs || 0;
 
   const getIntensityLabel = (rpe: number) => {
-    if (rpe >= 8) return { label: 'Vysoká', color: 'text-destructive' };
-    if (rpe >= 6) return { label: 'Střední', color: 'text-warning' };
-    return { label: 'Nízká', color: 'text-success' };
+    if (rpe >= 8) return { label: 'Vysoká', color: 'text-muted-foreground' };
+    if (rpe >= 6) return { label: 'Střední', color: 'text-muted-foreground' };
+    return { label: 'Nízká', color: 'text-muted-foreground' };
   };
 
   return (

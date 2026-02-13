@@ -13,11 +13,11 @@ import {
 
 function getRetentionColor(rate: number | null): string {
   if (rate === null) return 'bg-muted/20';
-  if (rate >= 80) return 'bg-success';
-  if (rate >= 60) return 'bg-success/70';
-  if (rate >= 40) return 'bg-warning/70';
-  if (rate >= 20) return 'bg-warning/50';
-  return 'bg-destructive/70';
+  if (rate >= 80) return 'bg-primary';
+  if (rate >= 60) return 'bg-primary/70';
+  if (rate >= 40) return 'bg-primary/50';
+  if (rate >= 20) return 'bg-primary/30';
+  return 'bg-primary/15';
 }
 
 function getTextColor(rate: number | null): string {
@@ -145,11 +145,11 @@ export function CohortRetentionCard() {
                 <div className="flex items-center justify-end gap-2 mt-4 text-xs text-muted-foreground">
                   <span>0%</span>
                   <div className="flex gap-0.5">
-                    <div className="w-3 h-3 rounded-sm bg-destructive/70" />
-                    <div className="w-3 h-3 rounded-sm bg-warning/50" />
-                    <div className="w-3 h-3 rounded-sm bg-warning/70" />
-                    <div className="w-3 h-3 rounded-sm bg-success/70" />
-                    <div className="w-3 h-3 rounded-sm bg-success" />
+                    <div className="w-3 h-3 rounded-sm bg-primary/15" />
+                    <div className="w-3 h-3 rounded-sm bg-primary/30" />
+                    <div className="w-3 h-3 rounded-sm bg-primary/50" />
+                    <div className="w-3 h-3 rounded-sm bg-primary/70" />
+                    <div className="w-3 h-3 rounded-sm bg-primary" />
                   </div>
                   <span>100%</span>
                 </div>
