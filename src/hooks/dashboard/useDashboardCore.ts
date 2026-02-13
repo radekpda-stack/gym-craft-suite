@@ -107,6 +107,8 @@ export function useDashboardCore() {
       const [
         clientsResult,
         budgetMembersResult,
+        ledgerBalancesResult,
+        groupLedgerResult,
         weekTrainingsResult,
         monthTrainingsResult,
         feedbackRequestsResult,
@@ -119,10 +121,20 @@ export function useDashboardCore() {
           .select('id, name, credit_balance, payment_mode, is_archived, is_favorite, created_at, feedback_enabled')
           .eq('is_archived', false),
         
-        // Budget members
+        // Budget members with group_id
         supabase
           .from('client_budget_members')
-          .select('client_id'),
+          .select('client_id, group_id'),
+        
+        // Individual ledger balances from the view (source of truth)
+        supabase
+          .from('vw_client_ledger_balances')
+          .select('client_id, ledger_balance'),
+        
+        // Group ledger balances
+        supabase
+          .from('vw_group_ledger_balances')
+          .select('group_id, ledger_balance'),
         
         // Week trainings (includes today + last week for comparison)
         supabase
@@ -160,10 +172,29 @@ export function useDashboardCore() {
           .eq('payment_status', 'pending'),
       ]);
 
-      const clients = (clientsResult.data || []) as DashboardCoreData['clients'];
-      const budgetMemberIds = new Set(
-        ((budgetMembersResult.data || []) as { client_id: string }[]).map(m => m.client_id)
-      );
+      // Build ledger balance maps (source of truth)
+      const individualBalances = new Map<string, number>();
+      ((ledgerBalancesResult.data || []) as { client_id: string; ledger_balance: number }[])
+        .forEach(lb => individualBalances.set(lb.client_id, lb.ledger_balance));
+      
+      const groupBalances = new Map<string, number>();
+      ((groupLedgerResult.data || []) as { group_id: string; ledger_balance: number }[])
+        .forEach(gb => groupBalances.set(gb.group_id, gb.ledger_balance));
+      
+      const budgetMembers = (budgetMembersResult.data || []) as { client_id: string; group_id: string }[];
+      const budgetMemberIds = new Set(budgetMembers.map(m => m.client_id));
+      const clientGroupMap = new Map<string, string>();
+      budgetMembers.forEach(m => clientGroupMap.set(m.client_id, m.group_id));
+
+      // Merge ledger balances into clients - use ledger as source of truth
+      const rawClients = (clientsResult.data || []) as DashboardCoreData['clients'];
+      const clients = rawClients.map(c => {
+        const groupId = clientGroupMap.get(c.id);
+        const ledgerBalance = groupId
+          ? groupBalances.get(groupId) ?? c.credit_balance ?? 0
+          : individualBalances.get(c.id) ?? c.credit_balance ?? 0;
+        return { ...c, credit_balance: ledgerBalance };
+      });
 
       // All week trainings - filter for different date ranges
       const allWeekTrainings = (weekTrainingsResult.data || []) as TrainingSession[];
