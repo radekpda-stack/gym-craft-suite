@@ -12,25 +12,12 @@ interface OverallPerformanceCardProps {
 }
 
 function getPercentileStyle(percentile: number) {
-  if (percentile >= 75) return { 
-    color: 'text-success', 
-    bg: 'bg-success/10',
-    label: `Top ${Math.round(100 - percentile)}%` 
-  };
-  if (percentile >= 50) return { 
-    color: 'text-warning', 
-    bg: 'bg-warning/10',
-    label: 'Nad průměr' 
-  };
-  if (percentile >= 25) return { 
-    color: 'text-muted-foreground', 
-    bg: 'bg-muted',
-    label: 'Průměr' 
-  };
+  // Neutral, comparative presentation — no evaluative colors
+  const label = `${Math.round(percentile)}. percentil`;
   return { 
-    color: 'text-destructive', 
-    bg: 'bg-destructive/10',
-    label: 'Pod průměrem' 
+    color: 'text-foreground', 
+    bg: 'bg-muted',
+    label,
   };
 }
 
@@ -96,15 +83,15 @@ export function OverallPerformanceCard({ clientId }: OverallPerformanceCardProps
             {/* Strongest exercise */}
             {benchmarks.strongestExercise && (
               <div className="p-3 rounded-xl bg-muted/50 space-y-1">
-                <div className="flex items-center gap-1.5 text-success">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Trophy className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium">Nejsilnější</span>
+                  <span className="text-xs font-medium">Nejsilnější cvik</span>
                 </div>
                 <p className="font-medium text-sm truncate capitalize">
                   {benchmarks.strongestExercise.name}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Top {Math.round(100 - benchmarks.strongestExercise.percentile)}%
+                  {Math.round(benchmarks.strongestExercise.percentile)}. percentil
                 </p>
               </div>
             )}
@@ -124,12 +111,12 @@ export function OverallPerformanceCard({ clientId }: OverallPerformanceCardProps
             </div>
           </div>
 
-          {/* Weakest exercise hint */}
+          {/* Exercise with lowest percentile — neutral framing */}
           {benchmarks.weakestExercise && (
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-destructive/5 border border-destructive/10">
-              <Dumbbell className="w-4 h-4 text-destructive shrink-0" />
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border">
+              <Dumbbell className="w-4 h-4 text-muted-foreground shrink-0" />
               <p className="text-xs text-muted-foreground">
-                <span className="font-medium capitalize">{benchmarks.weakestExercise.name}</span> – prostor ke zlepšení
+                <span className="font-medium capitalize">{benchmarks.weakestExercise.name}</span> — {Math.round(benchmarks.weakestExercise.percentile)}. percentil
               </p>
             </div>
           )}

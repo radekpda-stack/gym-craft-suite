@@ -9,10 +9,12 @@ import { ExerciseSparklineItem } from './ExerciseSparklineItem';
 import { ExerciseProgressSheet } from './ExerciseProgressSheet';
 import { useNavigate } from 'react-router-dom';
 import { haptic } from '@/lib/haptics';
+import { usePortalBasePath } from '@/hooks/usePortalBasePath';
 
 export function MyExercisesWidget() {
   const { clientId } = useClientPortal();
   const navigate = useNavigate();
+  const basePath = usePortalBasePath();
   const { data: exercises, isLoading } = useClientAllExercises(clientId, 12); // Extend to 12 months
   const [selectedExercise, setSelectedExercise] = useState<ClientExerciseProgress | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -38,7 +40,7 @@ export function MyExercisesWidget() {
 
   const handleViewAll = () => {
     haptic('selection');
-    navigate('/zona/progress');
+    navigate(`${basePath}/progress`);
   };
 
   // Don't render if no exercises with data

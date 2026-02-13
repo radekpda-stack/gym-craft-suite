@@ -17,6 +17,7 @@ import { useMyPRs } from '@/hooks/useClientPRs';
 import { useClientExercisePRs } from '@/hooks/useClientExercisePRs';
 import { useNavigate } from 'react-router-dom';
 import { WeightStatCard } from './WeightStatCard';
+import { usePortalBasePath } from '@/hooks/usePortalBasePath';
 
 interface QuickStatProps {
   icon: typeof Dumbbell;
@@ -52,6 +53,7 @@ function QuickStat({ icon: Icon, label, value, iconClassName, valueClassName, is
 export function ClientQuickStats() {
   const { clientId } = useClientPortal();
   const navigate = useNavigate();
+  const basePath = usePortalBasePath();
   
   const { data: attendanceStats, isLoading: attendanceLoading } = useClientPortalAttendanceStats(clientId ?? undefined, 30);
   const { data: definedPrs, isLoading: definedPrsLoading } = useMyPRs();
@@ -75,7 +77,7 @@ export function ClientQuickStats() {
         label="Tréninků"
         value={trainingsThisMonth}
         isLoading={attendanceLoading}
-        onClick={() => navigate('/zona/diary')}
+        onClick={() => navigate(`${basePath}/diary`)}
       />
       <QuickStat
         icon={Trophy}
@@ -83,7 +85,7 @@ export function ClientQuickStats() {
         value={totalPRs}
         iconClassName="bg-amber-500/10"
         isLoading={prsLoading}
-        onClick={() => navigate('/zona/progress')}
+        onClick={() => navigate(`${basePath}/progress`)}
       />
       <WeightStatCard />
     </motion.div>

@@ -31,7 +31,7 @@ export function useClientOnboardingStatus() {
         .from('clients')
         .select('allow_anonymous_benchmarks')
         .eq('id', clientId)
-        .single();
+        .maybeSingle();
 
       const hasAnonymousBenchmarks = clientData?.allow_anonymous_benchmarks ?? false;
 

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfMonth, endOfMonth, subWeeks, format, differenceInDays, parseISO, isToday } from 'date-fns';
+import { startOfMonth, endOfMonth, subWeeks, startOfWeek, endOfWeek, format, differenceInDays, parseISO, isToday } from 'date-fns';
 
 // =====================================================
 // CREDIT & TRANSACTIONS
@@ -16,7 +16,7 @@ export function useClientCredit(clientId: string | undefined) {
         .from('clients')
         .select('credit_balance')
         .eq('id', clientId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return client?.credit_balance ?? 0;
@@ -214,24 +214,48 @@ export function useClientConsistency(clientId: string | undefined, weeks = 8) {
 
       if (error) throw error;
 
-      // Calculate streak
-      let streak = 0;
+      // Calculate streak: consecutive weeks (going back) with at least 1 training
       const completedDates = new Set((data ?? []).map(t => t.date));
       const today = new Date();
       
-      for (let i = 0; i < 30; i++) {
-        const checkDate = format(subWeeks(today, 0), 'yyyy-MM-dd');
-        // Simplified: count consecutive weeks with at least 1 training
-        if (completedDates.size > 0) streak++;
-        break; // Simple streak for now
+      let streak = 0;
+      for (let w = 0; w < weeks; w++) {
+        const weekStart = subWeeks(today, w);
+        const weekEnd = w === 0 ? today : subWeeks(today, w - 1);
+        // Check if any completed date falls in this week
+        let hasTraining = false;
+        for (const dateStr of completedDates) {
+          const d = parseISO(dateStr);
+          if (d >= startOfWeek(weekStart) && d <= endOfWeek(weekStart)) {
+            hasTraining = true;
+            break;
+          }
+        }
+        if (hasTraining) {
+          streak++;
+        } else if (w > 0) {
+          // Current week (w=0) can be empty without breaking streak
+          break;
+        }
       }
 
       // Weekly aggregation
       const weeklyData: { week: string; count: number }[] = [];
-      // Group by week (simplified)
+      for (let w = weeks - 1; w >= 0; w--) {
+        const weekStart = subWeeks(today, w);
+        const weekLabel = format(weekStart, 'dd.MM');
+        let count = 0;
+        for (const dateStr of completedDates) {
+          const d = parseISO(dateStr);
+          if (d >= startOfWeek(weekStart) && d <= endOfWeek(weekStart)) {
+            count++;
+          }
+        }
+        weeklyData.push({ week: weekLabel, count });
+      }
 
       return {
-        streak: completedDates.size, // Total completed in period
+        streak,
         totalCompleted: completedDates.size,
         weeklyData,
       };

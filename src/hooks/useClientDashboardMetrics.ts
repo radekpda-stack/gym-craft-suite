@@ -88,7 +88,7 @@ export function useCommunicationMetrics(clientId: string | undefined) {
         .from('clients')
         .select('notes')
         .eq('id', clientId!)
-        .single();
+        .maybeSingle();
       
       const notes = client?.notes || '';
       const noteCount = notes.split('\n\n').filter((n: string) => n.startsWith('[')).length;
@@ -168,7 +168,7 @@ export function useHealthMetrics(clientId: string | undefined) {
         .from('clients')
         .select('health_restrictions')
         .eq('id', clientId!)
-        .single();
+        .maybeSingle();
       
       return !!client?.health_restrictions;
     },

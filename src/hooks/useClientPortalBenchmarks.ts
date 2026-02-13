@@ -169,7 +169,7 @@ export function useClientPrivacySettings() {
         .from('clients')
         .select('allow_anonymous_benchmarks, allow_challenges_participation, gender')
         .eq('id', clientId!)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;

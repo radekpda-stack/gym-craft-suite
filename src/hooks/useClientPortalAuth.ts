@@ -65,7 +65,7 @@ export function useClientPortalAuth() {
           .from('clients')
           .select('id, name, first_name, last_name, email, phone, credit_balance')
           .eq('id', account.client_id)
-          .single();
+          .maybeSingle();
 
         if (clientError) throw clientError;
         setClientProfile(client as ClientProfile);

@@ -26,7 +26,7 @@ export function PendingHomeworkWidget() {
             <div className="min-w-0">
               <p className="text-sm font-medium">Domácí tréninky</p>
               <p className="text-xs text-muted-foreground">
-                {pending.length} {pending.length === 1 ? 'čeká na splnění' : pending.length < 5 ? 'čekají na splnění' : 'čeká na splnění'}
+                {pending.length} {pending.length === 1 ? 'úkol čeká na splnění' : pending.length < 5 ? 'úkoly čekají na splnění' : 'úkolů čeká na splnění'}
               </p>
             </div>
           </div>
