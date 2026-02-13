@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toLocalISOString } from '@/utils/dateUtils';
 import { Plus, Dumbbell, Activity, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +29,7 @@ export function NewRecordButton() {
   const handleCreateTraining = async (data: TrainingFormValues, tagIds: string[]) => {
     await createTraining.mutateAsync({
       client_id: data.client_id,
-      date: new Date(data.date).toISOString(),
+      date: toLocalISOString(data.date),
       duration: data.duration,
       notes: data.notes,
       status: data.status,

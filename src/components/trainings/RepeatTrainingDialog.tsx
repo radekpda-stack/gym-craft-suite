@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toLocalISOString } from '@/utils/dateUtils';
 import { Repeat, Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -96,7 +97,7 @@ export function RepeatTrainingDialog({
       // Create child sessions
       const childSessions = futureDates.map(date => ({
         client_id: session.client_id,
-        date: date.toISOString(),
+        date: toLocalISOString(date.toString()),
         duration: session.duration,
         notes: session.notes || '',
         status: 'scheduled' as const,
