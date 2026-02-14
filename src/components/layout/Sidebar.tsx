@@ -19,6 +19,7 @@ import {
   LayoutTemplate,
   Receipt,
   UserCircle,
+  StickyNote,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
@@ -149,6 +150,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
           ...(isModuleEnabled('training_templates') ? [{ id: 'training-templates', to: '/training-templates', icon: LayoutTemplate, label: 'Workouty' }] : []),
           ...(isModuleEnabled('nutrition') ? [{ id: 'nutrition', to: '/nutrition', icon: Utensils, label: 'Strava' }] : []),
           ...(isModuleEnabled('feedback') ? [{ id: 'feedback-overview', to: '/feedback-overview', icon: TrendingUp, label: 'Zpětná vazba' }] : []),
+          { id: 'notes', to: '/notes', icon: StickyNote, label: 'Poznámky' },
         ],
       },
       {
