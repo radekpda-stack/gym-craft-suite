@@ -80,7 +80,7 @@ import { usePageTracking } from '@/hooks/useFeatureTracking';
 
 type PeriodOption = '7' | '30' | '90' | 'all';
 type StatusFilter = 'all' | 'red_flags' | 'completed' | 'pending' | 'expired' | 'unfilled';
-type TabValue = 'to_send' | 'completed' | 'analytics' | 'history' | 'settings';
+type TabValue = 'to_send' | 'overview' | 'analytics';
 
 export default function FeedbackOverview() {
   usePageTracking('feedback_overview');
@@ -141,13 +141,12 @@ export default function FeedbackOverview() {
   const handleStatusClick = (status: 'to_send' | 'pending' | 'completed' | 'expired' | 'red_flags') => {
     if (status === 'to_send') {
       setActiveTab('to_send');
-    } else if (status === 'completed') {
-      // Navigate to new Vyplněné tab for completed feedbacks
-      setActiveTab('completed');
     } else {
-      // Use history tab for pending, expired, red_flags
-      setActiveTab('history');
-      if (status === 'pending') {
+      // All other statuses go to the overview tab with appropriate filter
+      setActiveTab('overview');
+      if (status === 'completed') {
+        setStatusFilter('completed');
+      } else if (status === 'pending') {
         setStatusFilter('pending');
       } else if (status === 'expired') {
         setStatusFilter('expired');
@@ -489,7 +488,7 @@ export default function FeedbackOverview() {
         {/* Tabs - Main content */}
         <div className="lg:col-span-2 order-1 lg:order-2">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="to_send" className="gap-2">
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">K odeslání</span>
@@ -497,26 +496,18 @@ export default function FeedbackOverview() {
                   <Badge variant="secondary" className="ml-1">{pendingTrainings.length}</Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="completed" className="gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Vyplněné</span>
+              <TabsTrigger value="overview" className="gap-2">
+                <MessageSquare className="w-4 h-4" />
+                <span className="hidden sm:inline">Přehled</span>
               </TabsTrigger>
               <TabsTrigger value="analytics" className="gap-2">
                 <TrendingUp className="w-4 h-4" />
                 <span className="hidden sm:inline">Statistiky</span>
               </TabsTrigger>
-              <TabsTrigger value="history" className="gap-2">
-                <MessageSquare className="w-4 h-4" />
-                <span className="hidden sm:inline">Historie</span>
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="gap-2">
-                <Settings2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Nastavení</span>
-              </TabsTrigger>
             </TabsList>
 
-            {/* Tab: Completed (New) */}
-            <TabsContent value="completed" className="space-y-4">
+            {/* Tab: Overview (merged Completed + History) */}
+            <TabsContent value="overview" className="space-y-4">
               <CompletedFeedbacksTab initialClientId={selectedClientId === 'all' ? undefined : selectedClientId} />
             </TabsContent>
 
@@ -676,262 +667,7 @@ export default function FeedbackOverview() {
               </Card>
             </TabsContent>
 
-            {/* Tab: History */}
-            <TabsContent value="history" className="space-y-4">
-              {/* Filters */}
-              <Card className="glass">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Filter className="w-4 h-4" />
-                    Filtry
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-3">
-                    <Select value={period} onValueChange={(v) => setPeriod(v as PeriodOption)}>
-                      <SelectTrigger className="w-[140px]">
-                        <Calendar className="w-4 h-4 mr-2" />
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="7">7 dní</SelectItem>
-                        <SelectItem value="30">30 dní</SelectItem>
-                        <SelectItem value="90">90 dní</SelectItem>
-                        <SelectItem value="all">Vše</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          <span className="flex items-center gap-2">
-                            <MessageSquare className="w-4 h-4" />
-                            Všechny stavy
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="completed">
-                          <span className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                            Vyplněné
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="pending">
-                          <span className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-amber-500" />
-                            Čekající
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="expired">
-                          <span className="flex items-center gap-2">
-                            <XCircle className="w-4 h-4 text-muted-foreground" />
-                            Expirované
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="unfilled">
-                          <span className="flex items-center gap-2">
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                            Nevyplněné (testovací)
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="red_flags">
-                          <span className="flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4 text-destructive" />
-                            Jen Red Flags
-                          </span>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <ClientSearchSelect
-                      clients={clients.filter(c => !c.is_archived)}
-                      value={selectedClientId === 'all' ? '' : selectedClientId}
-                      onValueChange={(v) => setSelectedClientId(v || 'all')}
-                      placeholder="Všichni klienti"
-                      allowAll
-                      allLabel="Všichni klienti"
-                      className="w-[180px]"
-                    />
-
-                    {/* Bulk delete button */}
-                    {selectedIds.size > 0 && (
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={handleBulkDeleteClick}
-                        className="gap-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Smazat vybrané ({selectedIds.size})
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Feedback List */}
-              <Card className="glass">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">Seznam feedbacků</CardTitle>
-                    {feedbackData && feedbackData.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          checked={isAllSelected}
-                          onCheckedChange={toggleSelectAll}
-                          aria-label="Vybrat vše"
-                        />
-                        <span className="text-sm text-muted-foreground">Vybrat vše</span>
-                      </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="space-y-3">
-                      {[1, 2, 3, 4, 5].map(i => (
-                        <Skeleton key={i} className="h-20 rounded-xl" />
-                      ))}
-                    </div>
-                  ) : feedbackData && feedbackData.length > 0 ? (
-                    <div className="space-y-2">
-                      {feedbackData.map((item) => {
-                        const statusConfig = getStatusIcon(item);
-                        const StatusIcon = statusConfig.icon;
-                        
-                        return (
-                          <div
-                            key={item.request.id}
-                            className={cn(
-                              'flex items-center gap-4 p-4 rounded-xl text-left transition-colors',
-                              selectedIds.has(item.request.id) && 'ring-2 ring-primary',
-                              item.feedback?.is_red_flag && 'bg-destructive/5 border border-destructive/20',
-                              !item.feedback?.is_red_flag && 'bg-secondary/30'
-                            )}
-                          >
-                            {/* Checkbox */}
-                            <Checkbox
-                              checked={selectedIds.has(item.request.id)}
-                              onCheckedChange={() => toggleSelect(item.request.id)}
-                              aria-label={`Vybrat feedback od ${item.clientName}`}
-                              className="shrink-0"
-                            />
-
-                            {/* Clickable area */}
-                            <button
-                              onClick={() => item.feedback && openFeedbackDetail(item)}
-                              disabled={!item.feedback}
-                              className={cn(
-                                'flex-1 flex items-center gap-4 text-left',
-                                item.feedback ? 'cursor-pointer' : 'cursor-default opacity-70'
-                              )}
-                            >
-                              {/* Status Icon */}
-                              <div className={cn(
-                                'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
-                                statusConfig.bg
-                              )}>
-                                <StatusIcon className={cn('w-5 h-5', statusConfig.color)} />
-                              </div>
-
-                              {/* Content */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="font-medium truncate">{item.clientName}</p>
-                                  {item.feedback?.is_red_flag && (
-                                    <Badge className="bg-destructive/20 text-destructive text-xs">
-                                      Red Flag
-                                    </Badge>
-                                  )}
-                                  {item.isExpired && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      Expirováno
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <span>
-                                    {item.trainingDate 
-                                      ? format(new Date(item.trainingDate), 'd.M.yyyy', { locale: cs })
-                                      : 'Bez tréninku'}
-                                  </span>
-                                  <span>•</span>
-                                  <span>
-                                    {item.request.status === 'completed' 
-                                      ? 'Vyplněno ' + format(new Date(item.request.completed_at!), 'd.M.', { locale: cs })
-                                      : item.isExpired
-                                      ? 'Odkaz vypršel'
-                                      : 'Čeká na vyplnění'}
-                                  </span>
-                                </div>
-
-                                {/* Quick metrics for completed */}
-                                {item.feedback && (
-                                  <div className="flex flex-wrap gap-2 mt-2">
-                                    {item.feedback.soreness !== null && (
-                                      <span className="text-xs px-2 py-0.5 rounded bg-secondary">
-                                        Svalovka: {item.feedback.soreness}/10
-                                      </span>
-                                    )}
-                                    {item.feedback.body_feel !== null && (
-                                      <span className="text-xs px-2 py-0.5 rounded bg-secondary">
-                                        Pocit: {item.feedback.body_feel}/10
-                                      </span>
-                                    )}
-                                    {item.feedback.pain !== null && item.feedback.pain >= 4 && (
-                                      <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400">
-                                        Bolest: {item.feedback.pain}/10
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Arrow */}
-                              {item.feedback && (
-                                <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-                              )}
-                            </button>
-
-                            {/* Delete button */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(item);
-                              }}
-                              className="shrink-0 text-muted-foreground hover:text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                      <p className="text-muted-foreground">Žádné zpětné vazby pro vybrané období</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Tab: Settings */}
-            <TabsContent value="settings" className="space-y-4">
-              <Card className="glass">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Nastavení dotazníku</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <FeedbackSettings />
-                </CardContent>
-              </Card>
-            </TabsContent>
+            {/* History content removed - merged into overview tab */}
           </Tabs>
         </div>
       </div>
