@@ -8,6 +8,7 @@ interface VolumeDataPoint {
   date: string;
   label: string;
   volume: number;
+  eVolume?: number;
   volumeComparison?: number;
 }
 
@@ -53,6 +54,10 @@ export function VolumeTimelineCard({
               <linearGradient id="volumeGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
                 <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="eVolumeGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="comparisonGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.2} />
@@ -105,6 +110,18 @@ export function VolumeTimelineCard({
                 />
               )}
             </AnimatePresence>
+            {data.some(d => d.eVolume && d.eVolume > 0) && (
+              <Area
+                type="monotone"
+                dataKey="eVolume"
+                name="eVolume"
+                stroke="hsl(var(--accent))"
+                strokeWidth={1.5}
+                fill="url(#eVolumeGrad)"
+                strokeDasharray="6 3"
+                animationDuration={500}
+              />
+            )}
             <Area
               type="monotone"
               dataKey="volume"

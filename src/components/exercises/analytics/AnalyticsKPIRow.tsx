@@ -112,6 +112,13 @@ export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
             <span className="text-[10px] text-muted-foreground">kg</span>
             <TrendBadge value={kpi?.tonnageTrend} />
           </div>
+          {kpi?.eVolume != null && kpi.eVolume > 0 && (
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-[10px] text-muted-foreground">eVol:</span>
+              <span className="text-xs font-medium tabular-nums text-muted-foreground">{formatVolume(kpi.eVolume)}</span>
+              <TrendBadge value={kpi?.eVolumeTrend} />
+            </div>
+          )}
         </div>
       </Card>
 

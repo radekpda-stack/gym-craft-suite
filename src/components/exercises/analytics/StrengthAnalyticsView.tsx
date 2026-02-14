@@ -7,10 +7,9 @@ import { StagnationAlertCard } from './StagnationAlertCard';
 import { MovementGapsCard } from './MovementGapsCard';
 import { UnusedExercisesCard } from './UnusedExercisesCard';
 import { ClientAttentionCard } from './ClientAttentionCard';
-import { LoadDistributionCard } from './LoadDistributionCard';
-import { MovementPatternsCard } from './MovementPatternsCard';
+import { RPEByExerciseCard } from './RPEByExerciseCard';
+import { RPEProgressCorrelationCard } from './RPEProgressCorrelationCard';
 import { TopExercisesTable } from './TopExercisesTable';
-import { AnalyticsGrid, AnalyticsGridItem } from './AnalyticsGrid';
 import { useClients } from '@/hooks/useClients';
 
 export function StrengthAnalyticsView() {
@@ -42,7 +41,7 @@ export function StrengthAnalyticsView() {
         onIncludeTestsChange={setIncludeTests}
       />
 
-      {/* KPI Row - 4 hlavní + 1 sekundární */}
+      {/* KPI Row */}
       <AnalyticsKPIRow 
         kpi={data?.kpi} 
         isLoading={isLoading} 
@@ -67,6 +66,18 @@ export function StrengthAnalyticsView() {
         <UnusedExercisesCard
           data={data?.unusedExercises || []}
           totalExercises={data?.totalExercisesInLibrary}
+          isLoading={isLoading}
+        />
+      </div>
+
+      {/* RPE Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <RPEByExerciseCard
+          data={data?.exerciseRpeRanking || []}
+          isLoading={isLoading}
+        />
+        <RPEProgressCorrelationCard
+          data={data?.rpeProgressCorrelation || []}
           isLoading={isLoading}
         />
       </div>

@@ -31,7 +31,7 @@ export interface UnusedExercise {
   daysSinceUse: number;
 }
 
-export type AttentionReason = 'no_pr' | 'declining_frequency' | 'high_asymmetry';
+export type AttentionReason = 'no_pr' | 'declining_frequency' | 'high_asymmetry' | 'chronic_high_rpe';
 
 export interface ClientNeedingAttention {
   clientId: string;
@@ -40,16 +40,31 @@ export interface ClientNeedingAttention {
   priority: 'high' | 'medium' | 'low';
 }
 
+export interface ExerciseRpeRanking {
+  name: string;
+  avgRpe: number;
+  entryCount: number;
+}
+
+export interface RpeProgressCorrelation {
+  exerciseName: string;
+  weightTrend: number; // % change
+  rpeTrend: number; // absolute change
+  status: 'true_strength_gain' | 'effort_increase' | 'fatigue_signal';
+}
+
 export interface AnalyticsKPI {
   tonnage: number;
   tonnageTrend: number;
+  eVolume: number;
+  eVolumeTrend: number;
   prCount: number;
   prTrend: number;
-  frequency: number; // training days per week average
+  frequency: number;
   frequencyTrend: number;
   avgRpe: number | null;
   rpeTrend: number;
-  bwReps: number; // bodyweight reps (sets * reps for is_bodyweight=true)
+  bwReps: number;
   bwRepsTrend: number;
   clientsNeedingAttentionCount: number;
 }
@@ -85,6 +100,14 @@ export interface TopExerciseItem {
   volumeTrend: number; // % change vs previous period
 }
 
+export interface VolumeTimelinePoint {
+  date: string;
+  label: string;
+  volume: number;
+  eVolume: number;
+  volumePrevious?: number;
+}
+
 export interface AnalyticsData {
   kpi: AnalyticsKPI;
   volumeTimeline: VolumeTimelinePoint[];
@@ -94,12 +117,13 @@ export interface AnalyticsData {
   movementPatterns: { pattern: string; label: string; count: number }[];
   topExercises: TopExerciseItem[];
   insight: string;
-  // New trainer-focused data
   stagnatingClients: StagnatingClient[];
   movementGaps: MovementGap[];
   unusedExercises: UnusedExercise[];
   totalExercisesInLibrary: number;
   clientsNeedingAttention: ClientNeedingAttention[];
+  exerciseRpeRanking: ExerciseRpeRanking[];
+  rpeProgressCorrelation: RpeProgressCorrelation[];
 }
 
 const BODY_PART_LABELS: Record<string, string> = {
@@ -239,6 +263,21 @@ export function useExerciseAnalyticsComplete(
 
       const tonnageTrend = prevTonnage > 0 
         ? Math.round(((tonnage - prevTonnage) / prevTonnage) * 100) 
+        : 0;
+
+      // eVolume: SUM(sets * reps * weight_kg * (rpe / 10)) for entries with RPE
+      const eVolume = (entries || []).reduce((sum, e) => {
+        if (e.is_bodyweight || !e.weight_kg || !e.rpe || e.rpe <= 0) return sum;
+        return sum + (e.sets || 1) * (e.reps || 1) * e.weight_kg * (e.rpe / 10);
+      }, 0);
+
+      const prevEVolume = (prevEntries || []).reduce((sum, e) => {
+        if (e.is_bodyweight || !e.weight_kg || !e.rpe || e.rpe <= 0) return sum;
+        return sum + (e.sets || 1) * (e.reps || 1) * e.weight_kg * (e.rpe / 10);
+      }, 0);
+
+      const eVolumeTrend = prevEVolume > 0 
+        ? Math.round(((eVolume - prevEVolume) / prevEVolume) * 100) 
         : 0;
 
       // PR count
@@ -474,10 +513,16 @@ export function useExerciseAnalyticsComplete(
           return sum + (e.sets || 1) * (e.reps || 1) * e.weight_kg;
         }, 0);
 
+        const weekEVolume = weekEntries.reduce((sum, e) => {
+          if (e.is_bodyweight || !e.weight_kg || !e.rpe || e.rpe <= 0) return sum;
+          return sum + (e.sets || 1) * (e.reps || 1) * e.weight_kg * (e.rpe / 10);
+        }, 0);
+
         return {
           date: format(weekStart, 'yyyy-MM-dd'),
           label: format(weekStart, 'd.M', { locale: cs }),
           volume,
+          eVolume: weekEVolume,
         };
       });
 
@@ -636,10 +681,130 @@ export function useExerciseAnalyticsComplete(
         }
       }
 
+      // ============ RPE BY EXERCISE RANKING ============
+      const exerciseRpeMap = new Map<string, { name: string; rpeSum: number; count: number }>();
+      (entries || []).forEach(e => {
+        if (!e.rpe || e.rpe <= 0) return;
+        const key = e.exercise_id || e.exercise_name;
+        const existing = exerciseRpeMap.get(key);
+        if (existing) {
+          existing.rpeSum += e.rpe;
+          existing.count++;
+        } else {
+          exerciseRpeMap.set(key, { name: e.exercise_name, rpeSum: e.rpe, count: 1 });
+        }
+      });
+
+      const exerciseRpeRanking: ExerciseRpeRanking[] = Array.from(exerciseRpeMap.values())
+        .filter(ex => ex.count >= 3)
+        .map(ex => ({
+          name: ex.name,
+          avgRpe: Math.round((ex.rpeSum / ex.count) * 10) / 10,
+          entryCount: ex.count,
+        }))
+        .sort((a, b) => b.avgRpe - a.avgRpe);
+
+      // ============ RPE VS PROGRESS CORRELATION ============
+      const rpeProgressCorrelation: RpeProgressCorrelation[] = [];
+      const midDate = new Date(startDate.getTime() + (now.getTime() - startDate.getTime()) / 2);
+
+      // Group entries by exercise with RPE
+      const exerciseEntriesForCorrelation = new Map<string, { name: string; entries: Array<{ date: Date; weight: number; rpe: number }> }>();
+      (entries || []).forEach(e => {
+        if (!e.rpe || e.rpe <= 0 || e.is_bodyweight || !e.weight_kg) return;
+        const key = e.exercise_id || e.exercise_name;
+        if (!exerciseEntriesForCorrelation.has(key)) {
+          exerciseEntriesForCorrelation.set(key, { name: e.exercise_name, entries: [] });
+        }
+        exerciseEntriesForCorrelation.get(key)!.entries.push({
+          date: parseISO(e.date),
+          weight: e.weight_kg,
+          rpe: e.rpe,
+        });
+      });
+
+      exerciseEntriesForCorrelation.forEach((data) => {
+        if (data.entries.length < 6) return;
+        const firstHalf = data.entries.filter(e => e.date < midDate);
+        const secondHalf = data.entries.filter(e => e.date >= midDate);
+        if (firstHalf.length < 2 || secondHalf.length < 2) return;
+
+        const avgWeight1 = firstHalf.reduce((s, e) => s + e.weight, 0) / firstHalf.length;
+        const avgWeight2 = secondHalf.reduce((s, e) => s + e.weight, 0) / secondHalf.length;
+        const avgRpe1 = firstHalf.reduce((s, e) => s + e.rpe, 0) / firstHalf.length;
+        const avgRpe2 = secondHalf.reduce((s, e) => s + e.rpe, 0) / secondHalf.length;
+
+        const weightChange = avgWeight1 > 0 ? ((avgWeight2 - avgWeight1) / avgWeight1) * 100 : 0;
+        const rpeChange = avgRpe2 - avgRpe1;
+
+        let status: RpeProgressCorrelation['status'];
+        if (weightChange > 2 && rpeChange <= 0.3) {
+          status = 'true_strength_gain';
+        } else if (weightChange > 2 && rpeChange > 0.3) {
+          status = 'effort_increase';
+        } else {
+          status = 'fatigue_signal';
+        }
+
+        rpeProgressCorrelation.push({
+          exerciseName: data.name,
+          weightTrend: Math.round(weightChange * 10) / 10,
+          rpeTrend: Math.round(rpeChange * 10) / 10,
+          status,
+        });
+      });
+
+      // ============ CHRONIC HIGH RPE DETECTION ============
+      // Detect clients with avg RPE >= 9 for 3+ consecutive weeks without PR
+      if (!clientId) {
+        const clientWeeklyRpe = new Map<string, Map<string, { rpeSum: number; count: number; hasPr: boolean }>>();
+        (entries || []).forEach(e => {
+          if (!e.client_id || !e.rpe) return;
+          const weekKey = format(startOfWeek(parseISO(e.date), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+          if (!clientWeeklyRpe.has(e.client_id)) clientWeeklyRpe.set(e.client_id, new Map());
+          const weekMap = clientWeeklyRpe.get(e.client_id)!;
+          if (!weekMap.has(weekKey)) weekMap.set(weekKey, { rpeSum: 0, count: 0, hasPr: false });
+          const w = weekMap.get(weekKey)!;
+          w.rpeSum += e.rpe;
+          w.count++;
+          if (e.is_pr) w.hasPr = true;
+        });
+
+        clientWeeklyRpe.forEach((weekMap, cId) => {
+          const sortedWeeks = Array.from(weekMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+          let consecutiveHigh = 0;
+          for (const [, data] of sortedWeeks) {
+            const weekAvg = data.count > 0 ? data.rpeSum / data.count : 0;
+            if (weekAvg >= 9 && !data.hasPr) {
+              consecutiveHigh++;
+            } else {
+              consecutiveHigh = 0;
+            }
+          }
+          if (consecutiveHigh >= 3) {
+            // Add to existing attention entry or create new
+            const existing = clientsNeedingAttention.find(c => c.clientId === cId);
+            if (existing) {
+              existing.reasons.push('chronic_high_rpe');
+              existing.priority = 'high';
+            } else {
+              clientsNeedingAttention.push({
+                clientId: cId,
+                clientName: clientMap.get(cId) || 'Neznámý',
+                reasons: ['chronic_high_rpe'],
+                priority: 'high',
+              });
+            }
+          }
+        });
+      }
+
       return {
         kpi: {
           tonnage,
           tonnageTrend,
+          eVolume,
+          eVolumeTrend,
           prCount,
           prTrend,
           frequency: Math.round(frequency * 10) / 10,
@@ -662,6 +827,8 @@ export function useExerciseAnalyticsComplete(
         unusedExercises,
         totalExercisesInLibrary,
         clientsNeedingAttention: clientsNeedingAttention.slice(0, 10),
+        exerciseRpeRanking: exerciseRpeRanking.slice(0, 20),
+        rpeProgressCorrelation: rpeProgressCorrelation.slice(0, 15),
       };
     },
     enabled: !!user?.id,
