@@ -95,7 +95,7 @@ export function TopExercisesTable({ data, isLoading, periodLabel }: TopExercises
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium truncate max-w-[200px]">
+                        <span className="font-medium truncate max-w-[140px] sm:max-w-[200px]">
                           {exercise.name}
                         </span>
                         <span className="text-xs text-muted-foreground">

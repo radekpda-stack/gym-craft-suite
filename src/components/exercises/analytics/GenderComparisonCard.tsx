@@ -12,8 +12,8 @@ export function GenderComparisonCard({ data, isLoading }: Props) {
   const isEmpty = data.male.entryCount === 0 && data.female.entryCount === 0;
 
   const chartData = [
-    { metric: 'Ø váha (kg)', Muži: data.male.avgWeight, Ženy: data.female.avgWeight },
-    { metric: 'Max váha (kg)', Muži: data.male.maxWeight, Ženy: data.female.maxWeight },
+    { metric: 'Ø váha', Muži: data.male.avgWeight, Ženy: data.female.avgWeight },
+    { metric: 'Max', Muži: data.male.maxWeight, Ženy: data.female.maxWeight },
     { metric: 'PR', Muži: data.male.prCount, Ženy: data.female.prCount },
   ];
 
@@ -49,7 +49,7 @@ export function GenderComparisonCard({ data, isLoading }: Props) {
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 10 }}>
             <XAxis type="number" tick={{ fontSize: 11 }} />
-            <YAxis dataKey="metric" type="category" tick={{ fontSize: 11 }} width={90} />
+            <YAxis dataKey="metric" type="category" tick={{ fontSize: 10 }} width={65} />
             <Tooltip
               contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
             />

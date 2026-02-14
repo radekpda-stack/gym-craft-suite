@@ -61,15 +61,15 @@ export function RPEProgressCorrelationCard({ data, isLoading }: RPEProgressCorre
               className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted/30 transition-colors"
             >
               <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", config.dotColor)} />
-              <span className="text-[10px] truncate flex-1 text-foreground">{item.exerciseName}</span>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[9px] tabular-nums text-muted-foreground">
+              <span className="text-[10px] truncate flex-1 min-w-0 text-foreground">{item.exerciseName}</span>
+              <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                <span className="text-[9px] tabular-nums text-muted-foreground whitespace-nowrap">
                   {item.weightTrend > 0 ? '+' : ''}{item.weightTrend}% váha
                 </span>
-                <span className="text-[9px] tabular-nums text-muted-foreground">
+                <span className="text-[9px] tabular-nums text-muted-foreground whitespace-nowrap">
                   {item.rpeTrend > 0 ? '+' : ''}{item.rpeTrend} RPE
                 </span>
-                <span className={cn("text-[8px] font-medium", config.textColor)}>
+                <span className={cn("text-[8px] font-medium whitespace-nowrap", config.textColor)}>
                   {config.label}
                 </span>
               </div>

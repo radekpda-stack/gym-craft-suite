@@ -81,7 +81,7 @@ export function AnalyticsFiltersBar({
         />
 
         {/* Include Tests Toggle */}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2 sm:ml-auto border-t border-border/30 pt-2 sm:border-0 sm:pt-0 w-full sm:w-auto">
           <Switch
             id="include-tests"
             checked={includeTests}

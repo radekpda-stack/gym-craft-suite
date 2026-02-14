@@ -74,9 +74,9 @@ const KPI_CONFIGS = [
 export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+      <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 sm:grid sm:grid-cols-4 lg:grid-cols-5 sm:overflow-visible sm:pb-0">
         {[1, 2, 3, 4, 5].map((i) => (
-          <Card key={i} className="p-3 bg-card/80 backdrop-blur-md border-border/50">
+          <Card key={i} className="p-3 bg-card/80 backdrop-blur-md border-border/50 min-w-[130px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start">
             <Skeleton className="h-3 w-12 mb-2" />
             <Skeleton className="h-6 w-16" />
           </Card>
@@ -86,10 +86,10 @@ export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+    <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 sm:grid sm:grid-cols-4 lg:grid-cols-5 sm:overflow-visible sm:pb-0">
       {/* Tonnage */}
       <Card className={cn(
-        "relative overflow-hidden p-3",
+        "relative overflow-hidden p-3 min-w-[130px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start",
         "bg-card/80 backdrop-blur-md",
         "border shadow-sm",
         KPI_CONFIGS[0].borderColor
@@ -124,7 +124,7 @@ export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
 
       {/* PR Count */}
       <Card className={cn(
-        "relative overflow-hidden p-3",
+        "relative overflow-hidden p-3 min-w-[130px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start",
         "bg-card/80 backdrop-blur-md",
         "border shadow-sm",
         KPI_CONFIGS[1].borderColor
@@ -151,7 +151,7 @@ export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
 
       {/* Frequency */}
       <Card className={cn(
-        "relative overflow-hidden p-3",
+        "relative overflow-hidden p-3 min-w-[130px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start",
         "bg-card/80 backdrop-blur-md",
         "border shadow-sm",
         KPI_CONFIGS[2].borderColor
@@ -179,7 +179,7 @@ export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
 
       {/* Avg RPE */}
       <Card className={cn(
-        "relative overflow-hidden p-3",
+        "relative overflow-hidden p-3 min-w-[130px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start",
         "bg-card/80 backdrop-blur-md",
         "border shadow-sm",
         KPI_CONFIGS[3].borderColor
@@ -206,7 +206,7 @@ export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
 
       {/* Clients Needing Attention */}
       <Card className={cn(
-        "relative overflow-hidden p-3 col-span-2 sm:col-span-1",
+        "relative overflow-hidden p-3 min-w-[130px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start",
         "bg-card/80 backdrop-blur-md",
         "border shadow-sm",
         kpi?.clientsNeedingAttentionCount && kpi.clientsNeedingAttentionCount > 0 

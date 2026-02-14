@@ -108,45 +108,45 @@ export function CardioAnalyticsView() {
 
       {/* KPI Cards */}
       {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 sm:grid sm:grid-cols-5 sm:overflow-visible sm:pb-0">
           {[1, 2, 3, 4, 5].map(i => (
-            <Card key={i} className="p-3">
+            <Card key={i} className="p-3 min-w-[120px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start">
               <Skeleton className="h-3 w-12 mb-2" />
               <Skeleton className="h-6 w-16" />
             </Card>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          <Card className="p-3">
+        <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 sm:grid sm:grid-cols-5 sm:overflow-visible sm:pb-0">
+          <Card className="p-3 min-w-[120px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start">
             <div className="flex items-center gap-1 text-muted-foreground mb-1">
               <Timer className="w-3 h-3" />
               <span className="text-[10px] uppercase">Čas</span>
             </div>
             <span className="text-lg font-bold">{formatDuration(data?.totalDuration || 0)}</span>
           </Card>
-          <Card className="p-3">
+          <Card className="p-3 min-w-[120px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start">
             <div className="flex items-center gap-1 text-muted-foreground mb-1">
               <Route className="w-3 h-3" />
               <span className="text-[10px] uppercase">Vzdálenost</span>
             </div>
             <span className="text-lg font-bold">{formatDistance(data?.totalDistance || 0)}</span>
           </Card>
-          <Card className="p-3">
+          <Card className="p-3 min-w-[120px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start">
             <div className="flex items-center gap-1 text-muted-foreground mb-1">
               <Zap className="w-3 h-3" />
               <span className="text-[10px] uppercase">Ø Watts</span>
             </div>
             <span className="text-lg font-bold">{data?.avgWatts ?? '-'}</span>
           </Card>
-          <Card className="p-3">
+          <Card className="p-3 min-w-[120px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start">
             <div className="flex items-center gap-1 text-muted-foreground mb-1">
               <Heart className="w-3 h-3" />
               <span className="text-[10px] uppercase">Ø HR</span>
             </div>
             <span className="text-lg font-bold">{data?.avgHR ?? '-'}</span>
           </Card>
-          <Card className="p-3">
+          <Card className="p-3 min-w-[120px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start">
             <div className="flex items-center gap-1 text-muted-foreground mb-1">
               <Trophy className="w-3 h-3 text-amber-500" />
               <span className="text-[10px] uppercase">PR</span>
