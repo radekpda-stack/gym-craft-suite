@@ -226,6 +226,7 @@ export function useCreditOperationsV2() {
     queryClient.invalidateQueries({ queryKey: ['credit_balance_v2', clientId] });
     queryClient.invalidateQueries({ queryKey: ['credit_transactions', clientId] });
     queryClient.invalidateQueries({ queryKey: ['shared_budget_balance', clientId] });
+    queryClient.invalidateQueries({ queryKey: ['clients'], refetchType: 'all' });
     queryClient.invalidateQueries({ queryKey: ['clients', clientId] });
     queryClient.invalidateQueries({ queryKey: ['pending_payments'] });
   }, [queryClient]);
