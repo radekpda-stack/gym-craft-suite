@@ -64,7 +64,7 @@ export function useClients() {
   
   return useQuery({
     queryKey: ["clients", isDemo],
-    staleTime: 1000 * 30, // 30 seconds - shorter to ensure fresh data after training completion
+    staleTime: 1000 * 5, // 5 seconds - matches financial hooks convention for fresh credit data
     queryFn: async () => {
       // In demo mode, return demo client data
       if (isDemo && demoClient) {
