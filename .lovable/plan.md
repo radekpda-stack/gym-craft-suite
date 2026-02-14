@@ -1,68 +1,44 @@
 
-# Pokrocila analytika na karte Vykonnost -- srovnani podle pohlavi, veku a casu
 
-## Co pridame
+# Oprava mobilniho UI na karte Vykonnost
 
-5 novych analytickych karet do `StrengthAnalyticsView`, ktere vyuzivaji existujici data z databaze (gender u 49 klientu, birth_date u 15, weight_kg u vsech exercise_entries):
+## Identifikovane problemy (z obrazovky)
 
-### 1. Karta "Srovnani podle pohlavi" (GenderComparisonCard)
-- Prumerna a maximalni vaha u muzu vs zen
-- Pocet PR podle pohlavi
-- Prumerny objem (tonnage) na trenink podle pohlavi
-- Vizualizace: dvojice horizontalnich baru vedle sebe
+1. **KPI Bar (3 karty nahore)**: Na mobilu se texty orizavaji ("CVIKU V KNIHO...", "ZAZNA... TENTO MESIC...") protoze 3 sloupce jsou prilis uzke
+2. **Zalozky (TabsList)**: Nazvy se neveji a zobrazuji jen prvni pismeno ("K", "K", "A", "T", "V") -- nerozpoznatelne
+3. **Kategorie cviku**: 3 sloupce na mobilu jsou sticene, ale jeste citelne
 
-### 2. Karta "Srovnani podle veku" (AgeGroupComparisonCard)  
-- Rozdeleni klientu do vekovych skupin (pod 25, 25-35, 35-45, 45+)
-- Prumerny max weight, pocet PR a frekvence treninku na skupinu
-- Vizualizace: seskupeny sloupcovy graf (BarChart z recharts)
-- Zobrazi se jen pokud existuji klienti s vyplnenym datem narozeni
+## Reseni
 
-### 3. Karta "Progrese vah v case" (WeightProgressionCard)
-- Pro top 5 nejpouzivanejsich cviku zobrazuje krivku prumerne vahy po tydnech
-- Vizualizace: LineChart s jednou krivkou na cvik
-- Umoznuje videt, jak se vahy zvysuji/snizuji v case
+### 1. KPI Bar -- horizontalni scroll na mobilu
 
-### 4. Karta "Top cviky podle pohlavi" (TopExercisesByGenderCard)
-- Pro muze a zeny samostatne: top 5 cviku podle max vahy
-- Umoznuje trenérovi videt rozdily v preferovanych cvicich
+Zmena gridu z `grid-cols-3` na horizontalne posuvny seznam na mobilu. Kazda karta bude mit fixni sirku `min-w-[140px]` aby se text neorizaval. Na desktopu zustane grid.
 
-### 5. Karta "PR distribuce v case" (PRDistributionCard)
-- Heatmapa: kolik PR za mesic (rozdeleno na muze/zeny)
-- Vizualizace: BarChart se stackovanymi sloupci
+**Soubor:** `src/components/performance/PerformanceKPIBar.tsx`
+- Kontejner: `flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible`
+- Karty: `min-w-[140px] sm:min-w-0 snap-start flex-shrink-0 sm:flex-shrink`
+
+### 2. Zalozky -- ikony only na mobilu, text od sm+
+
+Texty v `TabsTrigger` budou skryte na mobilu (< sm) a zobrazene od `sm:` breakpointu. Ikony zustanou vzdy viditelne.
+
+**Soubor:** `src/pages/PerformanceHub.tsx`
+- `<span className="text-xs truncate">` zmenit na `<span className="hidden sm:inline text-xs truncate">`
+- Na mobilu se zobrazi jen ikony (Zap, Users, List, BarChart3, atd.) -- rozpoznatelne bez textu
+
+### 3. Kategorie cviku -- 2 sloupce na mobilu, 3 od sm+
+
+Zmena `grid-cols-3` na `grid-cols-2 sm:grid-cols-3` aby karty meli vice prostoru. Treti karta (Plyometrie) bude na druhem radku.
+
+**Soubor:** `src/components/performance/CategoryCards.tsx`
+- Grid: `grid-cols-2 sm:grid-cols-3`
+- Zmensi padding na mobilu: `p-3 sm:p-4`
 
 ## Technicke detaily
 
-### Zmeny v souboru `src/hooks/useExerciseAnalyticsComplete.ts`
-- Rozsireni query o `clients.gender` a `clients.birth_date` (JOIN pres existujici client_id)
-- Pridani novych vypoctu do AnalyticsData typu:
-  - `genderComparison`: { male: { avgWeight, maxWeight, tonnage, prCount, entryCount }, female: {...} }
-  - `ageGroupComparison`: pole { ageGroup, avgWeight, maxWeight, prCount, clientCount }
-  - `weightProgression`: pole { exerciseName, weeks: { label, avgWeight }[] }
-  - `topExercisesByGender`: { male: TopExercise[], female: TopExercise[] }
-  - `prDistribution`: pole { month, male, female }
-
-### Nove soubory komponent
-| Soubor | Obsah |
-|--------|-------|
-| `src/components/exercises/analytics/GenderComparisonCard.tsx` | Srovnani muzi vs zeny (vahy, PR, objem) |
-| `src/components/exercises/analytics/AgeGroupComparisonCard.tsx` | Srovnani vekovych skupin |
-| `src/components/exercises/analytics/WeightProgressionCard.tsx` | Krivky vah top cviku v case |
-| `src/components/exercises/analytics/TopExercisesByGenderCard.tsx` | Top cviky podle pohlavi |
-| `src/components/exercises/analytics/PRDistributionCard.tsx` | Mesicni distribuce PR podle pohlavi |
-
-### Zmeny v existujicich souborech
 | Soubor | Zmena |
 |--------|-------|
-| `src/hooks/useExerciseAnalyticsComplete.ts` | Rozsireni AnalyticsData o nove typy a vypocty; fetch `clients.gender, clients.birth_date` |
-| `src/components/exercises/analytics/StrengthAnalyticsView.tsx` | Pridani 5 novych karet pod stavajici obsah |
+| `src/components/performance/PerformanceKPIBar.tsx` | Horizontalni scroll na mobilu misto 3-col gridu |
+| `src/pages/PerformanceHub.tsx` | Skryti textu zalozek na mobilu (hidden sm:inline) |
+| `src/components/performance/CategoryCards.tsx` | Grid 2 sloupce na mobilu, 3 od sm |
 
-### Vizualni styl
-- Neutralni barvy (bez hodnoceni dle design-philosophy) -- modra pro muze, fialova pro zeny
-- Pouziti recharts (BarChart, LineChart) ktere uz je v projektu
-- Karty budou pouzivat existujici `Card` komponentu z shadcn/ui
-- Cesky jazyk ve vsech popiscich
-
-### Data dostupnost
-- Gender: 49 z 54 klientu (90%) -- dostatecne
-- Birth_date: 15 z 54 (28%) -- karta s vekem zobrazi upozorneni "Data dostupna pro X klientu"
-- Exercise entries s vahou: 536 zaznamu -- dostatecne pro smysluplnou analytiku
