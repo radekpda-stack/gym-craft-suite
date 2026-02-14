@@ -587,20 +587,20 @@ export function SalesStatistics() {
             <div className={cn(
               "relative overflow-hidden rounded-xl p-4",
               "bg-card/80 backdrop-blur-md",
-              "border border-emerald-500/30 shadow-sm shadow-emerald-500/10",
+              "border border-success/30 shadow-sm shadow-success/10",
               "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
             )}>
-              <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-emerald-500/20 to-transparent" />
+              <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-success/20 to-transparent" />
               <div className="relative">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-emerald-500/10">
-                    <Banknote className="w-4 h-4 text-emerald-500" />
+                   <div className="p-1.5 rounded-lg bg-success/10">
+                    <Banknote className="w-4 h-4 text-success" />
                   </div>
-                  <span className="text-[10px] uppercase tracking-widest text-emerald-600 font-medium">Čistý zisk</span>
+                  <span className="text-[10px] uppercase tracking-widest text-success font-medium">Čistý zisk</span>
                 </div>
                 <p className={cn(
                   "text-2xl font-bold tabular-nums",
-                  stats.totalProfit >= 0 ? "text-emerald-500" : "text-destructive"
+                  stats.totalProfit >= 0 ? "text-success" : "text-destructive"
                 )}>
                   {formatCurrency(stats.totalProfit)}
                 </p>
@@ -722,7 +722,7 @@ export function SalesStatistics() {
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         return (
-                          <div className="glass rounded-lg p-2 border border-border">
+                          <div className="bg-popover border border-border rounded-lg p-2 shadow-lg">
                             <p className="text-sm font-medium">{formatCurrency(payload[0]?.value as number)}</p>
                             <p className="text-xs text-muted-foreground">{payload[1]?.value} prodejů</p>
                           </div>
