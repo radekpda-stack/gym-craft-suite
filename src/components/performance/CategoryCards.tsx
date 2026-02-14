@@ -81,11 +81,11 @@ export function CategoryCards({ categories, isLoading, onCategoryClick }: Catego
   );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       <h3 className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest">
         Kategorie cviků
       </h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {(Object.entries(CATEGORY_CONFIG) as [keyof typeof CATEGORY_CONFIG, typeof CATEGORY_CONFIG.strength][]).map(
           ([key, config]) => {
             const stats = categories[key];
@@ -102,66 +102,44 @@ export function CategoryCards({ categories, isLoading, onCategoryClick }: Catego
                   'border shadow-sm transition-all duration-300',
                   config.borderColor,
                   'hover:shadow-xl hover:-translate-y-1',
-                  config.shadowColor.replace('shadow-', 'hover:shadow-'),
                   'focus:outline-none focus:ring-2 focus:ring-primary/30'
                 )}
               >
-                {/* Gradient overlay */}
                 <div className={cn(
-                  "absolute inset-0 opacity-20 bg-gradient-to-br to-transparent transition-opacity duration-300",
+                  "absolute inset-0 opacity-20 bg-gradient-to-br to-transparent",
                   config.gradientFrom,
-                  "group-hover:opacity-40"
-                )} />
-                
-                {/* Top glow on hover */}
-                <div className={cn(
-                  "absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl opacity-0 transition-opacity duration-300",
-                  config.bgColor,
-                  "group-hover:opacity-50"
                 )} />
                 
                 <div className="relative">
-                  {/* Icon */}
                   <div className={cn(
-                    'p-2.5 rounded-xl w-fit mb-3 shadow-lg transition-all duration-300',
+                    'p-2 sm:p-2.5 rounded-lg sm:rounded-xl w-fit mb-2 sm:mb-3 shadow-sm',
                     config.bgColor,
-                    config.shadowColor,
-                    'group-hover:scale-110'
                   )}>
-                    <Icon className={cn('w-5 h-5 sm:w-6 sm:h-6', config.color)} />
+                    <Icon className={cn('w-4 h-4 sm:w-6 sm:h-6', config.color)} />
                   </div>
                   
-                  {/* Category label */}
-                  <p className={cn('text-[10px] font-bold uppercase tracking-widest mb-1', config.color)}>
+                  <p className={cn('text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-0.5', config.color)}>
                     {config.label}
                   </p>
                   
-                  {/* Count - prominent */}
-                  <p className="text-3xl sm:text-4xl font-bold text-foreground tabular-nums">
+                  <p className="text-2xl sm:text-4xl font-bold text-foreground tabular-nums leading-tight">
                     {stats.count}
                   </p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-wide">
                     cviků
                   </p>
 
-                  {/* Usage gauge */}
-                  <div className="mt-4 pt-3 border-t border-border/30 space-y-1.5">
-                    <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                  <div className="mt-2 sm:mt-4 pt-2 sm:pt-3 border-t border-border/30 space-y-1">
+                    <div className="h-1 sm:h-1.5 rounded-full bg-muted/30 overflow-hidden">
                       <div 
                         className={cn('h-full rounded-full transition-all duration-700 ease-out', config.barColor)}
                         style={{ width: `${usagePercent}%` }}
                       />
                     </div>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground tabular-nums">
-                      {stats.entries.toLocaleString('cs-CZ')} záznamů
+                    <p className="text-[9px] sm:text-xs text-muted-foreground tabular-nums">
+                      {stats.entries.toLocaleString('cs-CZ')} zázn.
                     </p>
                   </div>
-
-                  {/* Chevron with hover animation */}
-                  <ChevronRight className={cn(
-                    "absolute top-3 right-2 w-4 h-4 text-muted-foreground/40 transition-all duration-200",
-                    "group-hover:translate-x-1 group-hover:text-muted-foreground"
-                  )} />
                 </div>
               </button>
             );

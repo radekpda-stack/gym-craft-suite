@@ -71,17 +71,17 @@ export function ExerciseSearchCommand({ trigger }: ExerciseSearchCommandProps) {
           variant="outline"
           onClick={() => setOpen(true)}
           className={cn(
-            "w-full justify-start text-muted-foreground gap-2 h-12",
+            "w-full justify-start text-muted-foreground gap-2 h-10 sm:h-12",
             "bg-background/60 backdrop-blur-sm",
             "border-border/50 shadow-sm",
             "hover:bg-background hover:border-primary/40 hover:shadow-md",
             "transition-all duration-200"
           )}
         >
-          <div className="p-1.5 rounded-lg bg-muted/50">
-            <Search className="w-4 h-4" />
+          <div className="p-1 sm:p-1.5 rounded-lg bg-muted/50">
+            <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
-          <span className="flex-1 text-left">Rychle hledat cvik...</span>
+          <span className="flex-1 text-left text-xs sm:text-sm">Hledat cvik...</span>
           <kbd className={cn(
             "pointer-events-none hidden h-6 select-none items-center gap-1 rounded-md px-2",
             "border border-border/50 bg-secondary/60 backdrop-blur-sm",

@@ -135,57 +135,49 @@ export function ClientProgressLeaderboard({ topClients, isLoading }: ClientProgr
               key={client.id}
               onClick={() => navigate(`/clients/${client.id}`)}
               className={cn(
-                'w-full flex items-center gap-3 p-3.5 rounded-xl',
+                'w-full flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3.5 rounded-xl',
                 'bg-background/60 backdrop-blur-sm',
                 'border shadow-sm',
                 rankStyle.border,
-                'hover:shadow-lg hover:-translate-y-0.5',
-                rankStyle.hoverShadow,
+                'hover:shadow-lg',
                 'transition-all duration-200',
-                'focus:outline-none focus:ring-2 focus:ring-primary/20',
                 'text-left',
                 isTopThree && rankStyle.glow && `shadow-sm ${rankStyle.glow}`
               )}
             >
               {/* Rank Badge */}
               <div className={cn(
-                'w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm',
+                'w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center font-bold text-sm shrink-0',
                 rankStyle.bg,
-                isTopThree && 'shadow-sm',
-                isTopThree && rankStyle.glow
               )}>
                 {isTopThree ? (
-                  <Medal className={cn('w-5 h-5', rankStyle.color)} />
+                  <Medal className={cn('w-4 h-4 sm:w-5 sm:h-5', rankStyle.color)} />
                 ) : (
-                  <span className={rankStyle.color}>{index + 1}</span>
+                  <span className={cn("text-xs sm:text-sm", rankStyle.color)}>{index + 1}</span>
                 )}
               </div>
 
               {/* Client info */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <p className="font-semibold text-foreground truncate">
+                <div className="flex items-center justify-between gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                  <p className="font-semibold text-sm text-foreground truncate">
                     {client.name}
                   </p>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     {client.prCount > 0 && (
-                      <Badge variant="outline" className="text-[10px] text-warning border-warning/30 bg-warning/10 shadow-sm">
+                      <Badge variant="outline" className="text-[9px] sm:text-[10px] text-warning border-warning/30 bg-warning/10 px-1.5 py-0">
                         <Trophy className="w-2.5 h-2.5 mr-0.5" />
-                        {client.prCount} PR
+                        {client.prCount}
                       </Badge>
                     )}
                     <div className={cn('flex items-center gap-0.5 text-[10px] font-medium', trendColor)}>
                       <TrendIcon className="w-3 h-3" />
-                      {client.trend !== 0 && (
-                        <span className="tabular-nums">{client.trend > 0 ? '+' : ''}{Math.min(Math.abs(client.trend), 99)}%</span>
-                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Progress bar with gradient */}
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden">
+                  <div className="flex-1 h-1.5 sm:h-2 rounded-full bg-muted/30 overflow-hidden">
                     <div 
                       className={cn(
                         "h-full rounded-full transition-all duration-500",
@@ -194,7 +186,7 @@ export function ClientProgressLeaderboard({ topClients, isLoading }: ClientProgr
                       style={{ width: `${progressPercent}%` }}
                     />
                   </div>
-                  <span className="text-xs text-muted-foreground w-16 text-right tabular-nums font-medium">
+                  <span className="text-[10px] sm:text-xs text-muted-foreground w-12 sm:w-16 text-right tabular-nums font-medium">
                     {client.entriesCount} zázn.
                   </span>
                 </div>

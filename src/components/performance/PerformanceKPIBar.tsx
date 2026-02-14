@@ -114,14 +114,14 @@ export function PerformanceKPIBar({
 
   if (isLoading) {
     return (
-    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 scrollbar-hide">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="card-floating rounded-xl p-4">
-            <div className="flex items-center gap-3">
-              <Skeleton className="w-12 h-12 rounded-xl" />
-              <div className="space-y-2 flex-1">
-                <Skeleton className="w-16 h-7" />
-                <Skeleton className="w-24 h-3" />
+          <div key={i} className="card-floating rounded-xl p-2.5 sm:p-4">
+            <div className="flex flex-col items-center sm:flex-row gap-1.5 sm:gap-3">
+              <Skeleton className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl" />
+              <div className="space-y-1.5 w-full">
+                <Skeleton className="w-10 sm:w-16 h-5 sm:h-7 mx-auto sm:mx-0" />
+                <Skeleton className="w-16 sm:w-24 h-2 sm:h-3 mx-auto sm:mx-0" />
               </div>
             </div>
           </div>
@@ -131,52 +131,38 @@ export function PerformanceKPIBar({
   }
 
   return (
-    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 scrollbar-hide">
+    <div className="grid grid-cols-3 gap-2 sm:gap-3">
       {kpis.map((kpi) => (
         <div
           key={kpi.label}
           className={cn(
-            "relative overflow-hidden rounded-xl p-3 sm:p-4",
-            "min-w-[140px] sm:min-w-0 snap-start flex-shrink-0 sm:flex-shrink",
+            "relative overflow-hidden rounded-xl p-2.5 sm:p-4",
             "bg-card/80 backdrop-blur-md",
             "border shadow-sm",
             kpi.borderColor,
-            "transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5",
-            kpi.shadowColor.replace('shadow-', 'hover:shadow-')
           )}
         >
-          {/* Subtle background gradient */}
           <div className={cn("absolute inset-0 opacity-30 bg-gradient-to-br to-transparent", kpi.bgColor)} />
           
-          <div className="relative flex items-center gap-3">
-            {/* Icon with enhanced glow */}
+          <div className="relative flex flex-col items-center text-center sm:flex-row sm:text-left sm:items-center gap-1.5 sm:gap-3">
             <div className={cn(
-              'relative p-3 rounded-xl shadow-lg',
+              'p-2 sm:p-3 rounded-lg sm:rounded-xl shadow-sm',
               kpi.bgColor,
-              kpi.shadowColor
             )}>
-              <kpi.icon className={cn('w-5 h-5 sm:w-6 sm:h-6', kpi.color)} />
-              {/* Mini progress ring overlay */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <MiniProgressRing value={kpi.value} maxValue={kpi.maxValue} color={kpi.ringColor} />
-              </div>
+              <kpi.icon className={cn('w-4 h-4 sm:w-5 sm:h-5', kpi.color)} />
             </div>
             
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline gap-2 flex-wrap">
-                <p className="text-2xl sm:text-3xl font-bold text-foreground tabular-nums">
-                  {kpi.value.toLocaleString('cs-CZ')}
-                </p>
-                <TrendIndicator value={kpi.trend} />
-              </div>
-              <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight uppercase tracking-widest mt-0.5">
+            <div className="min-w-0">
+              <p className="text-lg sm:text-3xl font-bold text-foreground tabular-nums leading-tight">
+                {kpi.value.toLocaleString('cs-CZ')}
+              </p>
+              <p className="text-[8px] sm:text-xs text-muted-foreground leading-tight uppercase tracking-wider mt-0.5">
                 {kpi.label}
               </p>
             </div>
           </div>
           
-          {/* Bottom progress bar */}
-          <div className="relative mt-3 pt-2 border-t border-border/30">
+          <div className="relative mt-2 pt-1.5 sm:pt-2 border-t border-border/30">
             <div className="h-1 rounded-full bg-muted/30 overflow-hidden">
               <div 
                 className={cn("h-full rounded-full transition-all duration-700 ease-out", kpi.bgColor.replace('/10', '/60'))}
