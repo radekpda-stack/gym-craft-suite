@@ -543,10 +543,10 @@ export function useDeleteTransaction() {
 
       if (deleteError) throw deleteError;
 
-      // Reverse credit change using atomic RPC
-      const result = await applyCreditDelta(clientId, -amount, 'Reversal of deleted transaction');
+      // DB trigger (fn_sync_client_credit_balance) automatically recalculates
+      // balance from SUM(amount) after DELETE. No manual delta needed.
 
-      return { isSharedBudget: !!groupId, newBalance: result.new_balance };
+      return { isSharedBudget: !!groupId };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
@@ -586,15 +586,11 @@ export function useUpdateTransactionPaymentMethod() {
       const wasFromCredit = oldPaymentMethod === 'credit';
       const isNowFromCredit = newPaymentMethod === 'credit';
 
-      let newBalance: number | null = null;
-      if (wasFromCredit !== isNowFromCredit) {
-        // If changing from credit to cash: add back; from cash to credit: deduct
-        const adjustment = wasFromCredit ? -amount : amount;
-        const result = await applyCreditDelta(clientId, adjustment, 'Payment method change');
-        newBalance = result.new_balance;
-      }
+      // DB trigger (fn_sync_client_credit_balance) recalculates balance from SUM.
+      // Payment method change on an existing transaction doesn't change the amount,
+      // so no balance adjustment is needed — the trigger handles it.
 
-      return { changed: wasFromCredit !== isNowFromCredit, isSharedBudget: !!groupId, newBalance };
+      return { changed: wasFromCredit !== isNowFromCredit, isSharedBudget: !!groupId };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
