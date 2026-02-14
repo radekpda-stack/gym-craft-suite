@@ -51,7 +51,7 @@ export function WeightProgressionCard({ data, isLoading }: Props) {
           <Tooltip
             contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
           />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Legend wrapperStyle={{ fontSize: 10, lineHeight: '16px' }} formatter={(value: string) => value.length > 18 ? value.slice(0, 16) + '…' : value} />
           {data.map((ex, i) => (
             <Line
               key={ex.exerciseName}

@@ -97,7 +97,7 @@ export function SkillAnalyticsView() {
 
       {/* KPI Cards */}
       {isLoading ? (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {[1, 2, 3].map(i => (
             <Card key={i} className="p-3">
               <Skeleton className="h-3 w-12 mb-2" />
@@ -106,7 +106,7 @@ export function SkillAnalyticsView() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <Card className="p-3">
             <div className="flex items-center gap-1 text-muted-foreground mb-1">
               <Brain className="w-3 h-3" />
