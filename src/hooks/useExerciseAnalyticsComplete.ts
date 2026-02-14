@@ -108,6 +108,55 @@ export interface VolumeTimelinePoint {
   volumePrevious?: number;
 }
 
+// ============ GENDER / AGE / PROGRESSION TYPES ============
+
+export interface GenderStats {
+  avgWeight: number;
+  maxWeight: number;
+  tonnage: number;
+  prCount: number;
+  entryCount: number;
+  clientCount: number;
+}
+
+export interface GenderComparison {
+  male: GenderStats;
+  female: GenderStats;
+}
+
+export interface AgeGroupStats {
+  ageGroup: string;
+  avgWeight: number;
+  maxWeight: number;
+  prCount: number;
+  clientCount: number;
+  entryCount: number;
+}
+
+export interface WeightProgressionWeek {
+  label: string;
+  avgWeight: number;
+}
+
+export interface WeightProgressionExercise {
+  exerciseName: string;
+  weeks: WeightProgressionWeek[];
+}
+
+export interface TopExerciseByGender {
+  name: string;
+  maxWeight: number;
+  entryCount: number;
+}
+
+export interface PRDistributionMonth {
+  month: string;
+  label: string;
+  male: number;
+  female: number;
+  unknown: number;
+}
+
 export interface AnalyticsData {
   kpi: AnalyticsKPI;
   volumeTimeline: VolumeTimelinePoint[];
@@ -124,6 +173,11 @@ export interface AnalyticsData {
   clientsNeedingAttention: ClientNeedingAttention[];
   exerciseRpeRanking: ExerciseRpeRanking[];
   rpeProgressCorrelation: RpeProgressCorrelation[];
+  genderComparison: GenderComparison;
+  ageGroupComparison: AgeGroupStats[];
+  weightProgression: WeightProgressionExercise[];
+  topExercisesByGender: { male: TopExerciseByGender[]; female: TopExerciseByGender[] };
+  prDistribution: PRDistributionMonth[];
 }
 
 const BODY_PART_LABELS: Record<string, string> = {
@@ -214,15 +268,19 @@ export function useExerciseAnalyticsComplete(
 
       // ============ FETCH ADDITIONAL DATA FOR NEW CARDS ============
       
-      // Fetch all clients for this trainer
+      // Fetch all clients for this trainer (including gender & birth_date)
       const { data: clients } = await supabase
         .from('clients')
-        .select('id, first_name, last_name')
+        .select('id, name, gender, birth_date')
         .eq('user_id', user.id);
 
       const clientMap = new Map<string, string>();
+      const clientGenderMap = new Map<string, string | null>();
+      const clientBirthDateMap = new Map<string, string | null>();
       clients?.forEach(c => {
-        clientMap.set(c.id, `${c.first_name} ${c.last_name}`);
+        clientMap.set(c.id, c.name);
+        clientGenderMap.set(c.id, c.gender);
+        clientBirthDateMap.set(c.id, c.birth_date);
       });
 
       // Fetch all exercises in trainer's library
@@ -799,6 +857,154 @@ export function useExerciseAnalyticsComplete(
         });
       }
 
+      // ============ GENDER COMPARISON ============
+      const genderEntries = { male: [] as any[], female: [] as any[] };
+      const genderClients = { male: new Set<string>(), female: new Set<string>() };
+      
+      (entries || []).forEach(e => {
+        if (!e.client_id) return;
+        const gender = clientGenderMap.get(e.client_id);
+        if (gender === 'male' || gender === 'female') {
+          genderEntries[gender].push(e);
+          genderClients[gender].add(e.client_id);
+        }
+      });
+
+      const calcGenderStats = (ents: any[], clientSet: Set<string>): GenderStats => {
+        const weighted = ents.filter(e => !e.is_bodyweight && e.weight_kg > 0);
+        const weights = weighted.map(e => e.weight_kg as number);
+        return {
+          avgWeight: weights.length > 0 ? Math.round(weights.reduce((a, b) => a + b, 0) / weights.length * 10) / 10 : 0,
+          maxWeight: weights.length > 0 ? Math.max(...weights) : 0,
+          tonnage: weighted.reduce((s, e) => s + (e.sets || 1) * (e.reps || 1) * (e.weight_kg || 0), 0),
+          prCount: ents.filter(e => e.is_pr).length,
+          entryCount: ents.length,
+          clientCount: clientSet.size,
+        };
+      };
+
+      const genderComparison: GenderComparison = {
+        male: calcGenderStats(genderEntries.male, genderClients.male),
+        female: calcGenderStats(genderEntries.female, genderClients.female),
+      };
+
+      // ============ AGE GROUP COMPARISON ============
+      const ageGroups: AgeGroupStats[] = [];
+      const ageBuckets: Record<string, { entries: any[]; clients: Set<string> }> = {
+        'pod 25': { entries: [], clients: new Set() },
+        '25–35': { entries: [], clients: new Set() },
+        '35–45': { entries: [], clients: new Set() },
+        '45+': { entries: [], clients: new Set() },
+      };
+
+      const getAgeBucket = (birthDate: string): string | null => {
+        const age = Math.floor(differenceInDays(now, parseISO(birthDate)) / 365.25);
+        if (age < 25) return 'pod 25';
+        if (age < 35) return '25–35';
+        if (age < 45) return '35–45';
+        return '45+';
+      };
+
+      (entries || []).forEach(e => {
+        if (!e.client_id) return;
+        const bd = clientBirthDateMap.get(e.client_id);
+        if (!bd) return;
+        const bucket = getAgeBucket(bd);
+        if (!bucket) return;
+        ageBuckets[bucket].entries.push(e);
+        ageBuckets[bucket].clients.add(e.client_id);
+      });
+
+      Object.entries(ageBuckets).forEach(([label, { entries: ents, clients: cls }]) => {
+        if (cls.size === 0) return;
+        const weighted = ents.filter(e => !e.is_bodyweight && e.weight_kg > 0);
+        const weights = weighted.map(e => e.weight_kg as number);
+        ageGroups.push({
+          ageGroup: label,
+          avgWeight: weights.length > 0 ? Math.round(weights.reduce((a, b) => a + b, 0) / weights.length * 10) / 10 : 0,
+          maxWeight: weights.length > 0 ? Math.max(...weights) : 0,
+          prCount: ents.filter(e => e.is_pr).length,
+          clientCount: cls.size,
+          entryCount: ents.length,
+        });
+      });
+
+      // ============ WEIGHT PROGRESSION (top 5 exercises, weekly avg) ============
+      const exerciseUsage = new Map<string, { name: string; count: number }>();
+      (entries || []).forEach(e => {
+        if (e.is_bodyweight || !e.weight_kg || !e.exercise_id) return;
+        const ex = exerciseUsage.get(e.exercise_id);
+        if (ex) ex.count++;
+        else exerciseUsage.set(e.exercise_id, { name: e.exercise_name, count: 1 });
+      });
+
+      const top5Exercises = Array.from(exerciseUsage.entries())
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 5);
+
+      const weightProgression: WeightProgressionExercise[] = top5Exercises.map(([exId, { name }]) => {
+        const exEntries = (entries || []).filter(e => e.exercise_id === exId && e.weight_kg && !e.is_bodyweight);
+        const weekData = weekIntervals.map(weekStart => {
+          const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+          const weekEntries = exEntries.filter(e => {
+            const d = parseISO(e.date);
+            return d >= weekStart && d <= weekEnd;
+          });
+          const weights = weekEntries.map(e => e.weight_kg as number);
+          return {
+            label: format(weekStart, 'd.M', { locale: cs }),
+            avgWeight: weights.length > 0 ? Math.round(weights.reduce((a, b) => a + b, 0) / weights.length * 10) / 10 : 0,
+          };
+        }).filter(w => w.avgWeight > 0);
+        return { exerciseName: name, weeks: weekData };
+      }).filter(wp => wp.weeks.length >= 2);
+
+      // ============ TOP EXERCISES BY GENDER ============
+      const calcTopByGender = (ents: any[]): TopExerciseByGender[] => {
+        const map = new Map<string, { name: string; maxWeight: number; entryCount: number }>();
+        ents.forEach(e => {
+          if (e.is_bodyweight || !e.weight_kg) return;
+          const key = e.exercise_id || e.exercise_name;
+          const ex = map.get(key);
+          if (ex) {
+            ex.entryCount++;
+            if (e.weight_kg > ex.maxWeight) ex.maxWeight = e.weight_kg;
+          } else {
+            map.set(key, { name: e.exercise_name, maxWeight: e.weight_kg, entryCount: 1 });
+          }
+        });
+        return Array.from(map.values()).sort((a, b) => b.maxWeight - a.maxWeight).slice(0, 5);
+      };
+
+      const topExercisesByGender = {
+        male: calcTopByGender(genderEntries.male),
+        female: calcTopByGender(genderEntries.female),
+      };
+
+      // ============ PR DISTRIBUTION BY MONTH & GENDER ============
+      const prDistMap = new Map<string, { male: number; female: number; unknown: number }>();
+      (entries || []).forEach(e => {
+        if (!e.is_pr) return;
+        const monthKey = format(parseISO(e.date), 'yyyy-MM');
+        const monthLabel = format(parseISO(e.date), 'MMM yy', { locale: cs });
+        if (!prDistMap.has(monthKey)) {
+          prDistMap.set(monthKey, { male: 0, female: 0, unknown: 0 });
+        }
+        const bucket = prDistMap.get(monthKey)!;
+        const gender = e.client_id ? clientGenderMap.get(e.client_id) : null;
+        if (gender === 'male') bucket.male++;
+        else if (gender === 'female') bucket.female++;
+        else bucket.unknown++;
+      });
+
+      const prDistribution: PRDistributionMonth[] = Array.from(prDistMap.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([key, val]) => ({
+          month: key,
+          label: format(parseISO(key + '-01'), 'MMM yy', { locale: cs }),
+          ...val,
+        }));
+
       return {
         kpi: {
           tonnage,
@@ -829,6 +1035,11 @@ export function useExerciseAnalyticsComplete(
         clientsNeedingAttention: clientsNeedingAttention.slice(0, 10),
         exerciseRpeRanking: exerciseRpeRanking.slice(0, 20),
         rpeProgressCorrelation: rpeProgressCorrelation.slice(0, 15),
+        genderComparison,
+        ageGroupComparison: ageGroups,
+        weightProgression,
+        topExercisesByGender,
+        prDistribution,
       };
     },
     enabled: !!user?.id,
