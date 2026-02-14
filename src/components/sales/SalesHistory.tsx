@@ -230,12 +230,12 @@ export function SalesHistory() {
                         "w-full p-4 rounded-xl text-left transition-all duration-200",
                         "bg-card/80 backdrop-blur-md border border-border/50 shadow-sm",
                         "hover:shadow-md hover:-translate-y-0.5",
-                        "flex items-center gap-4"
+                        "flex items-center gap-3 sm:gap-4"
                       )}
                     >
                       {/* Payment icon */}
-                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <PaymentIcon className="w-5 h-5 text-primary" />
+                      <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <PaymentIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                       </div>
 
                       {/* Order info */}
@@ -268,8 +268,8 @@ export function SalesHistory() {
                       </div>
 
                       {/* Amount */}
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-lg tabular-nums">
+                      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                        <span className="font-bold text-base sm:text-lg tabular-nums">
                           {formatCurrency(order.total_amount)}
                         </span>
                         <ChevronRight className="w-4 h-4 text-muted-foreground" />

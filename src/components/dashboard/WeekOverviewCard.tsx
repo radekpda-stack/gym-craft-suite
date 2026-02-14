@@ -44,7 +44,7 @@ const MetricTile = memo(function MetricTile({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, delay }}
-      className="p-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/30"
+      className="p-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/30 min-w-[130px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink"
     >
       <div className="flex items-center gap-1.5 mb-1.5">
         <Icon className={cn('w-3.5 h-3.5', color)} />
@@ -117,7 +117,7 @@ export const WeekOverviewCard = memo(function WeekOverviewCard({
         </CardHeader>
         <CardContent className="space-y-3">
           {/* Main metrics grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="flex overflow-x-auto snap-x snap-mandatory gap-2 -mx-1 px-1 pb-1 scrollbar-hide sm:grid sm:grid-cols-4 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0">
             <MetricTile
               icon={Calendar}
               label="Tréninky"
