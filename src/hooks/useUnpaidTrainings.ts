@@ -114,12 +114,12 @@ export function usePayTraining() {
 
       if (updateError) throw updateError;
 
-      // If paying from credit, deduct from balance (individual or shared)
+      // If paying from credit, create a deduction transaction
+      // DB trigger (fn_sync_client_credit_balance) automatically recalculates balance from SUM
       if (deductCredit && paymentMethod === 'credit' && training.final_price) {
         const price = training.final_price;
         const groupId = await getClientGroupId(training.client_id);
 
-        // Create credit transaction
         const { error: txError } = await supabase
           .from('credit_transactions')
           .insert({
@@ -133,9 +133,7 @@ export function usePayTraining() {
           });
 
         if (txError) throw txError;
-
-        // Apply credit delta using centralized function
-        await applyCreditDelta(training.client_id, -price);
+        // No applyCreditDelta call — trigger handles balance sync
       }
 
       return { trainingId, paymentMethod };
