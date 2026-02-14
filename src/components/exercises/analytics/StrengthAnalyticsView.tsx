@@ -10,6 +10,11 @@ import { ClientAttentionCard } from './ClientAttentionCard';
 import { RPEByExerciseCard } from './RPEByExerciseCard';
 import { RPEProgressCorrelationCard } from './RPEProgressCorrelationCard';
 import { TopExercisesTable } from './TopExercisesTable';
+import { GenderComparisonCard } from './GenderComparisonCard';
+import { AgeGroupComparisonCard } from './AgeGroupComparisonCard';
+import { WeightProgressionCard } from './WeightProgressionCard';
+import { TopExercisesByGenderCard } from './TopExercisesByGenderCard';
+import { PRDistributionCard } from './PRDistributionCard';
 import { useClients } from '@/hooks/useClients';
 
 export function StrengthAnalyticsView() {
@@ -66,6 +71,36 @@ export function StrengthAnalyticsView() {
         <UnusedExercisesCard
           data={data?.unusedExercises || []}
           totalExercises={data?.totalExercisesInLibrary}
+          isLoading={isLoading}
+        />
+      </div>
+
+      {/* Gender & Age Comparison Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <GenderComparisonCard
+          data={data?.genderComparison || { male: { avgWeight: 0, maxWeight: 0, tonnage: 0, prCount: 0, entryCount: 0, clientCount: 0 }, female: { avgWeight: 0, maxWeight: 0, tonnage: 0, prCount: 0, entryCount: 0, clientCount: 0 } }}
+          isLoading={isLoading}
+        />
+        <AgeGroupComparisonCard
+          data={data?.ageGroupComparison || []}
+          isLoading={isLoading}
+        />
+      </div>
+
+      {/* Weight Progression - Full Width */}
+      <WeightProgressionCard
+        data={data?.weightProgression || []}
+        isLoading={isLoading}
+      />
+
+      {/* Top Exercises by Gender & PR Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <TopExercisesByGenderCard
+          data={data?.topExercisesByGender || { male: [], female: [] }}
+          isLoading={isLoading}
+        />
+        <PRDistributionCard
+          data={data?.prDistribution || []}
           isLoading={isLoading}
         />
       </div>
