@@ -2,22 +2,24 @@
  * ClientProgressView - Detailed progress view for a single client
  * Merged with Comparison tab. Shows client list before selection.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, ExternalLink, BarChart2, Trophy, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useClientProgressStats, useAllClientsProgress, type ProgressPeriod } from '@/hooks/useClientProgressStats';
+import { useClientProgressStats, useAllClientsProgress, type ProgressPeriod, type ExerciseProgress } from '@/hooks/useClientProgressStats';
 import { ProgressHeroCard } from './ProgressHeroCard';
 import { ProgressSparklineGrid } from './ProgressSparklineGrid';
 import { PRHistoryTimeline } from './PRHistoryTimeline';
 import { MultiClientComparison } from './MultiClientComparison';
 import { CohortBenchmarkView } from './CohortBenchmarkView';
+import { ExerciseProgressDetail } from './ExerciseProgressDetail';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { AnimatePresence } from 'framer-motion';
 
 interface ClientProgressViewProps {
   initialClientId?: string;
@@ -29,6 +31,7 @@ export function ClientProgressView({ initialClientId }: ClientProgressViewProps)
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'single' | 'compare' | 'benchmark'>('single');
   const [period, setPeriod] = useState<ProgressPeriod>('12m');
+  const [selectedExercise, setSelectedExercise] = useState<ExerciseProgress | null>(null);
 
   const { data: allClients = [], isLoading: clientsLoading } = useAllClientsProgress();
 
@@ -42,10 +45,17 @@ export function ClientProgressView({ initialClientId }: ClientProgressViewProps)
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleExerciseClick = (exercise: { exerciseName: string; exerciseId: string | null }) => {
-    if (selectedClientId) {
-      navigate(`/clients/${selectedClientId}?tab=performance&exercise=${encodeURIComponent(exercise.exerciseName)}`);
-    }
+  // Get selected client name for the detail view
+  const selectedClientName = useMemo(() => {
+    return allClients.find(c => c.id === selectedClientId)?.name || '';
+  }, [allClients, selectedClientId]);
+
+  const handleExerciseClick = (exercise: ExerciseProgress) => {
+    setSelectedExercise(exercise);
+  };
+
+  const handleBackFromDetail = () => {
+    setSelectedExercise(null);
   };
 
   return (
@@ -70,12 +80,12 @@ export function ClientProgressView({ initialClientId }: ClientProgressViewProps)
         {/* Single Client View */}
         <TabsContent value="single" className="mt-6 space-y-6">
           {/* Client selector - only when a client is already selected */}
-          {selectedClientId && (
+          {selectedClientId && !selectedExercise && (
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSelectedClientId(null)}
+                onClick={() => { setSelectedClientId(null); setSelectedExercise(null); }}
                 className="gap-1.5"
               >
                 <Users className="w-4 h-4" />
@@ -112,101 +122,116 @@ export function ClientProgressView({ initialClientId }: ClientProgressViewProps)
           )}
 
           {/* Content */}
-          {!selectedClientId ? (
-            <div className="space-y-4">
-              {/* Search */}
-              <Input
-                placeholder="Hledat klienta..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="max-w-sm"
+          <AnimatePresence mode="wait">
+            {selectedExercise && selectedClientId ? (
+              <ExerciseProgressDetail
+                key="exercise-detail"
+                clientId={selectedClientId}
+                clientName={selectedClientName}
+                exerciseName={selectedExercise.exerciseName}
+                exerciseId={selectedExercise.exerciseId}
+                exerciseType={selectedExercise.type}
+                isTimeBased={selectedExercise.isInverted}
+                onBack={handleBackFromDetail}
               />
-
-              {/* Client list with mini stats */}
-              {clientsLoading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <Skeleton key={i} className="h-16 rounded-xl" />
-                  ))}
-                </div>
-              ) : filteredClients.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Users className="w-12 h-12 mx-auto mb-4 opacity-40" />
-                  <p className="text-sm">Žádní klienti nenalezeni</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {filteredClients.map(client => (
-                    <button
-                      key={client.id}
-                      onClick={() => setSelectedClientId(client.id)}
-                      className={cn(
-                        'w-full flex items-center gap-4 p-4 rounded-xl text-left',
-                        'bg-card/80 backdrop-blur-md border border-border/50',
-                        'hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200',
-                        'focus:outline-none focus:ring-2 focus:ring-primary/30'
-                      )}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-foreground truncate">{client.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {client.entriesCount} záznamů za 90 dní
-                          {client.lastActivity && (
-                            <> · poslední {formatDistanceToNow(parseISO(client.lastActivity), { addSuffix: true, locale: cs })}</>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        {client.prCount > 0 && (
-                          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-warning/10 text-warning text-xs font-medium">
-                            <Trophy className="w-3 h-3" />
-                            {client.prCount} PR
-                          </div>
-                        )}
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {client.entriesCount}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              {/* Hero Stats */}
-              <ProgressHeroCard
-                totalPRs={progressStats?.totalPRs || 0}
-                prsThisMonth={progressStats?.prsThisMonth || 0}
-                trainingsCount={progressStats?.trainingsCount90d || 0}
-                activeMonths={progressStats?.activeMonths || 0}
-                volumeTrend={progressStats?.volumeTrend || 0}
-                isLoading={statsLoading}
-              />
-
-              {/* Section: Exercise Progress */}
+            ) : !selectedClientId ? (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-foreground">Pokrok v cvicích</h4>
-                  <span className="text-xs text-muted-foreground">
-                    Top {progressStats?.topExercises.length || 0} cviků podle aktivity
-                  </span>
-                </div>
-                <ProgressSparklineGrid
-                  exercises={progressStats?.topExercises || []}
-                  isLoading={statsLoading}
-                  onExerciseClick={handleExerciseClick}
+                {/* Search */}
+                <Input
+                  placeholder="Hledat klienta..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-sm"
                 />
-              </div>
 
-              {/* Section: PR History */}
-              <PRHistoryTimeline
-                prs={progressStats?.recentPRs || []}
-                isLoading={statsLoading}
-                maxItems={8}
-              />
-            </>
-          )}
+                {/* Client list with mini stats */}
+                {clientsLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <Skeleton key={i} className="h-16 rounded-xl" />
+                    ))}
+                  </div>
+                ) : filteredClients.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Users className="w-12 h-12 mx-auto mb-4 opacity-40" />
+                    <p className="text-sm">Žádní klienti nenalezeni</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredClients.map(client => (
+                      <button
+                        key={client.id}
+                        onClick={() => setSelectedClientId(client.id)}
+                        className={cn(
+                          'w-full flex items-center gap-4 p-4 rounded-xl text-left',
+                          'bg-card/80 backdrop-blur-md border border-border/50',
+                          'hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200',
+                          'focus:outline-none focus:ring-2 focus:ring-primary/30'
+                        )}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground truncate">{client.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {client.entriesCount} záznamů za 90 dní
+                            {client.lastActivity && (
+                              <> · poslední {formatDistanceToNow(parseISO(client.lastActivity), { addSuffix: true, locale: cs })}</>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          {client.prCount > 0 && (
+                            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-warning/10 text-warning text-xs font-medium">
+                              <Trophy className="w-3 h-3" />
+                              {client.prCount} PR
+                            </div>
+                          )}
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {client.entriesCount}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div key="client-detail">
+                {/* Hero Stats */}
+                <ProgressHeroCard
+                  totalPRs={progressStats?.totalPRs || 0}
+                  prsThisMonth={progressStats?.prsThisMonth || 0}
+                  trainingsCount={progressStats?.trainingsCount90d || 0}
+                  activeMonths={progressStats?.activeMonths || 0}
+                  volumeTrend={progressStats?.volumeTrend || 0}
+                  isLoading={statsLoading}
+                />
+
+                {/* Section: Exercise Progress */}
+                <div className="space-y-4 mt-6">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-foreground">Pokrok v cvicích</h4>
+                    <span className="text-xs text-muted-foreground">
+                      Top {progressStats?.topExercises.length || 0} cviků podle aktivity
+                    </span>
+                  </div>
+                  <ProgressSparklineGrid
+                    exercises={progressStats?.topExercises || []}
+                    isLoading={statsLoading}
+                    onExerciseClick={handleExerciseClick}
+                  />
+                </div>
+
+                {/* Section: PR History */}
+                <div className="mt-6">
+                  <PRHistoryTimeline
+                    prs={progressStats?.recentPRs || []}
+                    isLoading={statsLoading}
+                    maxItems={8}
+                  />
+                </div>
+              </div>
+            )}
+          </AnimatePresence>
         </TabsContent>
 
         {/* Multi-Client Comparison View */}
