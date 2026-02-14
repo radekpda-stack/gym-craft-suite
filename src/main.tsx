@@ -5,6 +5,11 @@ import { initClientErrorReporter } from "@/lib/clientErrorReporter";
 
 initClientErrorReporter();
 
+// Cleanup legacy SW cache that caused stale financial data
+if ('caches' in window) {
+  caches.delete('supabase-api-cache');
+}
+
 // Initialize theme on load (keep in sync with src/hooks/useTheme)
 const initTheme = () => {
   const stored = localStorage.getItem('app-theme');
