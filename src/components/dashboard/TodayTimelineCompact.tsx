@@ -256,7 +256,7 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
                         className="flex-1 min-w-0 text-left"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                          <span className="text-xs font-medium text-muted-foreground tabular-nums shrink-0">
                             {training.time || '—'}
                           </span>
                           {/* Readiness dot */}
@@ -268,13 +268,13 @@ export const TodayTimelineCompact = memo(function TodayTimelineCompact({
                             )} />
                           )}
                           <span className={cn(
-                            'font-medium truncate',
+                            'font-medium truncate text-sm',
                             isCancelled && 'text-muted-foreground'
                           )}>
                             {training.clientName || 'Nepřiřazeno'}
                           </span>
                           {(training.participantCount || 1) > 1 && (
-                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 gap-0.5 shrink-0">
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 gap-0.5 shrink-0">
                               <Users className="w-2.5 h-2.5" />
                               {training.participantCount}×
                             </Badge>

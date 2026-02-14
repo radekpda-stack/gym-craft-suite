@@ -594,8 +594,8 @@ export function StockManagement() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 sm:gap-4">
+                <div className="flex items-center gap-2.5 sm:gap-4 flex-1 min-w-0">
                   <div className={cn(
                     "p-2.5 rounded-xl shrink-0",
                     product.kind === 'service' 
@@ -624,7 +624,7 @@ export function StockManagement() {
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground mt-0.5 flex-wrap">
                       <span>{getKindLabel(product.kind || 'inventory')}</span>
                       <span>•</span>
                       <span>{getCategoryLabel(product.category)}</span>
@@ -654,7 +654,7 @@ export function StockManagement() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                   <div className="text-right">
                     <p className="font-bold text-foreground">{formatCurrency(product.price)}</p>
                     {showMargin && product.purchase_price > 0 && (

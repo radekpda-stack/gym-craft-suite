@@ -22,14 +22,14 @@ interface TrainingChipProps {
 const TrainingChip = memo(function TrainingChip({ item, isNext, onClick }: TrainingChipProps) {
   const getStatusStyles = () => {
     if (item.status === 'cancelled') return 'opacity-50 line-through';
-    if (item.status === 'completed') return 'bg-emerald-500/10 border-emerald-500/30';
+    if (item.status === 'completed') return 'bg-success/10 border-success/30';
     if (isNext) return 'bg-primary/10 border-primary ring-2 ring-primary/20';
     return 'bg-secondary/50 border-border/50';
   };
   
   const getIcon = () => {
     if (item.status === 'cancelled') return <XCircle className="w-3.5 h-3.5 text-muted-foreground" />;
-    if (item.status === 'completed') return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />;
+    if (item.status === 'completed') return <CheckCircle2 className="w-3.5 h-3.5 text-success" />;
     if (isNext) return <Play className="w-3.5 h-3.5 text-primary" />;
     return <Clock className="w-3.5 h-3.5 text-muted-foreground" />;
   };
@@ -102,10 +102,11 @@ function NextTrainingHighlight({ item, onClick }: { item: ScheduleItem; onClick:
         </p>
       </div>
       
-      <Button size="sm" className="shrink-0 group-hover:bg-primary/90 whitespace-nowrap">
+      <Button size="sm" className="shrink-0 group-hover:bg-primary/90 whitespace-nowrap hidden sm:flex">
         Otevřít
         <ChevronRight className="w-4 h-4 ml-1" />
       </Button>
+      <ChevronRight className="w-5 h-5 text-primary shrink-0 sm:hidden" />
     </button>
   );
 }
@@ -200,7 +201,7 @@ export function TodayPlanCompact({ data, isLoading }: TodayPlanCompactProps) {
           </div>
         ) : (
           <div className="text-center py-4">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+            <CheckCircle2 className="w-8 h-8 text-success mx-auto mb-2" />
             <p className="text-sm font-medium text-foreground">Vše dokončeno!</p>
           </div>
         )}
