@@ -73,20 +73,19 @@ export default function PerformanceHub() {
   // Tabs ready
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 pb-32">
-      {/* Hero Header Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-card/80 to-card/60 backdrop-blur-md border border-border/50 shadow-lg p-6">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-32">
+      {/* Hero Header Section - compact on mobile */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-card/80 to-card/60 backdrop-blur-md border border-border/50 shadow-lg p-4 sm:p-6">
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
         
-        <div className="relative space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-primary/20 backdrop-blur-sm shadow-lg shadow-primary/30 ring-1 ring-primary/30">
-              <Zap className="w-7 h-7 text-primary" />
+        <div className="relative space-y-3 sm:space-y-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-primary/20 backdrop-blur-sm shadow-lg shadow-primary/30 ring-1 ring-primary/30">
+              <Zap className="w-5 h-5 sm:w-7 sm:h-7 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Výkonnost</h1>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-xl sm:text-3xl font-bold tracking-tight">Výkonnost</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Sleduj pokrok svých klientů
               </p>
             </div>
@@ -106,33 +105,33 @@ export default function PerformanceHub() {
 
       {/* Tabs - reduced to 4 core + optional */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="flex w-full max-w-3xl mx-auto bg-secondary/30 backdrop-blur-sm p-1 overflow-x-auto">
-          <TabsTrigger value="overview" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Zap className="w-4 h-4 shrink-0" />
-            <span className="hidden sm:inline text-xs truncate">Přehled</span>
+        <TabsList className="flex w-full max-w-3xl mx-auto bg-secondary/30 backdrop-blur-sm p-1 overflow-x-auto gap-0.5">
+          <TabsTrigger value="overview" className="gap-1 flex-1 min-w-0 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm px-2 sm:px-3">
+            <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate">Přehled</span>
           </TabsTrigger>
-          <TabsTrigger value="clients" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Users className="w-4 h-4 shrink-0" />
-            <span className="hidden sm:inline text-xs truncate">Klienti</span>
+          <TabsTrigger value="clients" className="gap-1 flex-1 min-w-0 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm px-2 sm:px-3">
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate">Klienti</span>
           </TabsTrigger>
-          <TabsTrigger value="library" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <List className="w-4 h-4 shrink-0" />
-            <span className="hidden sm:inline text-xs truncate">Knihovna</span>
+          <TabsTrigger value="library" className="gap-1 flex-1 min-w-0 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm px-2 sm:px-3">
+            <List className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate">Knihovna</span>
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <BarChart3 className="w-4 h-4 shrink-0" />
-            <span className="hidden sm:inline text-xs truncate">Analytika</span>
+          <TabsTrigger value="analytics" className="gap-1 flex-1 min-w-0 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm px-2 sm:px-3">
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate">Analytika</span>
           </TabsTrigger>
           {testsEnabled && (
-            <TabsTrigger value="tests" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <ClipboardCheck className="w-4 h-4 shrink-0" />
-              <span className="hidden sm:inline text-xs truncate">Testy</span>
+            <TabsTrigger value="tests" className="gap-1 flex-1 min-w-0 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm px-2 sm:px-3">
+              <ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="hidden sm:inline truncate">Testy</span>
             </TabsTrigger>
           )}
           {challengesEnabled && (
-            <TabsTrigger value="challenges" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Trophy className="w-4 h-4 shrink-0" />
-              <span className="hidden sm:inline text-xs truncate">Výzvy</span>
+            <TabsTrigger value="challenges" className="gap-1 flex-1 min-w-0 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm px-2 sm:px-3">
+              <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="hidden sm:inline truncate">Výzvy</span>
             </TabsTrigger>
           )}
         </TabsList>
