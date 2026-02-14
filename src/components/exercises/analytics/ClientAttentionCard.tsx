@@ -1,10 +1,10 @@
  import { AnalyticsCard } from './AnalyticsCard';
- import { Users, AlertCircle, ChevronRight, TrendingDown, Trophy, Scale } from 'lucide-react';
+ import { Users, AlertCircle, ChevronRight, TrendingDown, Trophy, Scale, Flame } from 'lucide-react';
  import { Badge } from '@/components/ui/badge';
  import { cn } from '@/lib/utils';
  import { useNavigate } from 'react-router-dom';
  
- export type AttentionReason = 'no_pr' | 'declining_frequency' | 'high_asymmetry';
+ export type AttentionReason = 'no_pr' | 'declining_frequency' | 'high_asymmetry' | 'chronic_high_rpe';
  
  export interface ClientNeedingAttention {
    clientId: string;
@@ -21,13 +21,14 @@
  const HELP_CONTENT = {
    title: 'Klienti vyžadující pozornost',
    description: 'Seznam klientů s indikátory, které vyžadují pozornost trenéra.',
-   calculation: 'Kritéria: žádné PR za 30 dní, klesající frekvence, vysoká asymetrie (>20%)',
+   calculation: 'Kritéria: žádné PR za 30 dní, klesající frekvence, vysoká asymetrie (>20%), chronicky vysoké RPE (≥9 po 3+ týdny)',
  };
  
  const REASON_CONFIG: Record<AttentionReason, { icon: typeof Trophy; label: string; color: string }> = {
    no_pr: { icon: Trophy, label: 'Žádné PR', color: 'text-warning' },
    declining_frequency: { icon: TrendingDown, label: 'Klesá frekvence', color: 'text-destructive' },
    high_asymmetry: { icon: Scale, label: 'Asymetrie', color: 'text-orange-500' },
+   chronic_high_rpe: { icon: Flame, label: 'Vysoké RPE 3+ týdny', color: 'text-destructive' },
  };
  
  const PRIORITY_CONFIG = {
