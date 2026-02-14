@@ -1,39 +1,50 @@
 
-# Oprava nekonzistentního zobrazeni kreditu
 
-## Problem
+# Oprava nekonzistentniho zobrazeni kreditu -- cast 2
 
-Seznam klientu a karta klienta zobrazuji odlisne zustatky, protoze:
-1. PWA Service Worker cachuje API odpovedi az 24 hodin -- pri urcitych podminak servuje stara data
-2. Seznam klientu pouziva jiny zdroj dat (view `vw_client_ledger_balances` + 30s staleTime) nez karta klienta (`balance_after` z posledni transakce, staleTime 0)
-3. Po dokonceni treninku chybi invalidace klice `credit_balance_v2`
+## Analyza problemu
+
+Nase predchozi oprava (odstraneni PWA cache pravidla) je spravna v kodu, ale **stary Service Worker s cache "supabase-api-cache" je stale aktivni na telefonu uzivatele**. Novy SW se jeste nenacetl. Proto:
+
+- Seznam klientu ukazuje -600 Kc (cachovana odpoved z 31.1.)
+- Detail klienta ukazuje -2 400 Kc (cachovana odpoved z 2.2.)
+- Databaze ma -7 100 Kc (spravny soucet vsech transakci)
+
+Uzivatel chce zustatek -6 300 Kc (rozdil +800 Kc = korekce posledniho treninku).
 
 ## Reseni
 
-### 1. Odstranit PWA cache pro Supabase API
+### 1. Vymazat starou SW cache pri startu aplikace
 
-Soubor: `vite.config.ts`
+Soubor: `src/main.tsx`
 
-Odstranim `runtimeCaching` pravidlo pro Supabase API (`supabase-api-cache`). Service Worker bude nadale cachovat staticke assety (JS, CSS, fonty), ale API volani budou vzdy cerstve. React Query jiz zajistuje client-side caching, takze PWA cache je nadbytecna a skodliva pro financni data.
+Pridam jednrazovy cleanup, ktery smaze cache "supabase-api-cache" z Service Workeru. Toto zajisti, ze i uzivatel se starym SW okamzite prestane dostavat cachovana API data. Kod bude:
 
-### 2. Zkratit staleTime pro useClients
+```typescript
+// Cleanup legacy SW cache that caused stale financial data
+if ('caches' in window) {
+  caches.delete('supabase-api-cache');
+}
+```
 
-Soubor: `src/hooks/useClients.ts`
+### 2. Opravit zustatek Dominika Tomana na -6 300 Kc
 
-Snizim `staleTime` z 30 sekund na 5 sekund (shodne s ostatnimi financnimi hooky dle existujici konvence). Timto se minimalizuje okno, kdy seznam klientu zobrazuje zastaralou hodnotu.
+Databaze aktualne ukazuje -7 100 Kc. Uzivatel chce -6 300 Kc. Vytvorim korekci:
+- Vlozim novou korekni transakci +800 Kc s popisem "Korekce zustatku"
+- Nastavim `balance_after = -6300` na teto transakci
+- Trigger automaticky aktualizuje `clients.credit_balance`
 
-### 3. Pridat invalidaci credit_balance_v2 po dokonceni treninku
+### 3. Zajistit ze oba pohledy ctou stejna data
 
-Soubor: `src/hooks/useCompleteTrainingAtomic.ts`
+Pro uplnou jistotu pridam do `CompactClientRow` pouziti `useCreditBalanceValue` misto `client.credit_balance`, cimz seznam klientu bude cist zustatek ze stejneho zdroje jako detail (posledni transakce). Toto eliminuje moznost diskrepance i v budoucnu.
 
-Do `onSuccess` callbacku pridam invalidaci klice `credit_balance_v2` pro vsechny ucastniky treninku, aby se karta klienta okamzite obnovila i bez realtime subscripce.
+**Pozn.:** Tato zmena zvysi pocet dotazu na DB (1 per klient), ale diky staleTime a React Query cache bude dopad minimalni. Alternativne bychom mohli pouzit ledger view primo v `useClients`, coz uz delame -- ale pridani druheho zdroje je bezpecnejsi.
 
 ## Technicke detaily
 
 | Soubor | Zmena |
 |--------|-------|
-| `vite.config.ts` | Odstraneni Supabase runtimeCaching pravidla |
-| `src/hooks/useClients.ts` | staleTime: 30000 -> 5000 |
-| `src/hooks/useCompleteTrainingAtomic.ts` | Pridani invalidace `credit_balance_v2` per-participant |
+| `src/main.tsx` | Pridani `caches.delete('supabase-api-cache')` |
+| Databaze | INSERT korekce +800 Kc pro Dominika Tomana |
+| `src/components/clients/CompactClientRow.tsx` | Mozna zmena zdroje dat pro kredit badge (volitelne) |
 
-Databaze se nemeni -- data v DB jsou konzistentni (-6300 Kc vsude). Problem je ciste na strane klientskeho cachovani.
