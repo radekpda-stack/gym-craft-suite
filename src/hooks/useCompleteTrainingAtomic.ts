@@ -246,6 +246,7 @@ export function useCompleteTrainingAtomic() {
         queryClient.invalidateQueries({ queryKey: ["credit_transactions", participant.client_id], refetchType: 'all' });
         queryClient.invalidateQueries({ queryKey: ["shared_budget_balance", participant.client_id], refetchType: 'all' });
         queryClient.invalidateQueries({ queryKey: ["client-exercise-prs", participant.client_id], refetchType: 'all' });
+        queryClient.invalidateQueries({ queryKey: ["credit_balance_v2", participant.client_id], refetchType: 'all' });
       }
       
       // Batch invalidate global queries
