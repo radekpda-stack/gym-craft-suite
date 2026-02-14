@@ -114,12 +114,6 @@ export function ClientDetailTabs({
       label: 'Profil',
       icon: User,
     },
-    {
-      id: 'media',
-      label: 'Média',
-      icon: Image,
-      badge: totalMediaCount > 0 ? totalMediaCount : undefined,
-    },
     { 
       id: 'trainings', 
       label: 'Tréninky', 
@@ -149,13 +143,8 @@ export function ClientDetailTabs({
       id: 'communication', 
       label: 'Zprávy', 
       icon: MessageSquare,
-      badge: unreadCount > 0 ? unreadCount : undefined,
-      badgeVariant: 'destructive' as const,
-    },
-    { 
-      id: 'settings', 
-      label: 'Nastavení', 
-      icon: Settings,
+      badge: (unreadCount > 0 ? unreadCount : 0) + (totalMediaCount > 0 ? totalMediaCount : 0) || undefined,
+      badgeVariant: unreadCount > 0 ? 'destructive' as const : undefined,
     },
   ];
 
@@ -194,14 +183,32 @@ export function ClientDetailTabs({
         </TabsList>
       </div>
 
-      {/* Tab: Profile */}
+      {/* Tab: Profile + Settings (merged) */}
       <TabsContent value="profile" className="mt-0 space-y-4">
         <ClientProfileTab client={client} onUpdateClient={onUpdateClient} />
-      </TabsContent>
-
-      {/* Tab: Media */}
-      <TabsContent value="media" className="mt-0 space-y-4">
-        <ClientMediaTab clientId={client.id} />
+        
+        {/* Portal Access */}
+        <div className="bg-card border border-border rounded-2xl p-4">
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <Settings className="w-5 h-5 text-primary" />
+            Klientský portál
+          </h3>
+          <ClientPortalAccessSection
+            clientId={client.id}
+            clientName={client.name}
+            clientEmail={client.email}
+            showSettings={true}
+          />
+        </div>
+        
+        {/* Admin Settings */}
+        <ClientAdminBlock
+          client={client}
+          isSharedBudget={isSharedBudget}
+          budgetGroupId={budgetGroupId}
+          onArchive={onArchive}
+          defaultExpanded={true}
+        />
       </TabsContent>
 
       {/* Tab: Trainings */}
@@ -277,8 +284,11 @@ export function ClientDetailTabs({
         </div>
       </TabsContent>
 
-      {/* Tab: Communication */}
+      {/* Tab: Communication + Media (merged) */}
       <TabsContent value="communication" className="mt-0 space-y-4">
+        {/* Media */}
+        <ClientMediaTab clientId={client.id} />
+        
         {/* Followup History */}
         <ClientFollowupHistory clientId={client.id} />
         
@@ -302,32 +312,6 @@ export function ClientDetailTabs({
           <h3 className="font-semibold mb-3">Log hovorů</h3>
           <ClientCommunicationLog clientId={client.id} />
         </div>
-      </TabsContent>
-
-      {/* Tab: Settings */}
-      <TabsContent value="settings" className="mt-0 space-y-4">
-        {/* Portal Access */}
-        <div className="bg-card border border-border rounded-2xl p-4">
-          <h3 className="font-semibold mb-3 flex items-center gap-2">
-            <Settings className="w-5 h-5 text-primary" />
-            Klientský portál
-          </h3>
-          <ClientPortalAccessSection
-            clientId={client.id}
-            clientName={client.name}
-            clientEmail={client.email}
-            showSettings={true}
-          />
-        </div>
-        
-        {/* Admin Settings */}
-        <ClientAdminBlock
-          client={client}
-          isSharedBudget={isSharedBudget}
-          budgetGroupId={budgetGroupId}
-          onArchive={onArchive}
-          defaultExpanded={true}
-        />
       </TabsContent>
     </Tabs>
   );
