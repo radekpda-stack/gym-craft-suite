@@ -14,6 +14,9 @@ import {
   Zap,
   MessageSquare,
   ShoppingBag,
+  BarChart3,
+  Receipt,
+  StickyNote,
   LucideIcon,
   Utensils,
   LayoutTemplate,
@@ -65,12 +68,15 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
           ...(isModuleEnabled('training_templates') ? [{ to: '/training-templates', icon: LayoutTemplate, label: 'Workouty' }] : []),
           ...(isModuleEnabled('nutrition') ? [{ to: '/nutrition', icon: Utensils, label: 'Strava' }] : []),
           ...(isModuleEnabled('feedback') ? [{ to: '/feedback-overview', icon: MessageSquare, label: 'Zpětná vazba' }] : []),
+          { to: '/notes', icon: StickyNote, label: 'Poznámky' },
         ],
       },
       {
         label: 'Finance',
         items: [
           { to: '/sales', icon: ShoppingBag, label: 'Prodeje' },
+          { to: '/expenses', icon: Receipt, label: 'Náklady' },
+          { to: '/statistics', icon: BarChart3, label: 'Statistiky' },
         ],
       },
       {
