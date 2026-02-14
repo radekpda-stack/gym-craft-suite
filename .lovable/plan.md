@@ -1,85 +1,93 @@
 
-# Oprava mobilniho UI na karte Vykonnost -- podkategorie a dalsi karty
+# Komplexni optimalizace mobilniho UI -- profesionalni mobilni aplikace
 
-## Identifikovane problemy
+## Prehled identifikovanych problemu
 
-### 1. Analytika > Sila: KPI radek (AnalyticsKPIRow)
-- 5 KPI karet v gridu `grid-cols-2 sm:grid-cols-4 lg:grid-cols-5` -- na mobilu 5. karta (`col-span-2`) zabira cely radek, ale prvni 4 se tisknou do 2 sloupcu, coz je OK
-- **Problem**: Texty jako "FREKVENCE" a "POZORNOST" se mohou orizavat v 2-sloupcovem gridu na uzkych telefonech
+Po duklednem auditu vsech hlavnich stranek a komponent jsem identifikoval nasledujici oblasti, ktere potrebuji zlepseni pro profesionalni mobilni zazitek:
 
-### 2. Analytika > Sila: Filters Bar (AnalyticsFiltersBar)
-- Sticky bar s `flex-col sm:flex-row` -- na mobilu se client selector roztahne na plnou sirku, coz je spravne
-- **Problem**: Switch "Zahrnout testy" ma `ml-auto` coz na mobilu (flex-col) nefunguje spravne -- zustavava vlevo bez vizualniho oddeleni
+### A. Rozvrh (SchedulePage) -- pretekajici hlavicka
+**Problem**: Header na mobilu obsahuje 6-7 tlacitek v jednom radku (`Pridat`, `Treninkovy rezim`, `Zrusene`, `Nastaveni`, `Dnes`, `Datum picker`). Na 375px se nevejdou a pretekaji nebo se tisknou.
 
-### 3. Analytika > Sila: 3 karty v radku (Stagnace, Pohybove vzorce, Nepouzivane cviky)
-- Grid `grid-cols-1 lg:grid-cols-3` -- na mobilu plna sirka, OK
-- **Problem u MovementGapsCard**: Label siroke `w-20` (80px) muze byt malo pro delsi ceske nazvy jako "Core anti-lateralni flexe" -- orizne se
+**Reseni**: 
+- Sekundarni akce (`Zrusene treninky`, `Nastaveni kalendare`) presunout do overflow `DropdownMenu` (3 tecky)
+- Na mobilu zobrazit pouze: `+ Pridat` (ikona), `Dnes`, `Datum picker`, `Overflow menu`
+- Tlacitko "Treninkovy rezim" schovat do overflow na mobilu
 
-### 4. Analytika > Sila: RPE vs. progrese (RPEProgressCorrelationCard)
-- **Problem**: Na mobilu se radek s metrikami (`weightTrend`, `rpeTrend`, status label) tiskne do jednoho radku, ale na uzkem displeji se prekryvaji -- `shrink-0` brani wrap
+### B. Karta klienta -- ClientSummaryStrip 3 sloupce
+**Problem**: `grid-cols-3` s metrikami (Tento mesic, Celkova hodnota, Prumer/mesic) -- na mobilu se castky jako "12.400 Kc" orizavaji, labely "CELKOVA HODNOTA" jsou prilis uzke.
 
-### 5. Analytika > Sila: Top cviky tabulka (TopExercisesTable)
-- HTML tabulka s 6 sloupci -- na mobilu se horizontalne posouva (ScrollArea), ale neni to zrejme
-- **Problem**: Sloupec "Cvik" ma `max-w-[200px]` coz na mobilu zabira vetsi cast, zatimco ostatni sloupce se stisnuji
+**Reseni**:
+- Zmena na horizontalni scroll `flex overflow-x-auto snap-x` na mobilu
+- Kazda karta `min-w-[150px] flex-shrink-0`
+- Na desktopu zustane `sm:grid sm:grid-cols-3`
 
-### 6. Analytika > Sila: Gender Comparison (GenderComparisonCard)
-- **Problem**: YAxis s `width={90}` zabira moc mista na mobilu u horizontalniho BarChartu -- labely "Max vaha (kg)" jsou prilis siroky
+### C. Karta klienta -- ClientDetailTabs
+**Problem**: 6 zalozek (Profil, Treninky, Finance, Vykon, Zdravi, Zpravy) -- sice maji horizontalni scroll, ale `w-max` zpusobuje, ze se na uzkem displeji nezobrazuji vsechny najednou a uzivatel nevi, ze muze scrollovat.
 
-### 7. Analytika > Sila: Weight Progression (WeightProgressionCard)
-- **Problem**: Legend s 5 nazvy cviku se na mobilu lami do vice radku a zabira moc prostoru. Nazvy cviku mohou byt dlouhe ("Bench Press s jednorukami")
+**Reseni**:
+- Pridat vizualni hint (gradient fade) na prave strane, kdyz jsou dalsi taby mimo viewport
+- Zmensit padding zalozek na mobilu z `px-2.5` na `px-2`
+- Labely zkratit na mobilu: "Zpravy" -> ikona only pod `sm:`
 
-### 8. Analytika > Kardio: KPI karty
-- Grid `grid-cols-2 sm:grid-cols-5` -- na mobilu 5 karet do 2 sloupcu = 3 radky, 5. karta sama
-- **Problem**: Label "DNI S TRENINKEM" se muze orizavat
+### D. Dashboard -- metriky grid 3 sloupce
+**Problem**: `DashboardHeader` grid `grid-cols-3` s kartami Kapacita/Klienti/Prijem -- na iPhone SE (320px) jsou karty stesnene, text "Klientu dnes" a "Dnesni prijem" se orizavaji.
 
-### 9. Analytika > Skill: KPI karty
-- Grid `grid-cols-3` bez responzivniho breakpointu -- na mobilu 3 karty v radku prilis uzke
-- **Problem**: "UNIKATNI SKILLY" a "DNI S TRENINKEM" se orizavaji
+**Reseni**:
+- Zmena na horizontalni scroll na telefonech pod 375px
+- `flex overflow-x-auto snap-x` s `min-w-[120px]` per karta
+- Na `sm:` zustanou `grid-cols-3`
 
-### 10. Analytika sub-taby (ExerciseAnalyticsView)
-- Sub-taby Sila/Kardio/Skill pouzivaji texty na vsech velikostech
-- **Problem**: Na uzkem mobilu se taby mohou stisknout
+### E. Prodeje -- hero header a tipy
+**Problem**: Smart tips v hero headeru (`tip.text` + `tip.subtext`) se na mobilu mohou nescrolovat a preteci. Badge chipy se zalamoji na dalsi radek.
 
-## Reseni
+**Reseni**:
+- Omezit pocet zobrazenych tipu na mobilu na max 2
+- Smart tips radek: `line-clamp-1` na mobilu aby nepretekaly
 
-### A. AnalyticsKPIRow -- horizontalni scroll na mobilu
-- Zmena z `grid grid-cols-2` na `flex overflow-x-auto snap-x` na mobilu, `sm:grid sm:grid-cols-4 lg:grid-cols-5` od sm+
-- Kazda KPI karta: `min-w-[130px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start`
+### F. Seznam klientu -- View Mode toggle
+**Problem**: 4 tlacitka v jednom radku (Dnes, Tyden, Vsichni, Archiv) s badge -- na iPhone SE se texty nezobrazuji (hidden sm:inline), ale i tak muze byt stesnene s badges.
 
-### B. AnalyticsFiltersBar -- lepsi mobilni layout
-- Switch + label zabalit do vlastniho `flex` radku s vizualnim oddelenim
+**Reseni**: Tento je relativne OK diky `hidden sm:inline`, ale pridat `gap-0.5` misto `gap-1` pro tesnejsi rozlozeni.
 
-### C. RPEProgressCorrelationCard -- wrap metrik na mobilu
-- Zmena `shrink-0` na `flex-wrap` pro metriky radek, status label na novy radek na mobilu
+### G. Agenda Item (kalendar) -- akce pretekaji
+**Problem**: `AgendaItem` ma tlacitka (Dokoncit w-10, Smazat w-8) + link sipku -- dohromady zabiraji ~80px, coz na uzkem displeji muze stisnit obsah.
 
-### D. GenderComparisonCard -- uzsi Y osa na mobilu
-- Zmensit YAxis `width` z 90 na 70 a zkratit labely ("Max (kg)" misto "Max vaha (kg)")
+**Reseni**:
+- Zmensi akce tlacitka na `w-8 h-8` a `w-7 h-7`
+- Skryt Smazat tlacitko na mobilu (pristupne pres context menu)
 
-### E. WeightProgressionCard -- Legend pod graf
-- Pridat `wrapperStyle` pro Legend s `fontSize: 10` a omezit delku nazvu
+### H. MobileNav -- bottom offset
+**Problem**: `bottom-6` (24px) muze byt prilis vysoko na nekterych telefonech a zabirat prostor obsahu.
 
-### F. Kardio KPI -- horizontalni scroll
-- Zmena gridu na `flex overflow-x-auto snap-x` na mobilu, `sm:grid sm:grid-cols-5` od sm+
+**Reseni**: Zmensit na `bottom-4` (16px) pro lepsi vyuziti prostoru, nebo pridat `safe-area-inset-bottom` fallback.
 
-### G. Skill KPI -- zmena na 2 sloupce na mobilu
-- `grid-cols-2 sm:grid-cols-3` misto `grid-cols-3`
+### I. Globalni -- touch target konzistence
+**Problem**: Nektere interaktivni prvky (badge, male tlacitka) nemaji dostatecne touch targety (min 44x44px).
 
-### H. ExerciseAnalyticsView sub-taby -- mensi na mobilu
-- Text `text-xs sm:text-sm`, padding `px-2 sm:px-3`
+**Reseni**: Audit a pridani `min-h-[44px] min-w-[44px]` na kriticke interaktivni prvky.
 
-### I. TopExercisesTable -- vizualni hint pro scroll
-- Pridat gradient fade na prave strane na mobilu jako indikace scrollovatelnosti
-
-## Zmeny v souborech
+## Technicke detaily
 
 | Soubor | Zmena |
 |--------|-------|
-| `src/components/exercises/analytics/AnalyticsKPIRow.tsx` | Horizontalni scroll na mobilu misto 2-col gridu |
-| `src/components/exercises/analytics/AnalyticsFiltersBar.tsx` | Lepsi rozlozeni switch a filru na mobilu |
-| `src/components/exercises/analytics/RPEProgressCorrelationCard.tsx` | Flex-wrap pro metriky na mobilu |
-| `src/components/exercises/analytics/GenderComparisonCard.tsx` | Uzsi Y osa, kratsi labely |
-| `src/components/exercises/analytics/WeightProgressionCard.tsx` | Kompaktnejsi legenda |
-| `src/components/exercises/analytics/CardioAnalyticsView.tsx` | Horizontalni scroll KPI na mobilu |
-| `src/components/exercises/analytics/SkillAnalyticsView.tsx` | 2 sloupce KPI na mobilu misto 3 |
-| `src/components/exercises/ExerciseAnalyticsView.tsx` | Mensi sub-taby na mobilu |
-| `src/components/exercises/analytics/TopExercisesTable.tsx` | Uzsi sloupce na mobilu, lepsi truncate |
+| `src/pages/SchedulePage.tsx` | Presunuti sekundarnich akci do overflow menu na mobilu |
+| `src/components/clients/ClientSummaryStrip.tsx` | Horizontalni scroll na mobilu misto grid-cols-3 |
+| `src/components/clients/ClientDetailTabs.tsx` | Gradient hint pro scrollovatelnost, mensi padding |
+| `src/components/dashboard/DashboardHeader.tsx` | Horizontalni scroll metrik na < sm |
+| `src/pages/Sales.tsx` | Limit tipu na mobilu, line-clamp |
+| `src/pages/Clients.tsx` | Tesnejsi view mode toggle |
+| `src/components/calendar/AgendaItem.tsx` | Mensi akce, skryti sekundarnich na mobilu |
+| `src/components/layout/MobileNav.tsx` | Jemne upravy pozicovani |
+| `src/components/dashboard/TodayTimelineCompact.tsx` | Lepsi truncate pro dlouha jmena a badges |
+
+### Vizualni styl
+- Zachovame stavajici premiovni estetiku (glassmorphismus, backdrop-blur)
+- Vsechny zmeny jsou ciste responzivni (mobilni breakpoint = pod `sm:`)
+- Touch targety minimalne 44x44px
+- Cesky jazyk ve vsech popiscich
+
+### Priorita
+1. SchedulePage header (nejvic viditelny problem)
+2. ClientSummaryStrip (castka se orizava)
+3. DashboardHeader metriky (prvni vec kterou uzivatel vidi)
+4. Ostatni optimalizace
