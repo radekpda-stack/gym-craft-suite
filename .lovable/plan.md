@@ -1,50 +1,93 @@
 
+# Oprava financniho systemu -- eliminace duplicitnich triggeru a sjednoceni zdroje dat
 
-# Oprava nekonzistentniho zobrazeni kreditu -- cast 2
+## Analyza korenove priciny
 
-## Analyza problemu
+Financni system ma **3 databazove triggery na tabulce `credit_transactions`**, ktere si navzajem odporuji:
 
-Nase predchozi oprava (odstraneni PWA cache pravidla) je spravna v kodu, ale **stary Service Worker s cache "supabase-api-cache" je stale aktivni na telefonu uzivatele**. Novy SW se jeste nenacetl. Proto:
+```text
+TRIGGER 1: trg_sync_client_credit_balance (fn_sync_client_credit_balance)
+           -> Po INSERT/UPDATE/DELETE prepocita balance z SUM(amount)
 
-- Seznam klientu ukazuje -600 Kc (cachovana odpoved z 31.1.)
-- Detail klienta ukazuje -2 400 Kc (cachovana odpoved z 2.2.)
-- Databaze ma -7 100 Kc (spravny soucet vsech transakci)
+TRIGGER 2: trg_sync_balance_on_transaction (trg_sync_balance_on_transaction)  
+           -> Po KAZDEM INSERT prida credit_balance += amount
 
-Uzivatel chce zustatek -6 300 Kc (rozdil +800 Kc = korekce posledniho treninku).
+TRIGGER 3: sync_balance_after_transaction (trg_sync_balance_on_transaction)
+           -> Po INSERT WHERE status='completed' ZNOVU prida credit_balance += amount
+           -> VOLA STEJNOU FUNKCI jako trigger 2!
+```
+
+Pri vlozeni jedne dokoncene transakce:
+- Trigger 1 nastavi balance na spravny SUM
+- Trigger 2 prida delta (+= amount) 
+- Trigger 3 prida delta ZNOVU (+= amount)
+
+Poradi triggeru je nedeterministicke. Vysledek zavisi na tom, ktery trigger se spusti jako posledni.
+
+**Navic v aplikacnim kodu:**
+- `useDeleteTransaction` smaze transakci (trigger 1 prepocita SUM) a POTOM zavola `applyCreditDelta(-amount)`, coz ZNOVU odecte castku -- vysledek je dvojity odpocet
+- `usePayTraining` vlozi transakci (triggery aktualizuji balance) a POTOM zavola `applyCreditDelta(-price)` -- opet dvojity odpocet
+- `useCreateTransaction` spravne NEVOLA `applyCreditDelta` (komentar: "We rely on DB triggers")
+
+**Aktualni stav Dominika Tomana:** Nekdo (pravdepodobne predchozi oprava) vlozil +20 000 Kc transakci, takze stored balance = 13 700 Kc misto pozadovanych -6 300 Kc.
+
+---
 
 ## Reseni
 
-### 1. Vymazat starou SW cache pri startu aplikace
+### Krok 1: Odstranit duplicitni triggery (databaze)
 
-Soubor: `src/main.tsx`
+Ponechat POUZE `trg_sync_client_credit_balance` (fn_sync_client_credit_balance), ktery prepocitava z SUM -- je to jediny spravny pristup (Event Sourcing: balance = suma vsech transakci).
 
-Pridam jednrazovy cleanup, ktery smaze cache "supabase-api-cache" z Service Workeru. Toto zajisti, ze i uzivatel se starym SW okamzite prestane dostavat cachovana API data. Kod bude:
+Smazat:
+- `sync_balance_after_transaction` (duplikat)
+- `trg_sync_balance_on_transaction` (duplikat)
 
-```typescript
-// Cleanup legacy SW cache that caused stale financial data
-if ('caches' in window) {
-  caches.delete('supabase-api-cache');
-}
-```
+Oba volaji `trg_sync_balance_on_transaction()` ktera dela `+= delta`, coz je v konfliktu s SUM pristupem.
 
-### 2. Opravit zustatek Dominika Tomana na -6 300 Kc
+### Krok 2: Opravit aplikacni kod -- odstranit dvojite aktualizace
 
-Databaze aktualne ukazuje -7 100 Kc. Uzivatel chce -6 300 Kc. Vytvorim korekci:
-- Vlozim novou korekni transakci +800 Kc s popisem "Korekce zustatku"
-- Nastavim `balance_after = -6300` na teto transakci
-- Trigger automaticky aktualizuje `clients.credit_balance`
+**`useDeleteTransaction`** (useCreditOperations.ts radek 532-565):
+- Odstranit volani `applyCreditDelta(-amount)` po smazani transakce
+- Trigger `fn_sync_client_credit_balance` uz sam prepocita SUM po DELETE
 
-### 3. Zajistit ze oba pohledy ctou stejna data
+**`usePayTraining`** (useUnpaidTrainings.ts):
+- Odstranit volani `applyCreditDelta(clientId, -price)` po vlozeni transakce  
+- Trigger uz sam aktualizuje balance po INSERT
 
-Pro uplnou jistotu pridam do `CompactClientRow` pouziti `useCreditBalanceValue` misto `client.credit_balance`, cimz seznam klientu bude cist zustatek ze stejneho zdroje jako detail (posledni transakce). Toto eliminuje moznost diskrepance i v budoucnu.
+**`useUpdateTransactionPaymentMethod`** (useCreditOperations.ts):
+- Odstranit volani `applyCreditDelta` po zmene platebni metody
+- Pokud se meni z/na credit, je treba vlozit/smazat transakci, ne rucne menit balance
 
-**Pozn.:** Tato zmena zvysi pocet dotazu na DB (1 per klient), ale diky staleTime a React Query cache bude dopad minimalni. Alternativne bychom mohli pouzit ledger view primo v `useClients`, coz uz delame -- ale pridani druheho zdroje je bezpecnejsi.
+### Krok 3: Opravit data Dominika Tomana
 
-## Technicke detaily
+Smazat chybnou transakci +20 000 Kc (id: `2c0d7063-8120-42ee-90e4-a7339ef0fdcc`).
+Po smazani trigger prepocita balance na SUM = -6 300 Kc (spravna hodnota).
 
-| Soubor | Zmena |
-|--------|-------|
-| `src/main.tsx` | Pridani `caches.delete('supabase-api-cache')` |
-| Databaze | INSERT korekce +800 Kc pro Dominika Tomana |
-| `src/components/clients/CompactClientRow.tsx` | Mozna zmena zdroje dat pro kredit badge (volitelne) |
+### Krok 4: Opravit balance pro Lenku Deiak
 
+Ma ledger_balance = 800 Kc ale stored = 0. Po oprave triggeru se to automaticky syncne. Pro jistotu spustim reconciliaci.
+
+### Krok 5: Sjednotit cteni dat v UI
+
+Aktualne `CompactClientRow` cte `client.credit_balance` z `useClients()`, ktery uz pouziva `vw_client_ledger_balances`. Detail klienta (`ClientDetailView`) take cte z `useClient()` ktery pouziva ledger view. Tyto zdroje by mely byt konzistentni po oprave triggeru.
+
+Pro uplnou jistotu: po kazde mutaci zajistit invalidaci klicu `clients`, `credit_balance_v2`, `credit_transactions`.
+
+---
+
+## Zmeny v souborech
+
+| Soubor / Oblast | Zmena |
+|-----------------|-------|
+| **Databaze (migrace)** | DROP triggery `sync_balance_after_transaction` a `trg_sync_balance_on_transaction`; reconciliace vsech balances z SUM |
+| `src/hooks/useCreditOperations.ts` | `useDeleteTransaction`: odstranit `applyCreditDelta` volani; `useUpdateTransactionPaymentMethod`: odstranit `applyCreditDelta` volani |
+| `src/hooks/useUnpaidTrainings.ts` | `usePayTraining`: odstranit `applyCreditDelta` volani (trigger to resi sam) |
+| **Databaze** | Smazat chybnou transakci +20 000 Kc pro Dominika Tomana |
+
+## Ocekavany vysledek
+
+- Jediny trigger (`fn_sync_client_credit_balance`) zajistuje 100% shodu `clients.credit_balance` s SUM(amount) z ledgeru
+- Zadne dvojite odpocty pri smazani/zmene transakci
+- Dominik Toman: -6 300 Kc (spravne)
+- Vsichni klienti: stored balance = ledger SUM
