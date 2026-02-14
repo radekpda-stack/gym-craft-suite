@@ -171,7 +171,7 @@ export function SalesRegister() {
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [inStockOnly, setInStockOnly] = useState(false);
+  const [inStockOnly, setInStockOnly] = useState(true);
   
   // Sorting state
   const [sortBy, setSortBy] = useState<SortOption>('best_selling');
