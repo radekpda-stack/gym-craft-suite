@@ -151,14 +151,17 @@ export function ClientDetailTabs({
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       {/* Tab Navigation - horizontal scroll on mobile */}
-      <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 mb-4">
-        <TabsList className="w-max sm:w-full h-auto flex justify-start gap-1 bg-secondary/30 backdrop-blur-sm p-1 rounded-xl border border-border/30">
-          {tabs.map((tab) => (
-            <TabsTrigger
-              key={tab.id}
-              value={tab.id}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 shrink-0",
+      <div className="relative -mx-4 px-4 sm:mx-0 sm:px-0 mb-4">
+        {/* Gradient fade hint for scroll on mobile */}
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none sm:hidden" />
+        <div className="overflow-x-auto scrollbar-hide">
+          <TabsList className="w-max sm:w-full h-auto flex justify-start gap-1 bg-secondary/30 backdrop-blur-sm p-1 rounded-xl border border-border/30">
+            {tabs.map((tab) => (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className={cn(
+                  "flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 shrink-0",
                 "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
                 "data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground",
                 "data-[state=inactive]:hover:bg-secondary/80 data-[state=inactive]:hover:text-foreground"
@@ -178,9 +181,10 @@ export function ClientDetailTabs({
                   {tab.badge}
                 </Badge>
               )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
       </div>
 
       {/* Tab: Profile + Settings (merged) */}

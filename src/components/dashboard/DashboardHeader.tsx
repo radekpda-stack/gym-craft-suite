@@ -146,7 +146,7 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
       </motion.div>
       
       {/* Premium Metric Instruments - Large Cards */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      <div className="flex overflow-x-auto snap-x snap-mandatory gap-2 sm:gap-3 -mx-1 px-1 pb-1 scrollbar-hide sm:grid sm:grid-cols-3 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0">
         {/* Capacity Card with Activity Ring */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
@@ -156,12 +156,13 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
           className={cn(
             "relative p-3 sm:p-4 rounded-2xl",
             "bg-card/80 backdrop-blur-md border border-border/30",
-            "transition-all duration-200 hover:shadow-lg"
+            "transition-all duration-200 hover:shadow-lg",
+            "min-w-[120px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink"
           )}
         >
           <div className="flex flex-col items-center gap-2">
             <div className="relative">
-              <ActivityRing 
+              <ActivityRing
                 progress={capacityProgress} 
                 size="lg" 
                 color={dayStatus === 'ok' ? 'success' : dayStatus === 'warning' ? 'warning' : 'destructive'}
@@ -196,7 +197,8 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
           className={cn(
             "relative p-3 sm:p-4 rounded-2xl",
             "bg-card/80 backdrop-blur-md border border-border/30",
-            "transition-all duration-200 hover:shadow-lg"
+            "transition-all duration-200 hover:shadow-lg",
+            "min-w-[120px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink"
           )}
         >
           <div className="flex flex-col items-center gap-2 h-full justify-center">
@@ -224,7 +226,8 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
           className={cn(
             "relative p-3 sm:p-4 rounded-2xl",
             "bg-card/80 backdrop-blur-md border border-border/30",
-            "transition-all duration-200 hover:shadow-lg"
+            "transition-all duration-200 hover:shadow-lg",
+            "min-w-[120px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink"
           )}
         >
           <div className="flex flex-col items-center gap-2 h-full justify-center">

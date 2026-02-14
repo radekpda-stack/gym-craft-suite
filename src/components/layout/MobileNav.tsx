@@ -35,7 +35,7 @@ export function MobileNav() {
   return (
     <>
       {/* Floating Tab Bar - positioned above iOS home indicator */}
-      <nav className="fixed bottom-6 left-4 right-4 z-50 lg:hidden">
+      <nav className="fixed bottom-4 left-4 right-4 z-50 lg:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="flex items-center justify-around bg-card/95 backdrop-blur-2xl rounded-[32px] px-2 py-3 border border-border/20 shadow-[0_8px_40px_rgba(0,0,0,0.3)] mx-auto max-w-md">
           
           {/* Notifications button - first position */}
