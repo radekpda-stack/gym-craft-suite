@@ -2,9 +2,15 @@ import { useState, useMemo, useRef } from 'react';
 import { motion, useAnimation, PanInfo } from 'framer-motion';
 import { addDays, subDays, isSameDay, format, startOfWeek, endOfWeek } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Plus, List, Calendar as CalendarIcon, Settings2, Dumbbell } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, List, Calendar as CalendarIcon, Settings2, Dumbbell, MoreHorizontal } from 'lucide-react';
 import { CanceledTrainingsSheet } from '@/components/schedule/CanceledTrainingsSheet';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useTrainingSessions, useCreateTrainingSession, useUpdateTrainingSession, useCancelTrainingSession, useDeleteTrainingSession, TrainingSession } from '@/hooks/useTrainingSessions';
 import { useClients } from '@/hooks/useClients';
@@ -317,7 +323,7 @@ export default function SchedulePage() {
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50 px-4 py-3">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-foreground">Rozvrh</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <Button
               variant="default"
               size="sm"
@@ -327,21 +333,26 @@ export default function SchedulePage() {
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Přidat</span>
             </Button>
+            {/* Desktop-only: Training mode */}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate('/training-mode')}
-              className="h-8 px-2.5 rounded-lg bg-card/60 backdrop-blur-sm border border-border/50 hover:bg-primary/10 hover:border-primary/30 transition-all"
+              className="hidden sm:flex h-8 px-2.5 rounded-lg bg-card/60 backdrop-blur-sm border border-border/50 hover:bg-primary/10 hover:border-primary/30 transition-all"
             >
               <Dumbbell className="w-4 h-4 text-primary" />
-              <span className="text-xs font-medium text-foreground/80 ml-1.5 hidden sm:inline">Tréninkový režim</span>
+              <span className="text-xs font-medium text-foreground/80 ml-1.5">Tréninkový režim</span>
             </Button>
-            <CanceledTrainingsSheet />
+            {/* Desktop-only: Canceled trainings */}
+            <div className="hidden sm:block">
+              <CanceledTrainingsSheet />
+            </div>
+            {/* Desktop-only: Calendar settings */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setCalendarSettingsOpen(true)}
-              className="h-8 w-8 rounded-full"
+              className="hidden sm:flex h-8 w-8 rounded-full"
               title="Nastavení kalendáře"
             >
               <Settings2 className="w-4 h-4" />
@@ -351,13 +362,31 @@ export default function SchedulePage() {
               size="sm"
               onClick={goToToday}
               className={cn(
-                'rounded-full text-sm',
+                'rounded-full text-sm h-8',
                 isSameDay(currentDate, new Date()) && 'bg-primary/10 text-primary'
               )}
             >
               Dnes
             </Button>
             <CalendarDatePicker date={currentDate} onDateSelect={setCurrentDate} />
+            {/* Mobile overflow menu for secondary actions */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="sm:hidden h-8 w-8 rounded-full">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => navigate('/training-mode')}>
+                  <Dumbbell className="w-4 h-4 mr-2 text-primary" />
+                  Tréninkový režim
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setCalendarSettingsOpen(true)}>
+                  <Settings2 className="w-4 h-4 mr-2" />
+                  Nastavení kalendáře
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

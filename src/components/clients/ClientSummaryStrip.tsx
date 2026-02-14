@@ -32,11 +32,12 @@ export function ClientSummaryStrip({
   const { data: ltvData } = useClientLTV(clientId);
 
   return (
-     <div className="grid grid-cols-3 gap-3">
+     <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 -mx-1 px-1 pb-1 scrollbar-hide sm:grid sm:grid-cols-3 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0">
       {/* Trainings This Month - Instrument card */}
       <div className={cn(
         'rounded-2xl p-3.5 border border-border/50 backdrop-blur-sm transition-all duration-200',
-        'bg-card/80 shadow-sm hover:shadow-md hover:-translate-y-0.5'
+        'bg-card/80 shadow-sm hover:shadow-md hover:-translate-y-0.5',
+        'min-w-[150px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink'
       )}>
         <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
           <div className="p-1.5 rounded-lg bg-primary/10">
@@ -62,7 +63,8 @@ export function ClientSummaryStrip({
        {/* LTV - Instrument card */}
       <div className={cn(
          'rounded-2xl p-3.5 border border-border/50 backdrop-blur-sm transition-all duration-200',
-        'bg-card/80 shadow-sm hover:shadow-md hover:-translate-y-0.5'
+        'bg-card/80 shadow-sm hover:shadow-md hover:-translate-y-0.5',
+        'min-w-[150px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink'
       )}>
         <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
           <div className="p-1.5 rounded-lg bg-success/10">
@@ -87,7 +89,8 @@ export function ClientSummaryStrip({
        {/* Avg per month - Instrument card */}
       <div className={cn(
          'rounded-2xl p-3.5 border border-border/50 backdrop-blur-sm transition-all duration-200',
-        'bg-card/80 shadow-sm hover:shadow-md hover:-translate-y-0.5'
+        'bg-card/80 shadow-sm hover:shadow-md hover:-translate-y-0.5',
+        'min-w-[150px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink'
       )}>
         <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
           <div className="p-1.5 rounded-lg bg-accent/10">

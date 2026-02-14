@@ -564,7 +564,7 @@ export default function Clients() {
         </div>
 
         {/* Unified View Mode Toggle - Single row with 4 options */}
-        <div className="flex gap-1 p-1 bg-secondary/50 rounded-lg w-full overflow-hidden">
+        <div className="flex gap-0.5 sm:gap-1 p-1 bg-secondary/50 rounded-lg w-full overflow-hidden">
           <Button
             variant={viewMode === 'today' ? 'default' : 'ghost'}
             size="sm"

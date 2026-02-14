@@ -178,10 +178,10 @@ export function AgendaItem({
                           e.stopPropagation();
                           onComplete?.(session);
                         }}
-                        className="flex items-center justify-center w-10 h-10 rounded-full bg-success/10 text-success hover:bg-success/20 transition-colors"
+                        className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-success/10 text-success hover:bg-success/20 transition-colors"
                         title="Dokončit"
                       >
-                        <Check className="w-5 h-5" />
+                        <Check className="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                       <button
                         onClick={(e) => {
@@ -189,7 +189,7 @@ export function AgendaItem({
                           e.stopPropagation();
                           onDelete?.(session);
                         }}
-                        className="flex items-center justify-center w-8 h-8 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                        className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
                         title="Smazat trénink"
                       >
                         <Trash2 className="w-4 h-4" />

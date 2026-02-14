@@ -89,19 +89,19 @@ export default function Sales() {
               )}
             </div>
 
-            {/* Smart Tips */}
+            {/* Smart Tips - max 2 on mobile */}
             {tips.length > 0 && (
               <div className="flex flex-col gap-1.5 mt-3">
-                {tips.map(tip => (
+                {tips.slice(0, 2).map(tip => (
                   <div key={tip.id} className="flex items-center gap-2 text-xs text-muted-foreground">
                     {tip.icon === 'user' ? (
                       <User className="w-3 h-3 text-accent shrink-0" />
                     ) : (
                       <Lightbulb className="w-3 h-3 text-warning shrink-0" />
                     )}
-                    <span className="font-medium text-foreground">{tip.text}</span>
+                    <span className="font-medium text-foreground line-clamp-1">{tip.text}</span>
                     {tip.subtext && (
-                      <span className="text-muted-foreground">— {tip.subtext}</span>
+                      <span className="text-muted-foreground hidden sm:inline">— {tip.subtext}</span>
                     )}
                   </div>
                 ))}
