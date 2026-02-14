@@ -55,7 +55,7 @@ export function CategoryCards({ categories, isLoading, onCategoryClick }: Catego
         <h3 className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest">
           Kategorie cviků
         </h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-36 rounded-xl" />
           ))}
@@ -85,7 +85,7 @@ export function CategoryCards({ categories, isLoading, onCategoryClick }: Catego
       <h3 className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest">
         Kategorie cviků
       </h3>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {(Object.entries(CATEGORY_CONFIG) as [keyof typeof CATEGORY_CONFIG, typeof CATEGORY_CONFIG.strength][]).map(
           ([key, config]) => {
             const stats = categories[key];
@@ -97,7 +97,7 @@ export function CategoryCards({ categories, isLoading, onCategoryClick }: Catego
                 key={key}
                 onClick={() => handleClick(key)}
                 className={cn(
-                  'group relative overflow-hidden rounded-xl p-4 text-left',
+                  'group relative overflow-hidden rounded-xl p-3 sm:p-4 text-left',
                   'bg-card/80 backdrop-blur-md',
                   'border shadow-sm transition-all duration-300',
                   config.borderColor,
