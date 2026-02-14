@@ -109,30 +109,30 @@ export default function PerformanceHub() {
         <TabsList className="flex w-full max-w-3xl mx-auto bg-secondary/30 backdrop-blur-sm p-1 overflow-x-auto">
           <TabsTrigger value="overview" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Zap className="w-4 h-4 shrink-0" />
-            <span className="text-xs truncate">Přehled</span>
+            <span className="hidden sm:inline text-xs truncate">Přehled</span>
           </TabsTrigger>
           <TabsTrigger value="clients" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Users className="w-4 h-4 shrink-0" />
-            <span className="text-xs truncate">Klienti</span>
+            <span className="hidden sm:inline text-xs truncate">Klienti</span>
           </TabsTrigger>
           <TabsTrigger value="library" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <List className="w-4 h-4 shrink-0" />
-            <span className="text-xs truncate">Knihovna</span>
+            <span className="hidden sm:inline text-xs truncate">Knihovna</span>
           </TabsTrigger>
           <TabsTrigger value="analytics" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <BarChart3 className="w-4 h-4 shrink-0" />
-            <span className="text-xs truncate">Analytika</span>
+            <span className="hidden sm:inline text-xs truncate">Analytika</span>
           </TabsTrigger>
           {testsEnabled && (
             <TabsTrigger value="tests" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <ClipboardCheck className="w-4 h-4 shrink-0" />
-              <span className="text-xs truncate">Testy</span>
+              <span className="hidden sm:inline text-xs truncate">Testy</span>
             </TabsTrigger>
           )}
           {challengesEnabled && (
             <TabsTrigger value="challenges" className="gap-1.5 flex-1 min-w-0 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Trophy className="w-4 h-4 shrink-0" />
-              <span className="text-xs truncate">Výzvy</span>
+              <span className="hidden sm:inline text-xs truncate">Výzvy</span>
             </TabsTrigger>
           )}
         </TabsList>

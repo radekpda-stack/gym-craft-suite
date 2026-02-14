@@ -114,7 +114,7 @@ export function PerformanceKPIBar({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-3 gap-3">
+    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 scrollbar-hide">
         {[1, 2, 3].map((i) => (
           <div key={i} className="card-floating rounded-xl p-4">
             <div className="flex items-center gap-3">
@@ -131,12 +131,13 @@ export function PerformanceKPIBar({
   }
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 scrollbar-hide">
       {kpis.map((kpi) => (
         <div
           key={kpi.label}
           className={cn(
             "relative overflow-hidden rounded-xl p-3 sm:p-4",
+            "min-w-[140px] sm:min-w-0 snap-start flex-shrink-0 sm:flex-shrink",
             "bg-card/80 backdrop-blur-md",
             "border shadow-sm",
             kpi.borderColor,
