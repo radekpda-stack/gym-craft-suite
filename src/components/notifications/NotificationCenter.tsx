@@ -26,6 +26,8 @@ import { NutritionEntryDetailDialog } from "./NutritionEntryDetailDialog";
 import { WorkoutLogDetailDialog } from "./WorkoutLogDetailDialog";
 import { BirthdayDetailDialog } from "./BirthdayDetailDialog";
 import { AnniversaryDetailDialog } from "./AnniversaryDetailDialog";
+import { WeightDetailDialog } from "./WeightDetailDialog";
+import { DiagnosticDetailDialog } from "./DiagnosticDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { TrainingFeedback } from "@/hooks/useTrainingFeedback";
 import { NotificationEmptyState } from "./NotificationEmptyState";
@@ -63,6 +65,8 @@ type PendingActionType =
   | { type: 'anniversary'; notification: UnifiedNotification }
   | { type: 'profile'; notification: UnifiedNotification }
   | { type: 'feedback'; notification: UnifiedNotification }
+  | { type: 'weight'; notification: UnifiedNotification }
+  | { type: 'diagnostic'; notification: UnifiedNotification }
   | { type: 'navigate'; path: string };
 
 interface NotificationCenterProps {
@@ -114,6 +118,10 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
   const [selectedBirthdayNotification, setSelectedBirthdayNotification] = useState<UnifiedNotification | null>(null);
   const [anniversaryDialogOpen, setAnniversaryDialogOpen] = useState(false);
   const [selectedAnniversaryNotification, setSelectedAnniversaryNotification] = useState<UnifiedNotification | null>(null);
+  const [weightDialogOpen, setWeightDialogOpen] = useState(false);
+  const [selectedWeightNotification, setSelectedWeightNotification] = useState<UnifiedNotification | null>(null);
+  const [diagnosticDialogOpen, setDiagnosticDialogOpen] = useState(false);
+  const [selectedDiagnosticNotification, setSelectedDiagnosticNotification] = useState<UnifiedNotification | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('all');
   const [searchQuery, setSearchQuery] = useState("");
@@ -175,6 +183,8 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
       case 'anniversary': setSelectedAnniversaryNotification(action.notification); setAnniversaryDialogOpen(true); break;
       case 'profile': setSelectedProfileNotification(action.notification); setProfileUpdateDialogOpen(true); break;
       case 'feedback': await loadAndOpenFeedback(action.notification); break;
+      case 'weight': setSelectedWeightNotification(action.notification); setWeightDialogOpen(true); break;
+      case 'diagnostic': setSelectedDiagnosticNotification(action.notification); setDiagnosticDialogOpen(true); break;
       case 'navigate': navigate(action.path); break;
     }
   }, [navigate, loadAndOpenFeedback]);
@@ -266,8 +276,8 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
 
     if (isBirthdayNotification && clientId) { pendingActionRef.current = { type: 'birthday', notification }; setSheetOpen(false); return; }
     if (isAnniversaryNotification && clientId) { pendingActionRef.current = { type: 'anniversary', notification }; setSheetOpen(false); return; }
-    if (isWeightNotification && clientId) { pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}?tab=progress` }; setSheetOpen(false); return; }
-    if (isDiagnosticNotification && clientId) { pendingActionRef.current = { type: 'navigate', path: `/clients/${clientId}?tab=profile` }; setSheetOpen(false); return; }
+    if (isWeightNotification && clientId) { pendingActionRef.current = { type: 'weight', notification }; setSheetOpen(false); return; }
+    if (isDiagnosticNotification && clientId) { pendingActionRef.current = { type: 'diagnostic', notification }; setSheetOpen(false); return; }
     if (isNutritionNotification && clientId) { pendingActionRef.current = { type: 'nutrition', notification }; setSheetOpen(false); return; }
     if (isProfileUpdateNotification) { pendingActionRef.current = { type: 'profile', notification }; setSheetOpen(false); return; }
     if (isWorkoutLogNotification && notification.entity_id) { pendingActionRef.current = { type: 'workout', notification }; setSheetOpen(false); return; }
@@ -592,6 +602,16 @@ export function NotificationCenter({ onOpenChange, children }: NotificationCente
         open={anniversaryDialogOpen}
         onOpenChange={(open) => { setAnniversaryDialogOpen(open); if (!open) setSelectedAnniversaryNotification(null); }}
         notification={selectedAnniversaryNotification}
+      />
+      <WeightDetailDialog
+        open={weightDialogOpen}
+        onOpenChange={(open) => { setWeightDialogOpen(open); if (!open) setSelectedWeightNotification(null); }}
+        notification={selectedWeightNotification}
+      />
+      <DiagnosticDetailDialog
+        open={diagnosticDialogOpen}
+        onOpenChange={(open) => { setDiagnosticDialogOpen(open); if (!open) setSelectedDiagnosticNotification(null); }}
+        notification={selectedDiagnosticNotification}
       />
     </>
   );
