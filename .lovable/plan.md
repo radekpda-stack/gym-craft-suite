@@ -1,98 +1,71 @@
 
+# Opravy dat a modernizace PDF finančního reportu
 
-# Vylepšení finančního reportu v Nastavení
+## Nalezené datové chyby
 
-## Nalezené problémy s daty
+### 1. Rozpad platebních metod zahrnuje i debety tréninků
+Dotaz `allTransactionsWithMethod` zahrnuje typy `training` a `product` (debetní transakce), na jejichž částkách se volá `Math.abs()`. To znamená, že rozpad platebních metod ukazuje nejen příjmy, ale i odběry kreditu za tréninky -- čísla jsou nafouklá.
 
-1. **Celkové příjmy nezahrnují příjmy z produktů v měsíčním přehledu** -- měsíční tabulka počítá příjmy pouze z `payment + manual` transakcí, prodeje produktů chybí
-2. **Rozdíl "odtrénováno vs zaplaceno" je špatně počítán** -- porovnává hodnotu tréninků s CELKOVOU sumou plateb (včetně manuálních dobití), místo jen s platbami za tréninky
-3. **"Přímé platby (kredit)" v sekci Úhrady** -- zobrazuje součet VŠECH payment+manual transakcí, ne pouze přímé kreditové platby
-4. **Chybí provozní náklady** -- business_expenses tabulka existuje ale report ji ignoruje, takže chybí čistý zisk
-5. **Chybí rozpad podle platební metody** -- hotovost / karta / převod / kredit
-6. **Týdenní přehled neobsahuje příjmy** -- jen počty tréninků
+**Oprava:** Filtrovat pouze typy `payment` a `manual` s `amount > 0` (skutečné příjmy), plus sales_orders (ty už se přidávají zvlášť).
 
-## Plánované změny
+### 2. Dvousloupcový layout v PDF je křehký
+Sekce "Souhrn období" a "Tréninky a platby" se pokoušejí o dvousloupcový layout ručním přepočtem `yPos`. Pokud má levý sloupec jiný počet řádků než pravý, sloupce se překrývají nebo mezi nimi vznikají mezery. Zejména řádek 188 (`rightStartY = yPos - (...)`) je odhadnutý offset.
 
-### 1. Oprava dat v `useFinancialReportData.ts`
-- Měsíční přehled: přidat příjmy z prodejů produktů do měsíčních sum
-- Opravit `trainedNotPaidDiff`: porovnávat s `trainingPayments` místo `paymentIncome`
-- Opravit `paymentsSummary.directPayments`: odečíst training payments od celkových plateb
-- Přidat týdenní příjmy do `WeeklyReportData`
-- Přidat rozpad podle platebních metod (cash/card/transfer/credit)
+**Oprava:** Uložit startovní `yPos` před vykreslením levého sloupce, pak pravý sloupec začít na stejné pozici.
 
-### 2. Přidat provozní náklady a čistý zisk
-- Načíst data z tabulky `business_expenses`
-- Přidat do summary: `totalExpenses`, `netProfit`
-- Zobrazit v PDF v sekci Souhrn období
+### 3. Chybějící příjmy z produktů v sales_orders v payment method breakdown
+Sales orders se přidávají do payment method breakdown, ale `allTransactionsWithMethod` už může obsahovat i `product` typ transakce -- potenciální dvojí započtení.
 
-### 3. Rozšířit náhled dat v nastavení (`FinancialReportSettings.tsx`)
-- Přidat: provozní náklady, čistý zisk, rozpad platebních metod, hodinovou sazbu
-- Vizuálně vylepšit náhled -- přehlednější grid s barvami
+**Oprava:** Z `allTransactionsWithMethod` odstranit typ `product` (počítat ho jen z `salesOrders`).
 
-### 4. Aktualizovat PDF generátor (`financialReportPdf.ts`)
-- Opravit sekci Úhrady -- správné hodnoty
-- Přidat řádek s provozními náklady a čistým ziskem do Souhrnu
-- Přidat rozpad platebních metod do měsíčního přehledu nebo vlastní sekce
-- Přidat příjmy do týdenního přehledu
+## Modernizace vizuálu PDF
+
+### Aktuální stav
+- Oranžové vyplněné obdélníky jako nadpisy sekcí
+- Základní `grid` tabulky s oranžovou hlavičkou
+- Jednoduchý textový layout bez vizuální hierarchie
+- Malé písmo, málo prostoru
+
+### Navrhované změny
+
+**Barvy a styl:**
+- Tmavší, profesionálnější paleta: tmavě šedé nadpisy místo oranžových obdélníků
+- Oranžová pouze jako akcentní barva (čísla, rozdíly)
+- Tabulky: střídavé šedé řádky, tenké linky, bez plných barevných hlaviček
+- Větší mezery mezi sekcemi pro vzdušnější design
+
+**Typografie:**
+- Zvětšit hlavní titulek (24pt)
+- Nadpisy sekcí: uppercase s tenkým spodním pruhem místo plného obdélníku
+- Hodnoty metrik: větší písmo (12pt bold) pro klíčová čísla
+
+**Layout:**
+- KPI karty nahoře: 3-4 boxy s klíčovými čísly (příjmy, tréninky, klienti, zisk)
+- Opravit dvousloupcový layout
+- Lepší zarovnání pravého a levého sloupce
+
+**Tabulky:**
+- Jemnější styl: `striped` místo `grid`
+- Hlavičky: tmavě šedé (ne oranžové)
+- Zaoblené rohy přes `roundedRect`
 
 ## Technické detaily
 
-### Nové datové struktury v `useFinancialReportData.ts`
-```typescript
-// Rozpad platebních metod
-interface PaymentMethodBreakdown {
-  cash: number;
-  card: number;
-  bank_transfer: number;
-  credit: number;
-}
-
-// Rozšířené summary
-summary: {
-  ...existing,
-  totalExpenses: number;
-  netProfit: number;
-  paymentMethodBreakdown: PaymentMethodBreakdown;
-}
-
-// Rozšířené WeeklyReportData
-interface WeeklyReportData {
-  ...existing,
-  income: number;
-}
-```
-
-### Nový dotaz na business_expenses
-```typescript
-supabase
-  .from('business_expenses')
-  .select('amount, category, date')
-  .gte('date', startStr)
-  .lte('date', endStr)
-```
-
-### Oprava paymentsSummary
-```typescript
-paymentsSummary: {
-  totalPayments: paymentIncome + productIncome,
-  trainingPayments: paidTrainingValue,
-  directPayments: paymentIncome - paidTrainingValue, // OPRAVA
-  productPayments: productIncome,
-  paymentTransactionCount: transactions.length,
-}
-```
-
-### Oprava validation
-```typescript
-validation: {
-  ...existing,
-  trainedNotPaidDiff: trainedTotal - paidTrainingValue, // OPRAVA: porovnat s training payments
-}
-```
-
 ### Soubory k úpravě
-- `src/hooks/useFinancialReportData.ts` -- opravy dat, nové dotazy, rozšíření typů
-- `src/components/settings/FinancialReportSettings.tsx` -- rozšířený náhled
-- `src/lib/financialReportPdf.ts` -- aktualizace PDF výstupu
-- `src/hooks/useFinancialReportSettings.ts` -- nová sekce v nastavení pro platební metody
 
+**`src/hooks/useFinancialReportData.ts`**
+- Řádek 309: změnit `allTransactionsWithMethod` dotaz -- odebrat typy `training` a `product`, nechat jen `payment` a `manual` s `amount > 0`
+- Řádek 718-724: zjednodušit payment method breakdown (jen payment/manual příjmy + sales orders)
+
+**`src/lib/financialReportPdf.ts`**
+- Kompletní přepracování vizuálu:
+  - Nová barevná paleta (tmavý header, neutrální tóny)
+  - `drawSectionTitle`: tenký spodní pruh + uppercase text místo plného obdélníku
+  - KPI boxy na vrchu souhrnu (3-4 vedle sebe s rámečkem)
+  - Oprava dvousloupcového layoutu v sekcích Souhrn a Tréninky/Platby
+  - Modernější tabulkový styl (striped, tmavě šedé hlavičky)
+  - Více whitespace mezi sekcemi
+  - Lepší footer s logem
+
+### Žádné databázové změny
+Vše se opravuje na úrovni kódu -- dotazy a rendering.
