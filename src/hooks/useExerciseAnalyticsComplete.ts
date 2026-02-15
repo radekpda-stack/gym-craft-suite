@@ -67,6 +67,9 @@ export interface AnalyticsKPI {
   bwReps: number;
   bwRepsTrend: number;
   clientsNeedingAttentionCount: number;
+  avgWeightPerEntry: number;
+  avgWeightPerEntryTrend: number;
+  activeClientCount: number;
 }
 
 export interface VolumeTimelinePoint {
@@ -157,6 +160,32 @@ export interface PRDistributionMonth {
   unknown: number;
 }
 
+export interface ClientProgressItem {
+  clientId: string;
+  clientName: string;
+  avgWeightFirst: number;
+  avgWeightSecond: number;
+  improvement: number;
+  entryCount: number;
+  frequency: number;
+}
+
+export interface ClientVolumeItem {
+  clientId: string;
+  clientName: string;
+  totalVolume: number;
+}
+
+export interface ExerciseByClientItem {
+  exerciseName: string;
+  clients: { name: string; count: number; maxWeight: number | null }[];
+}
+
+export interface ClientWeeklyWeightItem {
+  clientName: string;
+  weeks: { label: string; avgWeight: number }[];
+}
+
 export interface AnalyticsData {
   kpi: AnalyticsKPI;
   volumeTimeline: VolumeTimelinePoint[];
@@ -178,6 +207,10 @@ export interface AnalyticsData {
   weightProgression: WeightProgressionExercise[];
   topExercisesByGender: { male: TopExerciseByGender[]; female: TopExerciseByGender[] };
   prDistribution: PRDistributionMonth[];
+  clientProgressRanking: ClientProgressItem[];
+  clientVolumeComparison: ClientVolumeItem[];
+  exerciseByClient: ExerciseByClientItem[];
+  clientWeightProgression: ClientWeeklyWeightItem[];
 }
 
 const BODY_PART_LABELS: Record<string, string> = {
@@ -1005,6 +1038,107 @@ export function useExerciseAnalyticsComplete(
           ...val,
         }));
 
+      // ============ NEW: AVG WEIGHT PER ENTRY ============
+      const weightedEntries = (entries || []).filter(e => !e.is_bodyweight && e.weight_kg && e.weight_kg > 0);
+      const avgWeightPerEntry = weightedEntries.length > 0
+        ? Math.round(weightedEntries.reduce((s, e) => s + (e.weight_kg || 0), 0) / weightedEntries.length * 10) / 10
+        : 0;
+      const prevWeightedEntries = (prevEntries || []).filter(e => !e.is_bodyweight && e.weight_kg && e.weight_kg > 0);
+      const prevAvgWeightPerEntry = prevWeightedEntries.length > 0
+        ? prevWeightedEntries.reduce((s, e) => s + (e.weight_kg || 0), 0) / prevWeightedEntries.length
+        : 0;
+      const avgWeightPerEntryTrend = prevAvgWeightPerEntry > 0
+        ? Math.round(((avgWeightPerEntry - prevAvgWeightPerEntry) / prevAvgWeightPerEntry) * 100)
+        : 0;
+
+      // Active client count
+      const activeClients = new Set((entries || []).map(e => e.client_id).filter(Boolean));
+      const activeClientCount = activeClients.size;
+
+      // ============ NEW: CLIENT PROGRESS RANKING ============
+      const midDateForProgress = new Date(startDate.getTime() + (now.getTime() - startDate.getTime()) / 2);
+      const clientProgressRanking: ClientProgressItem[] = [];
+      const clientEntriesMap = new Map<string, { first: number[]; second: number[]; count: number; days: Set<string> }>();
+
+      (entries || []).forEach(e => {
+        if (!e.client_id || e.is_bodyweight || !e.weight_kg) return;
+        if (!clientEntriesMap.has(e.client_id)) {
+          clientEntriesMap.set(e.client_id, { first: [], second: [], count: 0, days: new Set() });
+        }
+        const c = clientEntriesMap.get(e.client_id)!;
+        c.count++;
+        c.days.add(e.date);
+        if (parseISO(e.date) < midDateForProgress) c.first.push(e.weight_kg);
+        else c.second.push(e.weight_kg);
+      });
+
+      clientEntriesMap.forEach((data, cId) => {
+        if (data.first.length < 2 || data.second.length < 2) return;
+        const avg1 = data.first.reduce((a, b) => a + b, 0) / data.first.length;
+        const avg2 = data.second.reduce((a, b) => a + b, 0) / data.second.length;
+        const improvement = avg1 > 0 ? Math.round(((avg2 - avg1) / avg1) * 1000) / 10 : 0;
+        clientProgressRanking.push({
+          clientId: cId,
+          clientName: clientMap.get(cId) || 'Neznámý',
+          avgWeightFirst: Math.round(avg1 * 10) / 10,
+          avgWeightSecond: Math.round(avg2 * 10) / 10,
+          improvement,
+          entryCount: data.count,
+          frequency: Math.round(data.days.size / weeks * 10) / 10,
+        });
+      });
+      clientProgressRanking.sort((a, b) => b.improvement - a.improvement);
+
+      // ============ NEW: CLIENT VOLUME COMPARISON ============
+      const clientVolumeMap = new Map<string, number>();
+      (entries || []).forEach(e => {
+        if (!e.client_id || e.is_bodyweight || !e.weight_kg) return;
+        const vol = (e.sets || 1) * (e.reps || 1) * e.weight_kg;
+        clientVolumeMap.set(e.client_id, (clientVolumeMap.get(e.client_id) || 0) + vol);
+      });
+      const clientVolumeComparison: ClientVolumeItem[] = Array.from(clientVolumeMap.entries())
+        .map(([id, vol]) => ({ clientId: id, clientName: clientMap.get(id) || 'Neznámý', totalVolume: vol }))
+        .sort((a, b) => b.totalVolume - a.totalVolume);
+
+      // ============ NEW: EXERCISE BY CLIENT MATRIX ============
+      const exerciseClientMap = new Map<string, Map<string, { count: number; maxWeight: number | null }>>();
+      (entries || []).forEach(e => {
+        if (!e.client_id) return;
+        const exName = e.exercise_name;
+        if (!exerciseClientMap.has(exName)) exerciseClientMap.set(exName, new Map());
+        const cMap = exerciseClientMap.get(exName)!;
+        const cName = clientMap.get(e.client_id) || 'Neznámý';
+        if (!cMap.has(cName)) cMap.set(cName, { count: 0, maxWeight: null });
+        const c = cMap.get(cName)!;
+        c.count++;
+        if (e.weight_kg && (c.maxWeight === null || e.weight_kg > c.maxWeight)) c.maxWeight = e.weight_kg;
+      });
+      const exerciseByClient: ExerciseByClientItem[] = Array.from(exerciseClientMap.entries())
+        .map(([name, cMap]) => ({
+          exerciseName: name,
+          clients: Array.from(cMap.entries()).map(([n, d]) => ({ name: n, ...d })).sort((a, b) => b.count - a.count),
+        }))
+        .sort((a, b) => b.clients.length - a.clients.length);
+
+      // ============ NEW: CLIENT WEIGHT PROGRESSION (top 5 by volume) ============
+      const top5Clients = clientVolumeComparison.slice(0, 5);
+      const clientWeightProgression: ClientWeeklyWeightItem[] = top5Clients.map(cv => {
+        const cEntries = (entries || []).filter(e => e.client_id === cv.clientId && !e.is_bodyweight && e.weight_kg);
+        const weekData = weekIntervals.map(weekStart => {
+          const weekEnd2 = endOfWeek(weekStart, { weekStartsOn: 1 });
+          const wEntries = cEntries.filter(e => {
+            const d = parseISO(e.date);
+            return d >= weekStart && d <= weekEnd2;
+          });
+          const weights = wEntries.map(e => e.weight_kg as number);
+          return {
+            label: format(weekStart, 'd.M', { locale: cs }),
+            avgWeight: weights.length > 0 ? Math.round(weights.reduce((a, b) => a + b, 0) / weights.length * 10) / 10 : 0,
+          };
+        }).filter(w => w.avgWeight > 0);
+        return { clientName: cv.clientName, weeks: weekData };
+      }).filter(c => c.weeks.length >= 2);
+
       return {
         kpi: {
           tonnage,
@@ -1020,6 +1154,9 @@ export function useExerciseAnalyticsComplete(
           bwReps,
           bwRepsTrend,
           clientsNeedingAttentionCount: clientsNeedingAttention.length,
+          avgWeightPerEntry,
+          avgWeightPerEntryTrend,
+          activeClientCount,
         },
         volumeTimeline,
         prTimeline,
@@ -1040,6 +1177,10 @@ export function useExerciseAnalyticsComplete(
         weightProgression,
         topExercisesByGender,
         prDistribution,
+        clientProgressRanking: clientProgressRanking.slice(0, 15),
+        clientVolumeComparison,
+        exerciseByClient: exerciseByClient.slice(0, 20),
+        clientWeightProgression,
       };
     },
     enabled: !!user?.id,

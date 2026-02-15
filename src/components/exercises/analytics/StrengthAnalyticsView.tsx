@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { useExerciseAnalyticsComplete, type AnalyticsPeriod } from '@/hooks/useExerciseAnalyticsComplete';
+import { useClientCardioComparison } from '@/hooks/useClientCardioComparison';
+import { useClientSkillComparison } from '@/hooks/useClientSkillComparison';
 import { AnalyticsFiltersBar } from './AnalyticsFiltersBar';
 import { AnalyticsKPIRow } from './AnalyticsKPIRow';
 import { AnalyticsInsightBar } from './AnalyticsInsightBar';
-import { StagnationAlertCard } from './StagnationAlertCard';
-import { MovementGapsCard } from './MovementGapsCard';
-import { UnusedExercisesCard } from './UnusedExercisesCard';
-import { ClientAttentionCard } from './ClientAttentionCard';
+import { ClientProgressLeaderboardCard } from './ClientProgressLeaderboardCard';
+import { ClientVolumeComparisonCard } from './ClientVolumeComparisonCard';
+import { ClientWeightProgressionCard } from './ClientWeightProgressionCard';
+import { ExercisePopularityByClientCard } from './ExercisePopularityByClientCard';
+import { CardioClientComparisonCard } from './CardioClientComparisonCard';
+import { SkillClientComparisonCard } from './SkillClientComparisonCard';
 import { RPEByExerciseCard } from './RPEByExerciseCard';
 import { RPEProgressCorrelationCard } from './RPEProgressCorrelationCard';
 import { TopExercisesTable } from './TopExercisesTable';
@@ -14,7 +18,6 @@ import { GenderComparisonCard } from './GenderComparisonCard';
 import { AgeGroupComparisonCard } from './AgeGroupComparisonCard';
 import { WeightProgressionCard } from './WeightProgressionCard';
 import { TopExercisesByGenderCard } from './TopExercisesByGenderCard';
-import { PRDistributionCard } from './PRDistributionCard';
 import { useClients } from '@/hooks/useClients';
 
 export function StrengthAnalyticsView() {
@@ -24,58 +27,47 @@ export function StrengthAnalyticsView() {
 
   const { data: clients = [] } = useClients();
   const { data, isLoading } = useExerciseAnalyticsComplete(period, selectedClientId, includeTests);
-
-  const handlePeriodChange = (value: AnalyticsPeriod) => {
-    setPeriod(value);
-  };
-
-  const handleClientChange = (value: string | null) => {
-    setSelectedClientId(value);
-  };
+  const { data: cardioData = [], isLoading: cardioLoading } = useClientCardioComparison(period);
+  const { data: skillData = [], isLoading: skillLoading } = useClientSkillComparison(period);
 
   return (
     <div className="space-y-4">
-      {/* Sticky Top Bar - Filters */}
+      {/* Filters */}
       <AnalyticsFiltersBar
         period={period}
-        onPeriodChange={handlePeriodChange}
+        onPeriodChange={setPeriod}
         clientId={selectedClientId}
-        onClientChange={handleClientChange}
+        onClientChange={setSelectedClientId}
         clients={clients}
         includeTests={includeTests}
         onIncludeTestsChange={setIncludeTests}
       />
 
       {/* KPI Row */}
-      <AnalyticsKPIRow 
-        kpi={data?.kpi} 
-        isLoading={isLoading} 
-      />
+      <AnalyticsKPIRow kpi={data?.kpi} isLoading={isLoading} />
 
       {/* Insight Bar */}
-      <AnalyticsInsightBar 
-        insight={data?.insight} 
-        isLoading={isLoading} 
+      <AnalyticsInsightBar insight={data?.insight} isLoading={isLoading} />
+
+      {/* Client Progress Leaderboard - Full Width */}
+      <ClientProgressLeaderboardCard
+        data={data?.clientProgressRanking || []}
+        isLoading={isLoading}
       />
 
-      {/* 3 Trainer-focused Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <StagnationAlertCard
-          data={data?.stagnatingClients || []}
+      {/* Client Volume + Client Weight Progression */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ClientVolumeComparisonCard
+          data={data?.clientVolumeComparison || []}
           isLoading={isLoading}
         />
-        <MovementGapsCard
-          data={data?.movementGaps || []}
-          isLoading={isLoading}
-        />
-        <UnusedExercisesCard
-          data={data?.unusedExercises || []}
-          totalExercises={data?.totalExercisesInLibrary}
+        <ClientWeightProgressionCard
+          data={data?.clientWeightProgression || []}
           isLoading={isLoading}
         />
       </div>
 
-      {/* Gender & Age Comparison Cards */}
+      {/* Gender & Age Comparison */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <GenderComparisonCard
           data={data?.genderComparison || { male: { avgWeight: 0, maxWeight: 0, tonnage: 0, prCount: 0, entryCount: 0, clientCount: 0 }, female: { avgWeight: 0, maxWeight: 0, tonnage: 0, prCount: 0, entryCount: 0, clientCount: 0 } }}
@@ -87,21 +79,33 @@ export function StrengthAnalyticsView() {
         />
       </div>
 
-      {/* Weight Progression - Full Width */}
+      {/* Weight Progression (top exercises) - Full Width */}
       <WeightProgressionCard
         data={data?.weightProgression || []}
         isLoading={isLoading}
       />
 
-      {/* Top Exercises by Gender & PR Distribution */}
+      {/* Top Exercises by Gender + Exercise Popularity by Client */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <TopExercisesByGenderCard
           data={data?.topExercisesByGender || { male: [], female: [] }}
           isLoading={isLoading}
         />
-        <PRDistributionCard
-          data={data?.prDistribution || []}
+        <ExercisePopularityByClientCard
+          data={data?.exerciseByClient || []}
           isLoading={isLoading}
+        />
+      </div>
+
+      {/* Cardio + Skill Client Comparison */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <CardioClientComparisonCard
+          data={cardioData}
+          isLoading={cardioLoading}
+        />
+        <SkillClientComparisonCard
+          data={skillData}
+          isLoading={skillLoading}
         />
       </div>
 
@@ -116,12 +120,6 @@ export function StrengthAnalyticsView() {
           isLoading={isLoading}
         />
       </div>
-
-      {/* Clients Needing Attention - Full Width */}
-      <ClientAttentionCard
-        data={data?.clientsNeedingAttention || []}
-        isLoading={isLoading}
-      />
 
       {/* Top Exercises Table */}
       <TopExercisesTable
