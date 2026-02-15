@@ -1,5 +1,4 @@
-import { TrendingUp, TrendingDown, Minus, Weight, Calendar, Trophy, Activity, Dumbbell } from 'lucide-react';
-import { Users } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Weight, Calendar, Activity, Dumbbell, Users } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { StatInfoTooltip } from '@/components/statistics/StatInfoTooltip';
@@ -9,12 +8,6 @@ import type { AnalyticsKPI } from '@/hooks/useExerciseAnalyticsComplete';
 interface AnalyticsKPIRowProps {
   kpi: AnalyticsKPI | undefined;
   isLoading?: boolean;
-}
-
-function formatVolume(value: number): string {
-  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
-  return `${Math.round(value)}`;
 }
 
 function TrendBadge({ value, suffix = '%', inverted = false }: { value: number | undefined; suffix?: string; inverted?: boolean }) {
@@ -36,15 +29,14 @@ function TrendBadge({ value, suffix = '%', inverted = false }: { value: number |
 }
 
 const HELP_CONTENT = {
-  tonnage: {
-    title: 'Tonnage (objem)',
-    description: 'Celkový objem zátěže za období. Nezahrnuje bodyweight cviky.',
-    calculation: 'Tonnage = Σ (série × opakování × váha kg)',
+  avgWeight: {
+    title: 'Ø váha/záznam',
+    description: 'Průměrná váha na záznam za období (bez bodyweight cviků).',
+    calculation: 'Ø váha = Σ weight_kg / počet záznamů s vahou',
   },
-  prCount: {
-    title: 'Osobní rekordy',
-    description: 'Počet dosažených PR za období. PR = nové maximum ve váze, čase nebo vzdálenosti.',
-    calculation: 'Počet záznamů s is_pr = true',
+  activeClients: {
+    title: 'Aktivní klienti',
+    description: 'Počet klientů s alespoň jedním záznamem za období.',
   },
   frequency: {
     title: 'Frekvence',
@@ -56,16 +48,16 @@ const HELP_CONTENT = {
     description: 'Průměrná hodnota vnímané námahy (Rate of Perceived Exertion) za období.',
     calculation: 'Průměr všech RPE hodnot (1-10)',
   },
-  clientsAttention: {
-    title: 'Klienti vyžadující pozornost',
-    description: 'Počet klientů, kteří vykazují signály vyžadující zásah trenéra.',
-    calculation: 'Kritéria: žádné PR za období, klesající frekvence tréninků',
+  bwReps: {
+    title: 'Bodyweight opakování',
+    description: 'Celkový počet opakování u bodyweight cviků za období.',
+    calculation: 'Σ (série × opakování) pro bodyweight cviky',
   },
 };
 
 const KPI_CONFIGS = [
-  { key: 'tonnage', icon: Weight, iconColor: 'text-primary', bgColor: 'bg-primary/10', borderColor: 'border-primary/20' },
-  { key: 'prCount', icon: Trophy, iconColor: 'text-warning', bgColor: 'bg-warning/10', borderColor: 'border-warning/20' },
+  { key: 'avgWeight', icon: Weight, iconColor: 'text-primary', bgColor: 'bg-primary/10', borderColor: 'border-primary/20' },
+  { key: 'activeClients', icon: Users, iconColor: 'text-warning', bgColor: 'bg-warning/10', borderColor: 'border-warning/20' },
   { key: 'frequency', icon: Calendar, iconColor: 'text-accent', bgColor: 'bg-accent/10', borderColor: 'border-accent/20' },
   { key: 'avgRpe', icon: Activity, iconColor: 'text-emerald-500', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20' },
   { key: 'bwReps', icon: Dumbbell, iconColor: 'text-muted-foreground', bgColor: 'bg-muted/30', borderColor: 'border-border' },
@@ -87,11 +79,10 @@ export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
 
   return (
     <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 sm:grid sm:grid-cols-4 lg:grid-cols-5 sm:overflow-visible sm:pb-0">
-      {/* Tonnage */}
+      {/* Avg Weight per Entry */}
       <Card className={cn(
         "relative overflow-hidden p-3 min-w-[130px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start",
-        "bg-card/80 backdrop-blur-md",
-        "border shadow-sm",
+        "bg-card/80 backdrop-blur-md border shadow-sm",
         KPI_CONFIGS[0].borderColor
       )}>
         <div className={cn("absolute inset-0 opacity-30 bg-gradient-to-br to-transparent", KPI_CONFIGS[0].bgColor)} />
@@ -100,51 +91,41 @@ export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
             <div className={cn("p-1 rounded", KPI_CONFIGS[0].bgColor)}>
               <Weight className={cn("w-3 h-3", KPI_CONFIGS[0].iconColor)} />
             </div>
-            <span className="text-[10px] uppercase tracking-widest font-medium">Tonnage</span>
+            <span className="text-[10px] uppercase tracking-widest font-medium">Ø Váha</span>
             <StatInfoTooltip
-              title={HELP_CONTENT.tonnage.title}
-              description={HELP_CONTENT.tonnage.description}
-              calculation={HELP_CONTENT.tonnage.calculation}
+              title={HELP_CONTENT.avgWeight.title}
+              description={HELP_CONTENT.avgWeight.description}
+              calculation={HELP_CONTENT.avgWeight.calculation}
             />
           </div>
           <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className="text-xl font-bold tabular-nums">{formatVolume(kpi?.tonnage || 0)}</span>
+            <span className="text-xl font-bold tabular-nums">{kpi?.avgWeightPerEntry?.toFixed(1) || '0'}</span>
             <span className="text-[10px] text-muted-foreground">kg</span>
-            <TrendBadge value={kpi?.tonnageTrend} />
+            <TrendBadge value={kpi?.avgWeightPerEntryTrend} />
           </div>
-          {kpi?.eVolume != null && kpi.eVolume > 0 && (
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-[10px] text-muted-foreground">eVol:</span>
-              <span className="text-xs font-medium tabular-nums text-muted-foreground">{formatVolume(kpi.eVolume)}</span>
-              <TrendBadge value={kpi?.eVolumeTrend} />
-            </div>
-          )}
         </div>
       </Card>
 
-      {/* PR Count */}
+      {/* Active Clients */}
       <Card className={cn(
         "relative overflow-hidden p-3 min-w-[130px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start",
-        "bg-card/80 backdrop-blur-md",
-        "border shadow-sm",
+        "bg-card/80 backdrop-blur-md border shadow-sm",
         KPI_CONFIGS[1].borderColor
       )}>
         <div className={cn("absolute inset-0 opacity-30 bg-gradient-to-br to-transparent", KPI_CONFIGS[1].bgColor)} />
         <div className="relative">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
             <div className={cn("p-1 rounded", KPI_CONFIGS[1].bgColor)}>
-              <Trophy className={cn("w-3 h-3", KPI_CONFIGS[1].iconColor)} />
+              <Users className={cn("w-3 h-3", KPI_CONFIGS[1].iconColor)} />
             </div>
-            <span className="text-[10px] uppercase tracking-widest font-medium">PR</span>
+            <span className="text-[10px] uppercase tracking-widest font-medium">Klienti</span>
             <StatInfoTooltip
-              title={HELP_CONTENT.prCount.title}
-              description={HELP_CONTENT.prCount.description}
-              calculation={HELP_CONTENT.prCount.calculation}
+              title={HELP_CONTENT.activeClients.title}
+              description={HELP_CONTENT.activeClients.description}
             />
           </div>
           <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className="text-xl font-bold tabular-nums">{kpi?.prCount || 0}</span>
-            <TrendBadge value={kpi?.prTrend} />
+            <span className="text-xl font-bold tabular-nums">{kpi?.activeClientCount || 0}</span>
           </div>
         </div>
       </Card>
@@ -152,8 +133,7 @@ export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
       {/* Frequency */}
       <Card className={cn(
         "relative overflow-hidden p-3 min-w-[130px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start",
-        "bg-card/80 backdrop-blur-md",
-        "border shadow-sm",
+        "bg-card/80 backdrop-blur-md border shadow-sm",
         KPI_CONFIGS[2].borderColor
       )}>
         <div className={cn("absolute inset-0 opacity-30 bg-gradient-to-br to-transparent", KPI_CONFIGS[2].bgColor)} />
@@ -180,8 +160,7 @@ export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
       {/* Avg RPE */}
       <Card className={cn(
         "relative overflow-hidden p-3 min-w-[130px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start",
-        "bg-card/80 backdrop-blur-md",
-        "border shadow-sm",
+        "bg-card/80 backdrop-blur-md border shadow-sm",
         KPI_CONFIGS[3].borderColor
       )}>
         <div className={cn("absolute inset-0 opacity-30 bg-gradient-to-br to-transparent", KPI_CONFIGS[3].bgColor)} />
@@ -204,51 +183,28 @@ export function AnalyticsKPIRow({ kpi, isLoading }: AnalyticsKPIRowProps) {
         </div>
       </Card>
 
-      {/* Clients Needing Attention */}
+      {/* BW Reps */}
       <Card className={cn(
         "relative overflow-hidden p-3 min-w-[130px] flex-shrink-0 sm:min-w-0 sm:flex-shrink snap-start",
-        "bg-card/80 backdrop-blur-md",
-        "border shadow-sm",
-        kpi?.clientsNeedingAttentionCount && kpi.clientsNeedingAttentionCount > 0 
-          ? "border-warning/30" 
-          : "border-border/50"
+        "bg-card/80 backdrop-blur-md border shadow-sm",
+        KPI_CONFIGS[4].borderColor
       )}>
-        <div className={cn(
-          "absolute inset-0 opacity-30 bg-gradient-to-br to-transparent",
-          kpi?.clientsNeedingAttentionCount && kpi.clientsNeedingAttentionCount > 0 
-            ? "bg-warning/10" 
-            : "bg-muted/30"
-        )} />
+        <div className={cn("absolute inset-0 opacity-30 bg-gradient-to-br to-transparent", KPI_CONFIGS[4].bgColor)} />
         <div className="relative">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
-            <div className={cn(
-              "p-1 rounded",
-              kpi?.clientsNeedingAttentionCount && kpi.clientsNeedingAttentionCount > 0 
-                ? "bg-warning/10" 
-                : "bg-muted/50"
-            )}>
-              <Users className={cn(
-                "w-3 h-3",
-                kpi?.clientsNeedingAttentionCount && kpi.clientsNeedingAttentionCount > 0 
-                  ? "text-warning" 
-                  : "text-muted-foreground"
-              )} />
+            <div className={cn("p-1 rounded", KPI_CONFIGS[4].bgColor)}>
+              <Dumbbell className={cn("w-3 h-3", KPI_CONFIGS[4].iconColor)} />
             </div>
-            <span className="text-[10px] uppercase tracking-widest font-medium">Pozornost</span>
+            <span className="text-[10px] uppercase tracking-widest font-medium">BW Reps</span>
             <StatInfoTooltip
-              title={HELP_CONTENT.clientsAttention.title}
-              description={HELP_CONTENT.clientsAttention.description}
-              calculation={HELP_CONTENT.clientsAttention.calculation}
+              title={HELP_CONTENT.bwReps.title}
+              description={HELP_CONTENT.bwReps.description}
+              calculation={HELP_CONTENT.bwReps.calculation}
             />
           </div>
           <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className={cn(
-              "text-xl font-bold tabular-nums",
-              kpi?.clientsNeedingAttentionCount && kpi.clientsNeedingAttentionCount > 0 && "text-warning"
-            )}>
-              {kpi?.clientsNeedingAttentionCount || 0}
-            </span>
-            <span className="text-[10px] text-muted-foreground">klientů</span>
+            <span className="text-xl font-bold tabular-nums">{kpi?.bwReps || 0}</span>
+            <TrendBadge value={kpi?.bwRepsTrend} />
           </div>
         </div>
       </Card>
