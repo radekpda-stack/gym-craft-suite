@@ -11494,6 +11494,22 @@ export type Database = {
           ledger_balance: number | null
           stored_balance: number | null
         }
+        Insert: {
+          client_id?: string | null
+          client_name?: string | null
+          discrepancy?: never
+          is_group_member?: never
+          ledger_balance?: never
+          stored_balance?: number | null
+        }
+        Update: {
+          client_id?: string | null
+          client_name?: string | null
+          discrepancy?: never
+          is_group_member?: never
+          ledger_balance?: never
+          stored_balance?: number | null
+        }
         Relationships: []
       }
       vw_daily_error_counts: {
@@ -11514,6 +11530,22 @@ export type Database = {
           ledger_balance: number | null
           member_count: number | null
           stored_balance: number | null
+        }
+        Insert: {
+          discrepancy?: never
+          group_id?: string | null
+          group_name?: string | null
+          ledger_balance?: never
+          member_count?: never
+          stored_balance?: number | null
+        }
+        Update: {
+          discrepancy?: never
+          group_id?: string | null
+          group_name?: string | null
+          ledger_balance?: never
+          member_count?: never
+          stored_balance?: number | null
         }
         Relationships: []
       }
