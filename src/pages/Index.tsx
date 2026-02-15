@@ -5,10 +5,8 @@ import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardActions } from '@/components/dashboard/DashboardActions';
-import { SmartDailyPlanCard } from '@/components/dashboard/SmartDailyPlanCard';
 import { TodayTimelineCompact } from '@/components/dashboard/TodayTimelineCompact';
 import { ActionCenterCard } from '@/components/dashboard/ActionCenterCard';
-import { FollowupsSection } from '@/components/dashboard/FollowupsSection';
 import { PendingPerformancesCard } from '@/components/performance/PendingPerformancesCard';
 import { WeekOverviewCard } from '@/components/dashboard/WeekOverviewCard';
 import { DashboardInsightsRefactored } from '@/components/dashboard/DashboardInsightsRefactored';
@@ -46,13 +44,6 @@ export default function Index() {
           </SectionErrorBoundary>
         </section>
 
-        {/* ═══ SMART DAILY PLAN - Proactive coaching assistant ═══ */}
-        <section>
-          <SectionErrorBoundary section="Denní plán" compact>
-            <SmartDailyPlanCard />
-          </SectionErrorBoundary>
-        </section>
-
         {/* ═══ TODAY TIMELINE ═══ */}
         <section>
           <SectionErrorBoundary section="Dnešní tréninky" compact>
@@ -76,15 +67,6 @@ export default function Index() {
                 followupCount={followupCount}
                 isLoading={isLoading}
               />
-            </SectionErrorBoundary>
-          </section>
-        )}
-
-        {/* ═══ FOLLOWUPS ═══ */}
-        {followupCount > 0 && (
-          <section>
-            <SectionErrorBoundary section="Připomenutí" compact>
-              <FollowupsSection defaultExpanded={followupCount <= 5} />
             </SectionErrorBoundary>
           </section>
         )}
