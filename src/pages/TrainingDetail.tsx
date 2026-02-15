@@ -395,9 +395,8 @@ export default function TrainingDetail() {
       
       setShowCompleteDialog(false);
       
-      // Show training summary overlay with celebration
-      setCompletedSessionId(training.id);
-      setShowSummaryOverlay(true);
+      // Skip summary overlay, navigate directly to schedule
+      navigate('/schedule');
     } catch (error) {
       // Error is already handled in the hook with toast
       console.error('Training completion failed:', error);
