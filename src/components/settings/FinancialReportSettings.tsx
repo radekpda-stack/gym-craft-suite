@@ -359,6 +359,12 @@ export function FinancialReportSettings() {
                     <div className="text-xs">{reportData.summary.paymentIncome.toLocaleString('cs-CZ')} Kč</div>
                   </>
                 )}
+                {settings.dataSources.clientPayments && reportData.summary.manualIncome > 0 && (
+                  <>
+                    <div className="text-muted-foreground pl-2 text-xs">↳ Manuální korekce:</div>
+                    <div className="text-xs">{reportData.summary.manualIncome.toLocaleString('cs-CZ')} Kč</div>
+                  </>
+                )}
                 {settings.dataSources.productSales && (
                   <>
                     <div className="text-muted-foreground pl-2 text-xs">↳ Prodeje:</div>

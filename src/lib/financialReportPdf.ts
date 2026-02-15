@@ -217,8 +217,8 @@ export async function generateFinancialReportPdf(
       // Income breakdown line
       const breakdownParts = [];
       if (data.summary.paymentIncome > 0) breakdownParts.push(`platby klientů ${fmt(data.summary.paymentIncome)}`);
+      if (data.summary.manualIncome > 0) breakdownParts.push(`manuální korekce ${fmt(data.summary.manualIncome)}`);
       if (data.summary.productIncome > 0) breakdownParts.push(`prodeje produktů ${fmt(data.summary.productIncome)}`);
-      // FIX #3: Show cancellation income in breakdown
       if (data.summary.cancellationIncome > 0) breakdownParts.push(`storno poplatky ${fmt(data.summary.cancellationIncome)}`);
       
       if (breakdownParts.length > 1) {
@@ -673,7 +673,21 @@ export async function generateFinancialReportPdf(
     doc.setFont("Roboto", "normal");
     doc.setFontSize(F.tiny);
     doc.text("(kladné = více odtrénováno než zaplaceno = dluh)", m + 50, y);
-    y += 10;
+    y += 8;
+    
+    // FIX #10: Show manual corrections warning
+    if (data.validation.manualCorrectionsPositive > 0) {
+      doc.setFontSize(F.small);
+      doc.setTextColor(...C.accent);
+      doc.setFont("Roboto", "bold");
+      doc.text(`⚠ Manuální korekce: ${fmt(data.validation.manualCorrectionsPositive)} započteno do příjmů`, m + 2, y);
+      y += 4;
+      doc.setFontSize(F.tiny);
+      doc.setTextColor(...C.textMuted);
+      doc.setFont("Roboto", "normal");
+      doc.text("(korekce zůstatků a opravy chyb — nemusí představovat skutečně přijaté peníze)", m + 2, y);
+      y += 6;
+    }
   }
 
   // ═══════════════════════════════════════════
