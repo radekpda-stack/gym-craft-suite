@@ -1,71 +1,68 @@
 
-# Opravy dat a modernizace PDF finančního reportu
+# Opravy finančního reportu -- audit účetní spolehlivosti
 
-## Nalezené datové chyby
+## Nalezené chyby (ověřeno proti reálným datům)
 
-### 1. Rozpad platebních metod zahrnuje i debety tréninků
-Dotaz `allTransactionsWithMethod` zahrnuje typy `training` a `product` (debetní transakce), na jejichž částkách se volá `Math.abs()`. To znamená, že rozpad platebních metod ukazuje nejen příjmy, ale i odběry kreditu za tréninky -- čísla jsou nafouklá.
+### 1. Ztráta 4 500 Kc z platební metody `transfer`
+Rozpad platebních metod nemapuje hodnotu `transfer` (jen `bank_transfer`, `bank`, `paid_bank`). Platba 4 500 Kc typu `payment` s `payment_method = 'transfer'` se nikam nezapocte.
 
-**Oprava:** Filtrovat pouze typy `payment` a `manual` s `amount > 0` (skutečné příjmy), plus sales_orders (ty už se přidávají zvlášť).
+**Oprava:** Pridat `transfer` do mapovani na `bank_transfer` bucket (radek 724).
 
-### 2. Dvousloupcový layout v PDF je křehký
-Sekce "Souhrn období" a "Tréninky a platby" se pokoušejí o dvousloupcový layout ručním přepočtem `yPos`. Pokud má levý sloupec jiný počet řádků než pravý, sloupce se překrývají nebo mezi nimi vznikají mezery. Zejména řádek 188 (`rightStartY = yPos - (...)`) je odhadnutý offset.
+### 2. Tydenni prijem ukazuje hodnotu treninku, ne skutecne platby
+Mesicni prehled spravne scita realne prijate platby (payment + manual + sales_orders). Ale tydenni prehled na radku 512 pouziva `final_price` z treninku -- to je PLAN, ne skutecnost. Cisla jsou nesrovnatelna.
 
-**Oprava:** Uložit startovní `yPos` před vykreslením levého sloupce, pak pravý sloupec začít na stejné pozici.
+**Oprava:** Tydenni prijem pocitat stejne jako mesicni -- z `transactions` (payment+manual) a `salesOrders`, ne z `final_price`.
 
-### 3. Chybějící příjmy z produktů v sales_orders v payment method breakdown
-Sales orders se přidávají do payment method breakdown, ale `allTransactionsWithMethod` už může obsahovat i `product` typ transakce -- potenciální dvojí započtení.
+### 3. Zrusene treninky (canceled_training) se nikam nezapocitavaji
+Existuje 16 transakcí typu `canceled_training` za 13 200 Kc. Tyto storno poplatky jsou reálný príjem, ale report je ignoruje -- nejsou v `totalIncome`, nejsou v mesícním prehledu, nejsou v platebních metodách.
 
-**Oprava:** Z `allTransactionsWithMethod` odstranit typ `product` (počítat ho jen z `salesOrders`).
+**Oprava:** Zahrnout `canceled_training` transakce do celkových príjmu a do mesícního i týdenního prehledu jako samostatnou polozku "Storno poplatky".
 
-## Modernizace vizuálu PDF
+### 4. Prodejní objednávky za hotovost chybí v payment method breakdown
+Cash sales_orders (5 547 Kc) se správne prictou do breakdown (radek 729-736). Ale credit sales_orders (10 422 Kc) se prictou k `credit` bucketu -- to je vsak spatne, protoze kredit uz byl zapocten pri payment transakcich. Dochází k double-countingu.
 
-### Aktuální stav
-- Oranžové vyplněné obdélníky jako nadpisy sekcí
-- Základní `grid` tabulky s oranžovou hlavičkou
-- Jednoduchý textový layout bez vizuální hierarchie
-- Malé písmo, málo prostoru
+**Oprava:** Sales orders s `payment_method = 'credit'` NEPRIDAVAT do breakdown (uz jsou zapocteny jako odliv z kreditu klienta). Pridat jen `cash`, `card`, `bank_transfer` sales orders.
 
-### Navrhované změny
+### 5. `directPayments` label je zavadejici
+Aktuálne `directPayments = paymentIncome - paidTrainingValue = 276 542 - 204 666 = 71 876`. To ale neznamena "prime platby kreditem" -- je to "castka z plateb klientu, ktera jeste nebyla pouzita na treninky". Label v PDF je "Prime platby (kredit)" coz je matouci.
 
-**Barvy a styl:**
-- Tmavší, profesionálnější paleta: tmavě šedé nadpisy místo oranžových obdélníků
-- Oranžová pouze jako akcentní barva (čísla, rozdíly)
-- Tabulky: střídavé šedé řádky, tenké linky, bez plných barevných hlaviček
-- Větší mezery mezi sekcemi pro vzdušnější design
+**Oprava:** Prejmenovat na "Nealokovaný kredit" s popiskem "prijato od klientu, ale dosud nevycerpano na treninky".
 
-**Typografie:**
-- Zvětšit hlavní titulek (24pt)
-- Nadpisy sekcí: uppercase s tenkým spodním pruhem místo plného obdélníku
-- Hodnoty metrik: větší písmo (12pt bold) pro klíčová čísla
+### 6. `netProfit` formula odecita productCost ale ne cancellation income
+`netProfit = totalIncome - totalExpenses - totalProductCost`. Ale `totalIncome` nezahrnuje storno poplatky (bod 3). Po oprave bodu 3 se tohle vyresi automaticky.
 
-**Layout:**
-- KPI karty nahoře: 3-4 boxy s klíčovými čísly (příjmy, tréninky, klienti, zisk)
-- Opravit dvousloupcový layout
-- Lepší zarovnání pravého a levého sloupce
+### 7. Validacni sekce -- barva semantiky je obracena
+Radek 621: `trainedNotPaidDiff >= 0 ? C.success : C.danger`. Ale kladny rozdil znamena "vice odtrenováno nez zaplaceno" = spatne (klient dluzi). Cervena by mela byt pro kladne cislo (dluh), zelena pro nulu nebo zaporne (preplatek).
 
-**Tabulky:**
-- Jemnější styl: `striped` místo `grid`
-- Hlavičky: tmavě šedé (ne oranžové)
-- Zaoblené rohy přes `roundedRect`
+**Oprava:** Obrátit barvy.
 
-## Technické detaily
+### 8. Klienti -- chybí příjmy z produktů
+`clientsData[].totalPaid` pocita jen `payment+manual` transakce. Pokud klient kupuje produkty, jeho castka to neodráží. `topClientsRevenuePercent` je tím zkresleny.
 
-### Soubory k úpravě
+**Oprava:** Pridat produkt purchases z `salesOrders` do klientskych stats.
 
-**`src/hooks/useFinancialReportData.ts`**
-- Řádek 309: změnit `allTransactionsWithMethod` dotaz -- odebrat typy `training` a `product`, nechat jen `payment` a `manual` s `amount > 0`
-- Řádek 718-724: zjednodušit payment method breakdown (jen payment/manual příjmy + sales orders)
+## Souhrnný plán zmen
 
-**`src/lib/financialReportPdf.ts`**
-- Kompletní přepracování vizuálu:
-  - Nová barevná paleta (tmavý header, neutrální tóny)
-  - `drawSectionTitle`: tenký spodní pruh + uppercase text místo plného obdélníku
-  - KPI boxy na vrchu souhrnu (3-4 vedle sebe s rámečkem)
-  - Oprava dvousloupcového layoutu v sekcích Souhrn a Tréninky/Platby
-  - Modernější tabulkový styl (striped, tmavě šedé hlavičky)
-  - Více whitespace mezi sekcemi
-  - Lepší footer s logem
+### Soubor: `src/hooks/useFinancialReportData.ts`
 
-### Žádné databázové změny
-Vše se opravuje na úrovni kódu -- dotazy a rendering.
+1. **Pridat `canceled_training` do dotazu na transakce** (nove Promise.all polozka) a zahrnout do `totalIncome`, mesicniho a tydenniho prehledu
+2. **Tydenni income** -- prepocitat z plateb/objednavek misto `final_price`
+3. **Payment method breakdown** -- pridat `transfer` mapping, odstranit credit sales_orders z breakdown (double-count)
+4. **Client stats** -- pridat product purchases z salesOrders
+5. **directPayments** -- prejmenovat interface pole na `unallocatedCredit`
+6. **Validation barvy** -- prehodit v PDF (ne v data hooku)
+7. **Pridat `cancellationIncome`** do summary
+
+### Soubor: `src/lib/financialReportPdf.ts`
+
+1. **Validation barvy** -- obrátit semantiku (kladný diff = danger)
+2. **directPayments label** -- zmenit na "Nealokovaný kredit"
+3. **Pridat storno poplatky** do KPI breakdown radku
+4. **Klienti tabulka** -- pridat sloupec "Produkty" s castkou za nakupy
+
+### Soubor: `src/components/settings/FinancialReportSettings.tsx`
+
+1. **Nahled** -- pridat storno poplatky do rozpadu, opravit label direct payments
+
+### Zadne zmeny databaze
+Vse je oprava logiky v kodu.
