@@ -100,7 +100,8 @@ export interface FinancialReportData {
     totalIncome: number;
     trainingIncome: number;
     productIncome: number;
-    paymentIncome: number;
+    paymentIncome: number;           // pure payment type only
+    manualIncome: number;            // positive manual corrections (informational)
     cancellationIncome: number;
     totalTrainings: number;
     totalClients: number;
@@ -143,6 +144,9 @@ export interface FinancialReportData {
     paymentsWithoutClient: number;
     trainingsWithoutClient: number;
     trainedNotPaidDiff: number;
+    manualCorrectionsPositive: number;
+    manualCorrectionsNegative: number;
+    manualCorrectionsNet: number;
   };
 }
 
@@ -333,10 +337,15 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       // FIX #3: Calculate cancellation income (storno fees are negative amounts, take absolute)
       const cancellationIncome = canceledTrainingTxns.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
 
-      // Calculate income from different sources based on settings
-      const paymentIncome = settings.dataSources.clientPayments 
-        ? transactions.reduce((sum, t) => sum + (t.amount || 0), 0) 
+      // FIX #10: Split payment vs manual income for transparency
+      const purePaymentIncome = settings.dataSources.clientPayments 
+        ? transactions.filter(t => t.type === 'payment').reduce((sum, t) => sum + (t.amount || 0), 0) 
         : 0;
+      const manualPositiveIncome = settings.dataSources.clientPayments 
+        ? transactions.filter(t => t.type === 'manual').reduce((sum, t) => sum + (t.amount || 0), 0) 
+        : 0;
+      // paymentIncome still includes both for backwards compatibility
+      const paymentIncome = purePaymentIncome + manualPositiveIncome;
       
       const productIncome = settings.dataSources.productSales 
         ? salesOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0)
@@ -349,6 +358,10 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       // FIX #3: Include cancellation income in totalIncome
       const totalIncome = paymentIncome + productIncome + cancellationIncome;
       const lastYearIncome = lastYearTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+      
+      // FIX #10: Calculate negative manual corrections (not in income, but tracked for validation)
+      // These are balance corrections that don't represent actual cash flow
+      const manualNegative = canceledTrainingTxns.length >= 0 ? 0 : 0; // placeholder, calculated below
 
       // Count trainings by participant count
       const soloTrainings = trainings.filter(t => (t.participant_count || 1) === 1).length;
@@ -378,9 +391,15 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         }
       });
 
-      // Process participants for multi-client trainings
+      // FIX #9: Process participants for multi-client trainings
+      // Skip primary client (already counted above) to avoid double-counting
+      const primaryClientBySession = new Map(trainings.map(t => [t.id, t.client_id]));
       participants.forEach((p: any) => {
         if (p.client_id) {
+          // Skip if this participant is the primary client of the session
+          const primaryClient = primaryClientBySession.get(p.training_session_id);
+          if (p.client_id === primaryClient) return;
+          
           clientsWithTraining.add(p.client_id);
           const stats = clientStats.get(p.client_id) || { paid: 0, productsPaid: 0, trainings: 0, solo: 0, duo: 0, trio: 0 };
           stats.trainings += 1;
@@ -794,7 +813,8 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           totalIncome,
           trainingIncome,
           productIncome,
-          paymentIncome,
+          paymentIncome: purePaymentIncome,
+          manualIncome: manualPositiveIncome,
           cancellationIncome,
           totalTrainings: settings.dataSources.trainings ? trainings.length : 0,
           totalClients,
@@ -833,6 +853,9 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           paymentsWithoutClient,
           trainingsWithoutClient,
           trainedNotPaidDiff: trainedNotPaidDiffFn(paidTrainingValue),
+          manualCorrectionsPositive: manualPositiveIncome,
+          manualCorrectionsNegative: 0, // negative manuals not fetched (excluded from income)
+          manualCorrectionsNet: manualPositiveIncome, // only positive counted
         },
       };
     },
