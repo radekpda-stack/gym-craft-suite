@@ -347,11 +347,10 @@ export function FinancialReportSettings() {
 
           <Separator />
 
-          {/* Preview Stats */}
           {reportData && (
-            <div className="glass-subtle rounded-lg p-4 space-y-2">
+            <div className="glass-subtle rounded-lg p-4 space-y-3">
               <p className="text-sm font-medium">Náhled dat</p>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
                 <div className="text-muted-foreground">Celkové příjmy:</div>
                 <div className="font-medium">{reportData.summary.totalIncome.toLocaleString('cs-CZ')} Kč</div>
                 {settings.dataSources.clientPayments && (
@@ -364,6 +363,16 @@ export function FinancialReportSettings() {
                   <>
                     <div className="text-muted-foreground pl-2 text-xs">↳ Prodeje:</div>
                     <div className="text-xs">{reportData.summary.productIncome.toLocaleString('cs-CZ')} Kč</div>
+                  </>
+                )}
+                {reportData.summary.totalExpenses > 0 && (
+                  <>
+                    <div className="text-muted-foreground">Provozní náklady:</div>
+                    <div className="font-medium text-destructive">{reportData.summary.totalExpenses.toLocaleString('cs-CZ')} Kč</div>
+                    <div className="text-muted-foreground">Čistý zisk:</div>
+                    <div className={cn("font-medium", reportData.summary.netProfit >= 0 ? "text-primary" : "text-destructive")}>
+                      {reportData.summary.netProfit.toLocaleString('cs-CZ')} Kč
+                    </div>
                   </>
                 )}
                 {settings.dataSources.trainings && (
@@ -380,7 +389,51 @@ export function FinancialReportSettings() {
                     <div className="font-medium">{reportData.totalProductsSold}</div>
                   </>
                 )}
+                {reportData.trainingsSummary?.avgHourlyRate > 0 && (
+                  <>
+                    <div className="text-muted-foreground">Hodinová sazba:</div>
+                    <div className="font-medium">{reportData.trainingsSummary.avgHourlyRate.toLocaleString('cs-CZ')} Kč/h</div>
+                  </>
+                )}
               </div>
+              
+              {/* Payment method breakdown */}
+              {(() => {
+                const pmb = reportData.summary.paymentMethodBreakdown;
+                const hasAny = pmb.cash > 0 || pmb.card > 0 || pmb.bank_transfer > 0 || pmb.credit > 0;
+                if (!hasAny) return null;
+                return (
+                  <div className="pt-2 border-t border-border/50">
+                    <p className="text-xs text-muted-foreground mb-1.5">Platební metody</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                      {pmb.cash > 0 && (
+                        <>
+                          <div className="text-muted-foreground">Hotovost:</div>
+                          <div>{pmb.cash.toLocaleString('cs-CZ')} Kč</div>
+                        </>
+                      )}
+                      {pmb.card > 0 && (
+                        <>
+                          <div className="text-muted-foreground">Karta:</div>
+                          <div>{pmb.card.toLocaleString('cs-CZ')} Kč</div>
+                        </>
+                      )}
+                      {pmb.bank_transfer > 0 && (
+                        <>
+                          <div className="text-muted-foreground">Převod:</div>
+                          <div>{pmb.bank_transfer.toLocaleString('cs-CZ')} Kč</div>
+                        </>
+                      )}
+                      {pmb.credit > 0 && (
+                        <>
+                          <div className="text-muted-foreground">Kredit:</div>
+                          <div>{pmb.credit.toLocaleString('cs-CZ')} Kč</div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
