@@ -365,6 +365,12 @@ export function FinancialReportSettings() {
                     <div className="text-xs">{reportData.summary.productIncome.toLocaleString('cs-CZ')} Kč</div>
                   </>
                 )}
+                {reportData.summary.cancellationIncome > 0 && (
+                  <>
+                    <div className="text-muted-foreground pl-2 text-xs">↳ Storno poplatky:</div>
+                    <div className="text-xs">{reportData.summary.cancellationIncome.toLocaleString('cs-CZ')} Kč</div>
+                  </>
+                )}
                 {reportData.summary.totalExpenses > 0 && (
                   <>
                     <div className="text-muted-foreground">Provozní náklady:</div>
@@ -393,6 +399,12 @@ export function FinancialReportSettings() {
                   <>
                     <div className="text-muted-foreground">Hodinová sazba:</div>
                     <div className="font-medium">{reportData.trainingsSummary.avgHourlyRate.toLocaleString('cs-CZ')} Kč/h</div>
+                  </>
+                )}
+                {reportData.paymentsSummary && reportData.paymentsSummary.unallocatedCredit > 0 && (
+                  <>
+                    <div className="text-muted-foreground">Nealokovaný kredit:</div>
+                    <div className="font-medium">{reportData.paymentsSummary.unallocatedCredit.toLocaleString('cs-CZ')} Kč</div>
                   </>
                 )}
               </div>

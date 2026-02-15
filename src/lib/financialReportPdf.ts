@@ -14,31 +14,20 @@ export interface FinancialReportPdfOptions {
 
 // Modern professional color palette
 const C = {
-  // Primary dark tones
-  headerBg: [15, 23, 42] as [number, number, number],       // slate-900
+  headerBg: [15, 23, 42] as [number, number, number],
   headerText: [255, 255, 255] as [number, number, number],
-  
-  // Accent (orange, used sparingly)
-  accent: [249, 115, 22] as [number, number, number],        // orange-500
-  accentLight: [255, 237, 213] as [number, number, number],   // orange-50
-  
-  // Text hierarchy
-  text: [15, 23, 42] as [number, number, number],             // slate-900
-  textSecondary: [71, 85, 105] as [number, number, number],   // slate-500
-  textMuted: [148, 163, 184] as [number, number, number],     // slate-400
-  
-  // Backgrounds
+  accent: [249, 115, 22] as [number, number, number],
+  accentLight: [255, 237, 213] as [number, number, number],
+  text: [15, 23, 42] as [number, number, number],
+  textSecondary: [71, 85, 105] as [number, number, number],
+  textMuted: [148, 163, 184] as [number, number, number],
   white: [255, 255, 255] as [number, number, number],
-  bgSubtle: [248, 250, 252] as [number, number, number],      // slate-50
-  bgAlt: [241, 245, 249] as [number, number, number],         // slate-100
-  
-  // Semantic
-  success: [22, 163, 74] as [number, number, number],         // green-600
-  danger: [220, 38, 38] as [number, number, number],          // red-600
-  
-  // Borders
-  border: [226, 232, 240] as [number, number, number],        // slate-200
-  borderLight: [241, 245, 249] as [number, number, number],   // slate-100
+  bgSubtle: [248, 250, 252] as [number, number, number],
+  bgAlt: [241, 245, 249] as [number, number, number],
+  success: [22, 163, 74] as [number, number, number],
+  danger: [220, 38, 38] as [number, number, number],
+  border: [226, 232, 240] as [number, number, number],
+  borderLight: [241, 245, 249] as [number, number, number],
 };
 
 const F = {
@@ -76,8 +65,8 @@ export async function generateFinancialReportPdf(
 
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
-  const m = 16; // margin
-  const cw = pw - 2 * m; // content width
+  const m = 16;
+  const cw = pw - 2 * m;
   let y = m;
 
   const checkPage = (h: number) => {
@@ -89,7 +78,6 @@ export async function generateFinancialReportPdf(
     return false;
   };
 
-  // ── Section title: uppercase text with thin accent underline ──
   const drawSection = (title: string) => {
     checkPage(18);
     y += 4;
@@ -105,7 +93,6 @@ export async function generateFinancialReportPdf(
     y += 6;
   };
 
-  // ── Stat row helper ──
   const statRow = (label: string, value: string, x: number = m, w: number = cw, options?: { color?: [number, number, number]; bold?: boolean }) => {
     doc.setFontSize(F.body);
     doc.setTextColor(...C.textSecondary);
@@ -117,26 +104,18 @@ export async function generateFinancialReportPdf(
     y += 5.5;
   };
 
-  // ── KPI Card ──
   const drawKpiCard = (x: number, w: number, label: string, value: string, subtext?: string, valueColor?: [number, number, number]) => {
-    // Card background
     doc.setFillColor(...C.bgSubtle);
     doc.setDrawColor(...C.border);
     doc.roundedRect(x, y, w, 22, 2, 2, 'FD');
-    
-    // Value
     doc.setFontSize(F.kpiValue);
     doc.setTextColor(...(valueColor || C.headerBg));
     doc.setFont("Roboto", "bold");
     doc.text(value, x + w / 2, y + 10, { align: "center" });
-    
-    // Label
     doc.setFontSize(F.kpiLabel);
     doc.setTextColor(...C.textMuted);
     doc.setFont("Roboto", "normal");
     doc.text(label.toUpperCase(), x + w / 2, y + 16, { align: "center" });
-    
-    // Subtext
     if (subtext) {
       doc.setFontSize(6.5);
       doc.setTextColor(...C.textMuted);
@@ -144,7 +123,6 @@ export async function generateFinancialReportPdf(
     }
   };
 
-  // ── Table theme config ──
   const tableTheme = {
     theme: 'striped' as const,
     styles: {
@@ -169,16 +147,12 @@ export async function generateFinancialReportPdf(
   // ═══════════════════════════════════════════
   // HEADER
   // ═══════════════════════════════════════════
-  
-  // Thin dark header bar
   doc.setFillColor(...C.headerBg);
   doc.rect(0, 0, pw, 5, 'F');
-  // Small accent stripe
   doc.setFillColor(...C.accent);
   doc.rect(0, 5, pw, 1.2, 'F');
   y = 14;
 
-  // Logo
   if (settings.branding.showLogo && options.companyLogoUrl) {
     try {
       const response = await fetch(options.companyLogoUrl);
@@ -195,14 +169,12 @@ export async function generateFinancialReportPdf(
     }
   }
 
-  // Title
   doc.setFontSize(F.title);
   doc.setTextColor(...C.headerBg);
   doc.setFont("Roboto", "bold");
   doc.text(settings.branding.customTitle || "Finanční report", m, y + 5);
   y += 12;
 
-  // Company name
   if (settings.branding.showCompanyName && options.companyName) {
     doc.setFontSize(F.subtitle);
     doc.setTextColor(...C.textSecondary);
@@ -211,7 +183,6 @@ export async function generateFinancialReportPdf(
     y += 5;
   }
 
-  // Period & date
   doc.setFontSize(F.small);
   doc.setTextColor(...C.textMuted);
   doc.text(`Období: ${data.period.label}`, m, y);
@@ -228,7 +199,6 @@ export async function generateFinancialReportPdf(
       doc.text("Za zvolené období nejsou k dispozici žádná data.", m + 2, y);
       y += 12;
     } else {
-      // 4 KPI cards across the top
       const cardGap = 4;
       const cardW = (cw - 3 * cardGap) / 4;
       const savedY = y;
@@ -237,7 +207,6 @@ export async function generateFinancialReportPdf(
       drawKpiCard(m + cardW + cardGap, cardW, "Tréninky", data.summary.totalTrainings.toString(), `${(data.trainingsSummary?.totalHours || 0).toFixed(0)} hod`);
       drawKpiCard(m + 2 * (cardW + cardGap), cardW, "Klienti", data.summary.totalClients.toString());
       
-      // Net profit card with color
       const npColor = data.summary.netProfit >= 0 ? C.success : C.danger;
       const npLabel = data.summary.totalExpenses > 0 ? "Čistý zisk" : "Příjmy";
       const npValue = data.summary.totalExpenses > 0 ? data.summary.netProfit : data.summary.totalIncome;
@@ -246,14 +215,19 @@ export async function generateFinancialReportPdf(
       y = savedY + 26;
 
       // Income breakdown line
-      if (data.summary.paymentIncome > 0 && data.summary.productIncome > 0) {
+      const breakdownParts = [];
+      if (data.summary.paymentIncome > 0) breakdownParts.push(`platby klientů ${fmt(data.summary.paymentIncome)}`);
+      if (data.summary.productIncome > 0) breakdownParts.push(`prodeje produktů ${fmt(data.summary.productIncome)}`);
+      // FIX #3: Show cancellation income in breakdown
+      if (data.summary.cancellationIncome > 0) breakdownParts.push(`storno poplatky ${fmt(data.summary.cancellationIncome)}`);
+      
+      if (breakdownParts.length > 1) {
         doc.setFontSize(F.small);
         doc.setTextColor(...C.textSecondary);
-        doc.text(`Rozpad: platby klientů ${fmt(data.summary.paymentIncome)} | prodeje produktů ${fmt(data.summary.productIncome)}`, m + 2, y);
+        doc.text(`Rozpad: ${breakdownParts.join(' | ')}`, m + 2, y);
         y += 5;
       }
       
-      // Expenses line
       if (data.summary.totalExpenses > 0) {
         doc.setFontSize(F.small);
         doc.setTextColor(...C.textSecondary);
@@ -275,7 +249,6 @@ export async function generateFinancialReportPdf(
         y += 5;
       }
 
-      // Training type breakdown
       if (data.summary.totalTrainings > 0) {
         doc.setFontSize(F.small);
         doc.setTextColor(...C.textSecondary);
@@ -283,7 +256,6 @@ export async function generateFinancialReportPdf(
         y += 5;
       }
 
-      // Product margin summary
       if (data.totalProductsSold > 0) {
         doc.setFontSize(F.small);
         doc.setTextColor(...C.textSecondary);
@@ -304,10 +276,25 @@ export async function generateFinancialReportPdf(
   if (settings.sections.monthlyOverview && data.monthly.length > 0) {
     drawSection("Měsíční přehled");
     
+    const hasCancellations = data.monthly.some(m => m.cancellationIncome > 0);
+    
     autoTable(doc, {
       startY: y,
-      head: [['Měsíc', 'Příjmy', 'Tréninky', '1:1', '2', '3+', 'Klienti', 'Změna']],
-      body: data.monthly.map(m => [
+      head: [hasCancellations 
+        ? ['Měsíc', 'Příjmy', 'Storno', 'Tréninky', '1:1', '2', '3+', 'Klienti', 'Změna']
+        : ['Měsíc', 'Příjmy', 'Tréninky', '1:1', '2', '3+', 'Klienti', 'Změna']
+      ],
+      body: data.monthly.map(m => hasCancellations ? [
+        m.month,
+        fmt(m.income),
+        m.cancellationIncome > 0 ? fmt(m.cancellationIncome) : '-',
+        m.trainingCount.toString(),
+        m.soloCount.toString(),
+        m.duoCount.toString(),
+        m.trioCount.toString(),
+        m.clientCount.toString(),
+        fmtPct(m.changePercent),
+      ] : [
         m.month,
         fmt(m.income),
         m.trainingCount.toString(),
@@ -318,7 +305,17 @@ export async function generateFinancialReportPdf(
         fmtPct(m.changePercent),
       ]),
       ...tableTheme,
-      columnStyles: {
+      columnStyles: hasCancellations ? {
+        0: { cellWidth: 22 },
+        1: { halign: 'right' },
+        2: { halign: 'right', cellWidth: 18 },
+        3: { halign: 'center', cellWidth: 14 },
+        4: { halign: 'center', cellWidth: 10 },
+        5: { halign: 'center', cellWidth: 10 },
+        6: { halign: 'center', cellWidth: 10 },
+        7: { halign: 'center', cellWidth: 14 },
+        8: { halign: 'right', cellWidth: 16 },
+      } : {
         0: { cellWidth: 25 },
         1: { halign: 'right' },
         2: { halign: 'center', cellWidth: 15 },
@@ -340,10 +337,23 @@ export async function generateFinancialReportPdf(
     checkPage(60);
     drawSection("Týdenní přehled");
     
+    const hasCancellations = data.weekly.some(w => w.cancellationIncome > 0);
+    
     autoTable(doc, {
       startY: y,
-      head: [['Týden', 'Příjmy', 'Tréninky', '1:1', 'Dvojice', 'Trojice+']],
-      body: data.weekly.map(w => [
+      head: [hasCancellations
+        ? ['Týden', 'Příjmy', 'Storno', 'Tréninky', '1:1', 'Dvojice', 'Trojice+']
+        : ['Týden', 'Příjmy', 'Tréninky', '1:1', 'Dvojice', 'Trojice+']
+      ],
+      body: data.weekly.map(w => hasCancellations ? [
+        w.weekLabel,
+        fmt(w.income),
+        w.cancellationIncome > 0 ? fmt(w.cancellationIncome) : '-',
+        w.trainingCount.toString(),
+        w.soloCount.toString(),
+        w.duoCount.toString(),
+        w.trioCount.toString(),
+      ] : [
         w.weekLabel,
         fmt(w.income),
         w.trainingCount.toString(),
@@ -352,7 +362,15 @@ export async function generateFinancialReportPdf(
         w.trioCount.toString(),
       ]),
       ...tableTheme,
-      columnStyles: {
+      columnStyles: hasCancellations ? {
+        0: { cellWidth: 28 },
+        1: { halign: 'right' },
+        2: { halign: 'right', cellWidth: 18 },
+        3: { halign: 'center' },
+        4: { halign: 'center' },
+        5: { halign: 'center' },
+        6: { halign: 'center' },
+      } : {
         0: { cellWidth: 30 },
         1: { halign: 'right' },
         2: { halign: 'center' },
@@ -377,10 +395,24 @@ export async function generateFinancialReportPdf(
     doc.text(`TOP 20 % klientů generuje ${data.topClientsRevenuePercent.toFixed(1)} % příjmů`, m + 2, y);
     y += 6;
     
+    // FIX #8: Add products column to client table
+    const hasProducts = data.clients.some(c => c.productsPaid > 0);
+    
     autoTable(doc, {
       startY: y,
-      head: [['Jméno', 'Zaplaceno', 'Tréninky', '1:1', '2', '3+']],
-      body: data.clients.slice(0, 30).map(c => [
+      head: [hasProducts 
+        ? ['Jméno', 'Zaplaceno', 'Produkty', 'Tréninky', '1:1', '2', '3+']
+        : ['Jméno', 'Zaplaceno', 'Tréninky', '1:1', '2', '3+']
+      ],
+      body: data.clients.slice(0, 30).map(c => hasProducts ? [
+        c.name,
+        fmt(c.totalPaid),
+        c.productsPaid > 0 ? fmt(c.productsPaid) : '-',
+        c.trainingCount.toString(),
+        c.soloCount.toString(),
+        c.duoCount.toString(),
+        c.trioCount.toString(),
+      ] : [
         c.name,
         fmt(c.totalPaid),
         c.trainingCount.toString(),
@@ -389,7 +421,15 @@ export async function generateFinancialReportPdf(
         c.trioCount.toString(),
       ]),
       ...tableTheme,
-      columnStyles: {
+      columnStyles: hasProducts ? {
+        0: { cellWidth: 38 },
+        1: { halign: 'right' },
+        2: { halign: 'right', cellWidth: 22 },
+        3: { halign: 'center', cellWidth: 16 },
+        4: { halign: 'center', cellWidth: 13 },
+        5: { halign: 'center', cellWidth: 13 },
+        6: { halign: 'center', cellWidth: 13 },
+      } : {
         0: { cellWidth: 45 },
         1: { halign: 'right' },
         2: { halign: 'center', cellWidth: 18 },
@@ -508,7 +548,6 @@ export async function generateFinancialReportPdf(
     const leftX = m;
     const rightX = m + halfW + 6;
     
-    // ── Save starting Y for both columns ──
     const colStartY = y;
     
     // LEFT COLUMN: Trainings
@@ -545,16 +584,22 @@ export async function generateFinancialReportPdf(
     
     const ps = data.paymentsSummary;
     statRow("Uhrazeno za tréninky", fmt(ps.trainingPayments), rightX, halfW);
-    statRow("Přímé platby (kredit)", fmt(ps.directPayments), rightX, halfW);
+    // FIX #5: Renamed from "Přímé platby (kredit)" to "Nealokovaný kredit"
+    statRow("Nealokovaný kredit", fmt(ps.unallocatedCredit), rightX, halfW);
     statRow("Platby za produkty", fmt(ps.productPayments), rightX, halfW);
+    
+    // FIX #3: Show cancellation income if any
+    if (data.summary.cancellationIncome > 0) {
+      statRow("Storno poplatky", fmt(data.summary.cancellationIncome), rightX, halfW);
+    }
     
     const rightEndY = y;
     
-    // Continue from whichever column is taller
     y = Math.max(leftEndY, rightEndY) + 8;
     
     // Difference summary bar
     const diff = ts.totalTrainedValue - ps.trainingPayments;
+    // FIX #7: Positive diff = danger (debt), negative/zero = success (overpaid)
     const diffColor = diff <= 0 ? C.success : C.danger;
     
     doc.setFillColor(...C.bgAlt);
@@ -618,7 +663,8 @@ export async function generateFinancialReportPdf(
     doc.text("Rozdíl 'odtrénováno vs zaplaceno':", m + 2, y);
     y += 5;
     
-    const vDiffColor = data.validation.trainedNotPaidDiff >= 0 ? C.success : C.danger;
+    // FIX #7: INVERTED - positive diff (debt) = danger, zero/negative (overpaid) = success
+    const vDiffColor = data.validation.trainedNotPaidDiff <= 0 ? C.success : C.danger;
     doc.setTextColor(...vDiffColor);
     doc.setFont("Roboto", "bold");
     doc.text(fmt(data.validation.trainedNotPaidDiff), m + 2, y);
@@ -626,7 +672,7 @@ export async function generateFinancialReportPdf(
     doc.setTextColor(...C.textMuted);
     doc.setFont("Roboto", "normal");
     doc.setFontSize(F.tiny);
-    doc.text("(kladné = více odtrénováno než zaplaceno)", m + 50, y);
+    doc.text("(kladné = více odtrénováno než zaplaceno = dluh)", m + 50, y);
     y += 10;
   }
 
@@ -636,16 +682,13 @@ export async function generateFinancialReportPdf(
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    // Bottom accent line
     doc.setDrawColor(...C.accent);
     doc.setLineWidth(0.4);
     doc.line(m, ph - 14, pw - m, ph - 14);
     doc.setLineWidth(0.2);
-    // Page number
     doc.setFontSize(F.tiny);
     doc.setTextColor(...C.textMuted);
     doc.text(`Strana ${i} / ${totalPages}`, pw - m, ph - 10, { align: 'right' });
-    // Brand text
     doc.text(settings.branding.customTitle || "Finanční report", m, ph - 10);
   }
 

@@ -8,6 +8,7 @@ export interface ClientReportData {
   id: string;
   name: string;
   totalPaid: number;
+  productsPaid: number;
   trainingCount: number;
   soloCount: number;
   duoCount: number;
@@ -18,6 +19,7 @@ export interface MonthlyReportData {
   month: string;
   monthNum: number;
   income: number;
+  cancellationIncome: number;
   trainingCount: number;
   soloCount: number;
   duoCount: number;
@@ -34,6 +36,7 @@ export interface WeeklyReportData {
   duoCount: number;
   trioCount: number;
   income: number;
+  cancellationIncome: number;
 }
 
 export interface PaymentMethodBreakdown {
@@ -67,23 +70,23 @@ export interface ProductClientData {
 export interface TrainingsSummary {
   totalTrainings: number;
   totalHours: number;
-  totalTrainedValue: number;         // suma final_price všech tréninků
-  paidTrainingsCount: number;        // tréninky s transakcí
-  paidHours: number;                 // hodiny zaplacených tréninků
-  paidValue: number;                 // skutečně uhrazeno za tréninky
-  avgPricePerTraining: number;       // opravený výpočet (pouze zaplacené)
-  avgHourlyRate: number;             // opravený výpočet (pouze zaplacené)
+  totalTrainedValue: number;
+  paidTrainingsCount: number;
+  paidHours: number;
+  paidValue: number;
+  avgPricePerTraining: number;
+  avgHourlyRate: number;
   unpaidTrainingsCount: number;
   unpaidValue: number;
 }
 
 // NEW: Payments summary
 export interface PaymentsSummary {
-  totalPayments: number;             // suma plateb (payment + manual)
-  trainingPayments: number;          // úhrady za tréninky (credit_transactions type=training)
-  directPayments: number;            // přímé platby (credit)
-  productPayments: number;           // platby za produkty
-  paymentTransactionCount: number;   // počet platebních transakcí
+  totalPayments: number;
+  trainingPayments: number;
+  unallocatedCredit: number;
+  productPayments: number;
+  paymentTransactionCount: number;
 }
 
 export interface FinancialReportData {
@@ -93,12 +96,12 @@ export interface FinancialReportData {
     label: string;
   };
   
-  // Year summary
   summary: {
     totalIncome: number;
     trainingIncome: number;
     productIncome: number;
     paymentIncome: number;
+    cancellationIncome: number;
     totalTrainings: number;
     totalClients: number;
     soloTrainings: number;
@@ -106,40 +109,26 @@ export interface FinancialReportData {
     trioTrainings: number;
     avgIncomePerTraining: number;
     avgIncomePerClient: number;
-    // Product summary
     totalProductRevenue: number;
     totalProductCost: number;
     totalProductMargin: number;
     totalProductMarginPercent: number;
-    // Expenses & net profit
     totalExpenses: number;
     netProfit: number;
-    // Payment method breakdown
     paymentMethodBreakdown: PaymentMethodBreakdown;
   };
   
-  // NEW: Trainings and payments summary
   trainingsSummary: TrainingsSummary;
   paymentsSummary: PaymentsSummary;
   
-  // Monthly breakdown
   monthly: MonthlyReportData[];
-  
-  // Weekly breakdown
   weekly: WeeklyReportData[];
-  
-  // Clients
   clients: ClientReportData[];
   topClientsRevenuePercent: number;
-  
-  // Product sales
   products: ProductSaleData[];
   totalProductsSold: number;
-  
-  // Product clients breakdown (who buys the most)
   productClients: ProductClientData[];
   
-  // Managerial metrics
   managerial: {
     incomePerHour: number | null;
     groupTrainingPercent: number;
@@ -150,7 +139,6 @@ export interface FinancialReportData {
     yoyChangePercent: number | null;
   };
   
-  // Data validation
   validation: {
     paymentsWithoutClient: number;
     trainingsWithoutClient: number;
@@ -181,7 +169,6 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       switch (period) {
         case 'year':
           startDate = startOfYear(now);
-          // Use current date if we're in the middle of the year
           endDate = now < endOfYear(now) ? now : endOfYear(now);
           periodLabel = `Rok ${now.getFullYear()} (do ${format(endDate, 'd.M.', { locale: cs })})`;
           break;
@@ -217,6 +204,7 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         trainingTransactionsResult,
         expensesResult,
         allTransactionsWithMethodResult,
+        canceledTrainingResult,
       ] = await Promise.all([
         // Trainings
         supabase
@@ -302,12 +290,20 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           .gte('date', format(startDate, 'yyyy-MM-dd'))
           .lte('date', format(endDate, 'yyyy-MM-dd')),
         
-        // All income transactions with payment_method for breakdown (only actual income, no training/product debits)
+        // All income transactions with payment_method for breakdown (only actual income)
         supabase
           .from('credit_transactions')
           .select('amount, type, payment_method, created_at')
           .in('type', ['payment', 'manual'])
           .gt('amount', 0)
+          .gte('created_at', startStr)
+          .lte('created_at', endStr),
+        
+        // FIX #3: Canceled training transactions (storno fees = real income)
+        supabase
+          .from('credit_transactions')
+          .select('id, amount, type, client_id, payment_method, created_at')
+          .eq('type', 'canceled_training')
           .gte('created_at', startStr)
           .lte('created_at', endStr),
       ]);
@@ -323,6 +319,7 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       const trainingTransactions = trainingTransactionsResult.data || [];
       const expenses = expensesResult.data || [];
       const allTransactionsWithMethod = allTransactionsWithMethodResult.data || [];
+      const canceledTrainingTxns = canceledTrainingResult.data || [];
 
       // Build maps
       const clientMap = new Map(clients.map(c => [c.id, c.name]));
@@ -333,12 +330,14 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       const orderClientMap = new Map(salesOrders.map(o => [o.id, o.client_id]));
       const orderItems = allOrderItems.filter(item => orderIds.has(item.order_id));
 
+      // FIX #3: Calculate cancellation income (storno fees are negative amounts, take absolute)
+      const cancellationIncome = canceledTrainingTxns.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+
       // Calculate income from different sources based on settings
       const paymentIncome = settings.dataSources.clientPayments 
         ? transactions.reduce((sum, t) => sum + (t.amount || 0), 0) 
         : 0;
       
-      // Product income from sales_orders
       const productIncome = settings.dataSources.productSales 
         ? salesOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0)
         : 0;
@@ -347,7 +346,8 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         ? trainings.reduce((sum, t) => sum + (t.final_price || 0), 0) 
         : 0;
       
-      const totalIncome = paymentIncome + productIncome;
+      // FIX #3: Include cancellation income in totalIncome
+      const totalIncome = paymentIncome + productIncome + cancellationIncome;
       const lastYearIncome = lastYearTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
 
       // Count trainings by participant count
@@ -362,13 +362,13 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       // Active clients based on definition
       const clientsWithTraining = new Set<string>();
       const clientsWithPayment = new Set<string>();
-      const clientStats = new Map<string, { paid: number; trainings: number; solo: number; duo: number; trio: number }>();
+      const clientStats = new Map<string, { paid: number; productsPaid: number; trainings: number; solo: number; duo: number; trio: number }>();
 
       // Process trainings for client stats
       trainings.forEach(t => {
         if (t.client_id) {
           clientsWithTraining.add(t.client_id);
-          const stats = clientStats.get(t.client_id) || { paid: 0, trainings: 0, solo: 0, duo: 0, trio: 0 };
+          const stats = clientStats.get(t.client_id) || { paid: 0, productsPaid: 0, trainings: 0, solo: 0, duo: 0, trio: 0 };
           stats.trainings += 1;
           const pc = t.participant_count || 1;
           if (pc === 1) stats.solo += 1;
@@ -382,7 +382,7 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       participants.forEach((p: any) => {
         if (p.client_id) {
           clientsWithTraining.add(p.client_id);
-          const stats = clientStats.get(p.client_id) || { paid: 0, trainings: 0, solo: 0, duo: 0, trio: 0 };
+          const stats = clientStats.get(p.client_id) || { paid: 0, productsPaid: 0, trainings: 0, solo: 0, duo: 0, trio: 0 };
           stats.trainings += 1;
           const pc = p.training_sessions?.participant_count || 1;
           if (pc === 1) stats.solo += 1;
@@ -396,10 +396,20 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       transactions.forEach(t => {
         if (t.client_id) {
           clientsWithPayment.add(t.client_id);
-          const stats = clientStats.get(t.client_id) || { paid: 0, trainings: 0, solo: 0, duo: 0, trio: 0 };
+          const stats = clientStats.get(t.client_id) || { paid: 0, productsPaid: 0, trainings: 0, solo: 0, duo: 0, trio: 0 };
           stats.paid += t.amount || 0;
           clientStats.set(t.client_id, stats);
         }
+      });
+
+      // FIX #8: Add product purchases from salesOrders to client stats
+      orderItems.forEach(item => {
+        const clientId = orderClientMap.get(item.order_id);
+        if (!clientId) return;
+        const revenue = item.line_total_after_discount || item.line_total || 0;
+        const stats = clientStats.get(clientId) || { paid: 0, productsPaid: 0, trainings: 0, solo: 0, duo: 0, trio: 0 };
+        stats.productsPaid += revenue;
+        clientStats.set(clientId, stats);
       });
 
       // Determine active clients based on setting
@@ -421,25 +431,26 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           id,
           name: clientMap.get(id) || 'Neznámý',
           totalPaid: stats.paid,
+          productsPaid: stats.productsPaid,
           trainingCount: stats.trainings,
           soloCount: stats.solo,
           duoCount: stats.duo,
           trioCount: stats.trio,
         }))
-        .sort((a, b) => b.totalPaid - a.totalPaid);
+        .sort((a, b) => (b.totalPaid + b.productsPaid) - (a.totalPaid + a.productsPaid));
 
       // Top 20% clients revenue percentage
       const top20Count = Math.max(1, Math.ceil(clientsData.length * 0.2));
-      const top20Revenue = clientsData.slice(0, top20Count).reduce((sum, c) => sum + c.totalPaid, 0);
+      const top20Revenue = clientsData.slice(0, top20Count).reduce((sum, c) => sum + c.totalPaid + c.productsPaid, 0);
       const topClientsRevenuePercent = totalIncome > 0 ? (top20Revenue / totalIncome) * 100 : 0;
 
       // Monthly breakdown
-      const monthlyMap = new Map<string, { income: number; trainings: number; solo: number; duo: number; trio: number; clients: Set<string> }>();
+      const monthlyMap = new Map<string, { income: number; cancellationIncome: number; trainings: number; solo: number; duo: number; trio: number; clients: Set<string> }>();
       const months = eachMonthOfInterval({ start: startDate, end: endDate });
       
       months.forEach(month => {
         const key = format(month, 'yyyy-MM');
-        monthlyMap.set(key, { income: 0, trainings: 0, solo: 0, duo: 0, trio: 0, clients: new Set() });
+        monthlyMap.set(key, { income: 0, cancellationIncome: 0, trainings: 0, solo: 0, duo: 0, trio: 0, clients: new Set() });
       });
 
       trainings.forEach(t => {
@@ -473,6 +484,15 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         }
       });
 
+      // FIX #3: Add cancellation income to monthly
+      canceledTrainingTxns.forEach(t => {
+        const key = format(new Date(t.created_at), 'yyyy-MM');
+        const data = monthlyMap.get(key);
+        if (data) {
+          data.cancellationIncome += Math.abs(t.amount || 0);
+        }
+      });
+
       const monthlyData: MonthlyReportData[] = [];
       let prevIncome: number | null = null;
       
@@ -480,14 +500,16 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         .sort(([a], [b]) => a.localeCompare(b))
         .forEach(([key, data]) => {
           const date = new Date(key + '-01');
+          const totalMonthIncome = data.income + data.cancellationIncome;
           const changePercent = prevIncome !== null && prevIncome > 0 
-            ? ((data.income - prevIncome) / prevIncome) * 100 
+            ? ((totalMonthIncome - prevIncome) / prevIncome) * 100 
             : null;
           
           monthlyData.push({
             month: format(date, 'LLLL', { locale: cs }),
             monthNum: date.getMonth() + 1,
             income: data.income,
+            cancellationIncome: data.cancellationIncome,
             trainingCount: data.trainings,
             soloCount: data.solo,
             duoCount: data.duo,
@@ -496,24 +518,57 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
             changePercent,
           });
           
-          prevIncome = data.income;
+          prevIncome = totalMonthIncome;
         });
 
-      // Weekly breakdown - use composite key for proper sorting across years
-      const weeklyMap = new Map<string, { week: number; year: number; trainings: number; solo: number; duo: number; trio: number; income: number }>();
+      // FIX #2: Weekly breakdown - use actual payments/sales, not final_price
+      const weeklyMap = new Map<string, { week: number; year: number; trainings: number; solo: number; duo: number; trio: number; income: number; cancellationIncome: number }>();
       
+      // First pass: just count trainings per week
       trainings.forEach(t => {
         const date = new Date(t.date);
         const week = getISOWeek(date);
         const year = date.getFullYear();
         const key = `${year}-W${week.toString().padStart(2, '0')}`;
-        const data = weeklyMap.get(key) || { week, year, trainings: 0, solo: 0, duo: 0, trio: 0, income: 0 };
+        const data = weeklyMap.get(key) || { week, year, trainings: 0, solo: 0, duo: 0, trio: 0, income: 0, cancellationIncome: 0 };
         data.trainings += 1;
-        data.income += t.final_price || 0;
         const pc = t.participant_count || 1;
         if (pc === 1) data.solo += 1;
         else if (pc === 2) data.duo += 1;
         else data.trio += 1;
+        weeklyMap.set(key, data);
+      });
+
+      // FIX #2: Add actual payment income to weekly (not final_price)
+      transactions.forEach(t => {
+        const date = new Date(t.created_at);
+        const week = getISOWeek(date);
+        const year = date.getFullYear();
+        const key = `${year}-W${week.toString().padStart(2, '0')}`;
+        const data = weeklyMap.get(key) || { week, year, trainings: 0, solo: 0, duo: 0, trio: 0, income: 0, cancellationIncome: 0 };
+        data.income += t.amount || 0;
+        weeklyMap.set(key, data);
+      });
+
+      // Add sales orders income to weekly
+      salesOrders.forEach(o => {
+        const date = new Date(o.created_at);
+        const week = getISOWeek(date);
+        const year = date.getFullYear();
+        const key = `${year}-W${week.toString().padStart(2, '0')}`;
+        const data = weeklyMap.get(key) || { week, year, trainings: 0, solo: 0, duo: 0, trio: 0, income: 0, cancellationIncome: 0 };
+        data.income += o.total_amount || 0;
+        weeklyMap.set(key, data);
+      });
+
+      // Add cancellation income to weekly
+      canceledTrainingTxns.forEach(t => {
+        const date = new Date(t.created_at);
+        const week = getISOWeek(date);
+        const year = date.getFullYear();
+        const key = `${year}-W${week.toString().padStart(2, '0')}`;
+        const data = weeklyMap.get(key) || { week, year, trainings: 0, solo: 0, duo: 0, trio: 0, income: 0, cancellationIncome: 0 };
+        data.cancellationIncome += Math.abs(t.amount || 0);
         weeklyMap.set(key, data);
       });
 
@@ -527,14 +582,15 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           duoCount: data.duo,
           trioCount: data.trio,
           income: data.income,
+          cancellationIncome: data.cancellationIncome,
         }));
 
       // Managerial metrics
       const bestMonth = monthlyData.length > 0 
-        ? monthlyData.reduce((best, m) => m.income > best.income ? m : best)
+        ? monthlyData.reduce((best, m) => (m.income + m.cancellationIncome) > (best.income + best.cancellationIncome) ? m : best)
         : null;
       const worstMonth = monthlyData.filter(m => m.income > 0).length > 0
-        ? monthlyData.filter(m => m.income > 0).reduce((worst, m) => m.income < worst.income ? m : worst)
+        ? monthlyData.filter(m => m.income > 0).reduce((worst, m) => (m.income + m.cancellationIncome) < (worst.income + worst.cancellationIncome) ? m : worst)
         : null;
 
       const groupTrainings = duoTrainings + trioTrainings;
@@ -548,9 +604,6 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       const paymentsWithoutClient = transactions.filter(t => !t.client_id).length;
       const trainingsWithoutClient = trainings.filter(t => !t.client_id && (t.participant_count || 1) === 1).length;
       const trainedTotal = trainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
-      // FIXED: compare with paidTrainingValue, not paymentIncome
-      // paidTrainingValue is calculated later, so we use a forward reference pattern
-      // We'll compute it here too for validation
       const trainedNotPaidDiffFn = (ptv: number) => trainedTotal - ptv;
 
       // ========== PRODUCT SALES BREAKDOWN (from sales_order_items) ==========
@@ -619,7 +672,7 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       const totalProductMargin = totalProductRevenue - totalProductCost;
       const totalProductMarginPercent = totalProductRevenue > 0 ? (totalProductMargin / totalProductRevenue) * 100 : 0;
 
-      // ========== PRODUCT CLIENTS BREAKDOWN (who buys the most) ==========
+      // ========== PRODUCT CLIENTS BREAKDOWN ==========
       const productClientMap = new Map<string, { 
         spent: number; 
         productCount: number;
@@ -651,13 +704,11 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         .sort((a, b) => b.totalSpent - a.totalSpent);
 
       // ========== CALCULATE ACCURATE TRAINING METRICS ==========
-      // Group training transactions by session to avoid counting same session multiple times (group trainings)
       const paidSessionMap = new Map<string, { amount: number; duration: number }>();
       trainingTransactions.forEach((t: any) => {
         if (t.training_session_id && t.training_sessions?.duration) {
           const existing = paidSessionMap.get(t.training_session_id);
           if (existing) {
-            // For group trainings, sum up the amounts but keep the same duration
             existing.amount += Math.abs(t.amount || 0);
           } else {
             paidSessionMap.set(t.training_session_id, {
@@ -673,7 +724,6 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
       const paidTrainingMinutes = Array.from(paidSessionMap.values()).reduce((sum, t) => sum + t.duration, 0);
       const paidTrainingHours = paidTrainingMinutes / 60;
       
-      // Calculate accurate metrics (only from paid trainings)
       const accurateAvgPricePerTraining = paidTrainingsCount > 0 
         ? Math.round(paidTrainingValue / paidTrainingsCount) 
         : 0;
@@ -681,14 +731,12 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         ? Math.round(paidTrainingValue / paidTrainingHours) 
         : null;
       
-      // Unpaid trainings
       const paidSessionIds = new Set(paidSessionMap.keys());
       const unpaidTrainings = trainings.filter(t => !paidSessionIds.has(t.id));
       const unpaidTrainingsCount = unpaidTrainings.length;
       const unpaidValue = unpaidTrainings.reduce((sum, t) => sum + (t.final_price || 0), 0);
       
-      // Build trainings summary
-      const trainingsSummary: import('./useFinancialReportData').TrainingsSummary = {
+      const trainingsSummary: TrainingsSummary = {
         totalTrainings: trainings.length,
         totalHours: totalHours,
         totalTrainedValue: trainingIncome,
@@ -701,11 +749,11 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         unpaidValue,
       };
       
-      // Build payments summary
-      const paymentsSummary: import('./useFinancialReportData').PaymentsSummary = {
+      // FIX #5: Rename directPayments -> unallocatedCredit
+      const paymentsSummary: PaymentsSummary = {
         totalPayments: paymentIncome + productIncome,
         trainingPayments: paidTrainingValue,
-        directPayments: paymentIncome - paidTrainingValue, // FIXED: only direct credit top-ups
+        unallocatedCredit: paymentIncome - paidTrainingValue,
         productPayments: productIncome,
         paymentTransactionCount: transactions.length,
       };
@@ -721,18 +769,19 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         const method = t.payment_method || '';
         if (method === 'cash' || method === 'paid_cash') paymentMethodBreakdown.cash += amount;
         else if (method === 'card' || method === 'paid_card') paymentMethodBreakdown.card += amount;
-        else if (method === 'bank_transfer' || method === 'bank' || method === 'paid_bank') paymentMethodBreakdown.bank_transfer += amount;
+        // FIX #1: Add 'transfer' to bank_transfer mapping
+        else if (method === 'bank_transfer' || method === 'bank' || method === 'paid_bank' || method === 'transfer') paymentMethodBreakdown.bank_transfer += amount;
         else if (method === 'credit' || method === 'paid_credit') paymentMethodBreakdown.credit += amount;
       });
 
-      // Also add sales order payment methods
+      // FIX #4: Add sales order payment methods, but EXCLUDE credit (already counted in payment transactions)
       salesOrders.forEach(o => {
         const amount = o.total_amount || 0;
         const method = (o.payment_method || '') as string;
         if (method === 'cash') paymentMethodBreakdown.cash += amount;
         else if (method === 'card') paymentMethodBreakdown.card += amount;
-        else if (method === 'bank_transfer' || method === 'bank') paymentMethodBreakdown.bank_transfer += amount;
-        else if (method === 'credit') paymentMethodBreakdown.credit += amount;
+        else if (method === 'bank_transfer' || method === 'bank' || method === 'transfer') paymentMethodBreakdown.bank_transfer += amount;
+        // FIX #4: credit sales_orders NOT added -- already counted via credit_transactions
       });
 
       return {
@@ -746,21 +795,21 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           trainingIncome,
           productIncome,
           paymentIncome,
+          cancellationIncome,
           totalTrainings: settings.dataSources.trainings ? trainings.length : 0,
           totalClients,
           soloTrainings,
           duoTrainings,
           trioTrainings,
-          avgIncomePerTraining: accurateAvgPricePerTraining, // FIXED: use accurate calculation
+          avgIncomePerTraining: accurateAvgPricePerTraining,
           avgIncomePerClient: totalClients > 0 ? totalIncome / totalClients : 0,
-          // Product summary
           totalProductRevenue,
           totalProductCost,
-           totalProductMargin,
-           totalProductMarginPercent,
-           totalExpenses,
-           netProfit,
-           paymentMethodBreakdown,
+          totalProductMargin,
+          totalProductMarginPercent,
+          totalExpenses,
+          netProfit,
+          paymentMethodBreakdown,
         },
         trainingsSummary,
         paymentsSummary,
@@ -772,10 +821,10 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
         totalProductsSold,
         productClients: productClientsData,
         managerial: {
-          incomePerHour: accurateHourlyRate, // FIXED: use accurate calculation
+          incomePerHour: accurateHourlyRate,
           groupTrainingPercent,
-          bestMonth: bestMonth ? { name: bestMonth.month, income: bestMonth.income } : null,
-          worstMonth: worstMonth ? { name: worstMonth.month, income: worstMonth.income } : null,
+          bestMonth: bestMonth ? { name: bestMonth.month, income: bestMonth.income + bestMonth.cancellationIncome } : null,
+          worstMonth: worstMonth ? { name: worstMonth.month, income: worstMonth.income + worstMonth.cancellationIncome } : null,
           ytdIncome: totalIncome,
           lastYearIncome,
           yoyChangePercent,
