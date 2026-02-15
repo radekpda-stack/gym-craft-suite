@@ -1,102 +1,98 @@
 
 
-# Přestavba Analytiky Výkonnosti -- zaměření na klienty a cviky
+# Vylepšení finančního reportu v Nastavení
 
-## Co se změní
+## Nalezené problémy s daty
 
-Sekce Analytika v kartě Výkonnost se přestaví tak, aby se zaměřila na **skutečné posuny klientů, srovnání mezi klienty a data o cvicích** (váhy, kardio, plyo). Odstraní se karty, které vás nezajímají, a přidají se nové, užitečnější.
+1. **Celkové příjmy nezahrnují příjmy z produktů v měsíčním přehledu** -- měsíční tabulka počítá příjmy pouze z `payment + manual` transakcí, prodeje produktů chybí
+2. **Rozdíl "odtrénováno vs zaplaceno" je špatně počítán** -- porovnává hodnotu tréninků s CELKOVOU sumou plateb (včetně manuálních dobití), místo jen s platbami za tréninky
+3. **"Přímé platby (kredit)" v sekci Úhrady** -- zobrazuje součet VŠECH payment+manual transakcí, ne pouze přímé kreditové platby
+4. **Chybí provozní náklady** -- business_expenses tabulka existuje ale report ji ignoruje, takže chybí čistý zisk
+5. **Chybí rozpad podle platební metody** -- hotovost / karta / převod / kredit
+6. **Týdenní přehled neobsahuje příjmy** -- jen počty tréninků
 
-### Karty k odstranění
-- **StagnationAlertCard** (stagnace)
-- **MovementGapsCard** (pohybové vzorce)
-- **UnusedExercisesCard** (nepoužité cviky)
-- **ClientAttentionCard** (klienti vyžadující pozornost)
-- **PRDistributionCard** (distribuce PR)
-- KPI "Pozornost" a "Tonnage" z horního řádku
+## Plánované změny
 
-### Karty k ponechání (upravené)
-- **KPI řádek** -- zůstane frekvence, RPE, BW reps; tonnage se nahradí za "Ø váha/záznam" a PR se nahradí za "Aktivní klienti"
-- **GenderComparisonCard** -- rozšíří se o Ø váhu na záznam a frekvenci
-- **AgeGroupComparisonCard** -- rozšíří se o frekvenci a objem na klienta
-- **WeightProgressionCard** -- zůstane (progrese vah top cviků)
-- **TopExercisesByGenderCard** -- zůstane
-- **RPE karty** -- zůstanou (RPE by Exercise + RPE Progress Correlation)
-- **TopExercisesTable** -- zůstane
+### 1. Oprava dat v `useFinancialReportData.ts`
+- Měsíční přehled: přidat příjmy z prodejů produktů do měsíčních sum
+- Opravit `trainedNotPaidDiff`: porovnávat s `trainingPayments` místo `paymentIncome`
+- Opravit `paymentsSummary.directPayments`: odečíst training payments od celkových plateb
+- Přidat týdenní příjmy do `WeeklyReportData`
+- Přidat rozpad podle platebních metod (cash/card/transfer/credit)
 
-### Nové karty
+### 2. Přidat provozní náklady a čistý zisk
+- Načíst data z tabulky `business_expenses`
+- Přidat do summary: `totalExpenses`, `netProfit`
+- Zobrazit v PDF v sekci Souhrn období
 
-1. **ClientProgressLeaderboard** -- Žebříček klientů seřazený podle skutečného zlepšení (nárůst Ø váhy, frekvence, počet záznamů). Každý klient s mini-sparkline trendem. Filtr: síla / kardio / plyo.
+### 3. Rozšířit náhled dat v nastavení (`FinancialReportSettings.tsx`)
+- Přidat: provozní náklady, čistý zisk, rozpad platebních metod, hodinovou sazbu
+- Vizuálně vylepšit náhled -- přehlednější grid s barvami
 
-2. **ClientVolumeComparisonCard** -- Sloupcový graf srovnávající celkový objem (kg) nebo čas (kardio) mezi klienty za zvolené období. Umožňuje vidět kdo trénuje nejvíc.
-
-3. **ExercisePopularityByClientCard** -- Tabulka: jaký cvik u kterého klienta a jak často, s max váhou. Odpovídá na "co s kým dělám a jak mu to jde".
-
-4. **ClientWeightProgressionCard** -- Stejný koncept jako WeightProgressionCard, ale místo top 5 cviků zobrazí top 5 klientů a jejich Ø váhu po týdnech -- posuny klientů v čase.
-
-5. **CardioClientComparisonCard** -- Srovnání kardio metrik (celkový čas, vzdálenost, Ø watts, Ø HR) mezi klienty. Data z `cardio_entries`.
-
-6. **SkillClientComparisonCard** -- Srovnání skill/plyo aktivity mezi klienty (počet záznamů, unikátní cviky). Data z `skill_entries`.
-
-## Nové rozložení stránky
-
-```text
-+--[ Filtry (období, klient, testy) ]--+
-
-+--[ KPI: Ø váha | Aktivní klienti | Frekvence | RPE | BW reps ]--+
-
-+--[ Client Progress Leaderboard (full width) ]--+
-
-+--[ Client Volume Comparison ]--+--[ Client Weight Progression ]--+
-
-+--[ Gender Comparison ]--------+--[ Age Group Comparison ]--------+
-
-+--[ Weight Progression (top cviky, full width) ]--+
-
-+--[ Top Exercises by Gender ]--+--[ Exercise Popularity by Client ]--+
-
-+--[ Cardio Client Comparison ]-+--[ Skill Client Comparison ]--------+
-
-+--[ RPE by Exercise ]----------+--[ RPE Progress Correlation ]------+
-
-+--[ Top Exercises Table (full width) ]--+
-```
+### 4. Aktualizovat PDF generátor (`financialReportPdf.ts`)
+- Opravit sekci Úhrady -- správné hodnoty
+- Přidat řádek s provozními náklady a čistým ziskem do Souhrnu
+- Přidat rozpad platebních metod do měsíčního přehledu nebo vlastní sekce
+- Přidat příjmy do týdenního přehledu
 
 ## Technické detaily
 
-### Hook `useExerciseAnalyticsComplete`
-- Odstraní se výpočty pro `stagnatingClients`, `movementGaps`, `unusedExercises`, `clientsNeedingAttention`, `prDistribution`
-- Přidají se nové datové struktury:
-  - `clientProgressRanking`: pro každého klienta vypočte Ø váhu v 1. a 2. polovině období, nárůst, frekvenci, počet záznamů
-  - `clientVolumeComparison`: celkový objem (kg) per klient
-  - `exerciseByClient`: matice cvik x klient (počet, max váha)
-  - `clientWeightProgression`: týdenní Ø váha per klient (top 5 klientů dle objemu)
+### Nové datové struktury v `useFinancialReportData.ts`
+```typescript
+// Rozpad platebních metod
+interface PaymentMethodBreakdown {
+  cash: number;
+  card: number;
+  bank_transfer: number;
+  credit: number;
+}
 
-### Nový hook `useClientCardioComparison`
-- Dotaz na `cardio_entries` seskupený po klientech
-- Vrátí: celkový čas, vzdálenost, Ø watts, Ø HR per klient
+// Rozšířené summary
+summary: {
+  ...existing,
+  totalExpenses: number;
+  netProfit: number;
+  paymentMethodBreakdown: PaymentMethodBreakdown;
+}
 
-### Nový hook `useClientSkillComparison`
-- Dotaz na `skill_entries` seskupený po klientech
-- Vrátí: počet záznamů, unikátní cviky per klient
+// Rozšířené WeeklyReportData
+interface WeeklyReportData {
+  ...existing,
+  income: number;
+}
+```
 
-### Nové komponenty (6 souborů)
-- `ClientProgressLeaderboard.tsx`
-- `ClientVolumeComparisonCard.tsx`
-- `ExercisePopularityByClientCard.tsx`
-- `ClientWeightProgressionCard.tsx`
-- `CardioClientComparisonCard.tsx`
-- `SkillClientComparisonCard.tsx`
+### Nový dotaz na business_expenses
+```typescript
+supabase
+  .from('business_expenses')
+  .select('amount, category, date')
+  .gte('date', startStr)
+  .lte('date', endStr)
+```
 
-### Upravené soubory
-- `StrengthAnalyticsView.tsx` -- nové rozložení, nové importy, odstranění starých karet
-- `AnalyticsKPIRow.tsx` -- nahrazení Tonnage za Ø váha, PR za Aktivní klienti, odstranění Pozornost
-- `useExerciseAnalyticsComplete.ts` -- rozšíření dat, odstranění nepotřebných výpočtů
-- `GenderComparisonCard.tsx` -- rozšíření o frekvenci
-- `AgeGroupComparisonCard.tsx` -- rozšíření o objem na klienta
+### Oprava paymentsSummary
+```typescript
+paymentsSummary: {
+  totalPayments: paymentIncome + productIncome,
+  trainingPayments: paidTrainingValue,
+  directPayments: paymentIncome - paidTrainingValue, // OPRAVA
+  productPayments: productIncome,
+  paymentTransactionCount: transactions.length,
+}
+```
 
-### Odstraněné soubory (nepoužívané po refactoru)
-- Žádné soubory se nemažou (mohou být použity jinde), ale importy se odstraní z `StrengthAnalyticsView.tsx`
+### Oprava validation
+```typescript
+validation: {
+  ...existing,
+  trainedNotPaidDiff: trainedTotal - paidTrainingValue, // OPRAVA: porovnat s training payments
+}
+```
 
-### Databáze
-- Žádné změny schématu -- vše se počítá z existujících tabulek (`exercise_entries`, `cardio_entries`, `skill_entries`, `clients`)
+### Soubory k úpravě
+- `src/hooks/useFinancialReportData.ts` -- opravy dat, nové dotazy, rozšíření typů
+- `src/components/settings/FinancialReportSettings.tsx` -- rozšířený náhled
+- `src/lib/financialReportPdf.ts` -- aktualizace PDF výstupu
+- `src/hooks/useFinancialReportSettings.ts` -- nová sekce v nastavení pro platební metody
 
