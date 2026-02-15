@@ -12,32 +12,52 @@ export interface FinancialReportPdfOptions {
   settings: FinancialReportSettings;
 }
 
-const COLORS = {
-  primary: [255, 115, 0] as [number, number, number],
-  primaryDark: [230, 100, 0] as [number, number, number],
-  text: [15, 23, 42] as [number, number, number],
-  textMuted: [100, 116, 139] as [number, number, number],
-  textLight: [148, 163, 184] as [number, number, number],
-  background: [250, 245, 240] as [number, number, number],
+// Modern professional color palette
+const C = {
+  // Primary dark tones
+  headerBg: [15, 23, 42] as [number, number, number],       // slate-900
+  headerText: [255, 255, 255] as [number, number, number],
+  
+  // Accent (orange, used sparingly)
+  accent: [249, 115, 22] as [number, number, number],        // orange-500
+  accentLight: [255, 237, 213] as [number, number, number],   // orange-50
+  
+  // Text hierarchy
+  text: [15, 23, 42] as [number, number, number],             // slate-900
+  textSecondary: [71, 85, 105] as [number, number, number],   // slate-500
+  textMuted: [148, 163, 184] as [number, number, number],     // slate-400
+  
+  // Backgrounds
   white: [255, 255, 255] as [number, number, number],
-  success: [34, 197, 94] as [number, number, number],
-  danger: [239, 68, 68] as [number, number, number],
+  bgSubtle: [248, 250, 252] as [number, number, number],      // slate-50
+  bgAlt: [241, 245, 249] as [number, number, number],         // slate-100
+  
+  // Semantic
+  success: [22, 163, 74] as [number, number, number],         // green-600
+  danger: [220, 38, 38] as [number, number, number],          // red-600
+  
+  // Borders
+  border: [226, 232, 240] as [number, number, number],        // slate-200
+  borderLight: [241, 245, 249] as [number, number, number],   // slate-100
 };
 
-const FONTS = {
-  title: 22,
-  sectionTitle: 14,
+const F = {
+  title: 24,
+  subtitle: 11,
+  sectionTitle: 13,
+  kpiValue: 16,
+  kpiLabel: 8,
   heading: 11,
-  body: 10,
-  small: 9,
-  tiny: 8,
+  body: 9.5,
+  small: 8.5,
+  tiny: 7.5,
 };
 
-function formatCurrency(amount: number): string {
+function fmt(amount: number): string {
   return `${amount.toLocaleString('cs-CZ')} Kč`;
 }
 
-function formatPercent(value: number | null): string {
+function fmtPct(value: number | null): string {
   if (value === null) return '-';
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(1)} %`;
@@ -51,56 +71,114 @@ export async function generateFinancialReportPdf(
   
   await loadRobotoFonts();
 
-  const doc = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4",
-  });
-
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   registerRobotoFont(doc);
 
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 15;
-  let yPos = margin;
+  const pw = doc.internal.pageSize.getWidth();
+  const ph = doc.internal.pageSize.getHeight();
+  const m = 16; // margin
+  const cw = pw - 2 * m; // content width
+  let y = m;
 
-  const checkPageBreak = (requiredHeight: number) => {
-    if (yPos + requiredHeight > pageHeight - 20) {
+  const checkPage = (h: number) => {
+    if (y + h > ph - 18) {
       doc.addPage();
-      yPos = margin;
+      y = m;
       return true;
     }
     return false;
   };
 
-  const drawSectionTitle = (title: string) => {
-    checkPageBreak(15);
-    doc.setFillColor(...COLORS.primary);
-    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 10, 2, 2, 'F');
-    doc.setFontSize(FONTS.sectionTitle);
-    doc.setTextColor(...COLORS.white);
+  // ── Section title: uppercase text with thin accent underline ──
+  const drawSection = (title: string) => {
+    checkPage(18);
+    y += 4;
+    doc.setFontSize(F.sectionTitle);
+    doc.setTextColor(...C.headerBg);
     doc.setFont("Roboto", "bold");
-    doc.text(title, margin + 5, yPos + 7);
-    yPos += 15;
+    doc.text(title.toUpperCase(), m, y);
+    y += 2;
+    doc.setDrawColor(...C.accent);
+    doc.setLineWidth(0.6);
+    doc.line(m, y, m + 45, y);
+    doc.setLineWidth(0.2);
+    y += 6;
   };
 
-  const drawStatRow = (label: string, value: string, x: number = margin, width: number = pageWidth - 2 * margin) => {
-    doc.setFontSize(FONTS.body);
-    doc.setTextColor(...COLORS.textMuted);
+  // ── Stat row helper ──
+  const statRow = (label: string, value: string, x: number = m, w: number = cw, options?: { color?: [number, number, number]; bold?: boolean }) => {
+    doc.setFontSize(F.body);
+    doc.setTextColor(...C.textSecondary);
     doc.setFont("Roboto", "normal");
-    doc.text(label, x + 3, yPos);
-    doc.setTextColor(...COLORS.text);
-    doc.setFont("Roboto", "bold");
-    doc.text(value, x + width - 3, yPos, { align: "right" });
-    yPos += 6;
+    doc.text(label, x + 2, y);
+    doc.setTextColor(...(options?.color || C.text));
+    doc.setFont("Roboto", options?.bold ? "bold" : "bold");
+    doc.text(value, x + w - 2, y, { align: "right" });
+    y += 5.5;
   };
 
-  // Header stripe
-  doc.setFillColor(...COLORS.primary);
-  doc.rect(0, 0, pageWidth, 8, 'F');
-  yPos = 18;
+  // ── KPI Card ──
+  const drawKpiCard = (x: number, w: number, label: string, value: string, subtext?: string, valueColor?: [number, number, number]) => {
+    // Card background
+    doc.setFillColor(...C.bgSubtle);
+    doc.setDrawColor(...C.border);
+    doc.roundedRect(x, y, w, 22, 2, 2, 'FD');
+    
+    // Value
+    doc.setFontSize(F.kpiValue);
+    doc.setTextColor(...(valueColor || C.headerBg));
+    doc.setFont("Roboto", "bold");
+    doc.text(value, x + w / 2, y + 10, { align: "center" });
+    
+    // Label
+    doc.setFontSize(F.kpiLabel);
+    doc.setTextColor(...C.textMuted);
+    doc.setFont("Roboto", "normal");
+    doc.text(label.toUpperCase(), x + w / 2, y + 16, { align: "center" });
+    
+    // Subtext
+    if (subtext) {
+      doc.setFontSize(6.5);
+      doc.setTextColor(...C.textMuted);
+      doc.text(subtext, x + w / 2, y + 20, { align: "center" });
+    }
+  };
 
-  // Company logo
+  // ── Table theme config ──
+  const tableTheme = {
+    theme: 'striped' as const,
+    styles: {
+      font: 'Roboto',
+      fontSize: F.tiny,
+      cellPadding: 2.5,
+      lineColor: C.borderLight,
+      lineWidth: 0.1,
+    },
+    headStyles: {
+      fillColor: C.headerBg,
+      textColor: C.headerText,
+      fontStyle: 'bold' as const,
+      fontSize: F.small,
+    },
+    alternateRowStyles: {
+      fillColor: C.bgSubtle,
+    },
+    margin: { left: m, right: m },
+  };
+
+  // ═══════════════════════════════════════════
+  // HEADER
+  // ═══════════════════════════════════════════
+  
+  // Thin dark header bar
+  doc.setFillColor(...C.headerBg);
+  doc.rect(0, 0, pw, 5, 'F');
+  // Small accent stripe
+  doc.setFillColor(...C.accent);
+  doc.rect(0, 5, pw, 1.2, 'F');
+  y = 14;
+
+  // Logo
   if (settings.branding.showLogo && options.companyLogoUrl) {
     try {
       const response = await fetch(options.companyLogoUrl);
@@ -110,161 +188,136 @@ export async function generateFinancialReportPdf(
         reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(blob);
       });
-      doc.addImage(base64, 'AUTO', margin, yPos - 5, 0, 12);
-      yPos += 5;
+      doc.addImage(base64, 'AUTO', m, y - 3, 0, 10);
+      y += 4;
     } catch (e) {
       console.error("Failed to load logo:", e);
     }
   }
 
   // Title
-  doc.setFontSize(FONTS.title);
-  doc.setTextColor(...COLORS.primaryDark);
+  doc.setFontSize(F.title);
+  doc.setTextColor(...C.headerBg);
   doc.setFont("Roboto", "bold");
-  const title = settings.branding.customTitle || "Finanční report";
-  doc.text(title, margin, yPos + 5);
-  yPos += 12;
+  doc.text(settings.branding.customTitle || "Finanční report", m, y + 5);
+  y += 12;
 
   // Company name
   if (settings.branding.showCompanyName && options.companyName) {
-    doc.setFontSize(FONTS.small);
-    doc.setTextColor(...COLORS.textMuted);
+    doc.setFontSize(F.subtitle);
+    doc.setTextColor(...C.textSecondary);
     doc.setFont("Roboto", "normal");
-    doc.text(options.companyName, margin, yPos);
-    yPos += 5;
+    doc.text(options.companyName, m, y);
+    y += 5;
   }
 
-  // Period and generation date
-  doc.setFontSize(FONTS.small);
-  doc.setTextColor(...COLORS.textLight);
-  doc.text(`Období: ${data.period.label}`, margin, yPos);
-  doc.text(`Vygenerováno: ${format(new Date(), "d. M. yyyy HH:mm", { locale: cs })}`, pageWidth - margin, yPos, { align: "right" });
-  yPos += 10;
+  // Period & date
+  doc.setFontSize(F.small);
+  doc.setTextColor(...C.textMuted);
+  doc.text(`Období: ${data.period.label}`, m, y);
+  doc.text(`Vygenerováno: ${format(new Date(), "d. M. yyyy HH:mm", { locale: cs })}`, pw - m, y, { align: "right" });
+  y += 10;
 
-  // === YEAR SUMMARY ===
+  // ═══════════════════════════════════════════
+  // KPI CARDS
+  // ═══════════════════════════════════════════
   if (settings.sections.yearSummary) {
-    drawSectionTitle("Souhrn období");
-    
-    // Handle empty data case
     if (data.summary.totalTrainings === 0 && data.summary.totalIncome === 0 && data.totalProductsSold === 0) {
-      doc.setFontSize(FONTS.body);
-      doc.setTextColor(...COLORS.textMuted);
-      doc.text("Za zvolené období nejsou k dispozici žádná data.", margin + 3, yPos);
-      yPos += 10;
+      doc.setFontSize(F.body);
+      doc.setTextColor(...C.textMuted);
+      doc.text("Za zvolené období nejsou k dispozici žádná data.", m + 2, y);
+      y += 12;
     } else {
-      const colWidth = (pageWidth - 2 * margin) / 2;
+      // 4 KPI cards across the top
+      const cardGap = 4;
+      const cardW = (cw - 3 * cardGap) / 4;
+      const savedY = y;
       
-      // Left column
-      const leftX = margin;
-      drawStatRow("Celkové příjmy", formatCurrency(data.summary.totalIncome), leftX, colWidth - 5);
+      drawKpiCard(m, cardW, "Celkové příjmy", fmt(data.summary.totalIncome));
+      drawKpiCard(m + cardW + cardGap, cardW, "Tréninky", data.summary.totalTrainings.toString(), `${(data.trainingsSummary?.totalHours || 0).toFixed(0)} hod`);
+      drawKpiCard(m + 2 * (cardW + cardGap), cardW, "Klienti", data.summary.totalClients.toString());
       
-      // Show breakdown if multiple sources enabled
+      // Net profit card with color
+      const npColor = data.summary.netProfit >= 0 ? C.success : C.danger;
+      const npLabel = data.summary.totalExpenses > 0 ? "Čistý zisk" : "Příjmy";
+      const npValue = data.summary.totalExpenses > 0 ? data.summary.netProfit : data.summary.totalIncome;
+      drawKpiCard(m + 3 * (cardW + cardGap), cardW, npLabel, fmt(npValue), undefined, npColor);
+      
+      y = savedY + 26;
+
+      // Income breakdown line
       if (data.summary.paymentIncome > 0 && data.summary.productIncome > 0) {
-        doc.setFontSize(FONTS.tiny);
-        doc.setTextColor(...COLORS.textLight);
-        doc.text(`  (platby: ${formatCurrency(data.summary.paymentIncome)}, prodeje: ${formatCurrency(data.summary.productIncome)})`, leftX + 3, yPos);
-        yPos += 5;
+        doc.setFontSize(F.small);
+        doc.setTextColor(...C.textSecondary);
+        doc.text(`Rozpad: platby klientů ${fmt(data.summary.paymentIncome)} | prodeje produktů ${fmt(data.summary.productIncome)}`, m + 2, y);
+        y += 5;
       }
       
-      if (data.summary.totalTrainings > 0) {
-        drawStatRow("Počet tréninků", data.summary.totalTrainings.toString(), leftX, colWidth - 5);
-      }
-      drawStatRow("Počet klientů", data.summary.totalClients.toString(), leftX, colWidth - 5);
-      
-      // Expenses & Net Profit
+      // Expenses line
       if (data.summary.totalExpenses > 0) {
-        drawStatRow("Provozní náklady", formatCurrency(data.summary.totalExpenses), leftX, colWidth - 5);
-        const npColor = data.summary.netProfit >= 0 ? COLORS.success : COLORS.danger;
-        doc.setFontSize(FONTS.body);
-        doc.setTextColor(...npColor);
-        doc.setFont("Roboto", "bold");
-        doc.text("Čistý zisk", leftX + 3, yPos);
-        doc.text(formatCurrency(data.summary.netProfit), leftX + colWidth - 8, yPos, { align: "right" });
-        doc.setFont("Roboto", "normal");
-        yPos += 6;
+        doc.setFontSize(F.small);
+        doc.setTextColor(...C.textSecondary);
+        doc.text(`Provozní náklady: ${fmt(data.summary.totalExpenses)}`, m + 2, y);
+        y += 5;
       }
-      
-      // Right column
-      const rightStartY = yPos - (data.summary.totalTrainings > 0 ? 18 : 12);
-      yPos = rightStartY;
-      const rightX = margin + colWidth;
-      
-      if (data.summary.totalTrainings > 0) {
-        drawStatRow("Průměr / trénink", formatCurrency(Math.round(data.summary.avgIncomePerTraining)), rightX, colWidth - 5);
-      }
-      drawStatRow("Průměr / klient", formatCurrency(Math.round(data.summary.avgIncomePerClient)), rightX, colWidth - 5);
-      yPos += 6;
-      
+
       // Payment method breakdown
       const pmb = data.summary.paymentMethodBreakdown;
       if (pmb.cash > 0 || pmb.card > 0 || pmb.bank_transfer > 0 || pmb.credit > 0) {
-        yPos += 2;
-        doc.setFontSize(FONTS.small);
-        doc.setTextColor(...COLORS.textMuted);
+        doc.setFontSize(F.small);
+        doc.setTextColor(...C.textSecondary);
         const parts = [];
-        if (pmb.cash > 0) parts.push(`Hotovost: ${formatCurrency(pmb.cash)}`);
-        if (pmb.card > 0) parts.push(`Karta: ${formatCurrency(pmb.card)}`);
-        if (pmb.bank_transfer > 0) parts.push(`Převod: ${formatCurrency(pmb.bank_transfer)}`);
-        if (pmb.credit > 0) parts.push(`Kredit: ${formatCurrency(pmb.credit)}`);
-        doc.text(`Platební metody: ${parts.join(' | ')}`, margin + 3, yPos);
-        yPos += 6;
+        if (pmb.cash > 0) parts.push(`Hotovost ${fmt(pmb.cash)}`);
+        if (pmb.card > 0) parts.push(`Karta ${fmt(pmb.card)}`);
+        if (pmb.bank_transfer > 0) parts.push(`Převod ${fmt(pmb.bank_transfer)}`);
+        if (pmb.credit > 0) parts.push(`Kredit ${fmt(pmb.credit)}`);
+        doc.text(`Platební metody: ${parts.join(' · ')}`, m + 2, y);
+        y += 5;
       }
-      
-      // Training breakdown (only if trainings are included)
+
+      // Training type breakdown
       if (data.summary.totalTrainings > 0) {
-        yPos += 2;
-        doc.setFontSize(FONTS.small);
-        doc.setTextColor(...COLORS.textMuted);
-        doc.text(`Rozpad: ${data.summary.soloTrainings}× 1:1 | ${data.summary.duoTrainings}× dvojice | ${data.summary.trioTrainings}× trojice+`, margin + 3, yPos);
-        yPos += 8;
+        doc.setFontSize(F.small);
+        doc.setTextColor(...C.textSecondary);
+        doc.text(`Typy: ${data.summary.soloTrainings}× 1:1 · ${data.summary.duoTrainings}× dvojice · ${data.summary.trioTrainings}× trojice+`, m + 2, y);
+        y += 5;
       }
-      
-      // Product summary with margin info
+
+      // Product margin summary
       if (data.totalProductsSold > 0) {
-        doc.setFontSize(FONTS.small);
-        doc.setTextColor(...COLORS.textMuted);
-        doc.text(`Prodáno produktů: ${data.totalProductsSold}× za ${formatCurrency(data.summary.totalProductRevenue)}`, margin + 3, yPos);
-        yPos += 5;
-        
-        // Show margin info
-        const marginColor = data.summary.totalProductMargin >= 0 ? COLORS.success : COLORS.danger;
+        doc.setFontSize(F.small);
+        doc.setTextColor(...C.textSecondary);
+        doc.text(`Produkty: ${data.totalProductsSold}× za ${fmt(data.summary.totalProductRevenue)}`, m + 2, y);
+        const marginColor = data.summary.totalProductMargin >= 0 ? C.success : C.danger;
         doc.setTextColor(...marginColor);
-        doc.text(`Marže: ${formatCurrency(data.summary.totalProductMargin)} (${data.summary.totalProductMarginPercent.toFixed(1)} %)`, margin + 3, yPos);
-        yPos += 8;
+        doc.text(` · marže ${fmt(data.summary.totalProductMargin)} (${data.summary.totalProductMarginPercent.toFixed(1)} %)`, m + 2 + doc.getTextWidth(`Produkty: ${data.totalProductsSold}× za ${fmt(data.summary.totalProductRevenue)}`), y);
+        y += 5;
       }
-      
-      yPos += 2;
+
+      y += 4;
     }
   }
 
-  // === MONTHLY OVERVIEW ===
+  // ═══════════════════════════════════════════
+  // MONTHLY OVERVIEW
+  // ═══════════════════════════════════════════
   if (settings.sections.monthlyOverview && data.monthly.length > 0) {
-    drawSectionTitle("Měsíční přehled");
+    drawSection("Měsíční přehled");
     
     autoTable(doc, {
-      startY: yPos,
+      startY: y,
       head: [['Měsíc', 'Příjmy', 'Tréninky', '1:1', '2', '3+', 'Klienti', 'Změna']],
       body: data.monthly.map(m => [
         m.month,
-        formatCurrency(m.income),
+        fmt(m.income),
         m.trainingCount.toString(),
         m.soloCount.toString(),
         m.duoCount.toString(),
         m.trioCount.toString(),
         m.clientCount.toString(),
-        formatPercent(m.changePercent),
+        fmtPct(m.changePercent),
       ]),
-      theme: 'grid',
-      styles: {
-        font: 'Roboto',
-        fontSize: FONTS.tiny,
-        cellPadding: 2,
-      },
-      headStyles: {
-        fillColor: COLORS.primary,
-        textColor: COLORS.white,
-        fontStyle: 'bold',
-      },
+      ...tableTheme,
       columnStyles: {
         0: { cellWidth: 25 },
         1: { halign: 'right' },
@@ -275,39 +328,30 @@ export async function generateFinancialReportPdf(
         6: { halign: 'center', cellWidth: 15 },
         7: { halign: 'right', cellWidth: 18 },
       },
-      margin: { left: margin, right: margin },
     });
     
-    yPos = (doc as any).lastAutoTable.finalY + 8;
+    y = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // === WEEKLY OVERVIEW ===
+  // ═══════════════════════════════════════════
+  // WEEKLY OVERVIEW
+  // ═══════════════════════════════════════════
   if (settings.sections.weeklyOverview && data.weekly.length > 0) {
-    checkPageBreak(60);
-    drawSectionTitle("Týdenní přehled");
+    checkPage(60);
+    drawSection("Týdenní přehled");
     
     autoTable(doc, {
-      startY: yPos,
+      startY: y,
       head: [['Týden', 'Příjmy', 'Tréninky', '1:1', 'Dvojice', 'Trojice+']],
       body: data.weekly.map(w => [
         w.weekLabel,
-        formatCurrency(w.income),
+        fmt(w.income),
         w.trainingCount.toString(),
         w.soloCount.toString(),
         w.duoCount.toString(),
         w.trioCount.toString(),
       ]),
-      theme: 'grid',
-      styles: {
-        font: 'Roboto',
-        fontSize: FONTS.tiny,
-        cellPadding: 2,
-      },
-      headStyles: {
-        fillColor: COLORS.primary,
-        textColor: COLORS.white,
-        fontStyle: 'bold',
-      },
+      ...tableTheme,
       columnStyles: {
         0: { cellWidth: 30 },
         1: { halign: 'right' },
@@ -316,45 +360,35 @@ export async function generateFinancialReportPdf(
         4: { halign: 'center' },
         5: { halign: 'center' },
       },
-      margin: { left: margin, right: margin },
     });
     
-    yPos = (doc as any).lastAutoTable.finalY + 8;
+    y = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // === CLIENTS BREAKDOWN ===
+  // ═══════════════════════════════════════════
+  // CLIENTS BREAKDOWN
+  // ═══════════════════════════════════════════
   if (settings.sections.clientsBreakdown && data.clients.length > 0) {
-    checkPageBreak(60);
-    drawSectionTitle("Klienti");
+    checkPage(60);
+    drawSection("Klienti");
     
-    // Top 20% info
-    doc.setFontSize(FONTS.small);
-    doc.setTextColor(...COLORS.textMuted);
-    doc.text(`TOP 20 % klientů generuje ${data.topClientsRevenuePercent.toFixed(1)} % příjmů`, margin + 3, yPos);
-    yPos += 6;
+    doc.setFontSize(F.small);
+    doc.setTextColor(...C.textSecondary);
+    doc.text(`TOP 20 % klientů generuje ${data.topClientsRevenuePercent.toFixed(1)} % příjmů`, m + 2, y);
+    y += 6;
     
     autoTable(doc, {
-      startY: yPos,
+      startY: y,
       head: [['Jméno', 'Zaplaceno', 'Tréninky', '1:1', '2', '3+']],
       body: data.clients.slice(0, 30).map(c => [
         c.name,
-        formatCurrency(c.totalPaid),
+        fmt(c.totalPaid),
         c.trainingCount.toString(),
         c.soloCount.toString(),
         c.duoCount.toString(),
         c.trioCount.toString(),
       ]),
-      theme: 'grid',
-      styles: {
-        font: 'Roboto',
-        fontSize: FONTS.tiny,
-        cellPadding: 2,
-      },
-      headStyles: {
-        fillColor: COLORS.primary,
-        textColor: COLORS.white,
-        fontStyle: 'bold',
-      },
+      ...tableTheme,
       columnStyles: {
         0: { cellWidth: 45 },
         1: { halign: 'right' },
@@ -363,69 +397,61 @@ export async function generateFinancialReportPdf(
         4: { halign: 'center', cellWidth: 15 },
         5: { halign: 'center', cellWidth: 15 },
       },
-      margin: { left: margin, right: margin },
     });
     
-    yPos = (doc as any).lastAutoTable.finalY + 8;
+    y = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // === TRAINING TYPE BREAKDOWN ===
+  // ═══════════════════════════════════════════
+  // TRAINING TYPE BREAKDOWN
+  // ═══════════════════════════════════════════
   if (settings.sections.trainingTypeBreakdown && data.summary.totalTrainings > 0) {
-    checkPageBreak(40);
-    drawSectionTitle("Rozpad typů tréninku");
+    checkPage(40);
+    drawSection("Rozpad typů tréninku");
     
     const total = data.summary.totalTrainings;
-    const soloPercent = total > 0 ? (data.summary.soloTrainings / total * 100).toFixed(1) : '0';
-    const duoPercent = total > 0 ? (data.summary.duoTrainings / total * 100).toFixed(1) : '0';
-    const trioPercent = total > 0 ? (data.summary.trioTrainings / total * 100).toFixed(1) : '0';
+    const soloP = total > 0 ? (data.summary.soloTrainings / total * 100).toFixed(1) : '0';
+    const duoP = total > 0 ? (data.summary.duoTrainings / total * 100).toFixed(1) : '0';
+    const trioP = total > 0 ? (data.summary.trioTrainings / total * 100).toFixed(1) : '0';
     
-    drawStatRow("Individuální (1:1)", `${data.summary.soloTrainings}× (${soloPercent} %)`);
-    drawStatRow("Dvojice", `${data.summary.duoTrainings}× (${duoPercent} %)`);
-    drawStatRow("Trojice a více", `${data.summary.trioTrainings}× (${trioPercent} %)`);
-    yPos += 5;
+    statRow("Individuální (1:1)", `${data.summary.soloTrainings}× (${soloP} %)`);
+    statRow("Dvojice", `${data.summary.duoTrainings}× (${duoP} %)`);
+    statRow("Trojice a více", `${data.summary.trioTrainings}× (${trioP} %)`);
+    y += 6;
   }
 
-  // === PRODUCT SALES BREAKDOWN ===
+  // ═══════════════════════════════════════════
+  // PRODUCT SALES BREAKDOWN
+  // ═══════════════════════════════════════════
   if (settings.sections.productSalesBreakdown && data.products.length > 0) {
-    checkPageBreak(80);
-    drawSectionTitle("Rozpad prodejů produktů");
+    checkPage(80);
+    drawSection("Rozpad prodejů produktů");
     
-    // Summary stats
-    doc.setFontSize(FONTS.small);
-    doc.setTextColor(...COLORS.textMuted);
-    doc.text(`Celkem: ${data.totalProductsSold}× produktů | Tržba: ${formatCurrency(data.summary.totalProductRevenue)} | Náklady: ${formatCurrency(data.summary.totalProductCost)}`, margin + 3, yPos);
-    yPos += 5;
+    doc.setFontSize(F.small);
+    doc.setTextColor(...C.textSecondary);
+    doc.text(`Celkem: ${data.totalProductsSold}× produktů | Tržba: ${fmt(data.summary.totalProductRevenue)} | Náklady: ${fmt(data.summary.totalProductCost)}`, m + 2, y);
+    y += 5;
     
-    const marginColor = data.summary.totalProductMargin >= 0 ? COLORS.success : COLORS.danger;
+    const marginColor = data.summary.totalProductMargin >= 0 ? C.success : C.danger;
     doc.setTextColor(...marginColor);
     doc.setFont("Roboto", "bold");
-    doc.text(`Celková marže: ${formatCurrency(data.summary.totalProductMargin)} (${data.summary.totalProductMarginPercent.toFixed(1)} %)`, margin + 3, yPos);
+    doc.text(`Celková marže: ${fmt(data.summary.totalProductMargin)} (${data.summary.totalProductMarginPercent.toFixed(1)} %)`, m + 2, y);
     doc.setFont("Roboto", "normal");
-    yPos += 8;
+    y += 8;
     
     autoTable(doc, {
-      startY: yPos,
+      startY: y,
       head: [['Produkt', 'Kategorie', 'Ks', 'Tržba', 'Náklady', 'Marže', 'Marže %']],
       body: data.products.slice(0, 25).map(p => [
         p.productName,
         p.category,
         `${p.quantity}×`,
-        formatCurrency(p.totalRevenue),
-        formatCurrency(p.totalCost),
-        formatCurrency(p.margin),
+        fmt(p.totalRevenue),
+        fmt(p.totalCost),
+        fmt(p.margin),
         `${p.marginPercent.toFixed(1)} %`,
       ]),
-      theme: 'grid',
-      styles: {
-        font: 'Roboto',
-        fontSize: FONTS.tiny,
-        cellPadding: 2,
-      },
-      headStyles: {
-        fillColor: COLORS.primary,
-        textColor: COLORS.white,
-        fontStyle: 'bold',
-      },
+      ...tableTheme,
       columnStyles: {
         0: { cellWidth: 40 },
         1: { cellWidth: 25 },
@@ -435,187 +461,193 @@ export async function generateFinancialReportPdf(
         5: { halign: 'right', cellWidth: 25 },
         6: { halign: 'right', cellWidth: 20 },
       },
-      margin: { left: margin, right: margin },
     });
     
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    y = (doc as any).lastAutoTable.finalY + 10;
     
-    // === PRODUCT CLIENTS (who buys the most) ===
+    // Product clients
     if (data.productClients.length > 0) {
-      checkPageBreak(60);
+      checkPage(60);
       
-      doc.setFontSize(FONTS.heading);
-      doc.setTextColor(...COLORS.primaryDark);
+      doc.setFontSize(F.heading);
+      doc.setTextColor(...C.headerBg);
       doc.setFont("Roboto", "bold");
-      doc.text("Klienti podle nákupů", margin + 3, yPos);
-      yPos += 6;
+      doc.text("Klienti podle nákupů", m + 2, y);
+      y += 6;
       
       autoTable(doc, {
-        startY: yPos,
+        startY: y,
         head: [['Klient', 'Utraceno', 'Produktů', 'Objednávek']],
         body: data.productClients.slice(0, 20).map(c => [
           c.clientName,
-          formatCurrency(c.totalSpent),
+          fmt(c.totalSpent),
           `${c.productCount}×`,
           c.orderCount.toString(),
         ]),
-        theme: 'grid',
-        styles: {
-          font: 'Roboto',
-          fontSize: FONTS.tiny,
-          cellPadding: 2,
-        },
-        headStyles: {
-          fillColor: COLORS.primary,
-          textColor: COLORS.white,
-          fontStyle: 'bold',
-        },
+        ...tableTheme,
         columnStyles: {
           0: { cellWidth: 50 },
           1: { halign: 'right', cellWidth: 35 },
           2: { halign: 'center', cellWidth: 25 },
           3: { halign: 'center', cellWidth: 25 },
         },
-        margin: { left: margin, right: margin },
       });
       
-      yPos = (doc as any).lastAutoTable.finalY + 8;
+      y = (doc as any).lastAutoTable.finalY + 10;
     }
   }
 
-  // === TRAININGS & PAYMENTS SUMMARY (NEW) ===
+  // ═══════════════════════════════════════════
+  // TRAININGS & PAYMENTS SUMMARY
+  // ═══════════════════════════════════════════
   if (settings.sections.trainingsPaymentsSummary && data.trainingsSummary && data.paymentsSummary) {
-    checkPageBreak(80);
-    drawSectionTitle("Přehled tréninků a plateb");
+    checkPage(80);
+    drawSection("Přehled tréninků a plateb");
     
-    const colWidth = (pageWidth - 2 * margin) / 2;
-    const leftX = margin;
-    const rightX = margin + colWidth;
+    const halfW = (cw - 6) / 2;
+    const leftX = m;
+    const rightX = m + halfW + 6;
     
-    // Left column - Trainings
-    doc.setFontSize(FONTS.heading);
-    doc.setTextColor(...COLORS.primaryDark);
+    // ── Save starting Y for both columns ──
+    const colStartY = y;
+    
+    // LEFT COLUMN: Trainings
+    doc.setFontSize(F.heading);
+    doc.setTextColor(...C.headerBg);
     doc.setFont("Roboto", "bold");
-    doc.text("TRÉNINKY", leftX + 3, yPos);
-    yPos += 7;
+    doc.text("TRÉNINKY", leftX + 2, y);
+    y += 7;
     
     const ts = data.trainingsSummary;
-    drawStatRow("Celkem odtrénováno", `${ts.totalTrainings}× (${ts.totalHours.toFixed(1)} hod)`, leftX, colWidth - 5);
-    drawStatRow("Hodnota tréninků", formatCurrency(ts.totalTrainedValue), leftX, colWidth - 5);
-    drawStatRow("Průměr / trénink", formatCurrency(ts.avgPricePerTraining), leftX, colWidth - 5);
-    drawStatRow("Průměrná hod. sazba", formatCurrency(ts.avgHourlyRate), leftX, colWidth - 5);
+    statRow("Celkem odtrénováno", `${ts.totalTrainings}× (${ts.totalHours.toFixed(1)} hod)`, leftX, halfW);
+    statRow("Hodnota tréninků", fmt(ts.totalTrainedValue), leftX, halfW);
+    statRow("Průměr / trénink", fmt(ts.avgPricePerTraining), leftX, halfW);
+    statRow("Průměrná hod. sazba", fmt(ts.avgHourlyRate), leftX, halfW);
     
-    // Unpaid info
     if (ts.unpaidTrainingsCount > 0) {
-      yPos += 2;
-      doc.setFontSize(FONTS.small);
-      doc.setTextColor(...COLORS.danger);
-      doc.text(`Neuhrazeno: ${ts.unpaidTrainingsCount}× za ${formatCurrency(ts.unpaidValue)}`, leftX + 3, yPos);
-      yPos += 5;
+      y += 1;
+      doc.setFontSize(F.small);
+      doc.setTextColor(...C.danger);
+      doc.text(`Neuhrazeno: ${ts.unpaidTrainingsCount}× za ${fmt(ts.unpaidValue)}`, leftX + 2, y);
+      y += 5;
     }
     
-    // Right column - Payments (positioned at same level as trainings header)
-    const paymentStartY = yPos - (ts.unpaidTrainingsCount > 0 ? 32 : 25);
-    yPos = paymentStartY;
+    const leftEndY = y;
     
-    doc.setFontSize(FONTS.heading);
-    doc.setTextColor(...COLORS.primaryDark);
+    // RIGHT COLUMN: Payments (start at same Y)
+    y = colStartY;
+    
+    doc.setFontSize(F.heading);
+    doc.setTextColor(...C.headerBg);
     doc.setFont("Roboto", "bold");
-    doc.text("ÚHRADY", rightX + 3, yPos);
-    yPos += 7;
+    doc.text("ÚHRADY", rightX + 2, y);
+    y += 7;
     
     const ps = data.paymentsSummary;
-    drawStatRow("Uhrazeno za tréninky", formatCurrency(ps.trainingPayments), rightX, colWidth - 5);
-    drawStatRow("Přímé platby (kredit)", formatCurrency(ps.directPayments), rightX, colWidth - 5);
-    drawStatRow("Platby za produkty", formatCurrency(ps.productPayments), rightX, colWidth - 5);
+    statRow("Uhrazeno za tréninky", fmt(ps.trainingPayments), rightX, halfW);
+    statRow("Přímé platby (kredit)", fmt(ps.directPayments), rightX, halfW);
+    statRow("Platby za produkty", fmt(ps.productPayments), rightX, halfW);
     
-    // Move down to align columns
-    yPos += 15;
+    const rightEndY = y;
     
-    // Difference summary
+    // Continue from whichever column is taller
+    y = Math.max(leftEndY, rightEndY) + 8;
+    
+    // Difference summary bar
     const diff = ts.totalTrainedValue - ps.trainingPayments;
-    const diffColor = diff <= 0 ? COLORS.success : COLORS.danger;
+    const diffColor = diff <= 0 ? C.success : C.danger;
     
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(margin, yPos - 2, pageWidth - 2 * margin, 14, 2, 2, 'F');
+    doc.setFillColor(...C.bgAlt);
+    doc.setDrawColor(...C.border);
+    doc.roundedRect(m, y - 2, cw, 12, 2, 2, 'FD');
     
-    doc.setFontSize(FONTS.small);
-    doc.setTextColor(...COLORS.textMuted);
-    doc.text("ROZDÍL (odtrénováno − uhrazeno za tréninky):", margin + 5, yPos + 4);
+    doc.setFontSize(F.small);
+    doc.setTextColor(...C.textSecondary);
+    doc.text("ROZDÍL (odtrénováno − uhrazeno za tréninky):", m + 5, y + 4);
     
     doc.setTextColor(...diffColor);
     doc.setFont("Roboto", "bold");
-    doc.setFontSize(FONTS.heading);
+    doc.setFontSize(F.heading);
     const diffSign = diff >= 0 ? '+' : '';
-    doc.text(`${diffSign}${formatCurrency(diff)}`, pageWidth - margin - 5, yPos + 4, { align: 'right' });
+    doc.text(`${diffSign}${fmt(diff)}`, pw - m - 5, y + 4, { align: 'right' });
     
-    yPos += 18;
+    y += 18;
   }
 
-  // === MANAGERIAL METRICS ===
+  // ═══════════════════════════════════════════
+  // MANAGERIAL METRICS
+  // ═══════════════════════════════════════════
   if (settings.sections.managerialMetrics) {
-    checkPageBreak(50);
-    drawSectionTitle("Manažerské metriky");
+    checkPage(50);
+    drawSection("Manažerské metriky");
     
     if (data.managerial.incomePerHour !== null) {
-      drawStatRow("Příjem / hodinu tréninku", formatCurrency(Math.round(data.managerial.incomePerHour)));
+      statRow("Příjem / hodinu tréninku", fmt(Math.round(data.managerial.incomePerHour)));
     }
-    drawStatRow("Podíl skupinových tréninků", `${data.managerial.groupTrainingPercent.toFixed(1)} %`);
+    statRow("Podíl skupinových tréninků", `${data.managerial.groupTrainingPercent.toFixed(1)} %`);
     
     if (data.managerial.bestMonth) {
-      drawStatRow("Nejlepší měsíc", `${data.managerial.bestMonth.name} (${formatCurrency(data.managerial.bestMonth.income)})`);
+      statRow("Nejlepší měsíc", `${data.managerial.bestMonth.name} (${fmt(data.managerial.bestMonth.income)})`);
     }
     if (data.managerial.worstMonth) {
-      drawStatRow("Nejslabší měsíc", `${data.managerial.worstMonth.name} (${formatCurrency(data.managerial.worstMonth.income)})`);
+      statRow("Nejslabší měsíc", `${data.managerial.worstMonth.name} (${fmt(data.managerial.worstMonth.income)})`);
     }
     
-    yPos += 3;
-    drawStatRow("YTD příjem", formatCurrency(data.managerial.ytdIncome));
-    drawStatRow("Loňský rok (stejné období)", formatCurrency(data.managerial.lastYearIncome));
+    y += 3;
+    statRow("YTD příjem", fmt(data.managerial.ytdIncome));
+    statRow("Loňský rok (stejné období)", fmt(data.managerial.lastYearIncome));
     if (data.managerial.yoyChangePercent !== null) {
-      drawStatRow("Meziroční změna", formatPercent(data.managerial.yoyChangePercent));
+      statRow("Meziroční změna", fmtPct(data.managerial.yoyChangePercent));
     }
-    yPos += 5;
+    y += 6;
   }
 
-  // === DATA VALIDATION ===
+  // ═══════════════════════════════════════════
+  // DATA VALIDATION
+  // ═══════════════════════════════════════════
   if (settings.sections.dataValidation) {
-    checkPageBreak(40);
-    drawSectionTitle("Kontrola dat");
+    checkPage(40);
+    drawSection("Kontrola dat");
     
-    drawStatRow("Platby bez přiřazeného klienta", data.validation.paymentsWithoutClient.toString());
-    drawStatRow("Tréninky bez klienta", data.validation.trainingsWithoutClient.toString());
+    statRow("Platby bez přiřazeného klienta", data.validation.paymentsWithoutClient.toString());
+    statRow("Tréninky bez klienta", data.validation.trainingsWithoutClient.toString());
     
-    yPos += 3;
-    doc.setFontSize(FONTS.small);
-    doc.setTextColor(...COLORS.textMuted);
-    doc.text("Rozdíl 'odtrénováno vs zaplaceno':", margin + 3, yPos);
-    yPos += 5;
+    y += 3;
+    doc.setFontSize(F.small);
+    doc.setTextColor(...C.textSecondary);
+    doc.text("Rozdíl 'odtrénováno vs zaplaceno':", m + 2, y);
+    y += 5;
     
-    const diffColor = data.validation.trainedNotPaidDiff >= 0 ? COLORS.success : COLORS.danger;
-    doc.setTextColor(...diffColor);
+    const vDiffColor = data.validation.trainedNotPaidDiff >= 0 ? C.success : C.danger;
+    doc.setTextColor(...vDiffColor);
     doc.setFont("Roboto", "bold");
-    doc.text(formatCurrency(data.validation.trainedNotPaidDiff), margin + 3, yPos);
+    doc.text(fmt(data.validation.trainedNotPaidDiff), m + 2, y);
     
-    doc.setTextColor(...COLORS.textLight);
+    doc.setTextColor(...C.textMuted);
     doc.setFont("Roboto", "normal");
-    doc.setFontSize(FONTS.tiny);
-    doc.text("(kladné = více odtrénováno než zaplaceno, záporné = více zaplaceno)", margin + 50, yPos);
-    yPos += 10;
+    doc.setFontSize(F.tiny);
+    doc.text("(kladné = více odtrénováno než zaplaceno)", m + 50, y);
+    y += 10;
   }
 
-  // Footer
-  const addFooter = () => {
-    const totalPages = doc.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      doc.setFontSize(FONTS.tiny);
-      doc.setTextColor(...COLORS.textLight);
-      doc.text(`Strana ${i} z ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
-    }
-  };
-  
-  addFooter();
+  // ═══════════════════════════════════════════
+  // FOOTER
+  // ═══════════════════════════════════════════
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    // Bottom accent line
+    doc.setDrawColor(...C.accent);
+    doc.setLineWidth(0.4);
+    doc.line(m, ph - 14, pw - m, ph - 14);
+    doc.setLineWidth(0.2);
+    // Page number
+    doc.setFontSize(F.tiny);
+    doc.setTextColor(...C.textMuted);
+    doc.text(`Strana ${i} / ${totalPages}`, pw - m, ph - 10, { align: 'right' });
+    // Brand text
+    doc.text(settings.branding.customTitle || "Finanční report", m, ph - 10);
+  }
 
   return doc;
 }

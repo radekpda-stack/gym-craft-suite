@@ -302,11 +302,12 @@ export function useFinancialReportData(options: UseFinancialReportDataOptions) {
           .gte('date', format(startDate, 'yyyy-MM-dd'))
           .lte('date', format(endDate, 'yyyy-MM-dd')),
         
-        // All transactions with payment_method for breakdown
+        // All income transactions with payment_method for breakdown (only actual income, no training/product debits)
         supabase
           .from('credit_transactions')
           .select('amount, type, payment_method, created_at')
-          .in('type', ['payment', 'manual', 'training', 'product'])
+          .in('type', ['payment', 'manual'])
+          .gt('amount', 0)
           .gte('created_at', startStr)
           .lte('created_at', endStr),
       ]);
