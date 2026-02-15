@@ -171,8 +171,21 @@ export async function generateFinancialReportPdf(
       }
       drawStatRow("Počet klientů", data.summary.totalClients.toString(), leftX, colWidth - 5);
       
+      // Expenses & Net Profit
+      if (data.summary.totalExpenses > 0) {
+        drawStatRow("Provozní náklady", formatCurrency(data.summary.totalExpenses), leftX, colWidth - 5);
+        const npColor = data.summary.netProfit >= 0 ? COLORS.success : COLORS.danger;
+        doc.setFontSize(FONTS.body);
+        doc.setTextColor(...npColor);
+        doc.setFont("Roboto", "bold");
+        doc.text("Čistý zisk", leftX + 3, yPos);
+        doc.text(formatCurrency(data.summary.netProfit), leftX + colWidth - 8, yPos, { align: "right" });
+        doc.setFont("Roboto", "normal");
+        yPos += 6;
+      }
+      
       // Right column
-      const rightStartY = yPos - (data.summary.totalTrainings > 0 ? 12 : 6);
+      const rightStartY = yPos - (data.summary.totalTrainings > 0 ? 18 : 12);
       yPos = rightStartY;
       const rightX = margin + colWidth;
       
@@ -181,6 +194,21 @@ export async function generateFinancialReportPdf(
       }
       drawStatRow("Průměr / klient", formatCurrency(Math.round(data.summary.avgIncomePerClient)), rightX, colWidth - 5);
       yPos += 6;
+      
+      // Payment method breakdown
+      const pmb = data.summary.paymentMethodBreakdown;
+      if (pmb.cash > 0 || pmb.card > 0 || pmb.bank_transfer > 0 || pmb.credit > 0) {
+        yPos += 2;
+        doc.setFontSize(FONTS.small);
+        doc.setTextColor(...COLORS.textMuted);
+        const parts = [];
+        if (pmb.cash > 0) parts.push(`Hotovost: ${formatCurrency(pmb.cash)}`);
+        if (pmb.card > 0) parts.push(`Karta: ${formatCurrency(pmb.card)}`);
+        if (pmb.bank_transfer > 0) parts.push(`Převod: ${formatCurrency(pmb.bank_transfer)}`);
+        if (pmb.credit > 0) parts.push(`Kredit: ${formatCurrency(pmb.credit)}`);
+        doc.text(`Platební metody: ${parts.join(' | ')}`, margin + 3, yPos);
+        yPos += 6;
+      }
       
       // Training breakdown (only if trainings are included)
       if (data.summary.totalTrainings > 0) {
@@ -260,9 +288,10 @@ export async function generateFinancialReportPdf(
     
     autoTable(doc, {
       startY: yPos,
-      head: [['Týden', 'Tréninky', '1:1', 'Dvojice', 'Trojice+']],
+      head: [['Týden', 'Příjmy', 'Tréninky', '1:1', 'Dvojice', 'Trojice+']],
       body: data.weekly.map(w => [
         w.weekLabel,
+        formatCurrency(w.income),
         w.trainingCount.toString(),
         w.soloCount.toString(),
         w.duoCount.toString(),
@@ -281,10 +310,11 @@ export async function generateFinancialReportPdf(
       },
       columnStyles: {
         0: { cellWidth: 30 },
-        1: { halign: 'center' },
+        1: { halign: 'right' },
         2: { halign: 'center' },
         3: { halign: 'center' },
         4: { halign: 'center' },
+        5: { halign: 'center' },
       },
       margin: { left: margin, right: margin },
     });
