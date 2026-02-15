@@ -13,7 +13,6 @@ import {
   Clock,
   Target,
   Percent,
-  CreditCard,
   UserPlus,
   DollarSign,
   BarChart3,
@@ -62,31 +61,7 @@ export function generateWarningInsights(ctx: InsightGeneratorContext): Insight[]
     });
   }
 
-  // Low credit clients
-  if (finance.creditAtRisk.count > 0) {
-    result.push({
-      id: 'low-credit',
-      icon: icon(CreditCard),
-      text: cs
-        ? `${finance.creditAtRisk.count} klientů má nízký kredit`
-        : `${finance.creditAtRisk.count} clients have low credit`,
-      type: 'warning',
-      priority: 2,
-      detail: {
-        title: cs ? 'Klienti s nízkým kreditem' : 'Low Credit Clients',
-        description: cs
-          ? `Celková částka v ohrožení: ${finance.creditAtRisk.amount.toLocaleString('cs-CZ')} Kč.`
-          : `Total amount at risk: ${finance.creditAtRisk.amount.toLocaleString('en-US')} CZK.`,
-        metric: {
-          value: `${finance.creditAtRisk.amount.toLocaleString(cs ? 'cs-CZ' : 'en-US')} Kč`,
-          label: cs ? 'Ohrožená částka' : 'Amount at Risk',
-          trend: 'down'
-        },
-        actionLabel: cs ? 'Zobrazit klienty' : 'View Clients',
-        actionUrl: '/clients?filter=lowCredit'
-      }
-    });
-  }
+  // Low credit - removed, now handled by ActionCenterCard exclusively
 
   // Income decline
   if (finance.incomeChange < -10) {

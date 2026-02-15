@@ -2,7 +2,7 @@ import { memo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   TrendingUp, TrendingDown, Minus, Calendar, Banknote, 
-  BarChart3, ChevronDown, AlertCircle, ChevronRight, Wallet 
+  BarChart3, ChevronDown, AlertCircle, Wallet 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { cn } from '@/lib/utils';
 import type { FinanceMetrics, WeeklySummary } from '@/types/dashboard';
 import { useCashflowForecast } from '@/hooks/useCashflowForecast';
-import { UnpaidTrainingsDialog } from './UnpaidTrainingsDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface WeekOverviewCardProps {
@@ -71,7 +70,6 @@ const MetricTile = memo(function MetricTile({
 export const WeekOverviewCard = memo(function WeekOverviewCard({
   finance, weeklySummary, isLoading,
 }: WeekOverviewCardProps) {
-  const [showUnpaidDialog, setShowUnpaidDialog] = useState(false);
   const [showForecast, setShowForecast] = useState(false);
   const { data: cashflow } = useCashflowForecast();
   const isMobile = useIsMobile();
@@ -97,12 +95,8 @@ export const WeekOverviewCard = memo(function WeekOverviewCard({
     ? Math.round(((weeklySummary.trainingsThisWeek - weeklySummary.trainingsLastWeek) / weeklySummary.trainingsLastWeek) * 100)
     : 0;
 
-  const hasUnpaid = finance.unpaidTotal.count > 0;
-  const hasCreditRisk = finance.creditAtRisk.count > 0;
-  const hasAlerts = hasUnpaid || hasCreditRisk;
-
+  // Financial alerts removed - now handled exclusively by ActionCenterCard
   return (
-    <>
       <Card variant="floating" className="overflow-hidden">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center justify-between text-sm">
@@ -151,38 +145,6 @@ export const WeekOverviewCard = memo(function WeekOverviewCard({
             />
           </div>
 
-          {/* Alerts row */}
-          {hasAlerts && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-wrap gap-2"
-            >
-              {hasUnpaid && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-3 bg-destructive/5 border border-destructive/20 rounded-lg text-destructive hover:bg-destructive/10"
-                  onClick={() => setShowUnpaidDialog(true)}
-                >
-                  <AlertCircle className="w-3.5 h-3.5 mr-1.5" />
-                  <span className="text-xs font-medium">
-                    {finance.unpaidTotal.count} neuhrazených ({formatCurrency(finance.unpaidTotal.amount)})
-                  </span>
-                  <ChevronRight className="w-3 h-3 ml-1" />
-                </Button>
-              )}
-              {hasCreditRisk && (
-                <div className="flex items-center gap-1.5 px-3 h-8 bg-warning/5 border border-warning/20 rounded-lg">
-                  <AlertCircle className="w-3.5 h-3.5 text-warning" />
-                  <span className="text-xs font-medium text-warning">
-                    {finance.creditAtRisk.count} nízký kredit
-                  </span>
-                </div>
-              )}
-            </motion.div>
-          )}
-
           {/* Cashflow forecast - collapsible */}
           {cashflow && (
             <Collapsible open={showForecast} onOpenChange={setShowForecast}>
@@ -229,8 +191,5 @@ export const WeekOverviewCard = memo(function WeekOverviewCard({
           )}
         </CardContent>
       </Card>
-
-      <UnpaidTrainingsDialog open={showUnpaidDialog} onOpenChange={setShowUnpaidDialog} />
-    </>
   );
 });
