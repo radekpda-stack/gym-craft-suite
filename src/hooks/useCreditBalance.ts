@@ -87,60 +87,25 @@ export function useCreditBalance(
       let lastUpdated: string | null = null;
 
       if (groupId) {
-        // Get balance from latest group transaction
-        const { data: latestTx, error: txError } = await supabase
-          .from('credit_transactions')
-          .select('balance_after, created_at')
+        // Always read from the ledger view (computed fresh, never stale)
+        const { data: ledger, error: ledgerError } = await supabase
+          .from('vw_group_ledger_balances')
+          .select('ledger_balance')
           .eq('group_id', groupId)
-          .eq('status', 'completed')
-          .not('balance_after', 'is', null)
-          .order('created_at', { ascending: false })
-          .order('id', { ascending: false })
-          .limit(1)
           .maybeSingle();
 
-        if (txError) throw txError;
-        
-        balance = latestTx?.balance_after ?? 0;
-        lastUpdated = latestTx?.created_at ?? null;
-
-        // Fallback to ledger view if no running balance yet
-        if (!latestTx) {
-          const { data: ledger } = await supabase
-            .from('vw_group_ledger_balances')
-            .select('ledger_balance')
-            .eq('group_id', groupId)
-            .maybeSingle();
-          balance = ledger?.ledger_balance ?? 0;
-        }
+        if (ledgerError) throw ledgerError;
+        balance = ledger?.ledger_balance ?? 0;
       } else {
-        // Get balance from latest individual transaction
-        const { data: latestTx, error: txError } = await supabase
-          .from('credit_transactions')
-          .select('balance_after, created_at')
+        // Always read from the ledger view (computed fresh, never stale)
+        const { data: ledger, error: ledgerError } = await supabase
+          .from('vw_client_ledger_balances')
+          .select('ledger_balance')
           .eq('client_id', clientId)
-          .is('group_id', null)
-          .eq('status', 'completed')
-          .not('balance_after', 'is', null)
-          .order('created_at', { ascending: false })
-          .order('id', { ascending: false })
-          .limit(1)
           .maybeSingle();
 
-        if (txError) throw txError;
-        
-        balance = latestTx?.balance_after ?? 0;
-        lastUpdated = latestTx?.created_at ?? null;
-
-        // Fallback to ledger view if no running balance yet
-        if (!latestTx) {
-          const { data: ledger } = await supabase
-            .from('vw_client_ledger_balances')
-            .select('ledger_balance')
-            .eq('client_id', clientId)
-            .maybeSingle();
-          balance = ledger?.ledger_balance ?? 0;
-        }
+        if (ledgerError) throw ledgerError;
+        balance = ledger?.ledger_balance ?? 0;
       }
 
       return {
@@ -154,7 +119,8 @@ export function useCreditBalance(
       };
     },
     enabled: enabled && !!clientId,
-    staleTime: 0, // Always fresh - realtime handles updates
+    staleTime: 0,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   });
 
