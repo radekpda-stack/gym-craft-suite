@@ -1,68 +1,58 @@
 
-# Opravy finančního reportu -- audit účetní spolehlivosti
+# Oprava nesouladu kreditního zůstatku mezi seznamem a kartou klienta
 
-## Nalezené chyby (ověřeno proti reálným datům)
+## Nalezený problém
 
-### 1. Ztráta 4 500 Kc z platební metody `transfer`
-Rozpad platebních metod nemapuje hodnotu `transfer` (jen `bank_transfer`, `bank`, `paid_bank`). Platba 4 500 Kc typu `payment` s `payment_method = 'transfer'` se nikam nezapocte.
+Aplikace používá **dva různé zdroje dat** pro zobrazení kreditního zůstatku:
 
-**Oprava:** Pridat `transfer` do mapovani na `bank_transfer` bucket (radek 724).
+1. **Seznam klientů (Clients.tsx):** Čte `client_budget_groups.shared_balance` z tabulky (aktualizováno DB triggerem) -- zobrazuje **4 800 Kč**
+2. **Detail klienta (ClientDetail.tsx):** Používá hook `useCreditBalance`, který hledá poslední `credit_transactions.balance_after` přímým dotazem -- zobrazuje **6 600 Kč** (zastaralá hodnota z cache)
 
-### 2. Tydenni prijem ukazuje hodnotu treninku, ne skutecne platby
-Mesicni prehled spravne scita realne prijate platby (payment + manual + sales_orders). Ale tydenni prehled na radku 512 pouziva `final_price` z treninku -- to je PLAN, ne skutecnost. Cisla jsou nesrovnatelna.
+Problém vzniká, protože `useCreditBalance` dotazuje jednotlivé transakce a výsledek může být zastaralý kvůli cachování v React Query nebo PWA service workeru. Naproti tomu `shared_balance` v tabulce je aktualizován spolehlivě DB triggerem.
 
-**Oprava:** Tydenni prijem pocitat stejne jako mesicni -- z `transactions` (payment+manual) a `salesOrders`, ne z `final_price`.
+Ověřeno v databázi:
+- `vw_group_ledger_balances` (view, vždy správný): **4 800 Kč**
+- `client_budget_groups.shared_balance` (trigger): **4 800 Kč**
+- `useCreditBalance` hook (stale cache): **6 600 Kč** (zastaralá hodnota z 26.1.)
 
-### 3. Zrusene treninky (canceled_training) se nikam nezapocitavaji
-Existuje 16 transakcí typu `canceled_training` za 13 200 Kc. Tyto storno poplatky jsou reálný príjem, ale report je ignoruje -- nejsou v `totalIncome`, nejsou v mesícním prehledu, nejsou v platebních metodách.
+## Řešení
 
-**Oprava:** Zahrnout `canceled_training` transakce do celkových príjmu a do mesícního i týdenního prehledu jako samostatnou polozku "Storno poplatky".
+Přepsat `useCreditBalance` hook tak, aby vždy četl z **databázových views** (`vw_group_ledger_balances` a `vw_client_ledger_balances`), které počítají zůstatek čerstvě při každém dotazu. Tím se eliminuje riziko zastaralých dat z cachované transakce.
 
-### 4. Prodejní objednávky za hotovost chybí v payment method breakdown
-Cash sales_orders (5 547 Kc) se správne prictou do breakdown (radek 729-736). Ale credit sales_orders (10 422 Kc) se prictou k `credit` bucketu -- to je vsak spatne, protoze kredit uz byl zapocten pri payment transakcich. Dochází k double-countingu.
+## Technické změny
 
-**Oprava:** Sales orders s `payment_method = 'credit'` NEPRIDAVAT do breakdown (uz jsou zapocteny jako odliv z kreditu klienta). Pridat jen `cash`, `card`, `bank_transfer` sales orders.
+### 1. `src/hooks/useCreditBalance.ts`
 
-### 5. `directPayments` label je zavadejici
-Aktuálne `directPayments = paymentIncome - paidTrainingValue = 276 542 - 204 666 = 71 876`. To ale neznamena "prime platby kreditem" -- je to "castka z plateb klientu, ktera jeste nebyla pouzita na treninky". Label v PDF je "Prime platby (kredit)" coz je matouci.
+Zjednodušit `queryFn` -- nahradit dotazy na jednotlivé transakce dotazy na views:
 
-**Oprava:** Prejmenovat na "Nealokovaný kredit" s popiskem "prijato od klientu, ale dosud nevycerpano na treninky".
+```typescript
+// PRED (nespolehlivé - závisí na nalezení správné transakce):
+const { data: latestTx } = await supabase
+  .from('credit_transactions')
+  .select('balance_after, created_at')
+  .eq('group_id', groupId)
+  .order('created_at', { ascending: false })
+  .limit(1)
+  .maybeSingle();
 
-### 6. `netProfit` formula odecita productCost ale ne cancellation income
-`netProfit = totalIncome - totalExpenses - totalProductCost`. Ale `totalIncome` nezahrnuje storno poplatky (bod 3). Po oprave bodu 3 se tohle vyresi automaticky.
+// PO (spolehlivé - view vždy vrátí aktuální hodnotu):
+const { data: ledger } = await supabase
+  .from('vw_group_ledger_balances')
+  .select('ledger_balance')
+  .eq('group_id', groupId)
+  .maybeSingle();
+balance = ledger?.ledger_balance ?? 0;
+```
 
-### 7. Validacni sekce -- barva semantiky je obracena
-Radek 621: `trainedNotPaidDiff >= 0 ? C.success : C.danger`. Ale kladny rozdil znamena "vice odtrenováno nez zaplaceno" = spatne (klient dluzi). Cervena by mela byt pro kladne cislo (dluh), zelena pro nulu nebo zaporne (preplatek).
+Stejná změna pro individuální klienty -- použít `vw_client_ledger_balances` místo hledání poslední transakce.
 
-**Oprava:** Obrátit barvy.
+Přidat `refetchOnMount: 'always'` pro zajištění čerstvých dat při každém otevření karty klienta.
 
-### 8. Klienti -- chybí příjmy z produktů
-`clientsData[].totalPaid` pocita jen `payment+manual` transakce. Pokud klient kupuje produkty, jeho castka to neodráží. `topClientsRevenuePercent` je tím zkresleny.
+### 2. `src/pages/Clients.tsx` (volitelné vylepšení)
 
-**Oprava:** Pridat produkt purchases z `salesOrders` do klientskych stats.
+Seznam klientů nyní funguje správně (čte z `shared_balance`). Pro 100% konzistenci by mohl také číst z views, ale to by znamenalo N+1 dotazy. Stávající přístup je dostatečný, protože DB trigger spolehlivě synchronizuje `shared_balance` s ledgerem.
 
-## Souhrnný plán zmen
-
-### Soubor: `src/hooks/useFinancialReportData.ts`
-
-1. **Pridat `canceled_training` do dotazu na transakce** (nove Promise.all polozka) a zahrnout do `totalIncome`, mesicniho a tydenniho prehledu
-2. **Tydenni income** -- prepocitat z plateb/objednavek misto `final_price`
-3. **Payment method breakdown** -- pridat `transfer` mapping, odstranit credit sales_orders z breakdown (double-count)
-4. **Client stats** -- pridat product purchases z salesOrders
-5. **directPayments** -- prejmenovat interface pole na `unallocatedCredit`
-6. **Validation barvy** -- prehodit v PDF (ne v data hooku)
-7. **Pridat `cancellationIncome`** do summary
-
-### Soubor: `src/lib/financialReportPdf.ts`
-
-1. **Validation barvy** -- obrátit semantiku (kladný diff = danger)
-2. **directPayments label** -- zmenit na "Nealokovaný kredit"
-3. **Pridat storno poplatky** do KPI breakdown radku
-4. **Klienti tabulka** -- pridat sloupec "Produkty" s castkou za nakupy
-
-### Soubor: `src/components/settings/FinancialReportSettings.tsx`
-
-1. **Nahled** -- pridat storno poplatky do rozpadu, opravit label direct payments
-
-### Zadne zmeny databaze
-Vse je oprava logiky v kodu.
+## Rozsah změn
+- **1 soubor:** `src/hooks/useCreditBalance.ts`
+- **Žádné změny databáze** -- views i triggery už existují a fungují správně
+- Oprava je zpětně kompatibilní -- rozhraní `CreditBalanceData` se nemění
