@@ -17,6 +17,7 @@ import { useClientsWithTags } from '@/hooks/useClientTags';
 import { useTags } from '@/hooks/useTags';
 import { useToggleFavorite } from '@/hooks/useFavoriteClients';
 import { useBudgetGroups } from '@/hooks/useClientBudgetGroups';
+import { useLedgerBalances } from '@/hooks/useLedgerBalances';
 import { useClientTrainingCounts } from '@/hooks/useClientTrainingCounts';
 import { useClientScheduleData } from '@/hooks/useClientScheduleData';
 import { CreateClientSheet } from '@/components/clients/CreateClientSheet';
@@ -117,6 +118,17 @@ export default function Clients() {
   const { data: allTags = [] } = useTags();
   const { data: budgetGroups = [] } = useBudgetGroups();
   const { data: scheduleData } = useClientScheduleData();
+  const { data: ledgerData } = useLedgerBalances();
+
+  // Helper to get the authoritative balance for a client
+  const getClientLedgerBalance = (client: Client): number => {
+    if (!ledgerData) return client.credit_balance || 0;
+    const budgetGroup = budgetGroups.find(g => g.members.some(m => m.client_id === client.id));
+    if (budgetGroup) {
+      return ledgerData.groupBalances.get(budgetGroup.id) ?? budgetGroup.shared_balance ?? 0;
+    }
+    return ledgerData.clientBalances.get(client.id) ?? client.credit_balance ?? 0;
+  };
   const createClientPreDiagnostic = useCreateClientPreDiagnostic();
 
   // Handle URL filter parameter
@@ -178,7 +190,7 @@ export default function Clients() {
         removeDiacritics(client.notes || '').includes(searchNorm);
 
       const matchesGoal = !selectedGoal || (client.training_goals || []).includes(selectedGoal);
-      const matchesLowCredit = !lowCreditFilter || (client.credit_balance || 0) < 500;
+      const matchesLowCredit = !lowCreditFilter || getClientLedgerBalance(client) < 500;
       const matchesTag = !selectedTagId || (clientTagsMap[client.id] || []).some(t => t.id === selectedTagId);
       const matchesGender = genderFilter === 'all' || client.gender === genderFilter;
 
@@ -194,7 +206,7 @@ export default function Clients() {
         case 'trainings':
           return (trainingCounts[b.id]?.count || 0) - (trainingCounts[a.id]?.count || 0);
         case 'credit':
-          return (b.credit_balance || 0) - (a.credit_balance || 0);
+          return getClientLedgerBalance(b) - getClientLedgerBalance(a);
         case 'recent':
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case 'name':
@@ -389,18 +401,18 @@ export default function Clients() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            {/* Current Balance */}
-            <div className="p-4 rounded-xl bg-secondary/50 border">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Aktuální kredit:</span>
-                <span className={cn(
-                  "text-xl font-bold",
-                  getCreditColor(creditClient?.credit_balance || 0)
-                )}>
-                  {formatCurrency(creditClient?.credit_balance || 0)}
-                </span>
-              </div>
-            </div>
+             {/* Current Balance */}
+             <div className="p-4 rounded-xl bg-secondary/50 border">
+               <div className="flex items-center justify-between">
+                 <span className="text-sm text-muted-foreground">Aktuální kredit:</span>
+                 <span className={cn(
+                   "text-xl font-bold",
+                   getCreditColor(creditClient ? getClientLedgerBalance(creditClient) : 0)
+                 )}>
+                   {formatCurrency(creditClient ? getClientLedgerBalance(creditClient) : 0)}
+                 </span>
+               </div>
+             </div>
 
             {/* Add Credit Form */}
             <div className="space-y-3">
@@ -637,8 +649,9 @@ export default function Clients() {
                 client={client}
                 tags={clientTags}
                 nextTraining={nextTraining ? { date: nextTraining.date } : null}
-                groupBalance={budgetGroup?.shared_balance}
+                groupBalance={budgetGroup ? (ledgerData?.groupBalances.get(budgetGroup.id) ?? budgetGroup.shared_balance) : undefined}
                 isInGroup={!!budgetGroup}
+                ledgerBalance={!budgetGroup ? (ledgerData?.clientBalances.get(client.id) ?? client.credit_balance ?? 0) : undefined}
                 onNewTraining={() => navigate(`/calendar?action=new-training&clientId=${client.id}`)}
                 onAddCredit={() => setCreditClient(client)}
                 onEdit={() => setEditingClient(client)}
