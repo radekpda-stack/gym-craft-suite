@@ -189,7 +189,7 @@ export function AgendaItem({
                           e.stopPropagation();
                           onDelete?.(session);
                         }}
-                        className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                        className="flex items-center justify-center w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
                         title="Smazat trénink"
                       >
                         <Trash2 className="w-4 h-4" />
