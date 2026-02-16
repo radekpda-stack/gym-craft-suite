@@ -31,6 +31,8 @@ interface CompactClientRowProps {
   nextTraining?: { date: string; time?: string } | null;
   groupBalance?: number | null;
   isInGroup?: boolean;
+  /** Authoritative ledger balance (from views). Takes precedence over client.credit_balance */
+  ledgerBalance?: number;
   onNewTraining?: () => void;
   onAddCredit?: () => void;
   onEdit?: () => void;
@@ -68,6 +70,7 @@ export const CompactClientRow = memo(function CompactClientRow({
   nextTraining,
   groupBalance,
   isInGroup = false,
+  ledgerBalance,
   onNewTraining,
   onAddCredit,
   onEdit,
@@ -162,7 +165,7 @@ export const CompactClientRow = memo(function CompactClientRow({
             {/* Indicators */}
             <div className="flex items-center gap-3 flex-shrink-0">
               <CreditStatusBadge 
-                balance={client.credit_balance} 
+                balance={ledgerBalance ?? client.credit_balance} 
                 groupBalance={groupBalance}
                 isGroup={isInGroup}
               />
