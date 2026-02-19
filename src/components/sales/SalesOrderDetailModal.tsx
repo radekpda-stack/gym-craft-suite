@@ -13,7 +13,11 @@ import {
   CreditCard,
   Wallet,
   Building2,
-  Pencil
+  Pencil,
+  TrendingUp,
+  TrendingDown,
+  ShoppingCart,
+  Percent
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -43,6 +47,8 @@ interface OrderItem {
   line_discount_amount: number | null;
   line_total_after_discount: number | null;
   payment_method: string | null;
+  product_id: string | null;
+  products?: { purchase_price: number | null } | null;
 }
 
 interface OrderDetail {
@@ -127,7 +133,11 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
             line_discount_value,
             line_discount_amount,
             line_total_after_discount,
-            payment_method
+            payment_method,
+            product_id,
+            products (
+              purchase_price
+            )
           )
         `)
         .eq('id', orderId)
@@ -195,13 +205,18 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
               {order.sales_order_items.map((item) => {
                 const KindIcon = KIND_ICONS[item.product_kind] || Package;
                 const hasDiscount = item.line_discount_amount && item.line_discount_amount > 0;
+                const purchasePrice = item.products?.purchase_price ?? 0;
+                const itemRevenue = item.line_total_after_discount ?? item.line_total;
+                const itemCost = purchasePrice * item.quantity;
+                const itemProfit = itemRevenue - itemCost;
+                const itemMargin = itemRevenue > 0 ? (itemProfit / itemRevenue) * 100 : 0;
 
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50"
+                    className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50"
                   >
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center mt-0.5">
                       <KindIcon className="w-4 h-4 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -232,8 +247,23 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
                           </span>
                         )}
                       </div>
+                      {/* Per-item profitability */}
+                      <div className="flex items-center gap-3 mt-1 text-xs">
+                        <span className="text-muted-foreground">
+                          Náklad: {formatCurrency(itemCost)}
+                        </span>
+                        <span className={cn(
+                          'font-medium flex items-center gap-0.5',
+                          itemProfit >= 0 ? 'text-success' : 'text-destructive'
+                        )}>
+                          {itemProfit >= 0 
+                            ? <TrendingUp className="w-3 h-3" /> 
+                            : <TrendingDown className="w-3 h-3" />}
+                          Zisk: {formatCurrency(itemProfit)} ({itemMargin.toFixed(0)}%)
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       {hasDiscount ? (
                         <div>
                           <p className="text-xs text-muted-foreground line-through">
@@ -289,13 +319,90 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
               {order.xp_earned > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    <Sparkles className="w-3 h-3 text-warning" />
                     Získané XP
                   </span>
-                  <span className="text-amber-500 font-medium">+{order.xp_earned} XP</span>
+                  <span className="text-warning font-medium">+{order.xp_earned} XP</span>
                 </div>
               )}
             </div>
+
+            {/* Profitability section */}
+            {(() => {
+              const totalCost = order.sales_order_items.reduce((sum, item) => {
+                const purchasePrice = item.products?.purchase_price ?? 0;
+                return sum + purchasePrice * item.quantity;
+              }, 0);
+              const totalRevenue = order.total_amount;
+              const grossProfit = totalRevenue - totalCost;
+              const margin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+              const isProfit = grossProfit >= 0;
+
+              return (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4" />
+                      Ziskovost prodeje
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Náklady */}
+                      <div className="rounded-lg bg-secondary/50 p-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <ShoppingCart className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Náklady</span>
+                        </div>
+                        <p className="text-base font-bold text-foreground">{formatCurrency(totalCost)}</p>
+                      </div>
+                      {/* Tržba */}
+                      <div className="rounded-lg bg-secondary/50 p-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Banknote className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Tržba</span>
+                        </div>
+                        <p className="text-base font-bold text-foreground">{formatCurrency(totalRevenue)}</p>
+                      </div>
+                      {/* Hrubý zisk */}
+                      <div className={cn(
+                        'rounded-lg p-3',
+                        isProfit ? 'bg-success/10' : 'bg-destructive/10'
+                      )}>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          {isProfit 
+                            ? <TrendingUp className="w-3.5 h-3.5 text-success" />
+                            : <TrendingDown className="w-3.5 h-3.5 text-destructive" />
+                          }
+                          <span className="text-xs text-muted-foreground">Hrubý zisk</span>
+                        </div>
+                        <p className={cn(
+                          'text-base font-bold',
+                          isProfit ? 'text-success' : 'text-destructive'
+                        )}>
+                          {isProfit ? '+' : ''}{formatCurrency(grossProfit)}
+                        </p>
+                      </div>
+                      {/* Marže */}
+                      <div className={cn(
+                        'rounded-lg p-3',
+                        isProfit ? 'bg-success/10' : 'bg-destructive/10'
+                      )}>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Percent className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Marže</span>
+                        </div>
+                        <p className={cn(
+                          'text-base font-bold',
+                          isProfit ? 'text-success' : 'text-destructive'
+                        )}>
+                          {margin.toFixed(1)} %
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
 
             {order.note && (
               <>
