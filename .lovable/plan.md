@@ -1,112 +1,104 @@
 
-## Rozšíření Historie výkonů o všechny metriky a filtrování
+## Celkové vylepšení UI sekce Výkonnost – Karty cviků a mobilní zobrazení
 
-### Problém
+### Co je aktuálně problém
 
-Záznamy pro SkillUp (kardio cvik) obsahují data – čas (57 s), vzdálenost (250 m), RPE (8) – ale tabulka je na mobilu nečitelná. Sloupce Tempo, Watty a RPE jsou schované přes `hidden sm:table-cell`, takže na telefonu vidíte jen datum a klienta.
+Po analýze kódu jsem identifikoval 6 konkrétních problémových oblastí:
 
-### Co se změní
+1. **ExercisesContent (záložky)** – textové popisky záložek jsou skryté na mobilu (`hidden sm:inline`), viditelné jsou jen ikony, bez popisků
+2. **ExerciseListItem (ClientExercisesView)** – karty cviků jsou funkční, ale vizuálně chudé – chybí barevné pozadí karty dle kategorie, trend šipka, a zobrazení více metrik najednou (watty, tep)
+3. **ExerciseDetailView (ClientExercisesView)** – detail cviku pro klienta zobrazuje základní KPI karty a graf, ale záznamy v historii (spodní seznam) zobrazují pouze datum + hodnotu, bez RPE badge, tepu nebo vzdálenosti
+4. **ExerciseDetailOverview** – funguje dobře, ale nadpis "Záznamy" v sekci "Posledních 5 PR" je zavádějící – jsou to PR záznamy, ne obecné záznamy
+5. **ExerciseHistoryTable (mobilní view)** – karty jsou funkční, ale vizuálně splývají – nulový vizuální kontrast mezi typy cviků (kardio vs. síla vs. plyo), chybí barevné odlišení
+6. **ExerciseProgressChart** – kardio cviky dělají duplicitní dotaz na `exercises` tabulku dvakrát (jednou pro `is_time_based`, jednou pro `name/category`)
 
-#### 1. `ExerciseHistoryTable.tsx` – hlavní tabulka Historie
+---
 
-**Mobilní zobrazení přepsat ze tabulky na karty:**
-- Na mobilu (< sm breakpoint) místo tabulky se zobrazí kompaktní řádkové karty
-- Každý záznam bude mít: datum + klient (vlevo), hlavní metriky (čas / vzdálenost / RPE) přímo viditelné
-- Na tabletu/desktopu zůstane tabulka s plnými sloupci
+### Plán změn
 
-**Přidat sloupce které chybí:**
-- Pro kardio typ: přidat sloupec "Vzdálenost" vedle "Čas" (vzdálenost je teď skryta)
-- Zviditelnit RPE i na menších obrazovkách
+#### Soubor 1: `src/components/performance/ExercisesContent.tsx`
+**Cíl:** Zobrazit textové popisky záložek i na mobilu
 
-**Rozšířit třídění:**
-- Přidat možnost třídit podle RPE (Podle obtížnosti)
-- Přidat možnost třídit podle vzdálenosti
+- Odstranit `hidden sm:inline` ze všech tří `<span>` v záložkách
+- Přidat `text-xs` pro kompaktnější text na mobilu
+- Přidat `shrink-0` na ikony, aby se nezmenšovaly
 
-**Přidat filtr klienta:**
-- Pokud není vybrán konkrétní klient, přidat dropdown pro rychlé filtrování
+#### Soubor 2: `src/components/exercises/ClientExercisesView.tsx`
+**Cíl:** Vylepšit vizuál `ExerciseListItem` a seznam záznamů v `ExerciseDetailView`
 
-#### 2. `ExerciseHistoryTable.tsx` – data fetching
+**ExerciseListItem vylepšení:**
+- Přidat barevný levý border dle typu (kardio = zelená/success, síla = primary, skill = warning)
+- Přidat zobrazení dalších metrik: pokud kardio a má watty → zobrazit ⚡ watts; pokud má tep → zobrazit ♥ HR
+- Přidat vizuální trend indikátor (šipka nahoru/dolů) pokud `data.length >= 2`
+- Pro sílu: zobrazit i počet opakování (`× reps`) vedle max váhy
 
-Aktuálně se fetchuje: `time_seconds, avg_watts, pace_sec_per_500m, pace_sec_per_km, avg_speed_kmh, rpe, distance_meters`
+**ExerciseDetailView – seznam záznamů (spodní část):**
+- Rozšířit záznamy o RPE badge (barevná dle hodnoty), vzdálenost (pokud kardio), watty
+- Přidat možnost kliknout na záznam a otevřít `ExerciseEntryDetailSheet` (spodní sheet s detailem)
+- Předat `exerciseId` do `ExerciseDetailView` přes `exercise.exerciseId` nebo vyhledat z DB
 
-Přidat do SELECT:
-- `avg_heart_rate` (průměrný tep)
-- `max_heart_rate` (max tep)
-- `strokes` (záběry – pro veslo)
-- `cadence_spm` (kadence)
-- `calories_kcal` (kalorie)
+#### Soubor 3: `src/components/exercises/ExerciseHistoryTable.tsx`
+**Cíl:** Barevné odlišení typů cviků v mobilním kartovém zobrazení
 
-#### 3. Nová mobilní karta pro každý záznam
+- Přidat barevný levý border na mobilní karty dle `isTimeBased` / `isJumpExercise`:
+  - Kardio (isTimeBased): `border-l-2 border-l-success`
+  - Plyometrie (isJumpExercise): `border-l-2 border-l-warning`  
+  - Síla: `border-l-2 border-l-primary`
+- Pro silová cvičení zobrazit na mobilních kartách navíc i objem (volume) jako terciální řádek
+- Zviditelnit poznámku (notes) pokud existuje – zkrátit truncate na max 60 znaků
+
+#### Soubor 4: `src/components/exercises/ExerciseProgressChart.tsx`
+**Cíl:** Opravit duplicitní dotaz
+
+- Sloučit dva `supabase.from('exercises').select(...)` dotazy do jednoho, který fetchuje `is_time_based, category, name, name_cs` najednou
+
+---
+
+### Vizuální výsledek
 
 ```text
-┌──────────────────────────────────────────────┐
-│ 🏆 5.1.26   Trenér Radek                     │
-│ ⏱ 0:45   📏 200 m   ⚡ RPE 7/10             │
-└──────────────────────────────────────────────┘
+PŘED (ExerciseListItem – kardio):
+┌─────────────────────────────────────────────────┐
+│ ♥ SkillUp          57 s        19.2.26  →       │
+│     1×  RPE 8                                   │
+└─────────────────────────────────────────────────┘
 
-┌──────────────────────────────────────────────┐
-│ 19.2.26   Kokeš Jirka                        │
-│ ⏱ 0:57   📏 250 m   ⚡ RPE 8/10             │
-└──────────────────────────────────────────────┘
+PO (ExerciseListItem – kardio):
+┌╔══════════════════════════════════════════════════╗
+│║ ♥ SkillUp          ⏱ 57s  📏 250m  ↗ trend     ║
+│║     1× │ RPE 8 │ ⚡ 245W              19.2.26 → ║
+└╚══════════════════════════════════════════════════╝
+
+PŘED (mobilní karta v historii):
+19.2.26  Kokeš Jirka
+⏱ 0:57  📏 250 m  RPE 8
+
+PO (mobilní karta v historii – barevně odlišená):
+┌────────────────────────────────────────────────┐
+│ 🟢 19.2.26  Kokeš Jirka                    ✏️ │
+│    ⏱ 0:57   📏 250 m   ⚡ 245W              │
+│    [RPE 8]  ♥ 142 bpm                         │
+│    Pozn.: skvělý výkon dnes...                 │
+└────────────────────────────────────────────────┘
 ```
 
-#### 4. Rozšířit třídící možnosti
+### Záložky na mobilu
 
-Pro kardio typ:
-- Datum (stávající)
-- Čas (nejlepší = nejkratší)
-- Vzdálenost (největší)
-- RPE (vnímaná obtížnost)
-- Watty (výkon)
-
-### Technické detaily
-
-**Soubory k úpravě:**
-1. `src/components/exercises/ExerciseHistoryTable.tsx`
-   - Přidat `avg_heart_rate`, `max_heart_rate`, `strokes`, `cadence_spm`, `calories_kcal` do SELECT dotazu
-   - Mapovat tyto hodnoty do `rows` objektu
-   - Přidat `sortBy` možnosti: `'rpe'` a rozšířit `'distance'` na kardio typ
-   - Přepsat mobilní zobrazení z tabulky na responzivní karty (grid layout na sm+)
-   - Na mobilu zobrazit: čas, vzdálenost, RPE, průměrný tep v jednom řádku s ikonami
-   - Na desktopu zachovat tabulku s přidanými sloupci vzdálenosti a tepu
-
-**Klíčová logika:**
-
-```typescript
-// Mobilní karta pro kardio
-const CardioRow = ({ row }) => (
-  <div className="flex items-center justify-between py-2 border-b">
-    <div>
-      <div className="flex items-center gap-1.5">
-        {row.isPR && <Trophy className="w-3 h-3 text-primary" />}
-        <span className="font-medium">{format(row.date, 'd.M.yy')}</span>
-        {!clientId && <span className="text-muted-foreground text-sm">{row.clientName}</span>}
-      </div>
-      <div className="flex items-center gap-3 mt-0.5 text-sm">
-        {row.timeSeconds && <span>⏱ {formatTime(row.timeSeconds)}</span>}
-        {row.distanceMeters && <span>📏 {row.distanceMeters} m</span>}
-        {row.rpe && <Badge className={getRpeBgColor(row.rpe)}>{row.rpe}/10</Badge>}
-        {row.avgHeartRate && <span>♥ {row.avgHeartRate}</span>}
-      </div>
-    </div>
-    <Button variant="ghost" size="icon" onClick={() => setDetailEntryId(row.id)}>
-      <ChevronRight className="w-4 h-4" />
-    </Button>
-  </div>
-);
+```text
+PŘED:          PO:
+[⊞] [👤] [📊]   [⊞ Seznam] [👤 Klient] [📊 Analytika]
+(bez textu)     (text viditelný)
 ```
 
-**Třídění podle RPE (nový SQL order):**
-```typescript
-} else if (sortBy === 'rpe') {
-  exerciseQuery = exerciseQuery.order('rpe', { ascending: false, nullsFirst: false });
-}
-```
+### Rozsah změn
 
-### Rozsah změny
+| Soubor | Typ změny | Rozsah |
+|--------|-----------|--------|
+| `ExercisesContent.tsx` | UI fix | Malý |
+| `ClientExercisesView.tsx` | UI vylepšení | Střední |
+| `ExerciseHistoryTable.tsx` | UI vylepšení | Malý |
+| `ExerciseProgressChart.tsx` | Optimalizace | Malý |
 
-Pouze **1 soubor**: `src/components/exercises/ExerciseHistoryTable.tsx`
-
-- Žádné databázové změny (všechna data jsou již v tabulce)
+- Žádné databázové změny
 - Žádné nové API endpointy
-- Zpětně kompatibilní (silové cviky se zobrazí stejně jako dříve)
+- Zpětně kompatibilní se stávajícími daty
