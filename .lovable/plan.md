@@ -1,206 +1,189 @@
 
-## Komplexní redesign záložky Klienti (tréninkový deník) ve Výkonnosti
+## Komplexní redesign karty Výkonnost – Tréninkový deník premium
 
-### Analýza problému
+### Analýza současného stavu
 
-Po důkladné analýze kódu a databáze jsem identifikoval tato klíčová selhání aktuálního stavu:
+Po podrobném prostudování kódu jsem identifikoval tyto klíčové problémy:
 
-1. **Záložka "Klienti" (ClientProgressView)** slouží primárně jako statistický přehled (Hero stats, sparkline grafy, PR timeline) – nevypadá ani nefunguje jako **tréninkový deník** pro rychlé zobrazení, přidávání a porovnání výkonů.
+1. **Záložka Přehled** – `CategoryCards`, `ClientProgressLeaderboard`, `RecentPRsCompact` a `RecentExercisesChips` jsou vizuálně oddělené bloky bez vzájemné provázanosti. Na mobilu zabírají příliš vertikálního prostoru, metriky jsou roztroušené.
 
-2. **Záložka "Klient" v ExercisesContent** (záložka ve starém ExercisesContent, která se nyní nezobrazuje přímo uživateli) obsahuje dobrou logiku zobrazení cviků dle kategorií, ale je skrytá uvnitř stránky a přístup k zápisu výkonu je komplikovaný.
+2. **KPI Bar** (`PerformanceKPIBar`) – tři karty jsou OK, ale vizuálně nezaujmou. Chybí kontext co daná čísla znamenají (trend za předchozí měsíc).
 
-3. **Mobilní zobrazení** v `ClientProgressView` – výběr klienta, přepínání módů a samotná data jsou nevhodně uspořádané pro rychlou práci na mobilu.
+3. **Záložka Klienti / Journal** (`ClientProgressView`) – Funguje dobře strukturálně, ale:
+   - **Karta cviku** (`ExerciseListItem`) je příliš kompaktní – ikony jsou malé, primární hodnota splývá s vedlejšími metrikami, datum je nečitelné
+   - **Detail cviku** (`ExerciseDetailView`) – záznamy v historii jsou obtížně čitelné na mobilu, RPE badge je příliš malá, watts/tep jsou skryté za truncate
+   - **KPI karty** v detailu jsou správné, ale vizuálně chudé
 
-4. **Datové zobrazení** – v detailu záznamu/cviku se zobrazují jen primární metriky. RPE, vzdálenost, čas jsou schované nebo zcela chybí v přehledovém listu.
+4. **ExerciseProgressDetail** (`ExerciseProgressDetail.tsx`) – jen zobrazuje základní `displayValue` bez RPE, watts nebo tepu. Záznamy nemají barevné odlišení.
 
-5. **Zápis výkonu** – není dostupný přímo ze záložky Klienti, je nutné přejít do Knihovny a najít cvik – to je pomalé v terénu.
+5. **ExerciseHistoryTable mobilní view** – funguje, ale je vizuálně přehlcené – vše v jednom řádku textu bez jasné vizuální hierarchie.
 
-6. **Real databáze**: Silové cviky nemají RPE/tep (NULL), kardio cviky (Veslo 500m, SkillUp) mají čas, vzdálenost, RPE, watty – to je data která musíme zobrazit správně.
-
----
-
-### Navrhované řešení: Redesign záložky "Klienti" jako plnohodnotný tréninkový deník
-
-Záložka **Klienti** bude kompletně přepracována. Zachováme stávající záložky "Porovnání" a "Benchmark", ale primární view "Klient" bude nyní fungovat jako rychlý deník:
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│  [Klient] ▾  Kokeš Jirka                    + Zapsat   │
-│──────────────────────────────────────────────────────────│
-│  [Síla 🔵] [Kardio 🟢] [Plyo 🟡] [Vše]               │
-│──────────────────────────────────────────────────────────│
-│  🔵 Bench Press                     85 kg × 5   ↗ PR   │
-│     5× │ Ø 80 kg │ RPE 8             14.2.26          ›│
-│──────────────────────────────────────────────────────────│
-│  🟢 SkillUp                       ⏱ 0:57  📏 250 m    │
-│     RPE 8                            19.2.26           ›│
-│──────────────────────────────────────────────────────────│
-│  🔵 Dřep (Back Squat)              120 kg × 3           │
-│     4× │ Ø 112 kg │ RPE 7            5.2.26           ›│
-└─────────────────────────────────────────────────────────┘
-```
-
-Po kliknutí na cvik → detail s grafem, celou historií, RPE badge, tep, waty:
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│ ← Bench Press        [🔵 Síla]         + Přidat záznam │
-│   Kokeš Jirka                                           │
-│──────────────────────────────────────────────────────────│
-│  Max: 85 kg    Trend: +5 kg ↗    PR: 3    Záznamů: 14  │
-│──────────────────────────────────────────────────────────│
-│  [Graf progrese - čára]                                  │
-│──────────────────────────────────────────────────────────│
-│  ZÁZNAMY:                                               │
-│  🏆 14.2.26 │ 4×5 │ 85 kg │ [RPE 8] │ ✏               │
-│     5.2.26  │ 3×5 │ 82.5 kg │ [RPE 7] │ ✏              │
-│    28.1.26  │ 4×5 │ 80 kg │ [RPE 8]  │ ✏              │
-└─────────────────────────────────────────────────────────┘
-```
+6. **ClientExercisesView** – duplicitní implementace s `ClientProgressView`, ale pro jiný kontext (záložka Knihovna > Klient).
 
 ---
 
-### Přesné změny souborů
+### Plán změn – 4 klíčové soubory
 
-#### Soubor 1: `src/components/performance/ClientProgressView.tsx` – HLAVNÍ REDESIGN
+#### Soubor 1: `src/components/performance/ClientProgressView.tsx` – Premium Journal redesign
 
-**Cíl:** Přepracovat "single" mode z statistického přehledu na deník-first design.
+**A) ExerciseListItem – zcela přepsat vizuál:**
+- Nahradit současný úzký řádek za **dvouřádkovou kartu** s jasnou hierarchií
+- Horní řádek: Ikona (větší 10×10), název cviku (font-semibold), datum vpravo (výraznější)
+- Dolní řádek: primární hodnota VELKÁ (text-lg font-bold), vedlejší metriky (vzdálenost, watty, tep) oddělené tečkami
+- RPE badge přesunout do pravého horního rohu (prominentní)
+- Trend šipka zcela vpravo jako velký indikátor
+- Pro silové: zobrazit jak `4×5` SEPARÁTNĚ od `85 kg` (dvě distinct hodnoty)
+- Přidat počet záznamů jako subtextík pod jménem cviku
 
-**Změny v sekci výběru klienta (bez vybraného klienta):**
-- Zachovat stávající seznam klientů, ale přidat statistiky přímo:
-  - Počet silových cviků / kardio cviků / plyo cviků
-  - Poslední aktivita
-  - Počet PR
+**B) ExerciseDetailView – vylepšit KPI a záznamy:**
+- KPI karty: Zvýraznit hodnoty (`text-2xl font-bold`), přidat barevné ikony odpovídající typu
+- Graf: Přidat tečky PR jako zlaté hvězdy, přidat gradient fill pod čarou (area fill)
+- Záznamy v historii: každý záznam jako **mini-karta** se světlým pozadím
+  - Síla: `[🏆] 14.2. │ 4×5 │ 85 kg │ Vol: 1700 kg │ [RPE 8]`
+  - Kardio: `[🏆] 19.2. │ ⏱ 0:57 │ 📏 250m │ ⚡ 245W │ ♥ 142 │ [RPE 8]`
+  - Plyo: `[19.2.] │ 5 pok. │ 2.4m │ [RPE 7]`
+- Přidat tlačítko "Upravit" (ikona tužky) u každého záznamu
+- Kliknout na záznam → otevře `ExerciseEntryDetailSheet`
 
-**Změny po výběru klienta (klíčová sekce):**
-- **Odstranit** ProgressHeroCard z horní části (nebo schovat do collapsible sekce "Statistiky")
-- **Nahradit** ProgressSparklineGrid a PRHistoryTimeline za `ClientExercisesView`-like komponentu:
-  - Barevně rozlišené karty cviků (Síla = modrá, Kardio = zelená, Plyo = žlutá)
-  - Quick filter tlačítka: [Síla] [Kardio] [Plyo] [Vše]
-  - Každá karta cviku zobrazuje: primární hodnota, datum, RPE badge, počet záznamů, trend šipka
-  - Kliknutím → inline detail s grafem + historií záznamů
-- **Přidat** tlačítko "Zapsat výkon" vedle výběru klienta (otevírá `QuickLogDialog` s předvybraným klientem)
+**C) JournalView – zlepšit layout:**
+- Přidat mini stats strip pod klientem: počet cviků / záznamů / PR
+- Filter pills: přidat počet jako superscript badge
+- Prázdný stav: nový ilustrativní empty state s tlačítkem "Zapsat první výkon"
 
-**Změny v detailu cviku (ExerciseProgressDetail):**
-- Rozšířit zobrazení záznamů v historii:
-  - Zobrazit RPE jako barevný badge (zelená/žlutá/červená) pro KAŽDÝ záznam
-  - Pro kardio: zobrazit čas + vzdálenost + watty v jednom řádku
-  - Pro sílu: zobrazit sériová struktura (3×5) + váha + objem
-  - Pro plyo: zobrazit počet pokusů + výška/vzdálenost
-- Přidat tlačítko "Přidat záznam" do záhlaví detailu cviku
-- Přidat tlačítko "Upravit" u každého záznamu v historii
+**D) ClientList – vylepšit:**
+- Přidat mini barevné pruhy počtů (síla/kardio/plyo) u každého klienta jako malé colored dots
+- Datum poslední aktivity = výraznější (badge místo textu)
 
-#### Soubor 2: `src/components/performance/ExerciseProgressDetail.tsx` – Rozšíření
+#### Soubor 2: `src/components/performance/ExerciseProgressDetail.tsx` – Rozšíření záznamů
 
-**Cíl:** Přidat RPE, vzdálenost, watty do zobrazení záznamů.
+Tento soubor se používá v záložce **Knihovna** když trenér vybere klienta. Stávající zobrazení záznamů ukazuje jen `displayValue` bez RPE/watts/tepu.
 
-- Rozšířit `useExerciseHistory` data o RPE a metriky specifické pro typ
-- Pro každý záznam v historii zobrazit:
-  - **Síla:** `3×8 │ 85 kg │ Vol: 2040 kg │ [RPE 8]`
-  - **Kardio:** `⏱ 1:57 │ 📏 500 m │ ⚡ 394 W │ [RPE 10]`
-  - **Plyo:** `5 pokusů │ 2.78 m │ [RPE 7]`
-- Přidat kliknutí na záznam → `ExerciseEntryDetailSheet`
-- Přidat tlačítko "+" pro zápis nového záznamu pro tento cvik + klienta
+- Rozšířit historii o RPE badge, watts, tep pro každý záznam
+- Přidat barevný levý border záznamu dle RPE (zelená < 6, žlutá 6-8, červená > 8)
+- Graf: typ svislé osy dle `exerciseType` (pro kardio = čas, pro sílu = kg)
 
-#### Soubor 3: `src/hooks/useExerciseHistory.ts` – Rozšíření dat
+#### Soubor 3: `src/components/performance/PerformanceKPIBar.tsx` – Mírné vylepšení
 
-**Cíl:** Přidat `rpe`, `avg_watts`, `avg_heart_rate`, `sets`, `side` do vráceného objektu.
+- Na mobilu: místo centrovaného textu použít horizontální layout s větší hodnotou
+- Přidat tooltip s vysvětlením co KPI znamená
+- Přidat subtextík "vs. minulý měsíc" pokud je trend dostupný
 
-- Přidat pole do `ExerciseHistoryEntry` interface: `rpe`, `avg_watts`, `avg_heart_rate`, `sets`
-- Přidat pole do SELECT dotazu
-- Exportovat je v mapování záznamu
+#### Soubor 4: `src/components/performance/RecentPRsCompact.tsx` – Visual upgrade
 
-#### Soubor 4: `src/components/exercises/QuickLogDialog.tsx` – Předvyplnění klienta
-
-**Cíl:** Přijmout volitelný `initialClientId` prop pro předvyplnění klienta.
-
-- Přidat prop `initialClientId?: string`
-- Nastavit `defaultValues.client_id` z `initialClientId` pokud je k dispozici
-
-#### Soubor 5: `src/pages/PerformanceHub.tsx` – Předání `QuickLogDialog` stavu
-
-**Cíl:** Propojit tlačítko "Zapsat výkon" v záložce Klienti s QuickLogDialog.
-
-- Přidat `quickLogClientId` state
-- Předat ho do `ClientProgressView` a do `QuickLogDialog`
+- Přidat barevný levý border dle typu cviku (primary/success/warning)
+- Přidat ikonu typu cviku před název
+- Přidat badge s typem (Síla / Kardio / Plyo)
+- Zobrazit více detailu: pokud kardio PR → zobrazit čas/vzdálenost místo raw čísla
 
 ---
 
-### Vizuální mobilní design po změně
+### Vizuální výsledek na mobilu
 
 ```text
-ZÁLOŽKA KLIENTI – bez vybraného klienta:
-┌──────────────────────────────────────────┐
-│ Klienti                                  │
-│ [🔍 Hledat klienta...]                  │
-│──────────────────────────────────────────│
-│ Kokeš Jirka               🏆 3 PR  14 → │
-│ Síla 8 │ Kardio 2 │ Plyo 3              │
-│ poslední: 19.2.26                        │
-│──────────────────────────────────────────│
-│ Novák Petr                🏆 1 PR  7  → │
-│ Síla 5 │ Kardio 0                       │
-└──────────────────────────────────────────┘
+KARTA CVIKU – KARDIO (nový design):
+┌────────────────────────────────────────────────┐
+│ ●─── 🟢 ───────────────────────────────────── │
+│ [♥] SkillUp                     19.2.26  ↗ ↗ │
+│      2 záznamy                   [RPE 8]      │
+│                                               │
+│  ⏱ 0:57          📏 250 m       ⚡ 245W      │
+└────────────────────────────────────────────────┘
 
-ZÁLOŽKA KLIENTI – vybraný klient:
-┌──────────────────────────────────────────┐
-│ ← Kokeš Jirka    [Karta klienta ↗]  +  │  ← + = Zapsat výkon
-│──────────────────────────────────────────│
-│ [🔵 Síla] [🟢 Kardio] [🟡 Plyo] [Vše]│
-│──────────────────────────────────────────│
-│ 🔵 Bench Press              85 kg ×5 ↗ │
-│    14× │ RPE Ø8.2          19.2.26    › │
-│──────────────────────────────────────────│
-│ 🟢 SkillUp              ⏱ 0:57  250m  │
-│    RPE 8                   19.2.26    › │
-│──────────────────────────────────────────│
-│ 🔵 Dřep                    120 kg ×3   │
-│    22× │ RPE Ø7.5          14.2.26    › │
-└──────────────────────────────────────────┘
+KARTA CVIKU – SÍLA (nový design):
+┌────────────────────────────────────────────────┐
+│ ●─── 🔵 ───────────────────────────────────── │
+│ [🏋] Bench Press                14.2.26  ↗    │
+│      14 záznamů                               │
+│                                               │
+│  4×5 │ 85 kg │ Vol: 1700 kg                  │
+└────────────────────────────────────────────────┘
 
-DETAIL CVIKU (Bench Press):
-┌──────────────────────────────────────────┐
-│ ← Bench Press  [🔵 Síla]    + Přidat   │
-│   Kokeš Jirka                           │
-│──────────────────────────────────────────│
-│ [Max: 85 kg] [Trend: +5↗] [PR: 3] [14×]│
-│──────────────────────────────────────────│
-│ [───●────────────────] Graf progrese    │
-│──────────────────────────────────────────│
-│ ZÁZNAMY                                 │
-│ 🏆 19.2. │ 4×5 │ 85 kg │ [RPE 8] │ ✏  │
-│    5.2.  │ 3×5 │ 82.5 kg│ [RPE 7] │ ✏  │
-│   28.1.  │ 4×5 │ 80 kg  │ [RPE 8] │ ✏  │
-└──────────────────────────────────────────┘
+DETAIL ZÁZNAMU V HISTORII – SÍLA:
+┌──────────────────────────────────────────────────┐
+│ 🔵 │ 🏆 19.2.26          4×5 │ 85 kg │ ✏       │
+│    │    Vol: 1700 kg  │ [RPE 8]                  │
+└──────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│    │    5.2.26          3×5 │ 82.5 kg │ ✏        │
+│    │    Vol: 1237 kg  │ [RPE 7]                  │
+└──────────────────────────────────────────────────┘
 
-DETAIL KARDIO CVIKU (SkillUp):
-┌──────────────────────────────────────────┐
-│ ← SkillUp      [🟢 Kardio]  + Přidat   │
-│   Kokeš Jirka                           │
-│──────────────────────────────────────────│
-│ [Nejlepší: 0:45] [Trend: -12s↗] [Záz: 2]│
-│──────────────────────────────────────────│
-│ [Graf]                                  │
-│──────────────────────────────────────────│
-│ ZÁZNAMY                                 │
-│ 19.2. │ ⏱ 0:57 │ 📏 250m │ [RPE 8] │ ✏│
-│  5.1. │ ⏱ 0:45 │ 📏 200m │ [RPE 7] │ ✏│
-└──────────────────────────────────────────┘
+DETAIL ZÁZNAMU V HISTORII – KARDIO:
+┌──────────────────────────────────────────────────┐
+│ 🟢 │    19.2.26  │ ⏱ 0:57 │ 📏 250m │ ⚡245W │ ✏│
+│    │    ♥ 142 bpm │ [RPE 8]                     │
+└──────────────────────────────────────────────────┘
 ```
 
 ---
+
+### Technické detaily
+
+**Nová struktura `ExerciseListItem`:**
+```typescript
+// Dvouřádkový layout s jasnou hierarchií
+<button className="w-full flex flex-col gap-2 p-3.5 rounded-xl bg-card border border-l-4 hover:bg-muted/40">
+  {/* Horní řádek: ikona + název + datum + trend */}
+  <div className="flex items-center gap-2.5">
+    <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+      {icon}
+    </div>
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-2">
+        <p className="font-semibold text-sm truncate">{exercise.exerciseName}</p>
+        <span className="text-[10px] text-muted-foreground">{exercise.count}×</span>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        {format(lastDate, 'd. M. yy', { locale: cs })}
+      </p>
+    </div>
+    {rpe && <RpeBadge rpe={rpe} />}
+    <div className="flex flex-col items-end gap-0.5">
+      {trendIcon}
+      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+    </div>
+  </div>
+
+  {/* Dolní řádek: hlavní metriky */}
+  <div className="flex items-center gap-3 pl-12 text-sm font-medium">
+    {primaryMetric}
+    {secondaryMetric} 
+    {tertiaryMetric}
+  </div>
+</button>
+```
+
+**RPE barevné kódování v historii:**
+```typescript
+const getEntryBorderColor = (rpe: number | null) => {
+  if (!rpe) return 'border-l-border/30';
+  if (rpe >= 9) return 'border-l-destructive';
+  if (rpe >= 7) return 'border-l-warning';
+  return 'border-l-success';
+};
+```
+
+**Chart area fill pro progres graf:**
+```typescript
+// Přidat AreaChart místo LineChart nebo defs gradient
+<defs>
+  <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="5%" stopColor={strokeColor} stopOpacity={0.15} />
+    <stop offset="95%" stopColor={strokeColor} stopOpacity={0} />
+  </linearGradient>
+</defs>
+<Area type="monotone" fill="url(#colorGradient)" ... />
+```
 
 ### Rozsah změn
 
-| Soubor | Typ | Rozsah |
-|--------|-----|--------|
-| `ClientProgressView.tsx` | Redesign (klíčový) | Velký |
-| `ExerciseProgressDetail.tsx` | Rozšíření metrik | Střední |
-| `useExerciseHistory.ts` | Přidat pole | Malý |
-| `QuickLogDialog.tsx` | Přidat prop | Malý |
-| `PerformanceHub.tsx` | State drilldown | Malý |
+| Soubor | Změna | Rozsah |
+|--------|-------|--------|
+| `ClientProgressView.tsx` | ExerciseListItem redesign + histórie záznamů + prázdný stav | Velký |
+| `ExerciseProgressDetail.tsx` | RPE/watts/tep v historii + border kódování | Střední |
+| `PerformanceKPIBar.tsx` | Mobilní layout + tooltip | Malý |
+| `RecentPRsCompact.tsx` | Typ badge + border + lepší detail hodnoty | Malý |
 
-- **Žádné databázové změny** – všechna data jsou v DB
-- **Zpětně kompatibilní** – ostatní záložky zůstanou beze změny
-- **Záložky Porovnání a Benchmark** zůstanou zachovány
-
+- Žádné databázové změny
+- Žádné nové endpointy
+- Zpětně kompatibilní
