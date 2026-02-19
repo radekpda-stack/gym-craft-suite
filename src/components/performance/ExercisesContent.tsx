@@ -30,17 +30,17 @@ export function ExercisesContent() {
       {/* Segmented Control for Views */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 w-full max-w-lg">
-          <TabsTrigger value="list" className="gap-2">
-            <List className="w-4 h-4" />
-            <span className="hidden sm:inline">Seznam</span>
+          <TabsTrigger value="list" className="gap-1.5">
+            <List className="w-4 h-4 shrink-0" />
+            <span className="text-xs truncate">Seznam</span>
           </TabsTrigger>
-          <TabsTrigger value="client" className="gap-2">
-            <User className="w-4 h-4" />
-            <span className="hidden sm:inline">Klient</span>
+          <TabsTrigger value="client" className="gap-1.5">
+            <User className="w-4 h-4 shrink-0" />
+            <span className="text-xs truncate">Klient</span>
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-2">
-            <BarChart3 className="w-4 h-4" />
-            <span className="hidden sm:inline">Analytika</span>
+          <TabsTrigger value="analytics" className="gap-1.5">
+            <BarChart3 className="w-4 h-4 shrink-0" />
+            <span className="text-xs truncate">Analytika</span>
           </TabsTrigger>
         </TabsList>
 
