@@ -772,6 +772,18 @@ interface ClientListProps {
   onSelectClient: (id: string, name: string) => void;
 }
 
+function getActivityStatus(lastActivity: string | null): {
+  dot: string;
+  badgeClass: string;
+  label: string;
+} {
+  if (!lastActivity) return { dot: 'bg-muted-foreground/30', badgeClass: 'border-border/40 text-muted-foreground', label: 'Bez záznamu' };
+  const days = Math.floor((Date.now() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24));
+  if (days <= 7) return { dot: 'bg-success', badgeClass: 'border-success/40 text-success bg-success/10', label: formatDistanceToNow(parseISO(lastActivity), { addSuffix: true, locale: cs }) };
+  if (days <= 30) return { dot: 'bg-warning', badgeClass: 'border-warning/40 text-warning bg-warning/10', label: formatDistanceToNow(parseISO(lastActivity), { addSuffix: true, locale: cs }) };
+  return { dot: 'bg-destructive', badgeClass: 'border-destructive/40 text-destructive bg-destructive/10', label: formatDistanceToNow(parseISO(lastActivity), { addSuffix: true, locale: cs }) };
+}
+
 function ClientList({ onSelectClient }: ClientListProps) {
   const [search, setSearch] = useState('');
   const { data: allClients = [], isLoading } = useAllClientsProgress();
@@ -800,49 +812,61 @@ function ClientList({ onSelectClient }: ClientListProps) {
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map(client => (
-            <button
-              key={client.id}
-              onClick={() => onSelectClient(client.id, client.name)}
-              className={cn(
-                'w-full flex items-center gap-4 p-4 rounded-xl text-left',
-                'bg-card/80 border border-border/50',
-                'hover:shadow-md hover:-translate-y-0.5 transition-all duration-200',
-                'focus:outline-none focus:ring-2 focus:ring-primary/30'
-              )}
-            >
-              {/* Avatar */}
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-sm font-bold text-primary">
-                  {client.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground truncate">{client.name}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-muted-foreground">
-                    {client.entriesCount} záznamů
-                  </span>
-                  {client.lastActivity && (
-                    <span className="text-xs text-muted-foreground">
-                      · {formatDistanceToNow(parseISO(client.lastActivity), { addSuffix: true, locale: cs })}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {client.prCount > 0 && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-warning/10 text-warning text-xs font-medium">
-                    <Trophy className="w-3 h-3" />
-                    {client.prCount}
-                  </div>
+          {filtered.map(client => {
+            const activity = getActivityStatus(client.lastActivity || null);
+            return (
+              <button
+                key={client.id}
+                onClick={() => onSelectClient(client.id, client.name)}
+                className={cn(
+                  'w-full flex items-center gap-4 p-4 rounded-xl text-left',
+                  'bg-card/80 border border-border/50',
+                  'hover:shadow-md hover:-translate-y-0.5 transition-all duration-200',
+                  'focus:outline-none focus:ring-2 focus:ring-primary/30'
                 )}
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </div>
-            </button>
-          ))}
+              >
+                {/* Avatar with activity dot */}
+                <div className="relative shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-sm font-bold text-primary">
+                      {client.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <span className={cn(
+                    "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card",
+                    activity.dot
+                  )} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground truncate">{client.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span className="text-xs text-muted-foreground">
+                      {client.entriesCount} záznamů
+                    </span>
+                    {client.lastActivity && (
+                      <Badge
+                        variant="outline"
+                        className={cn("text-[10px] h-4 px-1.5 border shrink-0", activity.badgeClass)}
+                      >
+                        {activity.label}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {client.prCount > 0 && (
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-warning/10 text-warning text-xs font-medium">
+                      <Trophy className="w-3 h-3" />
+                      {client.prCount}
+                    </div>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
