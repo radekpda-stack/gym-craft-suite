@@ -23,7 +23,7 @@ export function MobileCartBar({
   if (itemCount === 0) return null;
 
   return (
-    <div className="fixed bottom-16 left-0 right-0 z-40 lg:hidden px-3 pb-2">
+    <div className="fixed bottom-[88px] left-0 right-0 z-40 lg:hidden px-3 pb-2">
       <div className={cn(
         "flex items-center justify-between gap-3",
         "px-4 py-3 rounded-2xl",
