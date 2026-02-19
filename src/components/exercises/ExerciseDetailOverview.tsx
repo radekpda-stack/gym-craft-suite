@@ -122,146 +122,116 @@ export function ExerciseDetailOverview({
     <div className="space-y-4">
       {/* KPI Cards */}
       {hasData ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
           {isJumpExercise ? (
             // Jump exercise cards
             <>
-              {/* Best Distance */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <Trophy className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs">Nejlepší skok</span>
-                  <StatInfoTooltip
-                    title="Nejlepší skok"
-                    description="Nejvyšší zaznamenaná vzdálenost/výška"
-                    calculation="Maximum z distance_meters"
-                  />
+              <Card className="p-2 sm:p-3">
+                <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                  <Trophy className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="text-xs truncate">Nejlepší skok</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">
-                    {stats?.bestDistance ? `${Math.round(stats.bestDistance * 100)}` : '-'}
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg sm:text-xl font-bold tabular-nums">
+                    {stats?.bestDistance ? `${Math.round(stats.bestDistance * 100)}` : '–'}
                   </span>
                   <span className="text-xs text-muted-foreground">cm</span>
                 </div>
                 {stats?.bestDistanceClient && !selectedClientId && (
-                  <span className="text-xs text-muted-foreground">{stats.bestDistanceClient}</span>
+                  <span className="text-[11px] text-muted-foreground truncate block">{stats.bestDistanceClient}</span>
                 )}
               </Card>
-
-              {/* Average Distance */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <Target className="w-3.5 h-3.5" />
-                  <span className="text-xs">Průměr</span>
+              <Card className="p-2 sm:p-3">
+                <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                  <Target className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-xs truncate">Průměr</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">
-                    {stats?.averageDistance ? `${Math.round(stats.averageDistance * 100)}` : '-'}
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg sm:text-xl font-bold tabular-nums">
+                    {stats?.averageDistance ? `${Math.round(stats.averageDistance * 100)}` : '–'}
                   </span>
                   <span className="text-xs text-muted-foreground">cm</span>
                 </div>
               </Card>
-
-              {/* Total Attempts */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <Activity className="w-3.5 h-3.5" />
-                  <span className="text-xs">Pokusů</span>
+              <Card className="p-2 sm:p-3">
+                <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                  <Activity className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-xs truncate">Pokusů</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">{stats?.totalEntries || 0}</span>
-                </div>
+                <span className="text-lg sm:text-xl font-bold tabular-nums">{stats?.totalEntries || 0}</span>
               </Card>
-
-              {/* PR Count */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <Trophy className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs">PRs</span>
+              <Card className="p-2 sm:p-3">
+                <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                  <Trophy className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="text-xs truncate">PRs</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">
-                    {stats?.prHistory?.length || 0}
-                  </span>
-                </div>
+                <span className="text-lg sm:text-xl font-bold tabular-nums">{stats?.prHistory?.length || 0}</span>
               </Card>
             </>
           ) : !isTimeBased ? (
             // Strength exercise cards
             <>
-              {/* Max Weight */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <Trophy className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs">Max váha</span>
+              <Card className="p-2 sm:p-3">
+                <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                  <Trophy className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="text-xs truncate">Max váha</span>
                   <StatInfoTooltip
                     title="Maximální váha"
                     description="Nejvyšší zaznamenaná váha"
                     calculation="Maximum z weight_kg"
                   />
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">
-                    {stats?.globalMaxWeight ? `${stats.globalMaxWeight}` : '-'}
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg sm:text-xl font-bold tabular-nums">
+                    {stats?.globalMaxWeight ? `${stats.globalMaxWeight}` : '–'}
                   </span>
                   <span className="text-xs text-muted-foreground">kg</span>
                 </div>
                 {stats?.globalMaxWeightClient && !selectedClientId && (
-                  <span className="text-xs text-muted-foreground">{stats.globalMaxWeightClient}</span>
+                  <span className="text-[11px] text-muted-foreground truncate block">{stats.globalMaxWeightClient}</span>
                 )}
               </Card>
-
-              {/* Total Volume */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <Activity className="w-3.5 h-3.5" />
-                  <span className="text-xs">Celk. objem</span>
+              <Card className="p-2 sm:p-3">
+                <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                  <Activity className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-xs truncate">Celk. objem</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">
-                    {stats?.totalEntries ? `${Math.round((stats.averageWeight || 0) * (stats.averageReps || 0) * stats.totalEntries / 1000)}` : '-'}
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg sm:text-xl font-bold tabular-nums">
+                    {stats?.totalEntries ? `${Math.round((stats.averageWeight || 0) * (stats.averageReps || 0) * stats.totalEntries / 1000)}` : '–'}
                   </span>
                   <span className="text-xs text-muted-foreground">t</span>
                 </div>
               </Card>
-
-              {/* Average Performance */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  <span className="text-xs">Průměr</span>
+              <Card className="p-2 sm:p-3">
+                <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                  <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-xs truncate">Průměr</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">
-                    {stats?.averageWeight ? `${stats.averageWeight}` : '-'}
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg sm:text-xl font-bold tabular-nums">
+                    {stats?.averageWeight ? `${stats.averageWeight}` : '–'}
                   </span>
                   <span className="text-xs text-muted-foreground">kg</span>
                 </div>
                 {stats?.averageReps && (
-                  <span className="text-xs text-muted-foreground">~{stats.averageReps} opak.</span>
+                  <span className="text-[11px] text-muted-foreground">~{stats.averageReps} opak.</span>
                 )}
               </Card>
-
-              {/* PR Count */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <Trophy className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs">PR klienti</span>
+              <Card className="p-2 sm:p-3">
+                <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                  <Trophy className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="text-xs truncate">PR klienti</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">
-                    {stats?.prHistory?.length || 0}
-                  </span>
-                </div>
+                <span className="text-lg sm:text-xl font-bold tabular-nums">{stats?.prHistory?.length || 0}</span>
               </Card>
             </>
           ) : (
             // Time-based / Cardio exercise cards
             <>
-              {/* Best Time */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <Timer className="w-3.5 h-3.5 text-primary" />
+              <Card className="p-2 sm:p-3">
+                <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                  <Timer className="w-3.5 h-3.5 text-primary shrink-0" />
                   <span className="text-xs truncate">Nejlepší</span>
                   <StatInfoTooltip
                     title="Nejlepší čas"
@@ -269,92 +239,74 @@ export function ExerciseDetailOverview({
                     calculation="Minimum z time_seconds"
                   />
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">
-                    {stats?.bestTime ? formatTime(stats.bestTime) : '-'}
-                  </span>
-                </div>
+                <span className="text-lg sm:text-xl font-bold tabular-nums">
+                  {stats?.bestTime ? formatTime(stats.bestTime) : '–'}
+                </span>
                 {stats?.bestTimeClient && !selectedClientId && (
-                  <span className="text-xs text-muted-foreground">{stats.bestTimeClient}</span>
+                  <span className="text-[11px] text-muted-foreground truncate block">{stats.bestTimeClient}</span>
                 )}
               </Card>
-
-              {/* Average Time */}
-              <Card className="p-3">
-                <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                  <Target className="w-3.5 h-3.5" />
+              <Card className="p-2 sm:p-3">
+                <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                  <Target className="w-3.5 h-3.5 shrink-0" />
                   <span className="text-xs truncate">Průměr</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold">
-                    {stats?.averageTime ? formatTime(stats.averageTime) : '-'}
-                  </span>
-                </div>
+                <span className="text-lg sm:text-xl font-bold tabular-nums">
+                  {stats?.averageTime ? formatTime(stats.averageTime) : '–'}
+                </span>
               </Card>
-
-              {/* Best Watts - only show if data exists */}
               {stats?.bestWatts ? (
-                <Card className="p-3">
-                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                    <Zap className="w-3.5 h-3.5 text-warning" />
+                <Card className="p-2 sm:p-3">
+                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                    <Zap className="w-3.5 h-3.5 text-warning shrink-0" />
                     <span className="text-xs truncate">Max W</span>
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-bold">{stats.bestWatts}</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-lg sm:text-xl font-bold tabular-nums">{stats.bestWatts}</span>
                     <span className="text-xs text-muted-foreground">W</span>
                   </div>
                   {stats.averageWatts && (
-                    <span className="text-xs text-muted-foreground">Ø {stats.averageWatts} W</span>
+                    <span className="text-[11px] text-muted-foreground">Ø {stats.averageWatts} W</span>
                   )}
                 </Card>
               ) : stats?.bestPace500m ? (
-                <Card className="p-3">
-                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                    <Gauge className="w-3.5 h-3.5 text-success" />
+                <Card className="p-2 sm:p-3">
+                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                    <Gauge className="w-3.5 h-3.5 text-success shrink-0" />
                     <span className="text-xs truncate">Tempo</span>
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-bold">{formatPace500m(stats.bestPace500m)}</span>
-                  </div>
+                  <span className="text-lg sm:text-xl font-bold tabular-nums">{formatPace500m(stats.bestPace500m)}</span>
                   {stats.averagePace500m && (
-                    <span className="text-xs text-muted-foreground">Ø {formatPace500m(stats.averagePace500m)}</span>
+                    <span className="text-[11px] text-muted-foreground">Ø {formatPace500m(stats.averagePace500m)}</span>
                   )}
                 </Card>
               ) : (
-                <Card className="p-3">
-                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                    <Activity className="w-3.5 h-3.5" />
-                    <span className="text-xs">Záznamy</span>
+                <Card className="p-2 sm:p-3">
+                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                    <Activity className="w-3.5 h-3.5 shrink-0" />
+                    <span className="text-xs truncate">Záznamy</span>
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-bold">{stats?.totalTimeEntries || stats?.totalEntries || 0}</span>
-                  </div>
+                  <span className="text-lg sm:text-xl font-bold tabular-nums">{stats?.totalTimeEntries || stats?.totalEntries || 0}</span>
                 </Card>
               )}
-
-              {/* PR Count or Cadence */}
               {stats?.averageCadence ? (
-                <Card className="p-3">
-                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                    <Activity className="w-3.5 h-3.5" />
+                <Card className="p-2 sm:p-3">
+                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                    <Activity className="w-3.5 h-3.5 shrink-0" />
                     <span className="text-xs truncate">Kadence</span>
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-bold">{stats.averageCadence}</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-lg sm:text-xl font-bold tabular-nums">{stats.averageCadence}</span>
                     <span className="text-xs text-muted-foreground">spm</span>
                   </div>
                 </Card>
               ) : (
-                <Card className="p-3">
-                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                    <Trophy className="w-3.5 h-3.5 text-primary" />
+                <Card className="p-2 sm:p-3">
+                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                    <Trophy className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span className="text-xs truncate">PRs</span>
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-bold">
-                      {stats?.prHistory?.length || 0}
-                    </span>
-                  </div>
+                  <span className="text-lg sm:text-xl font-bold tabular-nums">{stats?.prHistory?.length || 0}</span>
                 </Card>
               )}
             </>
