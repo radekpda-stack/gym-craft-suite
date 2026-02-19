@@ -12,6 +12,9 @@ export interface ExerciseProgressEntry {
   timeSeconds: number | null;
   distanceMeters: number | null;
   heightCm: number | null;
+  rpe: number | null;
+  avgHeartRate: number | null;
+  avgWatts: number | null;
 }
 
 export type ExerciseEntryType = 'strength' | 'cardio' | 'skill';
@@ -23,6 +26,8 @@ export interface ClientExerciseProgress {
   maxWeight: number | null;
   bestTime: number | null;
   bestHeight: number | null;
+  bestDistance: number | null;
+  avgRpe: number | null;
   prCount: number;
   data: ExerciseProgressEntry[];
   isTimeBased: boolean;
@@ -40,7 +45,7 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
       // 1. Fetch exercise_entries (strength)
       const { data: strengthEntries, error: strengthError } = await supabase
         .from('exercise_entries')
-        .select('exercise_name, date, weight_kg, reps, sets, is_pr, time_seconds, distance_meters')
+        .select('exercise_name, date, weight_kg, reps, sets, is_pr, time_seconds, distance_meters, rpe, avg_heart_rate, avg_watts')
         .eq('client_id', clientId)
         .gte('date', startDate)
         .order('date', { ascending: true });
@@ -50,7 +55,7 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
       // 2. Fetch cardio_entries
       const { data: cardioEntries, error: cardioError } = await supabase
         .from('cardio_entries')
-        .select('exercise_name, date, duration_seconds, distance_meters, is_pr')
+        .select('exercise_name, date, duration_seconds, distance_meters, is_pr, rpe, avg_heart_rate, avg_watts')
         .eq('client_id', clientId)
         .gte('date', startDate)
         .order('date', { ascending: true });
@@ -60,7 +65,7 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
       // 3. Fetch skill_entries (plyo/skill)
       const { data: skillEntries, error: skillError } = await supabase
         .from('skill_entries')
-        .select('exercise_name, date, duration_seconds, attempts, successful, is_breakthrough')
+        .select('exercise_name, date, duration_seconds, attempts, successful, is_breakthrough, rpe')
         .eq('client_id', clientId)
         .gte('date', startDate)
         .order('date', { ascending: true });
@@ -73,6 +78,9 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
         maxWeight: number | null; 
         bestTime: number | null;
         bestHeight: number | null;
+        bestDistance: number | null;
+        rpeSum: number;
+        rpeCount: number;
         prCount: number; 
         lastDate: string;
         isTimeBased: boolean;
@@ -95,6 +103,9 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
             maxWeight: null, 
             bestTime: null, 
             bestHeight: null,
+            bestDistance: null,
+            rpeSum: 0,
+            rpeCount: 0,
             prCount: 0, 
             lastDate: entry.date,
             isTimeBased,
@@ -112,6 +123,9 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
           timeSeconds,
           distanceMeters,
           heightCm: null,
+          rpe: (entry as any).rpe ?? null,
+          avgHeartRate: (entry as any).avg_heart_rate ?? null,
+          avgWatts: (entry as any).avg_watts ?? null,
         });
         
         // Update stats
@@ -124,6 +138,13 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
           if (weight && (exerciseStats[name].maxWeight === null || weight > exerciseStats[name].maxWeight!)) {
             exerciseStats[name].maxWeight = weight;
           }
+        }
+        if (distanceMeters && (exerciseStats[name].bestDistance === null || distanceMeters > exerciseStats[name].bestDistance!)) {
+          exerciseStats[name].bestDistance = distanceMeters;
+        }
+        if ((entry as any).rpe) {
+          exerciseStats[name].rpeSum += (entry as any).rpe;
+          exerciseStats[name].rpeCount++;
         }
         
         if (entry.is_pr) exerciseStats[name].prCount++;
@@ -142,6 +163,9 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
             maxWeight: null, 
             bestTime: null, 
             bestHeight: null,
+            bestDistance: null,
+            rpeSum: 0,
+            rpeCount: 0,
             prCount: 0, 
             lastDate: entry.date,
             isTimeBased: true,
@@ -159,11 +183,21 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
           timeSeconds,
           distanceMeters,
           heightCm: null,
+          rpe: (entry as any).rpe ?? null,
+          avgHeartRate: (entry as any).avg_heart_rate ?? null,
+          avgWatts: (entry as any).avg_watts ?? null,
         });
         
-        // For cardio, longer duration or distance might be better - use time for display
-        if (timeSeconds && (exerciseStats[name].bestTime === null || timeSeconds > exerciseStats[name].bestTime!)) {
+        // For cardio: track best time (shortest = best for fixed distance)
+        if (timeSeconds && (exerciseStats[name].bestTime === null || timeSeconds < exerciseStats[name].bestTime!)) {
           exerciseStats[name].bestTime = timeSeconds;
+        }
+        if (distanceMeters && (exerciseStats[name].bestDistance === null || distanceMeters > exerciseStats[name].bestDistance!)) {
+          exerciseStats[name].bestDistance = distanceMeters;
+        }
+        if ((entry as any).rpe) {
+          exerciseStats[name].rpeSum += (entry as any).rpe;
+          exerciseStats[name].rpeCount++;
         }
         exerciseStats[name].isTimeBased = true;
         exerciseStats[name].exerciseType = 'cardio';
@@ -177,7 +211,6 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
         const name = entry.exercise_name;
         const durationSeconds = entry.duration_seconds;
         const attempts = entry.attempts || 1;
-        const successful = entry.successful || 0;
         
         if (!grouped[name]) {
           grouped[name] = { entries: [], type: 'skill' };
@@ -185,6 +218,9 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
             maxWeight: null, 
             bestTime: null, 
             bestHeight: null,
+            bestDistance: null,
+            rpeSum: 0,
+            rpeCount: 0,
             prCount: 0, 
             lastDate: entry.date,
             isTimeBased: !!durationSeconds,
@@ -202,11 +238,17 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
           timeSeconds: durationSeconds,
           distanceMeters: null,
           heightCm: null,
+          rpe: (entry as any).rpe ?? null,
+          avgHeartRate: null,
+          avgWatts: null,
         });
         
-        // For skill: track best time (lower is better) and breakthroughs as PR
         if (durationSeconds && (exerciseStats[name].bestTime === null || durationSeconds < exerciseStats[name].bestTime!)) {
           exerciseStats[name].bestTime = durationSeconds;
+        }
+        if ((entry as any).rpe) {
+          exerciseStats[name].rpeSum += (entry as any).rpe;
+          exerciseStats[name].rpeCount++;
         }
         exerciseStats[name].exerciseType = 'skill';
         
@@ -214,7 +256,7 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
         if (entry.date > exerciseStats[name].lastDate) exerciseStats[name].lastDate = entry.date;
       }
       
-      // Convert to array and sort by count (most used first)
+      // Convert to array and sort by lastDate (most recent first)
       const result: ClientExerciseProgress[] = Object.entries(grouped)
         .map(([name, data]) => ({
           exerciseName: name,
@@ -223,12 +265,16 @@ export function useClientAllExercises(clientId: string | null, months = 6) {
           maxWeight: exerciseStats[name].maxWeight,
           bestTime: exerciseStats[name].bestTime,
           bestHeight: exerciseStats[name].bestHeight,
+          bestDistance: exerciseStats[name].bestDistance,
+          avgRpe: exerciseStats[name].rpeCount > 0
+            ? Math.round(exerciseStats[name].rpeSum / exerciseStats[name].rpeCount * 10) / 10
+            : null,
           prCount: exerciseStats[name].prCount,
           data: data.entries,
           isTimeBased: exerciseStats[name].isTimeBased,
           exerciseType: exerciseStats[name].exerciseType,
         }))
-        .sort((a, b) => b.count - a.count);
+        .sort((a, b) => b.lastDate.localeCompare(a.lastDate));
       
       return result;
     },
