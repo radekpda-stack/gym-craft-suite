@@ -45,6 +45,12 @@ export default function PerformanceHub() {
   // Dialogs
   const [showNewExerciseDialog, setShowNewExerciseDialog] = useState(false);
   const [showQuickLog, setShowQuickLog] = useState(false);
+  const [quickLogExerciseId, setQuickLogExerciseId] = useState<string | undefined>();
+
+  const handleQuickLogFromSearch = (exerciseId: string, _exerciseName: string) => {
+    setQuickLogExerciseId(exerciseId);
+    setShowQuickLog(true);
+  };
 
   // Data hooks
   const { data: overview, isLoading: overviewLoading } = usePerformanceOverview();
@@ -105,7 +111,7 @@ export default function PerformanceHub() {
             </div>
           </div>
 
-          <ExerciseSearchCommand />
+          <ExerciseSearchCommand onQuickLog={handleQuickLogFromSearch} />
 
           {/* Prominent Quick Log CTA */}
           <button
@@ -175,22 +181,26 @@ export default function PerformanceHub() {
         {/* Overview Tab */}
         <TabsContent value="overview" className="mt-6 space-y-6">
 
-          {/* Today's Activity Block */}
+          {/* Today's Activity Block – rich journal feed */}
           <div className="rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
               <div className="flex items-center gap-2">
-                <CalendarCheck className="w-4 h-4 text-primary" />
-                <span className="font-semibold text-sm">Aktivita dnes</span>
-                {!todayLoading && (
-                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
-                    {todayEntries.length}
-                  </Badge>
-                )}
+                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <CalendarCheck className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <span className="font-semibold text-sm">Aktivita dnes</span>
+                  {!todayLoading && todayEntries.length > 0 && (
+                    <span className="ml-2 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                      {todayEntries.length} záznamů
+                    </span>
+                  )}
+                </div>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs gap-1 text-primary"
+                className="h-7 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
                 onClick={() => setShowQuickLog(true)}
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -199,38 +209,60 @@ export default function PerformanceHub() {
             </div>
 
             {todayLoading ? (
-              <div className="p-4 space-y-2">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 rounded-lg" />)}
+              <div className="p-4 space-y-2.5">
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 rounded-xl" />)}
               </div>
             ) : todayEntries.length === 0 ? (
-              <div className="flex flex-col items-center py-8 px-4 text-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-muted/40 flex items-center justify-center">
-                  <Dumbbell className="w-6 h-6 text-muted-foreground/40" />
+              <div className="flex flex-col items-center py-10 px-4 text-center gap-4">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-2xl bg-muted/30 flex items-center justify-center">
+                    <Dumbbell className="w-8 h-8 text-muted-foreground/30" />
+                  </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Dnes ještě žádný zápis</p>
-                  <p className="text-xs text-muted-foreground/60 mt-0.5">Začni zápisem prvního výkonu dnes</p>
+                  <p className="text-sm font-semibold text-foreground">Dnes ještě žádný zápis</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Začni zápisem prvního výkonu dnes</p>
                 </div>
                 <button
                   onClick={() => setShowQuickLog(true)}
-                  className="text-xs font-semibold text-primary underline underline-offset-2"
+                  className="flex items-center gap-2 text-sm font-semibold text-primary-foreground bg-primary px-4 py-2 rounded-lg hover:brightness-110 transition-all"
                 >
-                  + Zapsat první výkon dnes
+                  <Plus className="w-4 h-4" />
+                  Zapsat první výkon dnes
                 </button>
               </div>
             ) : (
               <div className="divide-y divide-border/20">
-                {todayEntries.map((entry) => (
-                  <div key={entry.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/20 transition-colors">
-                    <div className="w-7 h-7 rounded-lg bg-muted/40 flex items-center justify-center shrink-0">
-                      {typeIcon(entry.type)}
+                {todayEntries.map((entry) => {
+                  const isStrength = entry.type === 'strength';
+                  const isCardio = entry.type === 'cardio';
+                  const iconBg = isCardio ? 'bg-success/10' : entry.type === 'skill' ? 'bg-warning/10' : 'bg-primary/10';
+                  const timeStr = new Date(entry.created_at).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+
+                  return (
+                    <div key={entry.id} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
+                      {/* Type icon */}
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5", iconBg)}>
+                        {typeIcon(entry.type)}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-sm font-semibold truncate leading-tight">{entry.exercise_name}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <span className="text-[11px] font-semibold text-foreground/70">{entry.client_name}</span>
+                          <span className="text-[11px] text-muted-foreground/50">·</span>
+                          <span className="text-[11px] text-muted-foreground">{entry.summary}</span>
+                        </div>
+                      </div>
+
+                      {/* Time */}
+                      <span className="text-[10px] text-muted-foreground/50 shrink-0 mt-1">{timeStr}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{entry.exercise_name}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{entry.client_name} · {entry.summary}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -252,6 +284,10 @@ export default function PerformanceHub() {
           <RecentExercisesChips
             recentExercises={overview?.recentExercises || []}
             isLoading={overviewLoading}
+            onQuickLog={(exerciseId, exerciseName) => {
+              setQuickLogExerciseId(exerciseId);
+              setShowQuickLog(true);
+            }}
           />
 
           {/* Recent PRs - compact */}
@@ -316,7 +352,8 @@ export default function PerformanceHub() {
 
       <QuickLogDialog
         open={showQuickLog}
-        onOpenChange={setShowQuickLog}
+        onOpenChange={(open) => { setShowQuickLog(open); if (!open) setQuickLogExerciseId(undefined); }}
+        exerciseId={quickLogExerciseId}
       />
     </div>
   );

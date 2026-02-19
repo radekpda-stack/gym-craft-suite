@@ -2,14 +2,16 @@
  * ClientProgressView - Training journal view for clients
  * Redesigned as a journal-first experience: client list → exercise list → detail
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, ExternalLink, BarChart2, Trophy, Plus,
   Dumbbell, Heart, Zap, ArrowLeft, Search,
   ChevronRight, TrendingUp, TrendingDown, Minus,
-  Timer, Ruler, Activity, Calendar, Target
+  Timer, Ruler, Activity, Calendar, Target, Flame
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -595,6 +597,80 @@ function ExerciseDetailView({ clientId, clientName, exercise, onBack, onQuickLog
   );
 }
 
+// ─── Week Strip (7-day activity overview) ────────────────────────────────────
+
+function useWeekStrip(clientId: string) {
+  const { user } = useAuth();
+  const [days, setDays] = useState<{ date: string; label: string; count: number; isToday: boolean }[]>([]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const today = new Date();
+    const dateRange = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    (async () => {
+      const [s, c, sk] = await Promise.all([
+        supabase.from('exercise_entries').select('date').eq('user_id', user.id).eq('client_id', clientId).in('date', dateRange),
+        supabase.from('cardio_entries').select('date').eq('user_id', user.id).eq('client_id', clientId).in('date', dateRange),
+        supabase.from('skill_entries').select('date').eq('user_id', user.id).eq('client_id', clientId).in('date', dateRange),
+      ]);
+      const counts: Record<string, number> = {};
+      [...(s.data || []), ...(c.data || []), ...(sk.data || [])].forEach(r => {
+        counts[r.date] = (counts[r.date] || 0) + 1;
+      });
+      const todayStr = today.toISOString().split('T')[0];
+      setDays(dateRange.map(date => ({
+        date,
+        label: new Date(date + 'T12:00:00').toLocaleDateString('cs-CZ', { weekday: 'short' }).slice(0, 2),
+        count: counts[date] || 0,
+        isToday: date === todayStr,
+      })));
+    })();
+  }, [user?.id, clientId]);
+
+  return days;
+}
+
+function WeekStrip({ clientId }: { clientId: string }) {
+  const days = useWeekStrip(clientId);
+
+  if (days.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 bg-muted/30 rounded-xl px-3 py-2.5">
+      {days.map((day) => (
+        <div key={day.date} className="flex flex-col items-center gap-1.5 flex-1">
+          <span className={cn("text-[10px] font-medium uppercase", day.isToday ? "text-primary" : "text-muted-foreground/60")}>
+            {day.label}
+          </span>
+          <div className="flex flex-col gap-0.5 items-center">
+            {day.count > 0 ? (
+              Array.from({ length: Math.min(day.count, 3) }, (_, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "w-2 h-2 rounded-full",
+                    i === 0 ? "bg-primary" : i === 1 ? "bg-primary/60" : "bg-primary/30"
+                  )}
+                />
+              ))
+            ) : (
+              <span className={cn(
+                "w-2 h-2 rounded-full",
+                day.isToday ? "border-2 border-primary/40" : "bg-muted-foreground/20"
+              )} />
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Journal View (client selected) ──────────────────────────────────────────
 
 type ExerciseFilter = 'all' | 'strength' | 'cardio' | 'skill';
@@ -676,7 +752,10 @@ function JournalView({ clientId, clientName, onBack, onNavigateToClient, onQuick
         </Button>
       </div>
 
-      {/* Type filter pills */}
+      {/* Week Strip – 7-day activity overview */}
+      <WeekStrip clientId={clientId} />
+
+
       <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
         {([
           ['all', 'Vše', null],
@@ -770,36 +849,89 @@ function JournalView({ clientId, clientName, onBack, onNavigateToClient, onQuick
 
 interface ClientListProps {
   onSelectClient: (id: string, name: string) => void;
+  onQuickLog: (clientId: string) => void;
 }
 
 function getActivityStatus(lastActivity: string | null): {
   dot: string;
+  avatarRing: string;
   badgeClass: string;
   label: string;
+  priority: number;
 } {
-  if (!lastActivity) return { dot: 'bg-muted-foreground/30', badgeClass: 'border-border/40 text-muted-foreground', label: 'Bez záznamu' };
+  if (!lastActivity) return { dot: 'bg-muted-foreground/30', avatarRing: 'ring-muted-foreground/20', badgeClass: 'border-border/40 text-muted-foreground', label: 'Bez záznamu', priority: 3 };
   const days = Math.floor((Date.now() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24));
-  if (days <= 7) return { dot: 'bg-success', badgeClass: 'border-success/40 text-success bg-success/10', label: formatDistanceToNow(parseISO(lastActivity), { addSuffix: true, locale: cs }) };
-  if (days <= 30) return { dot: 'bg-warning', badgeClass: 'border-warning/40 text-warning bg-warning/10', label: formatDistanceToNow(parseISO(lastActivity), { addSuffix: true, locale: cs }) };
-  return { dot: 'bg-destructive', badgeClass: 'border-destructive/40 text-destructive bg-destructive/10', label: formatDistanceToNow(parseISO(lastActivity), { addSuffix: true, locale: cs }) };
+  if (days <= 7) return { dot: 'bg-success', avatarRing: 'ring-success/40', badgeClass: 'border-success/40 text-success bg-success/10', label: formatDistanceToNow(parseISO(lastActivity), { addSuffix: true, locale: cs }), priority: 0 };
+  if (days <= 30) return { dot: 'bg-warning', avatarRing: 'ring-warning/40', badgeClass: 'border-warning/40 text-warning bg-warning/10', label: formatDistanceToNow(parseISO(lastActivity), { addSuffix: true, locale: cs }), priority: 1 };
+  return { dot: 'bg-destructive', avatarRing: 'ring-destructive/40', badgeClass: 'border-destructive/40 text-destructive bg-destructive/10', label: formatDistanceToNow(parseISO(lastActivity), { addSuffix: true, locale: cs }), priority: 2 };
 }
 
-function ClientList({ onSelectClient }: ClientListProps) {
+function getInitials(name: string): string {
+  return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function useClientMonthlyStats(clientIds: string[]) {
+  const { user } = useAuth();
+  const [stats, setStats] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!user?.id || clientIds.length === 0) return;
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const since = thirtyDaysAgo.toISOString().split('T')[0];
+
+    (async () => {
+      const [s, c, sk] = await Promise.all([
+        supabase.from('exercise_entries').select('client_id').eq('user_id', user.id).gte('date', since).in('client_id', clientIds),
+        supabase.from('cardio_entries').select('client_id').eq('user_id', user.id).gte('date', since).in('client_id', clientIds),
+        supabase.from('skill_entries').select('client_id').eq('user_id', user.id).gte('date', since).in('client_id', clientIds),
+      ]);
+      const counts: Record<string, number> = {};
+      [...(s.data || []), ...(c.data || []), ...(sk.data || [])].forEach(r => {
+        counts[r.client_id] = (counts[r.client_id] || 0) + 1;
+      });
+      setStats(counts);
+    })();
+  }, [user?.id, clientIds.join(',')]);
+
+  return stats;
+}
+
+function ClientList({ onSelectClient, onQuickLog }: ClientListProps) {
   const [search, setSearch] = useState('');
   const { data: allClients = [], isLoading } = useAllClientsProgress();
 
-  const filtered = allClients.filter(c =>
+  // Sort: inactive first (priority desc), then by name
+  const sorted = useMemo(() => {
+    return [...allClients].sort((a, b) => {
+      const aStatus = getActivityStatus(a.lastActivity || null);
+      const bStatus = getActivityStatus(b.lastActivity || null);
+      if (bStatus.priority !== aStatus.priority) return bStatus.priority - aStatus.priority;
+      return a.name.localeCompare(b.name);
+    });
+  }, [allClients]);
+
+  const filtered = sorted.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const clientIds = allClients.map(c => c.id);
+  const monthlyStats = useClientMonthlyStats(clientIds);
+
+  const colors = ['from-orange-500 to-amber-500', 'from-emerald-500 to-teal-500', 'from-blue-500 to-cyan-500', 'from-purple-500 to-pink-500', 'from-rose-500 to-red-500'];
+  const getColor = (name: string) => colors[name.split('').reduce((s, c) => s + c.charCodeAt(0), 0) % colors.length];
+
   return (
     <div className="space-y-4">
-      <Input
-        placeholder="Hledat klienta..."
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        className="max-w-sm"
-      />
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Hledat klienta..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="pl-9 max-w-sm"
+        />
+      </div>
 
       {isLoading ? (
         <div className="space-y-2">
@@ -814,57 +946,87 @@ function ClientList({ onSelectClient }: ClientListProps) {
         <div className="space-y-2">
           {filtered.map(client => {
             const activity = getActivityStatus(client.lastActivity || null);
+            const monthlyCount = monthlyStats[client.id] || 0;
+            const initials = getInitials(client.name);
+            const gradient = getColor(client.name);
+
             return (
-              <button
+              <div
                 key={client.id}
-                onClick={() => onSelectClient(client.id, client.name)}
                 className={cn(
-                  'w-full flex items-center gap-4 p-4 rounded-xl text-left',
+                  'flex items-center gap-3 p-3.5 rounded-xl text-left',
                   'bg-card/80 border border-border/50',
                   'hover:shadow-md hover:-translate-y-0.5 transition-all duration-200',
-                  'focus:outline-none focus:ring-2 focus:ring-primary/30'
                 )}
               >
-                {/* Avatar with activity dot */}
-                <div className="relative shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary">
-                      {client.name.charAt(0).toUpperCase()}
-                    </span>
+                {/* Avatar with colored gradient + activity ring */}
+                <button
+                  onClick={() => onSelectClient(client.id, client.name)}
+                  className="relative shrink-0 focus:outline-none"
+                >
+                  <div className={cn(
+                    'w-11 h-11 rounded-full bg-gradient-to-br flex items-center justify-center ring-2',
+                    gradient,
+                    activity.avatarRing,
+                  )}>
+                    <span className="text-sm font-bold text-white">{initials}</span>
                   </div>
                   <span className={cn(
-                    "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card",
+                    "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-card",
                     activity.dot
                   )} />
-                </div>
+                </button>
 
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground truncate">{client.name}</p>
+                {/* Main info */}
+                <button
+                  onClick={() => onSelectClient(client.id, client.name)}
+                  className="flex-1 min-w-0 text-left focus:outline-none"
+                >
+                  <p className="font-semibold text-foreground truncate text-sm">{client.name}</p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="text-xs text-muted-foreground">
-                      {client.entriesCount} záznamů
+                    {/* Last active badge */}
+                    <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full border", activity.badgeClass)}>
+                      {activity.label}
                     </span>
-                    {client.lastActivity && (
-                      <Badge
-                        variant="outline"
-                        className={cn("text-[10px] h-4 px-1.5 border shrink-0", activity.badgeClass)}
-                      >
-                        {activity.label}
-                      </Badge>
-                    )}
                   </div>
-                </div>
+                </button>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  {client.prCount > 0 && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-warning/10 text-warning text-xs font-medium">
-                      <Trophy className="w-3 h-3" />
-                      {client.prCount}
+                {/* Stats column */}
+                <button
+                  onClick={() => onSelectClient(client.id, client.name)}
+                  className="flex flex-col items-end gap-1 shrink-0 focus:outline-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    {client.prCount > 0 && (
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-warning/10 text-warning text-[10px] font-medium">
+                        <Trophy className="w-2.5 h-2.5" />
+                        {client.prCount}
+                      </div>
+                    )}
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  {monthlyCount > 0 && (
+                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <Flame className="w-2.5 h-2.5 text-warning" />
+                      <span>{monthlyCount} / 30 dní</span>
                     </div>
                   )}
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </div>
-              </button>
+                </button>
+
+                {/* Inline Quick Log "+" */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); onQuickLog(client.id); }}
+                  className={cn(
+                    "flex items-center justify-center w-9 h-9 rounded-lg shrink-0",
+                    "bg-primary/10 text-primary",
+                    "hover:bg-primary hover:text-primary-foreground",
+                    "transition-all duration-200 focus:outline-none",
+                  )}
+                  title="Zapsat výkon"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
             );
           })}
         </div>
@@ -890,10 +1052,16 @@ export function ClientProgressView({ initialClientId }: ClientProgressViewProps)
     return clients.find(c => c.id === initialClientId)?.name || '';
   });
   const [showQuickLog, setShowQuickLog] = useState(false);
+  const [quickLogClientId, setQuickLogClientId] = useState<string | null>(null);
 
   const handleSelectClient = (id: string, name: string) => {
     setSelectedClientId(id);
     setSelectedClientName(name);
+  };
+
+  const handleClientQuickLog = (clientId: string) => {
+    setQuickLogClientId(clientId);
+    setShowQuickLog(true);
   };
 
   const handleBack = () => {
@@ -934,7 +1102,7 @@ export function ClientProgressView({ initialClientId }: ClientProgressViewProps)
               />
             ) : (
               <motion.div key="client-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <ClientList onSelectClient={handleSelectClient} />
+                <ClientList onSelectClient={handleSelectClient} onQuickLog={handleClientQuickLog} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -954,8 +1122,8 @@ export function ClientProgressView({ initialClientId }: ClientProgressViewProps)
       {/* Quick Log Dialog – pre-filled with selected client */}
       <QuickLogDialog
         open={showQuickLog}
-        onOpenChange={setShowQuickLog}
-        clientId={selectedClientId}
+        onOpenChange={(open) => { setShowQuickLog(open); if (!open) setQuickLogClientId(null); }}
+        clientId={quickLogClientId || selectedClientId}
       />
     </div>
   );
