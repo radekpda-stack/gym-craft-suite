@@ -1,80 +1,104 @@
 
-# Redesign sekce Výkonnost – Tréninkový deník pro trenéra
+# Komplexní vylepšení sekce Výkonnost – Tréninkový deník pro trenéra
 
-## Co aktuálně existuje (fungující základ)
+## Analýza aktuálního stavu
 
-Sekce Výkonnost má tyto záložky:
-- **Přehled** – Hero header, KPI bar (90 cviků / 597 záz. / 399 PR), kategorie cviků, leaderboard klientů, nedávné PR
-- **Klienti** – Deník (seznam klientů → seznam cviků → detail cviku s grafem), Porovnání, Benchmark
-- **Knihovna** – Seznam cviků s filtry a řazením
-- **Analytika** – Síla / Kardio / Skill analytika
+Po důkladném prozkoumání kódu jsem identifikoval konkrétní nedostatky a příležitosti pro zlepšení:
 
-## Zjištěné problémy
+### Co funguje dobře (zachovat):
+- Záložky (Přehled, Deník, Cviky, Analytika) jsou přejmenované
+- Blok "Aktivita dnes" existuje v Přehledu
+- CTA tlačítko "Zapsat výkon klientovi" je přítomno
+- Barevné indikátory aktivity v ClientList (zelená/žlutá/červená dot)
+- ExerciseDetailView s grafem progrese
+- JournalView s filtry (Síla/Kardio/Plyo)
 
-**1. Chybí primární akce pro zápis výkonu na přehledu**
-- Trenér musí navigovat přes FAB nebo přes Knihovnu. Na Přehledu není žádné prominentní "Zapsat výkon" tlačítko s výběrem klienta.
+### Co chybí nebo je slabé (vylepšit):
 
-**2. Tab lišta je přeplněná a labely jsou ořezané**
-- Na mobilu (390px) se zobrazuje 5 záložek (P..., K..., A..., a dvě ikony bez textu). Labely jsou ořezané zkratkou.
+**1. Záložka Přehled – slabá hierarchie informací**
+- Blok "Aktivita dnes" je esteticky chudý – pouze textový seznam bez vizuální hierarchie
+- "Nedávno použité cviky" jsou pouhé chipy bez kontextu – kliknutí jde na detail, ale neotevírá zápis
+- Sekundarita RecentPRsCompact je skrytá dole – PR jsou motivační prvek, patří výš
+- KPI bar je první věc po CTA, ale neobsahuje žádná "dnešní" čísla
 
-**3. Přehled tab – špatná hierarchie pro deník**
-- KPI bar ukazuje globální statistiky, ale trenér potřebuje vidět *co bylo naposledy zapsáno* a *kdo potřebuje pozornost dnes*.
-- Chybí sekce "Dnes / Nedávno" – co bylo zapsáno za posledních 24 hodin.
-- "Nedávno použité cviky" jsou linky do detail cviku, ale nenabídnou rychlý zápis.
+**2. Záložka Deník (ClientList) – chybí klíčové informace**
+- Avatar je jen iniciála bez barvy vztažné k aktivitě
+- Nevidíme počet cviků / posledních 30 dní u klienta
+- Žádné rychlé akce z listu klientů (přidat záznam přímo z listu)
 
-**4. Klienti tab – dobrý základ, ale chybí kontext**
-- Seznam klientů nezobrazuje, kdy byl klient naposledy aktivní vizuálně (jen text). Chybí barevné indikátory aktivity.
-- Deník klienta po výběru nevykazuje „tréninkový deník" feeling – spíše seznam cviků.
+**3. ExerciseSearchCommand – naviguje na detail cviku, NE na zápis**
+- Trenér hledá cvik → chce ZAPSAT, ne si ho prohlédnout
+- Potřebujeme rychlou volbu: "Zapsat" nebo "Detail"
 
-**5. Knihovna – funguje, ale chybí rychlý zápis z karty cviku**
-- Kliknutí na cvik v Knihovně přejde na `/exercises/:id`, ale nenabídne ihned dialog pro zápis výkonu s výběrem klienta.
+**4. Záložka Cviky – kategorie accordion je pomalá pro mobilního uživatele**
+- Kategorie jsou sbalené → dva kliky pro dosažení cviku
+- Pro trenéra v terénu je to zbytečná friction
+
+**5. RecentExercisesChips – naviguje na detail, místo zápisu**
+- Hlavní účel trenéra při opakovaném cviku = ZAPSAT, ne prohlédnout
 
 ---
 
 ## Navrhované změny
 
-### A. Záložka „Přehled" – přidání sekce „Dnes"
+### A. Přehled – přepracování "Aktivita dnes" bloku na bohatý Journal Feed
+**Soubor:** `src/pages/PerformanceHub.tsx` (Today's Activity section)
 
-Přidat nad leaderboard nový blok **„Aktivita dnes"** který zobrazí:
-- Počet zápisů za dnešní den (z `exercise_entries` + `cardio_entries` kde `date = today`)
-- Seznam posledních 3–5 zápisů dnes (klient, cvik, hodnota) jako mini-feed
-- Prázdný stav s CTA „Zapsat první výkon dnes"
+Místo jednoduchého textového listu:
+- Každý záznam zobrazí: typ-ikona (barva), jméno cviku, klient (tučně), klíčová hodnota (kg/čas/reps) prominentně, čas záznamu
+- Prázdný stav je větší a motivující s animovanou ikonou
+- Přidat tlačítko "Zobrazit vše" pokud je záznamů více než 5
 
-**Technicky:** Nový jednoduchý hook `useTodayActivity` dotazující `exercise_entries`, `cardio_entries`, `skill_entries` kde `date = today` a `user_id = current`.
+### B. Přehled – PR jako primární motivační widget
+**Soubor:** `src/components/performance/RecentPRsCompact.tsx`
 
-### B. Záložka „Přehled" – prominentní „Zapsat výkon" tlačítko
+PR přesunout nad leaderboard, přidat "konfeti efekt" - vizuální zvýraznění nejnovějšího PR. Přidat počet PR za dnešní den prominentně v záhlaví.
 
-Přidat přímo pod Hero header velké tlačítko nebo banner:
-```
-[ + Zapsat výkon klientovi  ▶ ]
-```
-které otevře `QuickLogDialog` (already exists). Tím se zkrátí tok z 3 kroků na 1 klik.
+### C. ExerciseSearchCommand – přidat možnost přímého zápisu ze search
+**Soubor:** `src/components/performance/ExerciseSearchCommand.tsx`
 
-### C. Tab lišta – zkrácení na 4 záložky s jasnými ikonami
+Rozšíření props o `onQuickLog` callback. Při výběru cviku se zobrazí mini-akcní menu:
+- "Zapsat výkon" → otevře QuickLogDialog s předvyplněným exerciseId
+- "Zobrazit detail" → naviguje na /exercises/:id
 
-Přejmenovat záložky pro lepší mobilní čitelnost:
-- **Přehled** → „Přehled" (Zap ikona)
-- **Klienti** → „Deník" (BookOpen ikona) – pojmenování reflektuje účel
-- **Knihovna** → „Cviky" (Dumbbell ikona)  
-- **Analytika** → „Analytika" (BarChart3 ikona)
+### D. RecentExercisesChips – přidat inline "+" tlačítko
+**Soubor:** `src/components/performance/RecentExercisesChips.tsx`
 
-### D. Záložka „Deník" (dříve Klienti) – vylepšení karet klientů
+Každý chip bude mít dvě části:
+- Kliknutí na název → navigace na detail (stávající chování)
+- Kliknutí na "+" ikonu → okamžitý zápis (QuickLogDialog s exerciseId)
 
-V `ClientList` komponentě přidat vizuální indikátor aktivity:
-- **Zelený bod** – aktivní za posledních 7 dní
-- **Žlutý bod** – aktivní za 8–30 dní
-- **Červený bod** – neaktivní 30+ dní
+Přejmenovat komponentu na "Oblíbené / Nedávné cviky" a přidat callback `onQuickLog`.
 
-Přidat datum posledního tréninku více prominentně (ne jen text, ale badge s barvou).
+### E. ClientList – výrazné vylepšení karet klientů
+**Soubor:** `src/components/performance/ClientProgressView.tsx` (ClientList sekce)
 
-### E. Záložka „Cviky" (Knihovna) – přidání rychlého zápisu
+Aktuální karty klientů mají pouze iniciálu a jméno. Nový design:
+- **Avatar s plnou barvou** podle statusu aktivity (zelená/žlutá/červená tint)
+- **"Naposledy aktivní"** zobrazeno jako prominentní text, ne jen badge
+- **Počet záznamů za poslední měsíc** jako mini-stat
+- **Inline "+" tlačítko** pro rychlý zápis přímo z listu (bez nutnosti vstoupit do deníku)
+- Klienti jsou seřazeni: nejdříve ti s červeným statusem (potřebují pozornost)
 
-Na kartě cviku v `ExerciseListView` přidat ikonu „+" která přímo otevře `QuickLogDialog` s předvyplněným `exerciseId`. Tím trenér může z Knihovny jedním tahem zapsat výkon bez nutnosti navigace.
+### F. JournalView – přidání týdenního přehledu při vstupu do deníku klienta
+**Soubor:** `src/components/performance/ClientProgressView.tsx` (JournalView)
 
-### F. Hero sekce – vylepšení textu a search baru
+Po výběru klienta zobrazit kompaktní "week strip" – malý horizontální pás s posledními 7 dny (den + počet záznamů jako tečky). Trenér okamžitě vidí, kdy byl klient naposledy aktivní.
 
-- Přidat aktuální datum pod nadpis „Výkonnost" (jako v Apple Fitness)
-- Search bar zvýraznit více – přidat placeholder „Vyhledat klienta nebo cvik..."
+### G. QuickLogDialog přes ExerciseSearchCommand
+**Soubor:** `src/pages/PerformanceHub.tsx`
+
+Předat `setShowQuickLog` a `setQuickLogExerciseId` do ExerciseSearchCommand, aby mohl otevřít dialog přímo ze search. Přidat stav `quickLogExerciseId` do PerformanceHub.
+
+---
+
+## Pořadí implementace
+
+1. **ClientList vylepšení** – největší dopad na operativní flow (inline zápis + sorting)
+2. **RecentExercisesChips inline "+" tlačítko** – okamžitá akce z Přehledu
+3. **ExerciseSearchCommand → Quick Log** – search jako vstupní bod pro zápis
+4. **Today Activity blok** – bohatší vizuální prezentace záznamů
+5. **JournalView week strip** – kontextový přehled aktivity klienta
 
 ---
 
@@ -82,19 +106,7 @@ Na kartě cviku v `ExerciseListView` přidat ikonu „+" která přímo otevře 
 
 | Soubor | Změna |
 |---|---|
-| `src/pages/PerformanceHub.tsx` | Přejmenování záložek, přidání QuickLogDialog state, prominentní CTA tlačítko |
-| `src/components/performance/ClientProgressView.tsx` | Barevné indikátory aktivity klientů v ClientList |
-| `src/components/exercises/ExerciseListView.tsx` | Ikona „+" na kartě cviku pro rychlý zápis |
-| `src/pages/PerformanceHub.tsx` | Nový blok „Aktivita dnes" v Přehled tab |
-
-### Nové hooky
-- `src/hooks/useTodayActivity.ts` – fetch záznamů za dnešní den
-
----
-
-## Pořadí implementace
-
-1. Tab přejmenování + prominentní CTA „Zapsat výkon" (rychlý win, viditelný dopad)
-2. Barevné indikátory aktivity v seznamu klientů
-3. Blok „Aktivita dnes" v Přehledu
-4. Rychlý zápis ikona v Knihovně cviků
+| `src/pages/PerformanceHub.tsx` | Stav pro quickLogExerciseId, předání callbacků do child komponent, bohatší Today Activity |
+| `src/components/performance/ClientProgressView.tsx` | Výrazné přepracování ClientList (avatar barvy, inline +, sorting) + JournalView week strip |
+| `src/components/performance/RecentExercisesChips.tsx` | Přidání inline "+" tlačítka, onQuickLog prop |
+| `src/components/performance/ExerciseSearchCommand.tsx` | Přidání onQuickLog prop, dual-action výběr |
