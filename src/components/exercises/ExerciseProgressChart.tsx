@@ -43,24 +43,17 @@ export function ExerciseProgressChart({ exerciseId, exerciseType, clientId }: Ex
     queryFn: async () => {
       const startDate = subDays(new Date(), parseInt(period));
 
-      // First, get exercise info to determine if it's time-based
-      const { data: exercise } = await supabase
-        .from('exercises')
-        .select('is_time_based, category')
-        .eq('id', exerciseId)
-        .single();
-
-      const isTimeBased = exercise?.is_time_based || 
-        exercise?.category === 'cardio' || 
-        exercise?.category === 'conditioning';
-
-      // Detect if this is a jump exercise
+      // Single query for all exercise metadata
       const { data: exerciseInfo } = await supabase
         .from('exercises')
-        .select('name, name_cs, category')
+        .select('is_time_based, category, name, name_cs')
         .eq('id', exerciseId)
         .single();
-      
+
+      const isTimeBased = exerciseInfo?.is_time_based ||
+        exerciseInfo?.category === 'cardio' ||
+        exerciseInfo?.category === 'conditioning';
+
       const exerciseName = exerciseInfo?.name_cs || exerciseInfo?.name || '';
       const exerciseCategory = exerciseInfo?.category || '';
       const isJumpExercise = exerciseName.toLowerCase().includes('skok') || 

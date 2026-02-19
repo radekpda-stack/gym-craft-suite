@@ -44,33 +44,64 @@ interface ExerciseListItemProps {
 
 function ExerciseListItem({ exercise, onClick }: ExerciseListItemProps) {
   const { exerciseType } = exercise;
-  
-  const iconBg = exerciseType === 'cardio' ? 'bg-success/10' 
-    : exerciseType === 'skill' ? 'bg-warning/10' 
+
+  // Color coding by type
+  const borderColor = exerciseType === 'cardio' ? 'border-l-success'
+    : exerciseType === 'skill' ? 'border-l-warning'
+    : 'border-l-primary';
+
+  const iconBg = exerciseType === 'cardio' ? 'bg-success/10'
+    : exerciseType === 'skill' ? 'bg-warning/10'
     : 'bg-primary/10';
 
-  const icon = exerciseType === 'cardio' 
+  const icon = exerciseType === 'cardio'
     ? <Heart className="w-4 h-4 text-success" />
-    : exerciseType === 'skill' 
+    : exerciseType === 'skill'
     ? <Zap className="w-4 h-4 text-warning" />
     : <Dumbbell className="w-4 h-4 text-primary" />;
 
   // Primary display value
   const primaryValue = exerciseType === 'cardio' || exercise.isTimeBased
     ? exercise.bestTime ? formatTime(exercise.bestTime) : null
-    : exercise.maxWeight ? `${exercise.maxWeight} kg` : null;
+    : exercise.maxWeight
+      ? exercise.data[0]?.reps
+        ? `${exercise.maxWeight} kg ×${exercise.data[0].reps}`
+        : `${exercise.maxWeight} kg`
+      : null;
 
-  // Secondary metric (distance or rpe)
+  // Secondary metric: distance for cardio
   const secondaryValue = exercise.bestDistance
-    ? `${Math.round(exercise.bestDistance)} m`
-    : exercise.avgRpe
-    ? `RPE ${exercise.avgRpe}`
+    ? exercise.bestDistance >= 1000
+      ? `${(exercise.bestDistance / 1000).toFixed(1)} km`
+      : `${Math.round(exercise.bestDistance)} m`
     : null;
+
+  // Trend indicator (compare last 2 entries)
+  const trendIcon = (() => {
+    const d = exercise.data;
+    if (d.length < 2) return null;
+    const latest = exercise.isTimeBased ? d[0].timeSeconds : d[0].weight;
+    const prev = exercise.isTimeBased ? d[1].timeSeconds : d[1].weight;
+    if (!latest || !prev) return null;
+    const improved = exercise.isTimeBased ? latest < prev : latest > prev;
+    const worsened = exercise.isTimeBased ? latest > prev : latest < prev;
+    if (improved) return <TrendingUp className="w-3.5 h-3.5 text-success" />;
+    if (worsened) return <TrendingDown className="w-3.5 h-3.5 text-destructive" />;
+    return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
+  })();
+
+  // Extra cardio metrics
+  const latestEntry = exercise.data[0];
+  const showWatts = exerciseType === 'cardio' && (latestEntry as any)?.avgWatts;
+  const showHR = exerciseType === 'cardio' && (latestEntry as any)?.avgHeartRate;
 
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border hover:bg-muted/50 active:bg-muted/70 transition-colors text-left min-h-[64px]"
+      className={cn(
+        "w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-l-4 hover:bg-muted/50 active:bg-muted/70 transition-colors text-left min-h-[64px]",
+        borderColor
+      )}
     >
       {/* Icon */}
       <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", iconBg)}>
@@ -79,7 +110,10 @@ function ExerciseListItem({ exercise, onClick }: ExerciseListItemProps) {
 
       {/* Name + meta */}
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm leading-tight truncate">{exercise.exerciseName}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="font-medium text-sm leading-tight truncate">{exercise.exerciseName}</p>
+          {trendIcon}
+        </div>
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
           <span className="text-xs text-muted-foreground">{exercise.count}×</span>
           {exercise.prCount > 0 && (
@@ -92,6 +126,16 @@ function ExerciseListItem({ exercise, onClick }: ExerciseListItemProps) {
               RPE {exercise.avgRpe}
             </Badge>
           )}
+          {showWatts && (
+            <span className="flex items-center gap-0.5 text-[10px] text-warning font-medium">
+              <Zap className="w-2.5 h-2.5" />{Math.round((latestEntry as any).avgWatts)}W
+            </span>
+          )}
+          {showHR && (
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+              <Heart className="w-2.5 h-2.5" />{(latestEntry as any).avgHeartRate}
+            </span>
+          )}
         </div>
       </div>
 
@@ -100,7 +144,7 @@ function ExerciseListItem({ exercise, onClick }: ExerciseListItemProps) {
         {primaryValue && (
           <p className="font-semibold tabular-nums text-sm">{primaryValue}</p>
         )}
-        {secondaryValue && exercise.bestDistance && (
+        {secondaryValue && (
           <p className="text-xs text-muted-foreground tabular-nums">{secondaryValue}</p>
         )}
         <p className="text-[11px] text-muted-foreground">
@@ -364,7 +408,7 @@ function ExerciseDetailView({ clientId, clientName, exercise, onBack }: Exercise
             Záznamy ({history.length})
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-4 pb-3">
+        <CardContent className="px-3 pb-3">
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map(i => <Skeleton key={i} className="h-10" />)}
@@ -372,32 +416,50 @@ function ExerciseDetailView({ clientId, clientName, exercise, onBack }: Exercise
           ) : history.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Žádné záznamy</p>
           ) : (
-            <div className="space-y-0.5 max-h-[280px] overflow-y-auto -mx-1">
+            <div className="space-y-1 max-h-[320px] overflow-y-auto">
               {history.map((entry, index) => (
-                <div 
+                <div
                   key={entry.id}
                   className={cn(
-                    "flex items-center justify-between px-2 py-2 rounded-lg",
-                    index === 0 ? "bg-primary/5 border border-primary/20" : "hover:bg-muted/50"
+                    "flex items-start justify-between px-2.5 py-2 rounded-lg",
+                    index === 0 ? "bg-primary/5 border border-primary/20" : "hover:bg-muted/40"
                   )}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs text-muted-foreground tabular-nums shrink-0 w-14">
-                      {format(parseISO(entry.date), 'd.M.yy', { locale: cs })}
-                    </span>
-                    <span className="font-medium text-sm tabular-nums truncate">{entry.displayValue}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {(entry as any).rpe && (
-                      <Badge className={cn("text-[10px] px-1 py-0 h-4", getRpeBgColor((entry as any).rpe))}>
-                        {(entry as any).rpe}
-                      </Badge>
-                    )}
-                    {index === 0 && (
-                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-primary/10 text-primary border-primary/30">
-                        Poslední
-                      </Badge>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-muted-foreground tabular-nums shrink-0 w-[52px]">
+                        {format(parseISO(entry.date), 'd.M.yy', { locale: cs })}
+                      </span>
+                      <span className="font-semibold text-sm tabular-nums">{entry.displayValue}</span>
+                      {/* Distance for cardio */}
+                      {entry.distance_meters && entry.distance_meters > 0 && entry.metricType !== 'distance' && (
+                        <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                          <Ruler className="w-3 h-3" />
+                          {Math.round(entry.distance_meters)} m
+                        </span>
+                      )}
+                    </div>
+                    {/* Secondary metrics row */}
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      {entry.reps && entry.weight_kg && entry.metricType === 'weight' && (
+                        <span className="text-[10px] text-muted-foreground">×{entry.reps} opak.</span>
+                      )}
+                      {(entry as any).rpe && (
+                        <Badge className={cn("text-[10px] px-1 py-0 h-4", getRpeBgColor((entry as any).rpe))}>
+                          RPE {(entry as any).rpe}
+                        </Badge>
+                      )}
+                      {index === 0 && (
+                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-primary/10 text-primary border-primary/30">
+                          Poslední
+                        </Badge>
+                      )}
+                      {entry.notes && (
+                        <span className="text-[10px] text-muted-foreground italic truncate max-w-[120px]">
+                          {entry.notes.slice(0, 40)}{entry.notes.length > 40 ? '…' : ''}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

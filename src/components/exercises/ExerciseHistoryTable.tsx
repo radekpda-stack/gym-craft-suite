@@ -260,104 +260,127 @@ export function ExerciseHistoryTable({ exerciseId, exerciseType, clientId }: Exe
   const isTimeBased = data.isTimeBased;
   const isJumpExercise = data.isJumpExercise;
 
-  // Mobile card view for cardio/time-based exercises
+  // Mobile card view
   const MobileCardList = () => (
-    <div className="divide-y divide-border">
-      {paginatedData.map((row) => (
-        <div
-          key={row.id}
-          className="flex items-center justify-between py-3 px-1 hover:bg-muted/30 cursor-pointer transition-colors"
-          onClick={() => setDetailEntryId(row.id)}
-        >
-          <div className="flex-1 min-w-0">
-            {/* Row 1: date + PR + client */}
-            <div className="flex items-center gap-1.5 mb-1">
-              {row.isPR && <Trophy className="w-3.5 h-3.5 text-primary shrink-0" />}
-              {row.side && (row.side === 'left' || row.side === 'right') && (
-                <span className={cn(
-                  "text-[10px] font-bold px-1 rounded shrink-0",
-                  row.side === 'left' ? "bg-accent/10 text-accent" : "bg-warning/10 text-warning"
-                )}>
-                  {row.side === 'left' ? 'L' : 'R'}
+    <div className="space-y-1.5 py-1">
+      {paginatedData.map((row) => {
+        // Border color by exercise type
+        const borderColor = isTimeBased
+          ? 'border-l-success'
+          : isJumpExercise
+          ? 'border-l-warning'
+          : 'border-l-primary';
+
+        // Volume for strength
+        const volume = !isTimeBased && !isJumpExercise && row.weight && row.reps && row.sets
+          ? Math.round(row.weight * row.reps * row.sets)
+          : null;
+
+        // Truncated notes (max 60 chars)
+        const noteText = row.notes
+          ? row.notes.length > 60 ? row.notes.slice(0, 60) + '…' : row.notes
+          : null;
+
+        return (
+          <div
+            key={row.id}
+            className={cn(
+              "flex items-center justify-between py-3 px-3 rounded-lg bg-card border border-l-4 hover:bg-muted/30 cursor-pointer transition-colors",
+              borderColor
+            )}
+            onClick={() => setDetailEntryId(row.id)}
+          >
+            <div className="flex-1 min-w-0">
+              {/* Row 1: date + PR + client */}
+              <div className="flex items-center gap-1.5 mb-1">
+                {row.isPR && <Trophy className="w-3.5 h-3.5 text-warning shrink-0" />}
+                {row.side && (row.side === 'left' || row.side === 'right') && (
+                  <span className={cn(
+                    "text-[10px] font-bold px-1 rounded shrink-0",
+                    row.side === 'left' ? "bg-accent/10 text-accent" : "bg-warning/10 text-warning"
+                  )}>
+                    {row.side === 'left' ? 'L' : 'R'}
+                  </span>
+                )}
+                <span className="font-semibold text-sm">
+                  {format(new Date(row.date), 'd.M.yy', { locale: cs })}
                 </span>
-              )}
-              <span className="font-semibold text-sm">
-                {format(new Date(row.date), 'd.M.yy', { locale: cs })}
-              </span>
-              {!clientId && (
-                <span className="text-muted-foreground text-xs truncate">{row.clientName}</span>
-              )}
-            </div>
-            {/* Row 2: metrics */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-              {row.timeSeconds && (
-                <span className="flex items-center gap-1 text-foreground">
-                  <Timer className="w-3 h-3 text-muted-foreground" />
-                  {row.timeMs ? formatTimeDisplay(row.timeSeconds, row.timeMs) : formatTimeDisplay(row.timeSeconds)}
-                </span>
-              )}
-              {row.distanceMeters && (
-                <span className="flex items-center gap-1 text-foreground">
-                  <Ruler className="w-3 h-3 text-muted-foreground" />
-                  {Math.round(row.distanceMeters)} m
-                </span>
-              )}
-              {row.avgWatts && (
-                <span className="flex items-center gap-1 text-foreground">
-                  <Zap className="w-3 h-3 text-muted-foreground" />
-                  {Math.round(row.avgWatts)} W
-                </span>
-              )}
-              {row.avgHeartRate && (
-                <span className="flex items-center gap-1 text-foreground">
-                  <Heart className="w-3 h-3 text-muted-foreground" />
-                  {row.avgHeartRate}
-                </span>
-              )}
-              {row.rpe && (
-                <Badge className={cn("text-xs px-1.5 py-0 h-5", getRpeBgColor(row.rpe))}>
-                  RPE {row.rpe}
-                </Badge>
-              )}
-              {row.caloriesKcal && (
-                <span className="text-muted-foreground text-xs">{Math.round(row.caloriesKcal)} kcal</span>
-              )}
-              {/* Strength display on mobile */}
-              {!isTimeBased && !isJumpExercise && row.weight && (
-                <span className="font-medium">
-                  {row.sets && row.reps ? `${row.sets}×${row.reps} ` : ''}{row.weight} kg
-                </span>
-              )}
-              {isJumpExercise && row.jumpValueCm && (
-                <span className="font-medium">{row.jumpValueCm} cm</span>
-              )}
-            </div>
-            {/* Row 3: performance display + notes */}
-            {(row.performanceDisplay?.value || row.notes) && (
-              <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                {!clientId && (
+                  <span className="text-muted-foreground text-xs truncate">{row.clientName}</span>
+                )}
+              </div>
+              {/* Row 2: primary metrics */}
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm">
+                {row.timeSeconds && (
+                  <span className="flex items-center gap-1 text-foreground font-medium">
+                    <Timer className="w-3 h-3 text-success" />
+                    {row.timeMs ? formatTimeDisplay(row.timeSeconds, row.timeMs) : formatTimeDisplay(row.timeSeconds)}
+                  </span>
+                )}
+                {row.distanceMeters && (
+                  <span className="flex items-center gap-1 text-foreground">
+                    <Ruler className="w-3 h-3 text-muted-foreground" />
+                    {Math.round(row.distanceMeters)} m
+                  </span>
+                )}
+                {row.avgWatts && (
+                  <span className="flex items-center gap-1 text-warning font-medium">
+                    <Zap className="w-3 h-3" />
+                    {Math.round(row.avgWatts)} W
+                  </span>
+                )}
+                {row.avgHeartRate && (
+                  <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                    <Heart className="w-3 h-3 text-destructive" />
+                    {row.avgHeartRate} bpm
+                  </span>
+                )}
+                {row.rpe && (
+                  <Badge className={cn("text-xs px-1.5 py-0 h-5", getRpeBgColor(row.rpe))}>
+                    RPE {row.rpe}
+                  </Badge>
+                )}
+                {/* Strength display */}
+                {!isTimeBased && !isJumpExercise && row.weight && (
+                  <span className="font-semibold text-primary">
+                    {row.sets && row.reps ? `${row.sets}×${row.reps} ` : ''}{row.weight} kg
+                  </span>
+                )}
+                {isJumpExercise && row.jumpValueCm && (
+                  <span className="font-semibold">{row.jumpValueCm} cm</span>
+                )}
+              </div>
+              {/* Row 3: volume (strength) + perf + notes */}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs text-muted-foreground">
+                {volume && (
+                  <span>Vol: {volume} kg</span>
+                )}
                 {row.performanceDisplay?.value && (
                   <span>{row.performanceDisplay.value}{row.performanceDisplay.unit ? ` ${row.performanceDisplay.unit}` : ''}</span>
                 )}
-                {row.notes && (
-                  <span className="truncate">{row.notes}</span>
+                {row.caloriesKcal && (
+                  <span>{Math.round(row.caloriesKcal)} kcal</span>
+                )}
+                {noteText && (
+                  <span className="italic">„{noteText}"</span>
                 )}
               </div>
-            )}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0 ml-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditEntry({ id: row.id, metricCategory: data?.metricCategory ?? 'strength' });
+              }}
+              aria-label="Upravit záznam"
+            >
+              <Edit2 className="w-4 h-4 text-muted-foreground" />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 ml-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditEntry({ id: row.id, metricCategory: data?.metricCategory ?? 'strength' });
-            }}
-            aria-label="Upravit záznam"
-          >
-            <Edit2 className="w-4 h-4 text-muted-foreground" />
-          </Button>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 
