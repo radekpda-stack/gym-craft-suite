@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Search, Filter, Dumbbell, Users, Activity, ChevronRight, Edit2, X, 
-  CheckSquare, Square, Trophy, Clock, Archive, SortAsc, ChevronDown, Star, Trash2 
+  CheckSquare, Square, Trophy, Clock, Archive, SortAsc, ChevronDown, Star, Trash2, Plus
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -83,9 +83,10 @@ interface Exercise {
 interface ExerciseListViewProps {
   exercises: Exercise[];
   isLoading: boolean;
+  onQuickLog?: (exerciseId?: string) => void;
 }
 
-export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps) {
+export function ExerciseListView({ exercises, isLoading, onQuickLog }: ExerciseListViewProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { language } = useLanguage();
@@ -639,6 +640,20 @@ export function ExerciseListView({ exercises, isLoading }: ExerciseListViewProps
                               </div>
                               {!bulkEditMode && (
                                 <div className="flex items-center gap-1">
+                                  {onQuickLog && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                      title="Rychlý zápis výkonu"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onQuickLog(exercise.id);
+                                      }}
+                                    >
+                                      <Plus className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                   <Button
                                     variant="ghost"
                                     size="icon"
