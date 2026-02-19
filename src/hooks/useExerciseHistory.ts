@@ -7,12 +7,17 @@ export interface ExerciseHistoryEntry {
   date: string;
   weight_kg: number | null;
   reps: number | null;
+  sets: number | null;
   time_seconds: number | null;
   distance_meters: number | null;
   height_cm: number | null;
   is_bodyweight: boolean;
   side: 'left' | 'right' | 'both' | 'none' | null;
   notes: string | null;
+  // Extended metrics
+  rpe: number | null;
+  avg_watts: number | null;
+  avg_heart_rate: number | null;
   // Formatted display value
   displayValue: string;
   // Primary metric type for this entry
@@ -41,9 +46,10 @@ export function useExerciseHistory(
       let query = supabase
         .from('exercise_entries')
         .select(`
-          id, exercise_name, exercise_id, weight_kg, reps, 
+          id, exercise_name, exercise_id, weight_kg, reps, sets,
           is_bodyweight, date, time_seconds, side, 
           distance_meters, height_cm, notes,
+          rpe, avg_watts, avg_heart_rate,
           exercises!exercise_id (
             is_time_based,
             category
@@ -114,12 +120,16 @@ export function useExerciseHistory(
           date: entry.date,
           weight_kg: entry.weight_kg,
           reps: entry.reps,
+          sets: (entry as any).sets ?? null,
           time_seconds: entry.time_seconds,
           distance_meters: entry.distance_meters,
           height_cm: entry.height_cm,
           is_bodyweight: entry.is_bodyweight || false,
           side: (entry.side as ExerciseHistoryEntry['side']) || null,
           notes: entry.notes,
+          rpe: (entry as any).rpe ?? null,
+          avg_watts: (entry as any).avg_watts ?? null,
+          avg_heart_rate: (entry as any).avg_heart_rate ?? null,
           displayValue,
           metricType,
         };
