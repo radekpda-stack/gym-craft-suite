@@ -1,189 +1,100 @@
 
-## Komplexní redesign karty Výkonnost – Tréninkový deník premium
+# Redesign sekce Výkonnost – Tréninkový deník pro trenéra
 
-### Analýza současného stavu
+## Co aktuálně existuje (fungující základ)
 
-Po podrobném prostudování kódu jsem identifikoval tyto klíčové problémy:
+Sekce Výkonnost má tyto záložky:
+- **Přehled** – Hero header, KPI bar (90 cviků / 597 záz. / 399 PR), kategorie cviků, leaderboard klientů, nedávné PR
+- **Klienti** – Deník (seznam klientů → seznam cviků → detail cviku s grafem), Porovnání, Benchmark
+- **Knihovna** – Seznam cviků s filtry a řazením
+- **Analytika** – Síla / Kardio / Skill analytika
 
-1. **Záložka Přehled** – `CategoryCards`, `ClientProgressLeaderboard`, `RecentPRsCompact` a `RecentExercisesChips` jsou vizuálně oddělené bloky bez vzájemné provázanosti. Na mobilu zabírají příliš vertikálního prostoru, metriky jsou roztroušené.
+## Zjištěné problémy
 
-2. **KPI Bar** (`PerformanceKPIBar`) – tři karty jsou OK, ale vizuálně nezaujmou. Chybí kontext co daná čísla znamenají (trend za předchozí měsíc).
+**1. Chybí primární akce pro zápis výkonu na přehledu**
+- Trenér musí navigovat přes FAB nebo přes Knihovnu. Na Přehledu není žádné prominentní "Zapsat výkon" tlačítko s výběrem klienta.
 
-3. **Záložka Klienti / Journal** (`ClientProgressView`) – Funguje dobře strukturálně, ale:
-   - **Karta cviku** (`ExerciseListItem`) je příliš kompaktní – ikony jsou malé, primární hodnota splývá s vedlejšími metrikami, datum je nečitelné
-   - **Detail cviku** (`ExerciseDetailView`) – záznamy v historii jsou obtížně čitelné na mobilu, RPE badge je příliš malá, watts/tep jsou skryté za truncate
-   - **KPI karty** v detailu jsou správné, ale vizuálně chudé
+**2. Tab lišta je přeplněná a labely jsou ořezané**
+- Na mobilu (390px) se zobrazuje 5 záložek (P..., K..., A..., a dvě ikony bez textu). Labely jsou ořezané zkratkou.
 
-4. **ExerciseProgressDetail** (`ExerciseProgressDetail.tsx`) – jen zobrazuje základní `displayValue` bez RPE, watts nebo tepu. Záznamy nemají barevné odlišení.
+**3. Přehled tab – špatná hierarchie pro deník**
+- KPI bar ukazuje globální statistiky, ale trenér potřebuje vidět *co bylo naposledy zapsáno* a *kdo potřebuje pozornost dnes*.
+- Chybí sekce "Dnes / Nedávno" – co bylo zapsáno za posledních 24 hodin.
+- "Nedávno použité cviky" jsou linky do detail cviku, ale nenabídnou rychlý zápis.
 
-5. **ExerciseHistoryTable mobilní view** – funguje, ale je vizuálně přehlcené – vše v jednom řádku textu bez jasné vizuální hierarchie.
+**4. Klienti tab – dobrý základ, ale chybí kontext**
+- Seznam klientů nezobrazuje, kdy byl klient naposledy aktivní vizuálně (jen text). Chybí barevné indikátory aktivity.
+- Deník klienta po výběru nevykazuje „tréninkový deník" feeling – spíše seznam cviků.
 
-6. **ClientExercisesView** – duplicitní implementace s `ClientProgressView`, ale pro jiný kontext (záložka Knihovna > Klient).
-
----
-
-### Plán změn – 4 klíčové soubory
-
-#### Soubor 1: `src/components/performance/ClientProgressView.tsx` – Premium Journal redesign
-
-**A) ExerciseListItem – zcela přepsat vizuál:**
-- Nahradit současný úzký řádek za **dvouřádkovou kartu** s jasnou hierarchií
-- Horní řádek: Ikona (větší 10×10), název cviku (font-semibold), datum vpravo (výraznější)
-- Dolní řádek: primární hodnota VELKÁ (text-lg font-bold), vedlejší metriky (vzdálenost, watty, tep) oddělené tečkami
-- RPE badge přesunout do pravého horního rohu (prominentní)
-- Trend šipka zcela vpravo jako velký indikátor
-- Pro silové: zobrazit jak `4×5` SEPARÁTNĚ od `85 kg` (dvě distinct hodnoty)
-- Přidat počet záznamů jako subtextík pod jménem cviku
-
-**B) ExerciseDetailView – vylepšit KPI a záznamy:**
-- KPI karty: Zvýraznit hodnoty (`text-2xl font-bold`), přidat barevné ikony odpovídající typu
-- Graf: Přidat tečky PR jako zlaté hvězdy, přidat gradient fill pod čarou (area fill)
-- Záznamy v historii: každý záznam jako **mini-karta** se světlým pozadím
-  - Síla: `[🏆] 14.2. │ 4×5 │ 85 kg │ Vol: 1700 kg │ [RPE 8]`
-  - Kardio: `[🏆] 19.2. │ ⏱ 0:57 │ 📏 250m │ ⚡ 245W │ ♥ 142 │ [RPE 8]`
-  - Plyo: `[19.2.] │ 5 pok. │ 2.4m │ [RPE 7]`
-- Přidat tlačítko "Upravit" (ikona tužky) u každého záznamu
-- Kliknout na záznam → otevře `ExerciseEntryDetailSheet`
-
-**C) JournalView – zlepšit layout:**
-- Přidat mini stats strip pod klientem: počet cviků / záznamů / PR
-- Filter pills: přidat počet jako superscript badge
-- Prázdný stav: nový ilustrativní empty state s tlačítkem "Zapsat první výkon"
-
-**D) ClientList – vylepšit:**
-- Přidat mini barevné pruhy počtů (síla/kardio/plyo) u každého klienta jako malé colored dots
-- Datum poslední aktivity = výraznější (badge místo textu)
-
-#### Soubor 2: `src/components/performance/ExerciseProgressDetail.tsx` – Rozšíření záznamů
-
-Tento soubor se používá v záložce **Knihovna** když trenér vybere klienta. Stávající zobrazení záznamů ukazuje jen `displayValue` bez RPE/watts/tepu.
-
-- Rozšířit historii o RPE badge, watts, tep pro každý záznam
-- Přidat barevný levý border záznamu dle RPE (zelená < 6, žlutá 6-8, červená > 8)
-- Graf: typ svislé osy dle `exerciseType` (pro kardio = čas, pro sílu = kg)
-
-#### Soubor 3: `src/components/performance/PerformanceKPIBar.tsx` – Mírné vylepšení
-
-- Na mobilu: místo centrovaného textu použít horizontální layout s větší hodnotou
-- Přidat tooltip s vysvětlením co KPI znamená
-- Přidat subtextík "vs. minulý měsíc" pokud je trend dostupný
-
-#### Soubor 4: `src/components/performance/RecentPRsCompact.tsx` – Visual upgrade
-
-- Přidat barevný levý border dle typu cviku (primary/success/warning)
-- Přidat ikonu typu cviku před název
-- Přidat badge s typem (Síla / Kardio / Plyo)
-- Zobrazit více detailu: pokud kardio PR → zobrazit čas/vzdálenost místo raw čísla
+**5. Knihovna – funguje, ale chybí rychlý zápis z karty cviku**
+- Kliknutí na cvik v Knihovně přejde na `/exercises/:id`, ale nenabídne ihned dialog pro zápis výkonu s výběrem klienta.
 
 ---
 
-### Vizuální výsledek na mobilu
+## Navrhované změny
 
-```text
-KARTA CVIKU – KARDIO (nový design):
-┌────────────────────────────────────────────────┐
-│ ●─── 🟢 ───────────────────────────────────── │
-│ [♥] SkillUp                     19.2.26  ↗ ↗ │
-│      2 záznamy                   [RPE 8]      │
-│                                               │
-│  ⏱ 0:57          📏 250 m       ⚡ 245W      │
-└────────────────────────────────────────────────┘
+### A. Záložka „Přehled" – přidání sekce „Dnes"
 
-KARTA CVIKU – SÍLA (nový design):
-┌────────────────────────────────────────────────┐
-│ ●─── 🔵 ───────────────────────────────────── │
-│ [🏋] Bench Press                14.2.26  ↗    │
-│      14 záznamů                               │
-│                                               │
-│  4×5 │ 85 kg │ Vol: 1700 kg                  │
-└────────────────────────────────────────────────┘
+Přidat nad leaderboard nový blok **„Aktivita dnes"** který zobrazí:
+- Počet zápisů za dnešní den (z `exercise_entries` + `cardio_entries` kde `date = today`)
+- Seznam posledních 3–5 zápisů dnes (klient, cvik, hodnota) jako mini-feed
+- Prázdný stav s CTA „Zapsat první výkon dnes"
 
-DETAIL ZÁZNAMU V HISTORII – SÍLA:
-┌──────────────────────────────────────────────────┐
-│ 🔵 │ 🏆 19.2.26          4×5 │ 85 kg │ ✏       │
-│    │    Vol: 1700 kg  │ [RPE 8]                  │
-└──────────────────────────────────────────────────┘
-┌──────────────────────────────────────────────────┐
-│    │    5.2.26          3×5 │ 82.5 kg │ ✏        │
-│    │    Vol: 1237 kg  │ [RPE 7]                  │
-└──────────────────────────────────────────────────┘
+**Technicky:** Nový jednoduchý hook `useTodayActivity` dotazující `exercise_entries`, `cardio_entries`, `skill_entries` kde `date = today` a `user_id = current`.
 
-DETAIL ZÁZNAMU V HISTORII – KARDIO:
-┌──────────────────────────────────────────────────┐
-│ 🟢 │    19.2.26  │ ⏱ 0:57 │ 📏 250m │ ⚡245W │ ✏│
-│    │    ♥ 142 bpm │ [RPE 8]                     │
-└──────────────────────────────────────────────────┘
+### B. Záložka „Přehled" – prominentní „Zapsat výkon" tlačítko
+
+Přidat přímo pod Hero header velké tlačítko nebo banner:
 ```
+[ + Zapsat výkon klientovi  ▶ ]
+```
+které otevře `QuickLogDialog` (already exists). Tím se zkrátí tok z 3 kroků na 1 klik.
+
+### C. Tab lišta – zkrácení na 4 záložky s jasnými ikonami
+
+Přejmenovat záložky pro lepší mobilní čitelnost:
+- **Přehled** → „Přehled" (Zap ikona)
+- **Klienti** → „Deník" (BookOpen ikona) – pojmenování reflektuje účel
+- **Knihovna** → „Cviky" (Dumbbell ikona)  
+- **Analytika** → „Analytika" (BarChart3 ikona)
+
+### D. Záložka „Deník" (dříve Klienti) – vylepšení karet klientů
+
+V `ClientList` komponentě přidat vizuální indikátor aktivity:
+- **Zelený bod** – aktivní za posledních 7 dní
+- **Žlutý bod** – aktivní za 8–30 dní
+- **Červený bod** – neaktivní 30+ dní
+
+Přidat datum posledního tréninku více prominentně (ne jen text, ale badge s barvou).
+
+### E. Záložka „Cviky" (Knihovna) – přidání rychlého zápisu
+
+Na kartě cviku v `ExerciseListView` přidat ikonu „+" která přímo otevře `QuickLogDialog` s předvyplněným `exerciseId`. Tím trenér může z Knihovny jedním tahem zapsat výkon bez nutnosti navigace.
+
+### F. Hero sekce – vylepšení textu a search baru
+
+- Přidat aktuální datum pod nadpis „Výkonnost" (jako v Apple Fitness)
+- Search bar zvýraznit více – přidat placeholder „Vyhledat klienta nebo cvik..."
 
 ---
 
-### Technické detaily
+## Technické soubory ke změně
 
-**Nová struktura `ExerciseListItem`:**
-```typescript
-// Dvouřádkový layout s jasnou hierarchií
-<button className="w-full flex flex-col gap-2 p-3.5 rounded-xl bg-card border border-l-4 hover:bg-muted/40">
-  {/* Horní řádek: ikona + název + datum + trend */}
-  <div className="flex items-center gap-2.5">
-    <div className="w-10 h-10 rounded-xl flex items-center justify-center">
-      {icon}
-    </div>
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-2">
-        <p className="font-semibold text-sm truncate">{exercise.exerciseName}</p>
-        <span className="text-[10px] text-muted-foreground">{exercise.count}×</span>
-      </div>
-      <p className="text-[11px] text-muted-foreground">
-        {format(lastDate, 'd. M. yy', { locale: cs })}
-      </p>
-    </div>
-    {rpe && <RpeBadge rpe={rpe} />}
-    <div className="flex flex-col items-end gap-0.5">
-      {trendIcon}
-      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-    </div>
-  </div>
+| Soubor | Změna |
+|---|---|
+| `src/pages/PerformanceHub.tsx` | Přejmenování záložek, přidání QuickLogDialog state, prominentní CTA tlačítko |
+| `src/components/performance/ClientProgressView.tsx` | Barevné indikátory aktivity klientů v ClientList |
+| `src/components/exercises/ExerciseListView.tsx` | Ikona „+" na kartě cviku pro rychlý zápis |
+| `src/pages/PerformanceHub.tsx` | Nový blok „Aktivita dnes" v Přehled tab |
 
-  {/* Dolní řádek: hlavní metriky */}
-  <div className="flex items-center gap-3 pl-12 text-sm font-medium">
-    {primaryMetric}
-    {secondaryMetric} 
-    {tertiaryMetric}
-  </div>
-</button>
-```
+### Nové hooky
+- `src/hooks/useTodayActivity.ts` – fetch záznamů za dnešní den
 
-**RPE barevné kódování v historii:**
-```typescript
-const getEntryBorderColor = (rpe: number | null) => {
-  if (!rpe) return 'border-l-border/30';
-  if (rpe >= 9) return 'border-l-destructive';
-  if (rpe >= 7) return 'border-l-warning';
-  return 'border-l-success';
-};
-```
+---
 
-**Chart area fill pro progres graf:**
-```typescript
-// Přidat AreaChart místo LineChart nebo defs gradient
-<defs>
-  <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="5%" stopColor={strokeColor} stopOpacity={0.15} />
-    <stop offset="95%" stopColor={strokeColor} stopOpacity={0} />
-  </linearGradient>
-</defs>
-<Area type="monotone" fill="url(#colorGradient)" ... />
-```
+## Pořadí implementace
 
-### Rozsah změn
-
-| Soubor | Změna | Rozsah |
-|--------|-------|--------|
-| `ClientProgressView.tsx` | ExerciseListItem redesign + histórie záznamů + prázdný stav | Velký |
-| `ExerciseProgressDetail.tsx` | RPE/watts/tep v historii + border kódování | Střední |
-| `PerformanceKPIBar.tsx` | Mobilní layout + tooltip | Malý |
-| `RecentPRsCompact.tsx` | Typ badge + border + lepší detail hodnoty | Malý |
-
-- Žádné databázové změny
-- Žádné nové endpointy
-- Zpětně kompatibilní
+1. Tab přejmenování + prominentní CTA „Zapsat výkon" (rychlý win, viditelný dopad)
+2. Barevné indikátory aktivity v seznamu klientů
+3. Blok „Aktivita dnes" v Přehledu
+4. Rychlý zápis ikona v Knihovně cviků
