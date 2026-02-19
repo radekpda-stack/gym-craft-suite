@@ -1,58 +1,68 @@
 
-# Oprava nesouladu kreditního zůstatku mezi seznamem a kartou klienta
+## Rozšíření detailu prodeje o náklady a zisk
 
-## Nalezený problém
+### Co bude přidáno
 
-Aplikace používá **dva různé zdroje dat** pro zobrazení kreditního zůstatku:
+V modálním okně detailu objednávky (`SalesOrderDetailModal.tsx`) přibude nová sekce **„Ziskovost"**, která zobrazí pro každou položku i celkový prodej:
+- Nákupní cenu (náklad) na položku
+- Tržbu (příjem) za položku
+- Hrubý zisk na položku = tržba − náklad
+- Marži v % pro každou položku
+- Souhrnné KPI karty dole: celkový náklad, celková tržba, hrubý zisk, marže v %
 
-1. **Seznam klientů (Clients.tsx):** Čte `client_budget_groups.shared_balance` z tabulky (aktualizováno DB triggerem) -- zobrazuje **4 800 Kč**
-2. **Detail klienta (ClientDetail.tsx):** Používá hook `useCreditBalance`, který hledá poslední `credit_transactions.balance_after` přímým dotazem -- zobrazuje **6 600 Kč** (zastaralá hodnota z cache)
+### Jak to funguje technicky
 
-Problém vzniká, protože `useCreditBalance` dotazuje jednotlivé transakce a výsledek může být zastaralý kvůli cachování v React Query nebo PWA service workeru. Naproti tomu `shared_balance` v tabulce je aktualizován spolehlivě DB triggerem.
+**Problém:** `sales_order_items` tabulka neukládá `purchase_price` v době prodeje – pouze `unit_price` (prodejní cena). Nákupní cena se musí dohledat přes `product_id` → `products.purchase_price`.
 
-Ověřeno v databázi:
-- `vw_group_ledger_balances` (view, vždy správný): **4 800 Kč**
-- `client_budget_groups.shared_balance` (trigger): **4 800 Kč**
-- `useCreditBalance` hook (stale cache): **6 600 Kč** (zastaralá hodnota z 26.1.)
+**Řešení:** Rozšířit dotaz v `SalesOrderDetailModal.tsx` o JOIN na `products` přes `product_id`, aby se pro každou položku načetla aktuální `purchase_price`. Tato hodnota je pro manažerský přehled dostatečná.
 
-## Řešení
+> **Poznámka:** Pro `service` (služba/ručník apod.) a `credit_topup` bude `purchase_price` brána jako 0 nebo hodnota z produktu – marže bude 100%, pokud není nákupní cena zadána.
 
-Přepsat `useCreditBalance` hook tak, aby vždy četl z **databázových views** (`vw_group_ledger_balances` a `vw_client_ledger_balances`), které počítají zůstatek čerstvě při každém dotazu. Tím se eliminuje riziko zastaralých dat z cachované transakce.
+### Změny souborů
 
-## Technické změny
+**1. `src/components/sales/SalesOrderDetailModal.tsx`** – hlavní změna
+- Rozšířit interface `OrderItem` o `product_id` a `purchase_price` (z JOIN)
+- Upravit Supabase dotaz: přidat `product_id` do select a JOIN přes `sales_order_items(product_id, products(purchase_price))`
+- Přidat výpočetní logiku:
+  - `itemCost = (purchase_price ?? 0) * quantity`
+  - `itemRevenue = line_total_after_discount ?? line_total`
+  - `itemProfit = itemRevenue - itemCost`
+  - `itemMargin = itemRevenue > 0 ? (itemProfit / itemRevenue) * 100 : 0`
+- Přidat do každé položky malý řádek s nákladem, ziskem a marží (pod stávající cenou)
+- Přidat souhrnnou sekci **„Ziskovost prodeje"** pod separátorem se 4 KPI kartami:
 
-### 1. `src/hooks/useCreditBalance.ts`
-
-Zjednodušit `queryFn` -- nahradit dotazy na jednotlivé transakce dotazy na views:
-
-```typescript
-// PRED (nespolehlivé - závisí na nalezení správné transakce):
-const { data: latestTx } = await supabase
-  .from('credit_transactions')
-  .select('balance_after, created_at')
-  .eq('group_id', groupId)
-  .order('created_at', { ascending: false })
-  .limit(1)
-  .maybeSingle();
-
-// PO (spolehlivé - view vždy vrátí aktuální hodnotu):
-const { data: ledger } = await supabase
-  .from('vw_group_ledger_balances')
-  .select('ledger_balance')
-  .eq('group_id', groupId)
-  .maybeSingle();
-balance = ledger?.ledger_balance ?? 0;
+```text
+┌─────────────┬─────────────┬─────────────┬─────────────┐
+│  Náklady    │   Tržba     │ Hrubý zisk  │   Marže     │
+│  1 200 Kč   │  1 900 Kč   │   700 Kč    │   36,8 %    │
+└─────────────┴─────────────┴─────────────┴─────────────┘
 ```
 
-Stejná změna pro individuální klienty -- použít `vw_client_ledger_balances` místo hledání poslední transakce.
+- Barevné kódování: zisk kladný = zelená, záporný = červená
 
-Přidat `refetchOnMount: 'always'` pro zajištění čerstvých dat při každém otevření karty klienta.
+### Vizuální hierarchie detailu po změně
 
-### 2. `src/pages/Clients.tsx` (volitelné vylepšení)
+```text
+[ Dialog: Detail objednávky ]
+  ├── Záhlaví: klient, datum, platební metoda, tlačítko Upravit
+  ├── Separator
+  ├── Položky (každá položka rozšířena):
+  │     Název produktu        [cena × ks]
+  │     Náklad: X Kč  →  Zisk: Y Kč (Z%)
+  ├── Separator
+  ├── Rekapitulace (stávající: produkty, služby, slevy, celkem)
+  ├── Separator
+  ├── 🆕 Ziskovost prodeje (4 KPI mini-karty)
+  │     Náklady / Tržba / Hrubý zisk / Marže
+  └── Poznámka (pokud existuje)
+```
 
-Seznam klientů nyní funguje správně (čte z `shared_balance`). Pro 100% konzistenci by mohl také číst z views, ale to by znamenalo N+1 dotazy. Stávající přístup je dostatečný, protože DB trigger spolehlivě synchronizuje `shared_balance` s ledgerem.
+### Důležité detaily
 
-## Rozsah změn
-- **1 soubor:** `src/hooks/useCreditBalance.ts`
-- **Žádné změny databáze** -- views i triggery už existují a fungují správně
-- Oprava je zpětně kompatibilní -- rozhraní `CreditBalanceData` se nemění
+- Položky bez `purchase_price` (null) se zobrazí s nákupní cenou 0 a marží 100% – to odpovídá realitě (čistý servisní výnos)
+- KPI karty pro zisk/marži budou barevně reagovat (zelená = zisk, červená = ztráta)
+- Bez databázových změn – veškerá data jsou dostupná přes existující JOIN
+
+### Rozsah změny
+
+Pouze **1 soubor**: `src/components/sales/SalesOrderDetailModal.tsx`
