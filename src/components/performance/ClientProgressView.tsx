@@ -8,7 +8,7 @@ import {
   Users, ExternalLink, BarChart2, Trophy, Plus,
   Dumbbell, Heart, Zap, ArrowLeft, Search,
   ChevronRight, TrendingUp, TrendingDown, Minus,
-  Timer, Ruler, Activity, Calendar, Target, Star
+  Timer, Ruler, Activity, Calendar, Target
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +29,7 @@ import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ResponsiveContainer, LineChart, Line, XAxis, YAxis,
+  ResponsiveContainer, AreaChart, Area, LineChart, Line, XAxis, YAxis,
   Tooltip, CartesianGrid, ReferenceLine,
 } from 'recharts';
 
@@ -67,32 +67,20 @@ function ExerciseListItem({ exercise, onClick }: ExerciseListItemProps) {
     : exerciseType === 'skill' ? 'bg-warning/10'
     : 'bg-primary/10';
 
+  const iconColor = exerciseType === 'cardio' ? 'text-success'
+    : exerciseType === 'skill' ? 'text-warning'
+    : 'text-primary';
+
   const icon = exerciseType === 'cardio'
-    ? <Heart className="w-4 h-4 text-success" />
+    ? <Heart className={cn("w-5 h-5", iconColor)} />
     : exerciseType === 'skill'
-    ? <Zap className="w-4 h-4 text-warning" />
-    : <Dumbbell className="w-4 h-4 text-primary" />;
+    ? <Zap className={cn("w-5 h-5", iconColor)} />
+    : <Dumbbell className={cn("w-5 h-5", iconColor)} />;
 
-  // Primary display value
   const latestEntry = exercise.data[exercise.data.length - 1];
-  const primaryValue = exerciseType === 'cardio' || exercise.isTimeBased
-    ? exercise.bestTime ? formatTime(exercise.bestTime) : null
-    : exercise.maxWeight
-      ? latestEntry?.reps
-        ? `${exercise.maxWeight} kg ×${latestEntry.reps}`
-        : `${exercise.maxWeight} kg`
-      : null;
 
-  // Secondary metric: distance for cardio
-  const latestDistance = latestEntry?.distanceMeters;
-  const secondaryValue = latestDistance
-    ? latestDistance >= 1000
-      ? `${(latestDistance / 1000).toFixed(1)} km`
-      : `${Math.round(latestDistance)} m`
-    : null;
-
-  // Trend indicator (compare last 2 entries, newest = last in array)
-  const trendIcon = (() => {
+  // Trend
+  const trend = (() => {
     const d = exercise.data;
     if (d.length < 2) return null;
     const latest = exercise.isTimeBased ? d[d.length - 1].timeSeconds : d[d.length - 1].weight;
@@ -100,66 +88,120 @@ function ExerciseListItem({ exercise, onClick }: ExerciseListItemProps) {
     if (!latest || !prev) return null;
     const improved = exercise.isTimeBased ? latest < prev : latest > prev;
     const worsened = exercise.isTimeBased ? latest > prev : latest < prev;
-    if (improved) return <TrendingUp className="w-3.5 h-3.5 text-success" />;
-    if (worsened) return <TrendingDown className="w-3.5 h-3.5 text-destructive" />;
-    return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
+    if (improved) return { icon: <TrendingUp className="w-3.5 h-3.5 text-success" />, label: 'text-success' };
+    if (worsened) return { icon: <TrendingDown className="w-3.5 h-3.5 text-destructive" />, label: 'text-destructive' };
+    return { icon: <Minus className="w-3.5 h-3.5 text-muted-foreground" />, label: '' };
   })();
 
-  // Latest entry metrics
-  const showWatts = latestEntry?.avgWatts && latestEntry.avgWatts > 0;
-  const showHR = latestEntry?.avgHeartRate && latestEntry.avgHeartRate > 0;
   const latestRpe = latestEntry?.rpe;
+  const latestWatts = latestEntry?.avgWatts;
+  const latestHR = latestEntry?.avgHeartRate;
+  const latestDistance = latestEntry?.distanceMeters;
+
+  // Primary metric
+  const primaryTime = (exerciseType === 'cardio' || exercise.isTimeBased) && exercise.bestTime
+    ? formatTime(exercise.bestTime) : null;
+  const primaryWeight = (!exercise.isTimeBased && exerciseType === 'strength' && exercise.maxWeight)
+    ? exercise.maxWeight : null;
+  const primaryReps = primaryWeight && latestEntry?.reps ? latestEntry.reps : null;
+
+  const distanceStr = latestDistance
+    ? latestDistance >= 1000
+      ? `${(latestDistance / 1000).toFixed(1)} km`
+      : `${Math.round(latestDistance)} m`
+    : null;
 
   return (
-    <button
+    <motion.button
+      whileHover={{ scale: 1.005 }}
+      whileTap={{ scale: 0.998 }}
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-l-4",
-        "hover:bg-muted/50 active:scale-[0.99] transition-all duration-150 text-left min-h-[64px]",
+        "w-full flex flex-col gap-2.5 p-4 rounded-xl bg-card border-l-4 border border-border/60",
+        "hover:shadow-md transition-all duration-200 text-left",
         borderColor
       )}
     >
-      <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", iconBg)}>
-        {icon}
+      {/* Top row: icon + name + date + trend + chevron */}
+      <div className="flex items-start gap-3">
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm", iconBg)}>
+          {icon}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-sm leading-snug truncate">{exercise.exerciseName}</p>
+            {exercise.prCount > 0 && (
+              <Badge className="text-[9px] px-1 py-0 h-4 bg-warning/15 text-warning border border-warning/30 font-semibold">
+                🏆 {exercise.prCount} PR
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-[11px] text-muted-foreground">{exercise.count} záz.</span>
+            <span className="text-[11px] text-muted-foreground/50">·</span>
+            <span className="text-[11px] text-muted-foreground">
+              {format(parseISO(exercise.lastDate), 'd. M. yy', { locale: cs })}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {trend?.icon}
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </div>
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <p className="font-medium text-sm leading-tight truncate">{exercise.exerciseName}</p>
-          {trendIcon}
-          {exercise.prCount > 0 && (
-            <Star className="w-3 h-3 text-warning fill-warning shrink-0" />
-          )}
-        </div>
-        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-          <span className="text-xs text-muted-foreground">{exercise.count}×</span>
-          {latestRpe && <RpeBadge rpe={latestRpe} />}
-          {showWatts && (
-            <span className="flex items-center gap-0.5 text-[10px] text-warning font-medium">
-              <Zap className="w-2.5 h-2.5" />{Math.round(latestEntry!.avgWatts!)}W
-            </span>
-          )}
-          {showHR && (
-            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-              <Heart className="w-2.5 h-2.5" />{latestEntry!.avgHeartRate}
-            </span>
-          )}
-        </div>
-      </div>
+      {/* Bottom row: key metrics */}
+      <div className="flex items-center gap-3 pl-[52px] flex-wrap">
+        {/* Time-based primary */}
+        {primaryTime && (
+          <div className="flex items-center gap-1">
+            <Timer className="w-3.5 h-3.5 text-muted-foreground/60" />
+            <span className="font-bold text-base tabular-nums">{primaryTime}</span>
+          </div>
+        )}
 
-      <div className="text-right shrink-0 ml-1">
-        {primaryValue && (
-          <p className="font-semibold tabular-nums text-sm">{primaryValue}</p>
+        {/* Weight-based primary */}
+        {primaryWeight && (
+          <>
+            {primaryReps && (
+              <span className="text-sm font-semibold text-muted-foreground tabular-nums">
+                {primaryReps}×
+              </span>
+            )}
+            <span className="font-bold text-base tabular-nums">{primaryWeight} kg</span>
+          </>
         )}
-        {secondaryValue && (
-          <p className="text-xs text-muted-foreground tabular-nums">{secondaryValue}</p>
+
+        {/* Distance */}
+        {distanceStr && (
+          <div className="flex items-center gap-1">
+            <Ruler className="w-3.5 h-3.5 text-muted-foreground/60" />
+            <span className="text-sm font-semibold tabular-nums">{distanceStr}</span>
+          </div>
         )}
-        <p className="text-[11px] text-muted-foreground">
-          {format(parseISO(exercise.lastDate), 'd.M.yy', { locale: cs })}
-        </p>
+
+        {/* Watts */}
+        {latestWatts && latestWatts > 0 && (
+          <div className="flex items-center gap-0.5">
+            <Zap className="w-3.5 h-3.5 text-warning" />
+            <span className="text-sm font-semibold tabular-nums text-warning">{Math.round(latestWatts)} W</span>
+          </div>
+        )}
+
+        {/* Heart rate */}
+        {latestHR && latestHR > 0 && (
+          <div className="flex items-center gap-0.5">
+            <Heart className="w-3.5 h-3.5 text-muted-foreground/60" />
+            <span className="text-sm tabular-nums">{latestHR}</span>
+          </div>
+        )}
+
+        {/* RPE */}
+        {latestRpe && <RpeBadge rpe={latestRpe} />}
       </div>
-      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-    </button>
+    </motion.button>
   );
 }
 
@@ -234,6 +276,7 @@ function ExerciseDetailView({ clientId, clientName, exercise, onBack, onQuickLog
     : 'border-primary/30 text-primary bg-primary/10';
 
   const strokeColor = isCardio ? 'hsl(var(--success))' : isSkill ? 'hsl(var(--warning))' : 'hsl(var(--primary))';
+  const gradientId = `grad-${exercise.exerciseName.replace(/\s+/g, '')}`;
 
   return (
     <motion.div
@@ -247,7 +290,7 @@ function ExerciseDetailView({ clientId, clientName, exercise, onBack, onQuickLog
         <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0 h-9 w-9">
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", typeBg)}>
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm", typeBg)}>
           {typeIcon}
         </div>
         <div className="flex-1 min-w-0">
@@ -269,88 +312,99 @@ function ExerciseDetailView({ clientId, clientName, exercise, onBack, onQuickLog
         </Button>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards – 2×2 grid, bold values */}
       <div className="grid grid-cols-2 gap-2">
-        <Card className="p-3">
-          <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-            <Target className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs">{isStrength ? 'Max váha' : isCardio ? 'Nejlepší čas' : 'Záznamů'}</span>
+        <div className={cn("rounded-xl p-3 border", typeBg, "border-border/40")}>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Target className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
+              {isStrength ? 'Max váha' : isCardio ? 'Nejlepší čas' : 'Záznamů'}
+            </span>
           </div>
-          <p className="text-xl font-bold tabular-nums">
+          <p className="text-2xl font-bold tabular-nums">
             {isStrength && exercise.maxWeight
               ? `${exercise.maxWeight} kg`
               : exercise.bestTime
               ? formatTime(exercise.bestTime)
               : exercise.count}
           </p>
-        </Card>
+        </div>
 
         {isCardio && exercise.bestDistance ? (
-          <Card className="p-3">
-            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-              <Ruler className="w-3.5 h-3.5 text-success" />
-              <span className="text-xs">Nejlepší vzdálenost</span>
+          <div className="rounded-xl p-3 border bg-success/5 border-border/40">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Ruler className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wide">Vzdálenost</span>
             </div>
-            <p className="text-xl font-bold tabular-nums">
+            <p className="text-2xl font-bold tabular-nums">
               {exercise.bestDistance >= 1000
                 ? `${(exercise.bestDistance / 1000).toFixed(1)} km`
                 : `${Math.round(exercise.bestDistance)} m`}
             </p>
-          </Card>
+          </div>
         ) : (
-          <Card className="p-3">
-            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+          <div className="rounded-xl p-3 border bg-warning/5 border-border/40">
+            <div className="flex items-center gap-1.5 mb-1.5">
               <Trophy className="w-3.5 h-3.5 text-warning" />
-              <span className="text-xs">PR celkem</span>
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wide">PR celkem</span>
             </div>
-            <p className="text-xl font-bold tabular-nums">{exercise.prCount}</p>
-          </Card>
+            <p className="text-2xl font-bold tabular-nums text-warning">{exercise.prCount}</p>
+          </div>
         )}
 
-        <Card className="p-3">
-          <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+        <div className="rounded-xl p-3 border bg-card border-border/40">
+          <div className="flex items-center gap-1.5 mb-1.5">
             <TrendIcon className={cn("w-3.5 h-3.5", trendColor)} />
-            <span className="text-xs">Trend</span>
+            <span className="text-[11px] text-muted-foreground uppercase tracking-wide">Trend</span>
           </div>
-          <p className={cn("text-xl font-bold tabular-nums", trendColor)}>
+          <p className={cn("text-2xl font-bold tabular-nums", trendColor)}>
             {trend.change === 0 ? '—'
               : exercise.isTimeBased
               ? `${trend.change > 0 ? '+' : ''}${Math.round(Math.abs(trend.change))}s`
               : `${trend.change > 0 ? '+' : ''}${Math.abs(trend.change).toFixed(1)} kg`}
           </p>
-        </Card>
+        </div>
 
         {exercise.avgRpe ? (
-          <Card className="p-3">
-            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-              <Activity className="w-3.5 h-3.5" />
-              <span className="text-xs">Průměr RPE</span>
+          <div className="rounded-xl p-3 border bg-card border-border/40">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Activity className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wide">Ø RPE</span>
             </div>
-            <p className="text-xl font-bold tabular-nums">{exercise.avgRpe}</p>
-            <p className="text-[10px] text-muted-foreground">z 10</p>
-          </Card>
+            <p className="text-2xl font-bold tabular-nums">{exercise.avgRpe}</p>
+            <p className="text-[10px] text-muted-foreground">/ 10</p>
+          </div>
         ) : (
-          <Card className="p-3">
-            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-              <Calendar className="w-3.5 h-3.5" />
-              <span className="text-xs">Záznamů celkem</span>
+          <div className="rounded-xl p-3 border bg-card border-border/40">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wide">Záznamy</span>
             </div>
-            <p className="text-xl font-bold tabular-nums">{exercise.count}</p>
-          </Card>
+            <p className="text-2xl font-bold tabular-nums">{exercise.count}</p>
+          </div>
         )}
       </div>
 
-      {/* Progress Chart */}
+      {/* Progress Chart – area fill s gradientem */}
       {chartData.length > 1 && (
         <Card>
           <CardHeader className="pb-2 pt-3 px-4">
-            <CardTitle className="text-sm">Progrese</CardTitle>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-muted-foreground" />
+              Progrese
+            </CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-3">
             <div className="h-44">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
+                <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={strokeColor} stopOpacity={0.18} />
+                      <stop offset="95%" stopColor={strokeColor} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 10 }}
@@ -371,20 +425,20 @@ function ExerciseDetailView({ clientId, clientName, exercise, onBack, onQuickLog
                       if (!active || !payload?.length) return null;
                       const d = payload[0].payload;
                       return (
-                        <div className="bg-popover border rounded-lg p-2 shadow-lg text-xs max-w-[160px]">
-                          <p className="font-medium">{d.fullDate}</p>
+                        <div className="bg-popover border rounded-lg p-2.5 shadow-lg text-xs max-w-[180px] space-y-0.5">
+                          <p className="font-semibold">{d.fullDate}</p>
                           <p className="text-muted-foreground">{d.displayValue}</p>
                           {d.distance && (
                             <p className="text-muted-foreground">📏 {Math.round(d.distance)} m</p>
                           )}
                           {d.avgWatts && (
-                            <p className="text-muted-foreground">⚡ {Math.round(d.avgWatts)} W</p>
+                            <p className="text-warning font-medium">⚡ {Math.round(d.avgWatts)} W</p>
                           )}
                           {d.rpe && (
                             <p className="text-muted-foreground">RPE {d.rpe}/10</p>
                           )}
                           {d.isPR && (
-                            <Badge className="mt-1 bg-warning/20 text-warning text-[10px]">🏆 PR!</Badge>
+                            <div className="mt-1"><Badge className="bg-warning/20 text-warning text-[10px] border-warning/30">🏆 PR!</Badge></div>
                           )}
                         </div>
                       );
@@ -395,14 +449,15 @@ function ExerciseDetailView({ clientId, clientName, exercise, onBack, onQuickLog
                       y={bestValue}
                       stroke={strokeColor}
                       strokeDasharray="4 4"
-                      strokeOpacity={0.4}
+                      strokeOpacity={0.5}
                     />
                   )}
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey="value"
                     stroke={strokeColor}
                     strokeWidth={2.5}
+                    fill={`url(#${gradientId})`}
                     dot={(props: any) => {
                       const { cx, cy, payload } = props;
                       if (payload.isPR) {
@@ -412,91 +467,109 @@ function ExerciseDetailView({ clientId, clientName, exercise, onBack, onQuickLog
                           />
                         );
                       }
-                      return <circle key={`dot-${cx}-${cy}`} cx={cx} cy={cy} r={3} fill={strokeColor} />;
+                      return <circle key={`dot-${cx}-${cy}`} cx={cx} cy={cy} r={3}
+                        fill={strokeColor} stroke="hsl(var(--background))" strokeWidth={1.5}
+                      />;
                     }}
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* History List – enriched */}
+      {/* History List – mini-karty s RPE border kódováním */}
       <Card>
         <CardHeader className="pb-2 pt-3 px-4">
-          <CardTitle className="text-sm flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Záznamy ({history.length})
-            </span>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <span>Záznamy</span>
+            <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{history.length}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-3">
           {isLoading ? (
             <div className="space-y-2">
-              {[1, 2, 3].map(i => <Skeleton key={i} className="h-12" />)}
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 rounded-lg" />)}
             </div>
           ) : history.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Žádné záznamy</p>
           ) : (
-            <div className="space-y-1 max-h-[360px] overflow-y-auto -mx-1 px-1">
+            <div className="space-y-1.5 max-h-[380px] overflow-y-auto -mx-1 px-1">
               {history.map((entry, index) => {
-                const entryRpe = (entry as any).rpe as number | null;
-                const entryWatts = (entry as any).avg_watts as number | null;
-                const entryHR = (entry as any).avg_heart_rate as number | null;
-                const entrySets = (entry as any).sets as number | null;
+                const entryRpe = entry.rpe;
+                const entryWatts = entry.avg_watts;
+                const entryHR = entry.avg_heart_rate;
+                const entrySets = entry.sets;
                 const isFirstEntry = index === 0;
+
+                // RPE → border barva
+                const rpeBorder = entryRpe
+                  ? entryRpe >= 9 ? 'border-l-destructive'
+                  : entryRpe >= 7 ? 'border-l-warning'
+                  : 'border-l-success'
+                  : 'border-l-border/30';
+
+                // Objem pro sílu
+                const volume = isStrength && entrySets && entry.reps && entry.weight_kg
+                  ? Math.round(entrySets * entry.reps * entry.weight_kg)
+                  : null;
 
                 return (
                   <div
                     key={entry.id}
                     className={cn(
-                      "flex items-start gap-2.5 px-2.5 py-2.5 rounded-lg transition-colors",
-                      isFirstEntry ? "bg-primary/5 border border-primary/20" : "hover:bg-muted/40"
+                      "flex flex-col gap-1.5 px-3 py-2.5 rounded-lg border-l-4 transition-colors",
+                      isFirstEntry
+                        ? "bg-primary/5 border border-primary/20 border-l-primary"
+                        : cn("bg-muted/20 border border-border/30 hover:bg-muted/40", rpeBorder)
                     )}
                   >
-                    {/* Date */}
-                    <span className="text-xs text-muted-foreground tabular-nums shrink-0 w-[52px] pt-0.5">
-                      {format(parseISO(entry.date), 'd.M.yy', { locale: cs })}
-                    </span>
+                    {/* Horní řádek: datum + badge + hlavní hodnota */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-muted-foreground tabular-nums shrink-0 w-[58px]">
+                        {format(parseISO(entry.date), 'd. M. yy', { locale: cs })}
+                      </span>
 
-                    {/* Main metrics */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {/* For strength: sets × reps structure */}
+                      {isFirstEntry && (
+                        <Badge className="text-[9px] px-1 py-0 h-4 bg-primary/15 text-primary border-primary/30 shrink-0">
+                          Poslední
+                        </Badge>
+                      )}
+
+                      <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                        {/* Síla: sériová struktura */}
                         {isStrength && entrySets && entry.reps && (
-                          <span className="text-xs text-muted-foreground">{entrySets}×{entry.reps}</span>
+                          <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
+                            {entrySets}×{entry.reps}
+                          </span>
                         )}
-                        <span className="font-semibold text-sm tabular-nums">{entry.displayValue}</span>
+                        <span className="font-bold text-sm tabular-nums">{entry.displayValue}</span>
 
-                        {/* Distance */}
+                        {/* Kardio: vzdálenost */}
                         {entry.distance_meters && entry.distance_meters > 0 && entry.metricType !== 'distance' && (
                           <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
                             <Ruler className="w-3 h-3 shrink-0" />
                             {Math.round(entry.distance_meters)} m
                           </span>
                         )}
-
-                        {/* PR badge */}
-                        {isFirstEntry && (
-                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-primary/10 text-primary border-primary/30 shrink-0">
-                            Poslední
-                          </Badge>
-                        )}
                       </div>
 
-                      {/* Secondary metrics row */}
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        {/* Strength volume */}
-                        {isStrength && entrySets && entry.reps && entry.weight_kg && (
+                      {entryRpe && <RpeBadge rpe={entryRpe} />}
+                    </div>
+
+                    {/* Dolní řádek: objem / watty / tep / poznámka */}
+                    {(volume || (entryWatts && entryWatts > 0) || (entryHR && entryHR > 0) || entry.notes) && (
+                      <div className="flex items-center gap-2 pl-[66px] flex-wrap">
+                        {volume && (
                           <span className="text-[10px] text-muted-foreground">
-                            Vol: {Math.round(entrySets * entry.reps * entry.weight_kg)} kg
+                            Vol: {volume.toLocaleString('cs-CZ')} kg
                           </span>
                         )}
                         {entryWatts && entryWatts > 0 && (
-                          <span className="flex items-center gap-0.5 text-[10px] text-warning font-medium">
-                            <Zap className="w-2.5 h-2.5" />{Math.round(entryWatts)}W
+                          <span className="flex items-center gap-0.5 text-[10px] text-warning font-semibold">
+                            <Zap className="w-2.5 h-2.5" />{Math.round(entryWatts)} W
                           </span>
                         )}
                         {entryHR && entryHR > 0 && (
@@ -504,14 +577,13 @@ function ExerciseDetailView({ clientId, clientName, exercise, onBack, onQuickLog
                             <Heart className="w-2.5 h-2.5" />{entryHR} bpm
                           </span>
                         )}
-                        {entryRpe && <RpeBadge rpe={entryRpe} />}
                         {entry.notes && (
-                          <span className="text-[10px] text-muted-foreground italic truncate max-w-[120px]">
-                            {entry.notes.slice(0, 40)}{entry.notes.length > 40 ? '…' : ''}
+                          <span className="text-[10px] text-muted-foreground/70 italic truncate max-w-[130px]">
+                            {entry.notes.slice(0, 45)}{entry.notes.length > 45 ? '…' : ''}
                           </span>
                         )}
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
@@ -656,11 +728,28 @@ function JournalView({ clientId, clientName, onBack, onNavigateToClient, onQuick
           {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">
-            {exercises.length === 0 ? 'Žádné záznamy výkonů' : 'Žádné výsledky'}
-          </p>
+        <div className="flex flex-col items-center py-12 text-muted-foreground gap-3">
+          <div className="w-14 h-14 rounded-2xl bg-muted/30 flex items-center justify-center">
+            <Dumbbell className="w-7 h-7 opacity-40" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium">
+              {exercises.length === 0 ? 'Zatím žádné záznamy' : 'Žádné výsledky'}
+            </p>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">
+              {exercises.length === 0
+                ? 'Zapište první výkon pomocí tlačítka + Zapsat'
+                : 'Zkuste jiný filtr nebo hledaný výraz'}
+            </p>
+          </div>
+          {exercises.length === 0 && (
+            <button
+              onClick={() => onQuickLog()}
+              className="text-xs font-semibold text-primary underline underline-offset-2"
+            >
+              + Zapsat první výkon
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
