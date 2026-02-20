@@ -103,6 +103,15 @@ Pro každý produkt extrahuj tyto atributy (pokud jsou v názvu):
 - flavor: Příchuť (čokoláda, vanilka, jahoda, peach fuzz, atd.)
 - size: Velikost balení nebo varianta
 
+MULTI-PACK / BALENÍ INSTRUKCE:
+- Pokud je položka balení (např. "12x Energy gel", "karton 24ks", "pack 6ks", "balení 12ks"):
+  * VŽDY vypočítej cenu ZA JEDEN KUS: purchasePrice = celková_cena_položky / počet_kusů_v_balení
+  * quantity = celkový počet jednotlivých kusů (ne balení)
+  * Příklad: "Energy gel 12ks balení" za 300 Kč → purchasePrice = 25, quantity = 12
+- Pokud faktura obsahuje STEJNÝ produkt jako jednotlivé kusy I jako balení, vrať je jako DVĚ SAMOSTATNÉ položky, obě s cenou za kus
+- Přidej field "unitInfo": null pro jednotlivé kusy, "balení 12ks" pro multi-packy
+- Nikdy nepoužívej cenu za celý balík jako cenu za kus!
+
 INTELIGENTNÍ PÁROVÁNÍ PRODUKTŮ:
 Priorita při párování s existujícími produkty:
 1. PŘESNÁ SHODA SKU kódu → confidence 0.95-1.0
@@ -157,6 +166,7 @@ Vrať POUZE validní JSON:
       "matchedProductId": "UUID nebo null",
       "matchedProductName": "Název nebo null",
       "confidence": 0-1,
+      "unitInfo": "balení 12ks nebo null",
       "matchSuggestions": [
         {"productId": "UUID", "productName": "Název", "confidence": 0-1, "matchReason": "SKU shoda / Podobný název"}
       ],
