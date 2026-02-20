@@ -1,90 +1,78 @@
 
-# Oprava importu faktur: chyby při naskladnění + špatné zaúčtování balíků
+# Navrhované vylepšení modulu Prodej a Sklad
 
-## Identifikované problémy
+## Kategorie A: Sklad -- Praktické vylepšení
 
-### Problém 1: "Naskladnění nebylo dokončeno" + "Faktura nebyla přidána do nákladů"
+### 1. Hromadné operace se zbožím
+Aktuálně lze editovat produkty pouze jednotlivě. Navrhujeme:
+- Checkbox u každé položky v seznamu skladu
+- Hromadné akce: archivovat/aktivovat, změnit kategorii, smazat
+- Hromadná změna ceny (procentuální navýšení/snížení)
 
-Funkce `importItems` v `useInvoiceImport.ts` zpracovává produkty **sekvenčně v jednom try/catch bloku**. Pokud selže jakákoliv operace (vytvoření/aktualizace produktu), stane se toto:
-- Mutace vyhodí chybu a zobrazí vlastní toast ("Chyba" / "Nepodařilo se aktualizovat produkt")
-- Catch blok zachytí chybu a zobrazí druhý toast ("Chyba importu" / chybová zpráva)
-- Vytvoření nákladu (expense) se **nikdy nespustí**, protože kód na něj nedojde
+### 2. Historie naskladnění a pohybů
+Aktuálně neexistuje přehled, kdy bylo co naskladněno a kolik. Navrhujeme:
+- Nová záložka nebo sekce "Pohyby skladu" (stock_movements tabulka)
+- Každé naskladnění (ruční i z faktury) zapíše záznam: produkt, množství, nákupní cena, datum, zdroj (ruční/faktura)
+- Timeline zobrazení: "+20 ks Energy gel (faktura #123)" / "-3 ks Energy gel (prodej)"
+- Filtrování dle produktu a období
 
-Navíc, pokud AI vrátí datum faktury ve špatném formátu (např. "20.02.2026" místo "2026-02-20"), vložení nákladu do databáze selže.
+### 3. Inventura (stocktaking)
+- Dialog pro zadání skutečného stavu zásob
+- Porovnání s evidovaným stavem a zobrazení rozdílů
+- Možnost hromadně opravit stav + záznam do historie pohybů
 
-### Problém 2: Balíky vs. jednotlivé kusy se sloučí pod jednu položku
-
-AI prompt v edge funkci `parse-invoice` neobsahuje instrukce pro rozlišení balíků (12ks) od jednotlivých kusů. Výsledek:
-- "Energy gel 1ks" za 30 Kč a "Energy gel 12ks balení" za 300 Kč se spárují ke stejnému produktu
-- Nákupní cena se přepíše na 300 Kč (cena za balík) místo 25 Kč (cena za kus)
-- Prodejní cena je pak vypočtena z 300 Kč, což je chybné
-
-### Drobný problém: SKU kódy se neukládají u nových produktů
-
-Funkce `useCreateProduct` manuálně vybírá pole pro insert a **nezahrnuje `sku_code`**, i když ho volající kód nastaví.
-
----
-
-## Plán oprav
-
-### A. Odolný import s částečným úspěchem (`useInvoiceImport.ts`)
-
-Aktuální stav: jeden `for` cyklus v try/catch -- jedna chyba zastaví vše.
-
-Nový stav:
-- Každý produkt se zpracuje ve vlastním try/catch
-- Chyby se kumulují do pole `errors[]`
-- Po zpracování VŠECH produktů se pokusí vytvořit náklad (i když některé produkty selhaly)
-- Datum faktury se validuje/normalizuje (podpora formátů DD.MM.YYYY, D.M.YYYY)
-- Na konci se zobrazí souhrnný toast: "Naskladněno X produktů, Y selhalo"
-- Pokud některé selhaly, zobrazí se varování s detaily
-
-### B. Rozlišení balíků vs. kusů v AI promptu (`parse-invoice/index.ts`)
-
-Do systémového promptu přidat explicitní instrukce:
-
-1. **Per-unit kalkulace**: Pokud je položka balení (např. "12x Energy gel" nebo "karton 24ks"), vždy vypočítat cenu ZA KUS -- `purchasePrice = celková_cena / počet_kusů`, `quantity = počet_kusů`
-2. **Oddělené položky**: Pokud jsou na faktuře položky se stejným názvem ale různým balením (1ks vs 12ks), vrátit je jako SAMOSTATNÉ řádky s různými cenami za kus
-3. **Příznak `isMultipack`**: Přidat nový field `unitInfo` (např. "balení 12ks") pro transparentnost v UI
-
-### C. Podpora `sku_code` v `useCreateProduct` (`useProducts.ts`)
-
-- Přidat `sku_code?: string | null` do `CreateProductInput` interface
-- Zahrnout `sku_code` do insert objektu v `mutationFn`
+### 4. Export skladu do CSV/Excel
+- Tlačítko pro export aktuálního stavu skladu (název, množství, nákupní cena, prodejní cena, marže)
+- Užitečné pro účetnictví a inventury
 
 ---
 
-## Technické detaily
+## Kategorie B: Pokladna -- Vylepšení UX
 
-### Soubory ke změně
+### 5. Čtečka čárových kódů / QR kódu
+- Podpora skenování EAN kódu produktu přes kameru telefonu
+- Spárování s polem `sku_code` u produktu
+- Rychlé přidání do košíku skenem
 
-| Soubor | Co se změní |
-|---|---|
-| `src/hooks/useInvoiceImport.ts` | Odolný import: individuální try/catch pro každý produkt, validace data, souhrnný toast |
-| `supabase/functions/parse-invoice/index.ts` | Rozšíření AI promptu o instrukce pro multi-packy a per-unit kalkulaci |
-| `src/hooks/useProducts.ts` | Přidání `sku_code` do `CreateProductInput` a do insert objektu |
+### 6. Rychlý prodej na klik (Quick Sale mode)
+- Zjednodušený režim pokladny: klikni na produkt = rovnou prodej (bez košíku)
+- Vhodné pro prodej jedné položky (např. nápoj u recepce)
+- Přepínač "Rychlý režim" v nastavení pokladny
 
-### Detailní změny v `useInvoiceImport.ts`
+### 7. Paragon / potvrzení o nákupu
+- Po dokončení prodeje možnost zobrazit/tisknout zjednodušený paragon
+- Obsahuje: datum, položky, ceny, celkem, platební metodu
+- Možnost sdílení přes odkaz nebo jako PDF
 
-```text
-importItems():
-  - Zavést pole: successCount, failedItems[], totalCost
-  - Pro kazdy item: try { update/create } catch { push to failedItems }
-  - Po smycce: if (createExpenseRecord && totalCost > 0) { try create expense }
-  - Validace data: parseDateSafe(state.invoice?.date)
-  - Souhrnny toast s vysledky
-  - Navratova hodnota: true i pri castecnem uspechu (aby se dialog zavrel)
-```
+---
 
-### Detailni zmeny v AI promptu
+## Kategorie C: Analytika a predikce
 
-Pridat do systemoveho promptu sekci:
-```text
-MULTI-PACK / BULK INSTRUKCE:
-- Pokud je polozka baleni (napr. "12x", "karton", "pack", "baleni"),
-  VZDY vypocitej cenu za KUS: purchasePrice = celkova_cena / pocet_kusu
-- quantity = pocet jednotlivych kusu v baleni
-- Pokud faktura obsahuje STEJNY produkt jako jednotlive kusy I jako baleni,
-  vrat je jako DVE SAMOSTATNE polozky (obe s cenou za kus)
-- Pridej field "unitInfo": null pro jednotlive kusy, "baleni 12ks" pro multi-packy
-```
+### 8. Automatické objednávky / nákupní seznam
+- Na základě Stock Velocity predikce automaticky generovat "Nákupní seznam"
+- Zobrazí produkty, které dojdou do X dní, s doporučeným množstvím k objednání
+- Možnost exportu seznamu nebo odeslání dodavateli emailem
+
+### 9. Sezónní trendy a predikce poptávky
+- Graf porovnávající prodeje stejného měsíce loni vs. letos
+- Upozornění na blížící se sezónní pík (např. proteinové tyčinky v lednu)
+
+---
+
+## Doporučený postup implementace
+
+Navrhuji začít s těmi, které přinesou největší praktický dopad:
+
+| Priorita | Vylepšení | Složitost | Dopad |
+|---|---|---|---|
+| 1 | Historie pohybů skladu (#2) | Střední | Vysoký -- audit a přehled |
+| 2 | Inventura (#3) | Střední | Vysoký -- přesnost skladu |
+| 3 | Export skladu (#4) | Nízká | Střední -- účetnictví |
+| 4 | Hromadné operace (#1) | Střední | Střední -- efektivita |
+| 5 | Nákupní seznam (#8) | Nízká | Střední -- prevence výpadků |
+| 6 | Paragon (#7) | Nízká | Nízký -- profesionalita |
+| 7 | Čtečka kódů (#5) | Vysoká | Nízký -- specifický use case |
+| 8 | Quick Sale (#6) | Nízká | Nízký -- pohodlí |
+| 9 | Sezónní trendy (#9) | Vysoká | Nízký -- dlouhodobé |
+
+Které z těchto vylepšení vás zajímají? Můžeme začít s jedním nebo více najednou.
