@@ -1,78 +1,103 @@
 
-# Navrhované vylepšení modulu Prodej a Sklad
+# Dalsi vylepseni modulu Prodej a Sklad
 
-## Kategorie A: Sklad -- Praktické vylepšení
+## Co uz je hotove (z predchoziho planu)
+- Historie pohybu skladu (stock_movements + timeline)
+- Inventura (stocktaking dialog)
+- Export skladu do XLSX
+- Oprava importu faktur (resilient import + bulk pricing)
 
-### 1. Hromadné operace se zbožím
-Aktuálně lze editovat produkty pouze jednotlivě. Navrhujeme:
-- Checkbox u každé položky v seznamu skladu
-- Hromadné akce: archivovat/aktivovat, změnit kategorii, smazat
-- Hromadná změna ceny (procentuální navýšení/snížení)
+## Navrzene nove upravy a vylepseni
 
-### 2. Historie naskladnění a pohybů
-Aktuálně neexistuje přehled, kdy bylo co naskladněno a kolik. Navrhujeme:
-- Nová záložka nebo sekce "Pohyby skladu" (stock_movements tabulka)
-- Každé naskladnění (ruční i z faktury) zapíše záznam: produkt, množství, nákupní cena, datum, zdroj (ruční/faktura)
-- Timeline zobrazení: "+20 ks Energy gel (faktura #123)" / "-3 ks Energy gel (prodej)"
-- Filtrování dle produktu a období
+### 1. Hromadne operace se zbozim (Bulk Operations)
+Aktualne lze produkty editovat pouze jeden po jednem. Pridame:
+- Checkbox u kazde polozky v seznamu skladu
+- Plovouci action bar pri vyberu (pocet vybranych + akce)
+- Hromadne akce: archivovat/aktivovat, zmenit kategorii, smazat
+- Hromadna zmena ceny (procentualni navyseni/snizeni vsech vybranych)
 
-### 3. Inventura (stocktaking)
-- Dialog pro zadání skutečného stavu zásob
-- Porovnání s evidovaným stavem a zobrazení rozdílů
-- Možnost hromadně opravit stav + záznam do historie pohybů
-
-### 4. Export skladu do CSV/Excel
-- Tlačítko pro export aktuálního stavu skladu (název, množství, nákupní cena, prodejní cena, marže)
-- Užitečné pro účetnictví a inventury
+**Zmeny:** `StockManagement.tsx` (checkbox logika, floating action bar, bulk mutace)
 
 ---
 
-## Kategorie B: Pokladna -- Vylepšení UX
+### 2. Automaticky nakupni seznam (Shopping List)
+Na zaklade Stock Velocity predikce automaticky generovat "Nakupni seznam":
+- Nova komponenta `ShoppingListPanel.tsx` v sekci Sklad
+- Zobrazi produkty, ktere dojdou do X dni (nastavitelny prah, default 14)
+- U kazdeho produktu: nazev, aktualni stav, predikce dojezdu, doporucene mnozstvi k objednani (= prumer 30 dni)
+- Moznost exportu seznamu do CSV
+- Tlacitko v toolbaru skladu
 
-### 5. Čtečka čárových kódů / QR kódu
-- Podpora skenování EAN kódu produktu přes kameru telefonu
-- Spárování s polem `sku_code` u produktu
-- Rychlé přidání do košíku skenem
-
-### 6. Rychlý prodej na klik (Quick Sale mode)
-- Zjednodušený režim pokladny: klikni na produkt = rovnou prodej (bez košíku)
-- Vhodné pro prodej jedné položky (např. nápoj u recepce)
-- Přepínač "Rychlý režim" v nastavení pokladny
-
-### 7. Paragon / potvrzení o nákupu
-- Po dokončení prodeje možnost zobrazit/tisknout zjednodušený paragon
-- Obsahuje: datum, položky, ceny, celkem, platební metodu
-- Možnost sdílení přes odkaz nebo jako PDF
+**Nove soubory:** `src/components/sales/ShoppingListDialog.tsx`
+**Zmeny:** `StockManagement.tsx` (tlacitko v toolbaru)
 
 ---
 
-## Kategorie C: Analytika a predikce
+### 3. Paragon / potvrzeni o nakupu (Receipt)
+Po dokonceni prodeje moznost zobrazit/tisknout zjednoduseny paragon:
+- Dialog s nahldem paragonu po uspesnem prodeji
+- Obsah: datum, cas, polozky, ceny, celkem, platebni metoda, klient
+- Tlacitko "Tisknout" (window.print s @media print styly)
+- Tlacitko "Stahnout PDF" (pomoci jspdf, ktery je uz nainstalovany)
+- Moznost zobrazit paragon i z historie prodeju (tlacitko v detailu objednavky)
 
-### 8. Automatické objednávky / nákupní seznam
-- Na základě Stock Velocity predikce automaticky generovat "Nákupní seznam"
-- Zobrazí produkty, které dojdou do X dní, s doporučeným množstvím k objednání
-- Možnost exportu seznamu nebo odeslání dodavateli emailem
-
-### 9. Sezónní trendy a predikce poptávky
-- Graf porovnávající prodeje stejného měsíce loni vs. letos
-- Upozornění na blížící se sezónní pík (např. proteinové tyčinky v lednu)
+**Nove soubory:** `src/components/sales/ReceiptDialog.tsx`
+**Zmeny:** `SalesRegister.tsx` (zobrazeni po prodeji), `SalesOrderDetailModal.tsx` (tlacitko "Paragon")
 
 ---
 
-## Doporučený postup implementace
+### 4. Vylepseni historie prodeju
+Aktualni historie zobrazuje max 100 poslednich prodeju. Vylepsime:
+- Filtrovani podle platebni metody (chip filtry: Vse, Hotove, Kartou, Kredit, Prevod)
+- Filtrovani podle obdobi (dnes, tento tyden, tento mesic, vse)
+- Souhrnny radek na vrchu: celkova castka za filtrovane obdobi + pocet prodeju
+- Zvyseni limitu na 500 s lazy loading / "Nacist dalsi"
 
-Navrhuji začít s těmi, které přinesou největší praktický dopad:
+**Zmeny:** `SalesHistory.tsx` (filtry, souhrn, paginace)
 
-| Priorita | Vylepšení | Složitost | Dopad |
+---
+
+### 5. Zapinani/vypinani stavu skladu u produktu v pohybu
+Pridame do casove osy pohybu skladu rychle filtrovani podle smeru:
+- Chip filtry: "Vse", "Naskladneni (+)", "Vyskladneni (-)", "Inventura"
+- Male souhrnne KPI nad timeline: celkem naskladneno, celkem vyskladneno za obdobi
+
+**Zmeny:** `StockMovementsTimeline.tsx` (filtry, KPI)
+
+---
+
+## Doporucene poradi implementace
+
+| Priorita | Vylepseni | Slozitost | Dopad |
 |---|---|---|---|
-| 1 | Historie pohybů skladu (#2) | Střední | Vysoký -- audit a přehled |
-| 2 | Inventura (#3) | Střední | Vysoký -- přesnost skladu |
-| 3 | Export skladu (#4) | Nízká | Střední -- účetnictví |
-| 4 | Hromadné operace (#1) | Střední | Střední -- efektivita |
-| 5 | Nákupní seznam (#8) | Nízká | Střední -- prevence výpadků |
-| 6 | Paragon (#7) | Nízká | Nízký -- profesionalita |
-| 7 | Čtečka kódů (#5) | Vysoká | Nízký -- specifický use case |
-| 8 | Quick Sale (#6) | Nízká | Nízký -- pohodlí |
-| 9 | Sezónní trendy (#9) | Vysoká | Nízký -- dlouhodobé |
+| 1 | Hromadne operace (#1) | Stredni | Vysoky -- efektivita |
+| 2 | Nakupni seznam (#2) | Nizka | Stredni -- prevence vypadku |
+| 3 | Paragon (#3) | Nizka | Stredni -- profesionalita |
+| 4 | Vylepseni historie (#4) | Nizka | Stredni -- prehlednost |
+| 5 | Filtry pohybu skladu (#5) | Nizka | Nizky -- pohodli |
 
-Které z těchto vylepšení vás zajímají? Můžeme začít s jedním nebo více najednou.
+## Technicke detaily
+
+### Hromadne operace
+- Stav `selectedIds: Set<string>` v StockManagement
+- "Vybrat vse" checkbox v hlavicce
+- AnimatePresence pro floating action bar (Framer Motion)
+- Bulk update pres `Promise.all` s updateProduct mutaci
+- Hromadna zmena ceny: dialog s inputem pro procenta, nahledy nove ceny
+
+### Nakupni seznam
+- Vyuzije existujici `useStockVelocity` hook
+- Filtruje produkty kde `daysRemaining !== null && daysRemaining <= threshold`
+- Doporucene mnozstvi = `avgDailySales * 30` (mesicni zasoba)
+- Export: generovani CSV stringu a download pres Blob
+
+### Paragon
+- Sdilena komponenta `ReceiptDialog` pouzitelna z pokladny i z detailu objednavky
+- PDF generovani pres `jspdf` (uz nainstalovany) + `jspdf-autotable`
+- Tisk pres `window.print()` s dedicnou @media print stylovou sekcí
+
+### Vylepseni historie
+- Chip filtry pro platebni metodu (reuse PAYMENT_LABELS)
+- Date range preset selector (dnes/tyden/mesic/vse)
+- Souhrnny badge: `filteredOrders.reduce(sum => sum + total_amount)`
+- Cursor-based paginace: "Nacist dalsi" tlacitko, `.range(offset, offset+50)`
