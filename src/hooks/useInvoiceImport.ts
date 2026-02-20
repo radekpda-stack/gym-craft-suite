@@ -256,29 +256,27 @@ export function useInvoiceImport() {
 
     setState(prev => ({ ...prev, status: 'importing' }));
 
-    try {
-      let newProductsCount = 0;
-      let updatedProductsCount = 0;
-      let totalCost = 0;
+    let newProductsCount = 0;
+    let updatedProductsCount = 0;
+    let totalCost = 0;
+    const failedItems: { name: string; error: string }[] = [];
 
-      for (const item of selectedItems) {
+    for (const item of selectedItems) {
+      try {
         const itemTotalCost = item.editedPurchasePrice * item.editedQuantity;
         totalCost += itemTotalCost;
 
         if (item.matchedProductId && item.matchedProduct) {
-          // Update existing product stock
           const updateData: Partial<Product> & { id: string; sku_code?: string } = {
             id: item.matchedProductId,
             stock_quantity: (item.matchedProduct.stock_quantity || 0) + item.editedQuantity,
             purchase_price: item.editedPurchasePrice,
           };
 
-          // Aktualizuj prodejní cenu pokud se změnila
           if (item.editedSellPrice && item.editedSellPrice !== item.matchedProduct.price) {
             updateData.price = item.editedSellPrice;
           }
 
-          // Optionally update SKU code if it's new and we have one
           if (state.saveSkuCodes && item.skuCode && !(item.matchedProduct as any).sku_code) {
             updateData.sku_code = item.skuCode;
           }
@@ -286,7 +284,6 @@ export function useInvoiceImport() {
           await updateProduct.mutateAsync(updateData);
           updatedProductsCount++;
         } else {
-          // Create new product with extracted details
           const createData: any = {
             name: item.name,
             price: item.editedSellPrice,
@@ -297,7 +294,6 @@ export function useInvoiceImport() {
             low_stock_threshold: 5,
           };
 
-          // Add SKU code if saving is enabled and we have one
           if (state.saveSkuCodes && item.skuCode) {
             createData.sku_code = item.skuCode;
           }
@@ -305,13 +301,28 @@ export function useInvoiceImport() {
           await createProduct.mutateAsync(createData);
           newProductsCount++;
         }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Neznámá chyba';
+        failedItems.push({ name: item.name, error: errorMsg });
+        console.error(`Failed to import item "${item.name}":`, err);
       }
+    }
 
-      // Create expense record if requested
-      if (createExpenseRecord && totalCost > 0) {
+    // Create expense record even if some items failed
+    if (createExpenseRecord && totalCost > 0) {
+      try {
         const itemDescriptions = selectedItems
           .map(i => `${i.name} (${i.editedQuantity}x)`)
           .join(', ');
+
+        // Normalize date - support DD.MM.YYYY, D.M.YYYY formats
+        let expenseDate = format(new Date(), 'yyyy-MM-dd');
+        if (state.invoice?.date) {
+          const parsed = parseDateSafe(state.invoice.date);
+          if (parsed) {
+            expenseDate = parsed;
+          }
+        }
 
         await createExpense.mutateAsync({
           name: state.invoice?.invoiceNumber 
@@ -319,30 +330,44 @@ export function useInvoiceImport() {
             : `Import faktury: ${selectedItems.length} položek`,
           description: itemDescriptions,
           amount: totalCost,
-          date: state.invoice?.date || format(new Date(), 'yyyy-MM-dd'),
+          date: expenseDate,
           category: 'inventory',
         });
+      } catch (err) {
+        console.error('Failed to create expense:', err);
+        toast({
+          title: 'Varování',
+          description: 'Produkty byly naskladněny, ale nepodařilo se vytvořit záznam nákladu.',
+          variant: 'destructive',
+        });
       }
+    }
 
+    const successCount = newProductsCount + updatedProductsCount;
+
+    if (failedItems.length === 0) {
       toast({
         title: 'Import dokončen',
         description: `Naskladněno: ${newProductsCount} nových, ${updatedProductsCount} aktualizovaných produktů${createExpenseRecord ? `. Náklad: ${totalCost} Kč` : ''}`,
       });
-
-      reset();
-      return true;
-
-    } catch (error) {
-      console.error('Import error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Nepodařilo se importovat položky';
-      setState(prev => ({ ...prev, status: 'error', error: errorMessage }));
+    } else if (successCount > 0) {
       toast({
-        title: 'Chyba importu',
-        description: errorMessage,
+        title: 'Import částečně dokončen',
+        description: `Naskladněno ${successCount} produktů, ${failedItems.length} selhalo: ${failedItems.map(f => f.name).join(', ')}`,
         variant: 'destructive',
       });
+    } else {
+      toast({
+        title: 'Import selhal',
+        description: `Žádný produkt nebyl naskladněn. Chyby: ${failedItems.map(f => `${f.name}: ${f.error}`).join('; ')}`,
+        variant: 'destructive',
+      });
+      setState(prev => ({ ...prev, status: 'error', error: 'Všechny položky selhaly' }));
       return false;
     }
+
+    reset();
+    return true;
   };
 
   // Computed values
@@ -370,6 +395,31 @@ export function useInvoiceImport() {
     newProductsCount,
     existingProductsCount,
   };
+}
+
+/**
+ * Parse date string safely, supporting DD.MM.YYYY, D.M.YYYY and YYYY-MM-DD formats.
+ * Returns YYYY-MM-DD string or null if unparseable.
+ */
+function parseDateSafe(dateStr: string): string | null {
+  // Already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  // Czech format: DD.MM.YYYY or D.M.YYYY (with optional spaces)
+  const czMatch = dateStr.match(/^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})$/);
+  if (czMatch) {
+    const day = czMatch[1].padStart(2, '0');
+    const month = czMatch[2].padStart(2, '0');
+    const year = czMatch[3];
+    return `${year}-${month}-${day}`;
+  }
+  // Try native Date parsing as fallback
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  return null;
 }
 
 // Helper to convert file to base64

@@ -37,6 +37,7 @@ export interface CreateProductInput {
   xp_bonus?: number;
   min_sell_price?: number | null;
   discount_eligible?: boolean;
+  sku_code?: string | null;
 }
 
 export function useProducts(activeOnly = false) {
@@ -83,6 +84,7 @@ export function useCreateProduct() {
           stock_quantity: kind === 'inventory' ? (input.stock_quantity ?? 0) : 0,
           low_stock_threshold: kind === 'inventory' ? (input.low_stock_threshold ?? 5) : 0,
           xp_bonus: input.xp_bonus ?? 0,
+          sku_code: input.sku_code ?? null,
           user_id: user.id,
         })
         .select()
