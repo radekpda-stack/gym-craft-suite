@@ -10,7 +10,8 @@ import {
   Loader2,
   CreditCard,
   Sparkles,
-  FileText
+  FileText,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,8 +26,12 @@ import { StockReceiveDialog } from '@/components/settings/StockReceiveDialog';
 import { StockSearchAndFilters, StockFilter, StockSortOption, StockTypeFilter } from './StockSearchAndFilters';
 import { LowStockBanner } from './LowStockBanner';
 import { InvoiceImportDialog } from './InvoiceImportDialog';
+import { StockMovementsTimeline } from './StockMovementsTimeline';
+import { StockExportButton } from './StockExportButton';
+import { StocktakingDialog } from './StocktakingDialog';
 import { useDebounce } from '@/hooks/useDebounce';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/formatters';
 
 const CATEGORIES = [
@@ -48,6 +53,7 @@ const normalizeText = (text: string) =>
   text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 export function StockManagement() {
+  const [stockTab, setStockTab] = useState('items');
   const { data: products = [], isLoading } = useProducts();
   const { data: velocityMap } = useStockVelocity();
   const createProduct = useCreateProduct();
@@ -268,7 +274,24 @@ export function StockManagement() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Low stock warning banner (collapsible) */}
+      {/* Sub-tabs: Items vs Movements */}
+      <Tabs value={stockTab} onValueChange={setStockTab} className="w-full">
+        <TabsList className="w-full h-auto p-1 rounded-xl mb-4">
+          <TabsTrigger value="items" className="flex-1 gap-1.5 py-2 rounded-lg text-xs sm:text-sm">
+            <Package className="w-4 h-4" />
+            Položky
+          </TabsTrigger>
+          <TabsTrigger value="movements" className="flex-1 gap-1.5 py-2 rounded-lg text-xs sm:text-sm">
+            <History className="w-4 h-4" />
+            Pohyby skladu
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="movements" className="mt-0">
+          <StockMovementsTimeline />
+        </TabsContent>
+
+        <TabsContent value="items" className="mt-0 space-y-4 sm:space-y-6">
       <LowStockBanner
         products={lowStockProducts}
         expanded={bannerExpanded}
@@ -300,16 +323,18 @@ export function StockManagement() {
             {showMargin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             <span className="hidden sm:inline">{showMargin ? 'Skrýt marži' : 'Zobrazit marži'}</span>
           </Button>
-          <div className="flex items-center gap-2">
-            <StockReceiveDialog />
-            <InvoiceImportDialog 
-              trigger={
-                <Button variant="outline" size="sm" className="gap-2">
-                  <FileText className="w-4 h-4" />
-                  <span className="hidden sm:inline">Import faktury</span>
-                </Button>
-              }
-            />
+           <div className="flex items-center gap-2">
+             <StockExportButton />
+             <StocktakingDialog />
+             <StockReceiveDialog />
+             <InvoiceImportDialog 
+               trigger={
+                 <Button variant="outline" size="sm" className="gap-2">
+                   <FileText className="w-4 h-4" />
+                   <span className="hidden sm:inline">Import faktury</span>
+                 </Button>
+               }
+             />
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" className="gap-2">
@@ -714,6 +739,8 @@ export function StockManagement() {
           </div>
         )}
       </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
