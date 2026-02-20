@@ -17,7 +17,8 @@ import {
   TrendingUp,
   TrendingDown,
   ShoppingCart,
-  Percent
+  Percent,
+  Receipt
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -28,6 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { EditSalesOrderDialog } from './EditSalesOrderDialog';
+import { ReceiptDialog, ReceiptData } from './ReceiptDialog';
 
 interface SalesOrderDetailModalProps {
   orderId: string | null;
@@ -95,6 +97,7 @@ const KIND_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
 
 export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrderDetailModalProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
   
   const { data: order, isLoading } = useQuery({
     queryKey: ['sales_order_detail', orderId],
@@ -186,6 +189,15 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
                   <PaymentIcon className="w-3 h-3" />
                   {PAYMENT_LABELS[order.payment_method]}
                 </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setReceiptOpen(true)}
+                  title="Paragon"
+                >
+                  <Receipt className="w-4 h-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -423,6 +435,28 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
           order={order}
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
+        />
+      )}
+      
+      {/* Receipt Dialog */}
+      {order && (
+        <ReceiptDialog
+          open={receiptOpen}
+          onOpenChange={setReceiptOpen}
+          data={{
+            id: order.id,
+            createdAt: order.created_at,
+            clientName: order.clients?.name,
+            paymentMethod: order.payment_method,
+            items: order.sales_order_items.map(item => ({
+              name: item.name_snapshot,
+              quantity: item.quantity,
+              unitPrice: item.unit_price,
+              lineTotal: item.line_total_after_discount ?? item.line_total,
+            })),
+            totalAmount: order.total_amount,
+            totalDiscount: order.total_discount,
+          }}
         />
       )}
     </Dialog>

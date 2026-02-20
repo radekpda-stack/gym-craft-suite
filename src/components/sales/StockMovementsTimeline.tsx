@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { ArrowDownToLine, ArrowUpFromLine, RefreshCw, FileText, ClipboardCheck, Package, Filter } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useStockMovements, MovementType } from '@/hooks/useStockMovements';
 import { useProducts } from '@/hooks/useProducts';
@@ -17,9 +18,17 @@ const MOVEMENT_CONFIG: Record<MovementType, { label: string; icon: typeof Packag
   inventura: { label: 'Inventura', icon: ClipboardCheck, colorClass: 'text-accent', sign: '' },
 };
 
+const DIRECTION_FILTERS = [
+  { value: 'all', label: 'Vše' },
+  { value: 'in', label: 'Naskladnění (+)' },
+  { value: 'out', label: 'Vyskladnění (-)' },
+  { value: 'inventura', label: 'Inventura' },
+];
+
 export function StockMovementsTimeline() {
   const [filterProduct, setFilterProduct] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
+  const [directionFilter, setDirectionFilter] = useState<string>('all');
   
   const { data: movements = [], isLoading } = useStockMovements(
     filterProduct !== 'all' ? filterProduct : undefined
@@ -32,9 +41,32 @@ export function StockMovementsTimeline() {
   );
 
   const filteredMovements = useMemo(() => {
-    if (filterType === 'all') return movements;
-    return movements.filter(m => m.movement_type === filterType);
-  }, [movements, filterType]);
+    let result = movements;
+    if (filterType !== 'all') {
+      result = result.filter(m => m.movement_type === filterType);
+    }
+    if (directionFilter !== 'all') {
+      switch (directionFilter) {
+        case 'in':
+          result = result.filter(m => m.quantity > 0);
+          break;
+        case 'out':
+          result = result.filter(m => m.quantity < 0);
+          break;
+        case 'inventura':
+          result = result.filter(m => m.movement_type === 'inventura');
+          break;
+      }
+    }
+    return result;
+  }, [movements, filterType, directionFilter]);
+
+  // KPI summary
+  const kpi = useMemo(() => {
+    const totalIn = filteredMovements.filter(m => m.quantity > 0).reduce((s, m) => s + m.quantity, 0);
+    const totalOut = filteredMovements.filter(m => m.quantity < 0).reduce((s, m) => s + Math.abs(m.quantity), 0);
+    return { totalIn, totalOut, count: filteredMovements.length };
+  }, [filteredMovements]);
 
   // Group by date
   const groupedByDate = useMemo(() => {
@@ -83,6 +115,38 @@ export function StockMovementsTimeline() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Direction chip filters */}
+      <div className="flex flex-wrap gap-1.5">
+        {DIRECTION_FILTERS.map(f => (
+          <Button
+            key={f.value}
+            variant={directionFilter === f.value ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs px-3 rounded-full"
+            onClick={() => setDirectionFilter(f.value)}
+          >
+            {f.label}
+          </Button>
+        ))}
+      </div>
+
+      {/* KPI Summary */}
+      {filteredMovements.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <Badge variant="outline" className="gap-1.5 py-1 px-3 bg-success/5 border-success/20">
+            <ArrowDownToLine className="w-3 h-3 text-success" />
+            <span className="text-success font-bold tabular-nums">+{kpi.totalIn}</span>
+            <span className="text-muted-foreground text-xs">naskladněno</span>
+          </Badge>
+          <Badge variant="outline" className="gap-1.5 py-1 px-3 bg-destructive/5 border-destructive/20">
+            <ArrowUpFromLine className="w-3 h-3 text-destructive" />
+            <span className="text-destructive font-bold tabular-nums">-{kpi.totalOut}</span>
+            <span className="text-muted-foreground text-xs">vyskladněno</span>
+          </Badge>
+          <Badge variant="secondary" className="text-xs">{kpi.count} pohybů</Badge>
+        </div>
+      )}
 
       {/* Timeline */}
       {groupedByDate.length === 0 ? (
