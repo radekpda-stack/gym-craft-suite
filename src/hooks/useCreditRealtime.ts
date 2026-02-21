@@ -4,17 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
 
-/**
- * Real-time credit transaction subscription hook.
- * 
- * This hook subscribes to credit_transactions INSERT events via WebSocket
- * and immediately updates the React Query cache, providing instant UI updates
- * without polling or refetching.
- * 
- * The balance is read directly from `balance_after` field (running balance),
- * eliminating the need to recalculate sums.
- */
-
 interface CreditTransaction {
   id: string;
   client_id: string;
@@ -51,87 +40,19 @@ export function useCreditRealtime(
   const channelRef = useRef<RealtimeChannel | null>(null);
   const lastTxIdRef = useRef<string | null>(null);
 
-  const handleNewTransaction = useCallback((payload: { new: CreditTransaction }) => {
-    const newTx = payload.new;
-    
-    // Prevent duplicate processing
-    if (lastTxIdRef.current === newTx.id) return;
-    lastTxIdRef.current = newTx.id;
-    
-    // Update transactions list cache (prepend new transaction)
-    queryClient.setQueryData(
-      ['credit_transactions', clientId],
-      (old: CreditTransaction[] | undefined) => {
-        if (!old) return [newTx];
-        // Avoid duplicates
-        if (old.some(tx => tx.id === newTx.id)) return old;
-        return [newTx, ...old];
-      }
-    );
-
-    // Update balance cache directly from balance_after (running balance)
-    if (newTx.balance_after !== null) {
-      queryClient.setQueryData(
-        ['shared_budget_balance', clientId],
-        (old: any) => {
-          if (!old) return old;
-          return {
-            ...old,
-            sharedBalance: newTx.balance_after,
-            displayBalance: newTx.balance_after,
-            isExhausted: (newTx.balance_after ?? 0) <= 0,
-            isNegative: (newTx.balance_after ?? 0) < 0,
-          };
-        }
-      );
-
-      // Also update the unified credit_balance key
-      queryClient.setQueryData(
-        ['credit_balance', clientId],
-        newTx.balance_after
-      );
-      
-      // Update v2 balance cache
-      queryClient.setQueryData(
-        ['credit_balance_v2', clientId],
-        (old: any) => {
-          if (!old) return old;
-          return {
-            ...old,
-            balance: newTx.balance_after,
-            isExhausted: (newTx.balance_after ?? 0) <= 0,
-            isNegative: (newTx.balance_after ?? 0) < 0,
-            lastUpdated: newTx.created_at,
-          };
-        }
-      );
-      
-      // Show notification for external balance changes
-      if (showNotifications && newTx.amount !== 0) {
-        const isCredit = newTx.amount > 0;
-        toast({
-          title: isCredit ? '💰 Kredit navýšen' : '📉 Kredit odečten',
-          description: `${Math.abs(newTx.amount).toLocaleString('cs-CZ')} Kč${newTx.description ? ` - ${newTx.description}` : ''}`,
-          variant: isCredit ? 'default' : 'default',
-        });
-      }
-    }
-
-    // Invalidate related queries for full consistency
-    queryClient.invalidateQueries({ queryKey: ['clients', clientId] });
-    queryClient.invalidateQueries({ queryKey: ['pending_payments'] });
-
-    // Call optional callback
-    onTransaction?.(newTx);
-  }, [clientId, queryClient, onTransaction, showNotifications]);
+  // Store callbacks in refs to avoid effect re-runs
+  const onTransactionRef = useRef(onTransaction);
+  onTransactionRef.current = onTransaction;
+  const showNotificationsRef = useRef(showNotifications);
+  showNotificationsRef.current = showNotifications;
+  const queryClientRef = useRef(queryClient);
+  queryClientRef.current = queryClient;
 
   useEffect(() => {
     if (!clientId || !enabled) return;
 
-    // Create unique channel name
     const channelName = `credit-realtime:${clientId}`;
 
-    // Subscribe to INSERT events for this client
     const channel = supabase
       .channel(channelName)
       .on(
@@ -142,7 +63,75 @@ export function useCreditRealtime(
           table: 'credit_transactions',
           filter: `client_id=eq.${clientId}`,
         },
-        handleNewTransaction
+        (payload: { new: CreditTransaction }) => {
+          const newTx = payload.new;
+          
+          // Prevent duplicate processing
+          if (lastTxIdRef.current === newTx.id) return;
+          lastTxIdRef.current = newTx.id;
+          
+          const qc = queryClientRef.current;
+          
+          // Update transactions list cache (prepend new transaction)
+          qc.setQueryData(
+            ['credit_transactions', clientId],
+            (old: CreditTransaction[] | undefined) => {
+              if (!old) return [newTx];
+              if (old.some(tx => tx.id === newTx.id)) return old;
+              return [newTx, ...old];
+            }
+          );
+
+          // Update balance cache directly from balance_after (running balance)
+          if (newTx.balance_after !== null) {
+            qc.setQueryData(
+              ['shared_budget_balance', clientId],
+              (old: any) => {
+                if (!old) return old;
+                return {
+                  ...old,
+                  sharedBalance: newTx.balance_after,
+                  displayBalance: newTx.balance_after,
+                  isExhausted: (newTx.balance_after ?? 0) <= 0,
+                  isNegative: (newTx.balance_after ?? 0) < 0,
+                };
+              }
+            );
+
+            qc.setQueryData(
+              ['credit_balance', clientId],
+              newTx.balance_after
+            );
+            
+            qc.setQueryData(
+              ['credit_balance_v2', clientId],
+              (old: any) => {
+                if (!old) return old;
+                return {
+                  ...old,
+                  balance: newTx.balance_after,
+                  isExhausted: (newTx.balance_after ?? 0) <= 0,
+                  isNegative: (newTx.balance_after ?? 0) < 0,
+                  lastUpdated: newTx.created_at,
+                };
+              }
+            );
+            
+            if (showNotificationsRef.current && newTx.amount !== 0) {
+              const isCredit = newTx.amount > 0;
+              toast({
+                title: isCredit ? '💰 Kredit navýšen' : '📉 Kredit odečten',
+                description: `${Math.abs(newTx.amount).toLocaleString('cs-CZ')} Kč${newTx.description ? ` - ${newTx.description}` : ''}`,
+                variant: isCredit ? 'default' : 'default',
+              });
+            }
+          }
+
+          qc.invalidateQueries({ queryKey: ['clients', clientId] });
+          qc.invalidateQueries({ queryKey: ['pending_payments'] });
+
+          onTransactionRef.current?.(newTx);
+        }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
@@ -157,7 +146,7 @@ export function useCreditRealtime(
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [clientId, enabled, handleNewTransaction]);
+  }, [clientId, enabled]);
 
   return {
     isSubscribed: channelRef.current !== null,
@@ -177,60 +166,13 @@ export function useCreditRealtimeGroup(
   const channelRef = useRef<RealtimeChannel | null>(null);
   const lastTxIdRef = useRef<string | null>(null);
 
-  const handleNewTransaction = useCallback((payload: { new: CreditTransaction }) => {
-    const newTx = payload.new;
-    
-    // Prevent duplicate processing
-    if (lastTxIdRef.current === newTx.id) return;
-    lastTxIdRef.current = newTx.id;
-    
-    // Update group transactions cache
-    queryClient.setQueryData(
-      ['shared_budget_transactions', groupId],
-      (old: CreditTransaction[] | undefined) => {
-        if (!old) return [newTx];
-        if (old.some(tx => tx.id === newTx.id)) return old;
-        return [newTx, ...old];
-      }
-    );
-
-    // Update group balance if available
-    if (newTx.balance_after !== null) {
-      // Invalidate all members' balance queries
-      queryClient.invalidateQueries({ 
-        queryKey: ['shared_budget_balance'],
-        refetchType: 'all'
-      });
-      
-      // Invalidate v2 balance queries
-      queryClient.invalidateQueries({ 
-        queryKey: ['credit_balance_v2'],
-        refetchType: 'all'
-      });
-
-      // Update group balance directly
-      queryClient.setQueryData(
-        ['group_balance', groupId],
-        newTx.balance_after
-      );
-      
-      // Show notification for external balance changes
-      if (showNotifications && newTx.amount !== 0) {
-        const isCredit = newTx.amount > 0;
-        toast({
-          title: isCredit ? '💰 Skupinový kredit navýšen' : '📉 Skupinový kredit odečten',
-          description: `${Math.abs(newTx.amount).toLocaleString('cs-CZ')} Kč${newTx.description ? ` - ${newTx.description}` : ''}`,
-          variant: isCredit ? 'default' : 'default',
-        });
-      }
-    }
-
-    // Invalidate related queries
-    queryClient.invalidateQueries({ queryKey: ['budget_groups'] });
-    queryClient.invalidateQueries({ queryKey: ['pending_payments'] });
-
-    onTransaction?.(newTx);
-  }, [groupId, queryClient, onTransaction, showNotifications]);
+  // Store callbacks in refs to avoid effect re-runs
+  const onTransactionRef = useRef(onTransaction);
+  onTransactionRef.current = onTransaction;
+  const showNotificationsRef = useRef(showNotifications);
+  showNotificationsRef.current = showNotifications;
+  const queryClientRef = useRef(queryClient);
+  queryClientRef.current = queryClient;
 
   useEffect(() => {
     if (!groupId || !enabled) return;
@@ -247,7 +189,54 @@ export function useCreditRealtimeGroup(
           table: 'credit_transactions',
           filter: `group_id=eq.${groupId}`,
         },
-        handleNewTransaction
+        (payload: { new: CreditTransaction }) => {
+          const newTx = payload.new;
+          
+          if (lastTxIdRef.current === newTx.id) return;
+          lastTxIdRef.current = newTx.id;
+          
+          const qc = queryClientRef.current;
+          
+          qc.setQueryData(
+            ['shared_budget_transactions', groupId],
+            (old: CreditTransaction[] | undefined) => {
+              if (!old) return [newTx];
+              if (old.some(tx => tx.id === newTx.id)) return old;
+              return [newTx, ...old];
+            }
+          );
+
+          if (newTx.balance_after !== null) {
+            qc.invalidateQueries({ 
+              queryKey: ['shared_budget_balance'],
+              refetchType: 'all'
+            });
+            
+            qc.invalidateQueries({ 
+              queryKey: ['credit_balance_v2'],
+              refetchType: 'all'
+            });
+
+            qc.setQueryData(
+              ['group_balance', groupId],
+              newTx.balance_after
+            );
+            
+            if (showNotificationsRef.current && newTx.amount !== 0) {
+              const isCredit = newTx.amount > 0;
+              toast({
+                title: isCredit ? '💰 Skupinový kredit navýšen' : '📉 Skupinový kredit odečten',
+                description: `${Math.abs(newTx.amount).toLocaleString('cs-CZ')} Kč${newTx.description ? ` - ${newTx.description}` : ''}`,
+                variant: isCredit ? 'default' : 'default',
+              });
+            }
+          }
+
+          qc.invalidateQueries({ queryKey: ['budget_groups'] });
+          qc.invalidateQueries({ queryKey: ['pending_payments'] });
+
+          onTransactionRef.current?.(newTx);
+        }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
@@ -262,7 +251,7 @@ export function useCreditRealtimeGroup(
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [groupId, enabled, handleNewTransaction]);
+  }, [groupId, enabled]);
 
   return {
     isSubscribed: channelRef.current !== null,
