@@ -12,7 +12,7 @@ import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet'
 import { TrainingFormValues } from '@/components/trainings/TrainingForm';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
-import { useAddTrainingSessionParticipants } from '@/hooks/useTrainingSessionParticipants';
+import { useSaveTrainingParticipants } from '@/hooks/useTrainingParticipants';
 import { AgendaItem } from '@/components/calendar/AgendaItem';
 import { SharedTrainingBlock } from '@/components/calendar/SharedTrainingBlock';
 import { ExternalEventBlock } from '@/components/calendar/ExternalEventBlock';
@@ -91,7 +91,7 @@ export default function CalendarPage() {
   const createTraining = useCreateTrainingSession();
   const updateTraining = useUpdateTrainingSession();
   const cancelTraining = useCancelTrainingSession();
-  const addTrainingParticipants = useAddTrainingSessionParticipants();
+  const saveTrainingParticipants = useSaveTrainingParticipants();
   const { data: settings } = useAppSettings();
   const trainingPrices = settings?.training_prices || { '1': 900, '2': 1100, '3': 1300 };
 
@@ -180,9 +180,17 @@ export default function CalendarPage() {
     // Save additional participants if any
     const additionalClientIds = data.additional_client_ids || [];
     if (additionalClientIds.length > 0 && result?.session?.id) {
-      await addTrainingParticipants.mutateAsync({
-        trainingSessionId: result.session.id,
-        clientIds: additionalClientIds,
+      const allClientIds = [data.client_id, ...additionalClientIds];
+      const totalCount = allClientIds.length;
+      const price = trainingPrices[String(Math.min(totalCount, 3)) as keyof typeof trainingPrices] || trainingPrices['1'];
+      const equalShare = Math.round(price / totalCount);
+      
+      await saveTrainingParticipants.mutateAsync({
+        training_session_id: result.session.id,
+        participants: allClientIds.map(cid => ({
+          client_id: cid,
+          price_share: equalShare,
+        })),
       });
     }
     
