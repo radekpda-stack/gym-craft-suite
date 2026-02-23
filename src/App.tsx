@@ -43,6 +43,7 @@ const FeedbackPage = lazy(() => import("./pages/FeedbackPage"));
 const FeedbackOverview = lazy(() => import("./pages/FeedbackOverview"));
 const PublicNutritionLog = lazy(() => import("./pages/PublicNutritionLog"));
 const PublicChallenge = lazy(() => import("./pages/PublicChallenge"));
+const PublicTrainerStats = lazy(() => import("./pages/PublicTrainerStats"));
 const Sales = lazy(() => import("./pages/Sales"));
 // PRHistory is now integrated into PerformanceHub
 const AppUsageStats = lazy(() => import("./pages/AppUsageStats"));
@@ -131,6 +132,8 @@ const App = () => (
               <Route path="/intake/:token" element={<ClientIntakePage />} />
               {/* Public challenge page - no auth required */}
               <Route path="/challenge/:slug" element={<PublicChallenge />} />
+              {/* Public trainer stats card */}
+              <Route path="/trener/:slug" element={<PublicTrainerStats />} />
               {/* Demo route - public, no auth required */}
               <Route path="/demo/*" element={<DemoPage />} />
               

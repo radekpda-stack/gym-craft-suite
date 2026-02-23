@@ -51,6 +51,7 @@ import { ModuleSettings } from '@/components/settings/ModuleSettings';
 import { ExercisesManagementSection } from '@/components/settings/exercises/ExercisesManagementSection';
 import { ThemeSettings } from '@/components/settings/ThemeSettings';
 import { SocialMediaExport } from '@/components/settings/SocialMediaExport';
+import { PublicStatsSettings } from '@/components/settings/PublicStatsSettings';
 import { AIAssistantSettings } from '@/components/settings/AIAssistantSettings';
 // CalendarSyncSettings moved to SchedulePage
 import { CreditAuditPanel } from '@/components/settings/CreditAuditPanel';
@@ -391,15 +392,27 @@ export default function Settings() {
 
       case 'social-export':
         return (
-          <SettingsSection
-            title={language === 'cs' ? 'Export pro sociální sítě' : 'Social Media Export'}
-            description={language === 'cs' 
-              ? 'Vytvořte vizuální přehledy statistik pro sdílení na sociálních sítích' 
-              : 'Create visual statistics summaries for sharing on social media'}
-            icon={Share2}
-          >
-            <SocialMediaExport />
-          </SettingsSection>
+          <>
+            <SettingsSection
+              title={language === 'cs' ? 'Export pro sociální sítě' : 'Social Media Export'}
+              description={language === 'cs' 
+                ? 'Vytvořte vizuální přehledy statistik pro sdílení na sociálních sítích' 
+                : 'Create visual statistics summaries for sharing on social media'}
+              icon={Share2}
+            >
+              <SocialMediaExport />
+            </SettingsSection>
+
+            <SettingsSection
+              title={language === 'cs' ? 'Veřejná vizitka trenéra' : 'Public Trainer Card'}
+              description={language === 'cs' 
+                ? 'Sdílejte své statistiky jako veřejnou stránku' 
+                : 'Share your stats as a public page'}
+              icon={Share2}
+            >
+              <PublicStatsSettings />
+            </SettingsSection>
+          </>
         );
 
       case 'ai':
