@@ -8053,6 +8053,8 @@ export type Database = {
           id: string
           last_login_at: string | null
           phone: string | null
+          public_stats_enabled: boolean
+          public_stats_slug: string | null
           social_links: Json | null
           specializations: string[] | null
           subscription_type: string
@@ -8076,6 +8078,8 @@ export type Database = {
           id: string
           last_login_at?: string | null
           phone?: string | null
+          public_stats_enabled?: boolean
+          public_stats_slug?: string | null
           social_links?: Json | null
           specializations?: string[] | null
           subscription_type?: string
@@ -8099,6 +8103,8 @@ export type Database = {
           id?: string
           last_login_at?: string | null
           phone?: string | null
+          public_stats_enabled?: boolean
+          public_stats_slug?: string | null
           social_links?: Json | null
           specializations?: string[] | null
           subscription_type?: string

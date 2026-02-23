@@ -140,3 +140,6 @@ verify_jwt = false
 
 [functions.daily-financial-audit]
 verify_jwt = false
+
+[functions.public-trainer-stats]
+verify_jwt = false
