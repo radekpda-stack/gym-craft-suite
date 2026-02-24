@@ -1,76 +1,50 @@
 
 
-# Verejna statisticka vizitka trenera
+# Vylepšení veřejné vizitky trenéra
 
-## Co vznikne
-Nova verejna stranka (napr. `/stats/:userId` nebo `/vizitka/:slug`), ktera bude fungovat jako atraktivni "dashboard vizitka" trenera. Stranka nebude vyzadovat prihlaseni a bude ji mozne sdilet jako odkaz nebo vlozit na web.
+## Co chybí / co vylepšit
 
-## Zobrazene udaje
+Po revizi aktuální implementace identifikuji tyto nedostatky:
 
-### Hlavni metriky (CircularGauge / cifernikove ukazatele)
-- **Pocet aktivnich klientu** - gauge s maximem napr. 30
-- **Kapacitni vytizeni** - procento (kolik slotu je obsazeno vs. maximum)
-- **Celkovy pocet odtrenrovanych hodin** (od zacatku pouzivani aplikace)
-- **Pocet treninku tento mesic** - s trendem vs. prumer
+### 1. Chybějící údaje z profilu
+- **Certifikace** (`certifications`) — profil je má, ale vizitka je nezobrazuje
+- **Roky zkušeností** (`experience_years`) — data se načítají z edge funkce, ale nezobrazují se
+- **Sociální sítě** (`social_links`) — profil je má, ale vizitka je ignoruje
 
-### Top osobni rekordy klientu (PRs showcase)
-- Bench Press - nejlepsi PR napric vsemi klienty
-- Drep (Squat) - nejlepsi PR
-- Mrtvy tah (Deadlift) - nejlepsi PR
-- Dalsi top cviky podle dat v databazi
+### 2. Chybějící QR kód pro snadné sdílení
+- Balíček `qrcode.react` je nainstalovaný, ale vizitka ho nepoužívá
+- Přidat malý QR kód v patičce nebo hero sekci pro offline sdílení (např. vytisknout, ukázat na mobilu)
 
-### Treninkova aktivita
-- Sparkline graf mesicniho poctu treninku (posledni rok)
-- Celkovy pocet unikatnich cviku v knihovne
-- Prumerne RPE treninku
+### 3. Edge funkce neposílá všechna data
+- `certifications`, `social_links` a `experience_years` se buď nenačítají, nebo neposílají v odpovědi
+- `experience_years` se načítá ale nepoužívá v UI
 
-### Trenerskska kariéra
-- "Trenér od" - datum prvniho treninku v systemu
-- Celkovy pocet treninku
-- Celkovy pocet klientu (vcetne archivovanych = celkem provedenych)
+### 4. Vizuální vylepšení
+- Přidat ikony k career stats (Celkem tréninků, Celkem klientů, Hodin)
+- Přidat gradient border/glow efekt na hero avatar
+- Přidat certifikace jako badge pills vedle specializací
+- Přidat "kontakt" sekci se sociálními odkazy (Instagram, web apod.)
 
-## Vizualni styl
-- Tmave tema, glassmorphismus, konzistentni s existujicim designem (Apple Fitness / Whoop estetika)
-- Pouziti existujicich komponent: `CircularGauge` (cifernikove ukazatele), `GaugeCard`, `SparklineCard`, `AnimatedCounter`
-- Hero sekce s jmenem trenera a logem
-- Responzivni grid - na mobilu 2 sloupce, na desktopu 3-4
-- Animovane pocitadla pri nacteni (framer-motion)
-- Bez interaktivnich prvku - ciste nahledy
+### 5. Meta tagy pro sdílení
+- Stránka nemá `<title>` ani Open Graph meta tagy — při sdílení na sociálních sítích nebude mít preview
 
-## Technicke reseni
+---
 
-### Nova edge funkce: `public-trainer-stats`
-- Prijima `userId` jako parametr
-- Nemuze byt volana jen tak - overuje, ze uzivatel ma v nastaveni povolenou verejnou vizitku
-- Agreguje data z tabulek: `clients`, `training_sessions`, `exercise_entries`, `exercises`
-- Vraci JSON s predpocitanymi metrikami (zadne citlive udaje)
+## Plán implementace
 
-### Nove nastaveni v databazi
-- Sloupec `public_stats_enabled` (boolean, default false) v tabulce `profiles`
-- Sloupec `public_stats_slug` (unique text) pro hezke URL
+### A. Edge funkce — rozšířit data
+Přidat do `select` a response: `certifications`, `social_links`. Pole `experience_years` už se načítá.
 
-### Nova stranka: `src/pages/PublicTrainerStats.tsx`
-- Verejna (bez `ProtectedRoute`)
-- Route: `/trenér/:slug`
-- Nacita data z edge funkce
-- Zobrazuje metriky pomoci existujicich chart komponent
+### B. TrainerStatsShowcase.tsx — rozšířit UI
+1. **Hero sekce**: zobrazit `experienceYears` ("X let zkušeností"), certifikace jako badge pills, sociální odkazy jako ikony
+2. **QR kód**: malý QR kód v patičce s odkazem na vizitku (použít `qrcode.react`)
+3. **Career stats**: přidat ikony (Users, Clock, Calendar) do karet
+4. **Meta tagy**: nastavit `document.title` v `useEffect`
 
-### Nova komponenta: `src/components/public-stats/TrainerStatsShowcase.tsx`
-- Hlavni layout s hero sekcí, gauge gridem, PR tabulkou a sparkline grafy
-
-### Nove nastaveni v Settings
-- Toggle pro zapnuti/vypnuti verejne vizitky
-- Pole pro nastaveni slug (URL)
-- Nahled odkazu ke sdileni
-
-### Routing
-- Pridani nove public route v `App.tsx` vedle existujicich public routes (`/feedback`, `/challenge/:slug`)
-
-## Souhrn souboru k vytvoreni/upraveni
-1. **Nova** edge funkce `supabase/functions/public-trainer-stats/index.ts`
-2. **Nova** stranka `src/pages/PublicTrainerStats.tsx`
-3. **Nove** komponenty v `src/components/public-stats/`
-4. **Migrace** - pridani sloupcu do `profiles`
-5. **Uprava** `src/App.tsx` - nova route
-6. **Uprava** Settings - toggle pro verejnou vizitku
+### C. Rozsah změn
+| Soubor | Změna |
+|--------|-------|
+| `supabase/functions/public-trainer-stats/index.ts` | Přidat `certifications`, `social_links` do select a response |
+| `src/components/public-stats/TrainerStatsShowcase.tsx` | Rozšířit hero o certifikace, roky zkušeností, sociální sítě, QR kód, ikony u career stats, meta tagy |
+| `src/pages/PublicTrainerStats.tsx` | Předat slug do showcase pro QR generování |
 
