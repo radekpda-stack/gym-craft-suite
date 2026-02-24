@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     // Find trainer by slug
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, display_name, avatar_url, public_stats_enabled, created_at, bio, specializations, experience_years")
+      .select("id, display_name, avatar_url, public_stats_enabled, created_at, bio, specializations, experience_years, certifications, social_links")
       .eq("public_stats_slug", slug)
       .eq("public_stats_enabled", true)
       .maybeSingle();
@@ -191,6 +191,8 @@ Deno.serve(async (req) => {
         bio: profile.bio,
         specializations: profile.specializations,
         experienceYears: profile.experience_years,
+        certifications: profile.certifications,
+        socialLinks: profile.social_links,
       },
       metrics: {
         activeClients,
