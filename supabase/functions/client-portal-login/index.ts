@@ -242,10 +242,40 @@ Deno.serve(async (req) => {
     }
 
     // Now sign in with Supabase Auth
-    const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+    let authData: any = null;
+    let authError: any = null;
+
+    const signInResult = await supabaseClient.auth.signInWithPassword({
       email: authEmail,
       password,
     });
+    authData = signInResult.data;
+    authError = signInResult.error;
+
+    // If Auth login fails but portal_password matches, sync password to Auth and retry
+    if (authError && authUserId && clientAccount.portal_password && password === clientAccount.portal_password) {
+      console.log('Auth password mismatch but portal_password matches - syncing password for:', authUserId);
+      
+      const { error: syncError } = await supabaseAdmin.auth.admin.updateUserById(authUserId, {
+        password: password,
+      });
+
+      if (!syncError) {
+        // Retry sign in after sync
+        const retryResult = await supabaseClient.auth.signInWithPassword({
+          email: authEmail,
+          password,
+        });
+        authData = retryResult.data;
+        authError = retryResult.error;
+        
+        if (!authError) {
+          console.log('Password synced and login successful for:', loginIdentifier);
+        }
+      } else {
+        console.error('Failed to sync password to Auth:', syncError);
+      }
+    }
 
     // Log the attempt
     await supabaseAdmin.from('login_attempts').insert({
