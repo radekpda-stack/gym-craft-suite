@@ -4,21 +4,15 @@
  * Enhanced with body part tags, training type, and feedback data
  */
 import { useState } from 'react';
-import { ChevronUp, ChevronDown, AlertTriangle, Heart, Target, Bell, FileText, Clock, Dumbbell, Star } from 'lucide-react';
-import { format } from 'date-fns';
-import { cs } from 'date-fns/locale';
+import { ChevronUp, ChevronDown, AlertTriangle, Heart, Target, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Client } from '@/hooks/useClients';
 import { useClientPreDiagnostic, usePreDiagnosticAnswers } from '@/hooks/usePreDiagnosticForms';
 import { useUnresolvedFollowups, useResolveFollowup, FollowupPriority } from '@/hooks/useTrainingFollowups';
-import { useLastTraining } from '@/hooks/useLastTraining';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { PreviousTrainingFeedbackCard } from './PreviousTrainingFeedbackCard';
-import { TrainingCoachingTip } from './TrainingCoachingTip';
 
 interface TrainingPrepSectionProps {
   client: Client | null;
@@ -33,20 +27,6 @@ const priorityConfig = {
   low: { color: 'text-muted-foreground', bg: 'bg-muted/30' },
 };
 
-// Training type labels for display
-const TRAINING_TYPE_LABELS: Record<string, string> = {
-  strength: 'Silový',
-  cardio: 'Kardio',
-  hiit: 'HIIT',
-  functional: 'Funkční',
-  mobility: 'Mobilita',
-  rehab: 'Rehabilitace',
-  plyometric: 'Plyometrický',
-  endurance: 'Vytrvalostní',
-  hypertrophy: 'Hypertrofie',
-  power: 'Výbušnost',
-};
-
 export function TrainingPrepSection({
   client,
   clientId,
@@ -54,8 +34,6 @@ export function TrainingPrepSection({
   trainingDate,
 }: TrainingPrepSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [showPreviousTraining, setShowPreviousTraining] = useState(false);
-  
   // Client profile data
   const { data: preDiagnostic } = useClientPreDiagnostic(clientId);
   const { data: answers = [] } = usePreDiagnosticAnswers(preDiagnostic?.id);
@@ -63,10 +41,6 @@ export function TrainingPrepSection({
   // Followups
   const { data: unresolvedFollowups = [] } = useUnresolvedFollowups(clientId);
   const resolveFollowup = useResolveFollowup();
-  
-  // Previous training
-  const { data: lastTraining, isLoading: isLoadingLastTraining } = useLastTraining(clientId);
-
   // Extract client data
   const trainingAlert = preDiagnostic?.trainer_restrictions;
   const painAreas = answers.find(a => a.field_key === 'pain_areas')?.value as string[] | undefined;
@@ -99,15 +73,9 @@ export function TrainingPrepSection({
   // Check if there's any content to show
   const hasAlerts = trainingAlert || (hasPain && painAreas?.length);
   const hasFollowups = filteredFollowups.length > 0;
-  const hasPreviousTraining = !isLoadingLastTraining && lastTraining;
-  const hasContent = hasAlerts || hasFollowups || mainGoal || hasPreviousTraining;
+  const hasContent = hasAlerts || hasFollowups || mainGoal;
 
   if (!hasContent) return null;
-
-  // Get training type label
-  const trainingTypeLabel = lastTraining?.training_type 
-    ? TRAINING_TYPE_LABELS[lastTraining.training_type] || lastTraining.training_type
-    : null;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -222,121 +190,6 @@ export function TrainingPrepSection({
               </div>
             )}
 
-            {/* Previous Training - expandable with enhanced data */}
-            {isLoadingLastTraining ? (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-48" />
-              </div>
-            ) : lastTraining && (
-              <Collapsible open={showPreviousTraining} onOpenChange={setShowPreviousTraining}>
-                <CollapsibleTrigger asChild>
-                  <button className="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-secondary/50 transition-colors">
-                    <div className="flex items-center gap-2 text-sm flex-wrap">
-                      <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <span className="font-medium">Předchozí trénink</span>
-                      <span className="text-muted-foreground">
-                        • {format(new Date(lastTraining.date), 'd.M.', { locale: cs })}
-                      </span>
-                      {/* Training Type Badge */}
-                      {trainingTypeLabel && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {trainingTypeLabel}
-                        </Badge>
-                      )}
-                    </div>
-                    {showPreviousTraining ? (
-                      <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-                    )}
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="pt-2 pl-6 space-y-3">
-                    {/* Body Part Tags */}
-                    {lastTraining.bodyPartTags && lastTraining.bodyPartTags.length > 0 && (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Dumbbell className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="text-xs text-muted-foreground">Partie:</span>
-                        <div className="flex flex-wrap gap-1">
-                          {lastTraining.bodyPartTags.map((tag) => (
-                            <Badge 
-                              key={tag.id} 
-                              variant="outline"
-                              className="text-[10px] px-1.5 py-0"
-                              style={{ 
-                                borderColor: tag.color,
-                                color: tag.color,
-                                backgroundColor: `${tag.color}10`
-                              }}
-                            >
-                              {tag.name}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Quick stats */}
-                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {lastTraining.duration} min
-                      </span>
-                      {lastTraining.rpe && (
-                        <span className="flex items-center gap-1">
-                          RPE: {lastTraining.rpe}/10
-                        </span>
-                      )}
-                      {lastTraining.subjective_rating && (
-                        <span className="flex items-center gap-1">
-                          <Star className="w-3 h-3" />
-                          {lastTraining.subjective_rating}/10
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Exercises list */}
-                    {lastTraining.exercises?.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground font-medium">
-                          Cviky ({lastTraining.exercises.length}):
-                        </p>
-                        {lastTraining.exercises.slice(0, 4).map((ex, i) => (
-                          <div key={i} className="flex items-center justify-between text-xs py-1 px-2 rounded bg-background/50">
-                            <span className="font-medium truncate max-w-[60%]">{ex.exercise_name}</span>
-                            <span className="text-muted-foreground">
-                              {ex.sets?.length || 0}×
-                            </span>
-                          </div>
-                        ))}
-                        {lastTraining.exercises.length > 4 && (
-                          <p className="text-xs text-muted-foreground px-2">
-                            +{lastTraining.exercises.length - 4} dalších
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Notes */}
-                    {lastTraining.notes && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 px-2 italic">
-                        {lastTraining.notes}
-                      </p>
-                    )}
-
-                    {/* Feedback Card - NEW */}
-                    {lastTraining.feedback && (
-                      <PreviousTrainingFeedbackCard feedback={lastTraining.feedback} />
-                    )}
-
-                    {/* Coaching Tips - NEW */}
-                    <TrainingCoachingTip lastTraining={lastTraining} />
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
           </div>
         </CollapsibleContent>
       </div>
