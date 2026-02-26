@@ -8,6 +8,7 @@ import { useCreateTrainingSession } from "@/hooks/useTrainingSessions";
 import { useAddTrainingSessionTags } from "@/hooks/useTrainingSessionTags";
 import { toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useNextAvailableTrainingSlot } from "@/hooks/useNextAvailableTrainingSlot";
 
 interface CreateTrainingDialogProps {
   open: boolean;
@@ -29,7 +30,7 @@ export function CreateTrainingDialog({
   const createTraining = useCreateTrainingSession();
   const addTrainingTags = useAddTrainingSessionTags();
   const isMobile = useIsMobile();
-  
+  const nextAvailableSlot = useNextAvailableTrainingSlot();
   // Track selected client to determine effective prices
   const [selectedClientId, setSelectedClientId] = useState<string | undefined>(defaultClientId);
   
@@ -65,8 +66,9 @@ export function CreateTrainingDialog({
     defaultValues.client_id = defaultClientId;
   }
   
-  if (defaultDate && !defaultValues.date) {
-    defaultValues.date = defaultDate;
+  // Use next available slot if no explicit date provided
+  if (!defaultValues.date) {
+    defaultValues.date = defaultDate || nextAvailableSlot;
   }
 
   const handleSubmit = async (data: EnhancedTrainingFormValues, tagIds: string[]) => {
@@ -112,7 +114,7 @@ export function CreateTrainingDialog({
         </DialogHeader>
         <div className={isMobile ? "flex-1 overflow-y-auto px-4 pb-4" : "max-h-[calc(90vh-80px)] overflow-y-auto px-6 pb-6"}>
           <EnhancedTrainingForm
-            key={defaultDate || defaultClientId || 'new'}
+            key={nextAvailableSlot || defaultDate || defaultClientId || 'new'}
             onSubmit={handleSubmit}
             isLoading={createTraining.isPending}
             clients={clients}
