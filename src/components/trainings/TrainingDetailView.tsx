@@ -64,6 +64,7 @@ import { WorkoutExerciseManager } from './WorkoutExerciseManager';
 import { TrainingParticipantsManager } from './TrainingParticipantsManager';
 import { ParticipantsPRsSection } from './ParticipantsPRsSection';
 import { TrainingQuickSale } from './TrainingQuickSale';
+import { PreviousTrainingSummary } from './PreviousTrainingSummary';
 
 const trainingDetailSchema = z.object({
   date: z.date(),
@@ -352,6 +353,11 @@ export function TrainingDetailView({
             </div>
           </div>
         </Form>
+      )}
+
+      {/* PREVIOUS TRAINING - always visible for scheduled/in_progress */}
+      {(isScheduled || isInProgress) && (
+        <PreviousTrainingSummary clientId={training.client_id} />
       )}
 
       {/* TAGS - Compact Grid Selector (moved ABOVE exercises) */}
