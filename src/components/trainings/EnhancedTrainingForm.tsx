@@ -86,15 +86,15 @@ export function EnhancedTrainingForm({
     formType: 'training_form',
   });
   
-  // Helper to format date as local datetime string - set to current hour with :00 minutes
+  // Use next available slot passed from parent, or fallback to next full hour
   const getLocalDateTimeString = () => {
     const now = new Date();
-    // Set minutes to :00 for faster entry
     now.setMinutes(0, 0, 0);
+    const nextHour = now.getHours() + 1;
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
+    const hours = String(nextHour).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:00`;
   };
 
