@@ -10,6 +10,7 @@ import { ActionCenterCard } from '@/components/dashboard/ActionCenterCard';
 import { PendingPerformancesCard } from '@/components/performance/PendingPerformancesCard';
 import { WeekOverviewCard } from '@/components/dashboard/WeekOverviewCard';
 import { DashboardInsightsRefactored } from '@/components/dashboard/DashboardInsightsRefactored';
+import { NextMonthForecastCard } from '@/components/dashboard/NextMonthForecastCard';
 import { useUnassignedSessions } from '@/hooks/useUnassignedSessions';
 import { useAllUnresolvedFollowups } from '@/hooks/useTrainingFollowups';
 
@@ -79,6 +80,13 @@ export default function Index() {
             </SectionErrorBoundary>
           </section>
         )}
+
+        {/* ═══ NEXT MONTH FORECAST ═══ */}
+        <section>
+          <SectionErrorBoundary section="Predikce" compact>
+            <NextMonthForecastCard />
+          </SectionErrorBoundary>
+        </section>
 
         {/* ═══ CONSOLIDATED OVERVIEW - Stats + Finance + Cashflow ═══ */}
         <section className="space-y-3">
