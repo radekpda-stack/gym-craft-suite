@@ -1,4 +1,4 @@
-import { useRevenueForecast } from '@/hooks/useRevenueForecast';
+import { useRevenueForecast, type ForecastSignal } from '@/hooks/useRevenueForecast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
