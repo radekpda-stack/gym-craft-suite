@@ -197,26 +197,25 @@ export async function clearPersonalDebtToSharedBudget(
 
   if (transferError) throw transferError;
 
-  // Set client's personal balance to 0
-  const { error: updateClientError } = await supabase
-    .from("clients")
-    .update({ credit_balance: 0 })
-    .eq("id", clientId);
+  // The transfer transaction above (positive amount on client's ledger) 
+  // will cause the trigger to recalculate client's balance.
+  // We also need a deduction transaction on the group ledger.
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  
+  const { error: groupTxError } = await supabase
+    .from("credit_transactions")
+    .insert({
+      client_id: clientId,
+      amount: -debtAmount,
+      type: 'transfer',
+      description: 'Převod dluhu z osobního kreditu do sdíleného budgetu',
+      user_id: authUser?.id ?? userId,
+      group_id: groupId,
+    });
 
-  if (updateClientError) throw updateClientError;
+  if (groupTxError) throw groupTxError;
 
-  // Deduct the debt from shared budget using atomic RPC
-  // Note: We apply to any member of the group - the RPC will handle it
-  const { data: anyMember } = await supabase
-    .from("client_budget_members")
-    .select("client_id")
-    .eq("group_id", groupId)
-    .limit(1)
-    .single();
-    
-  if (anyMember) {
-    await applyCreditDelta(anyMember.client_id, -debtAmount, 'Převod dluhu z osobního kreditu');
-  }
+  // Triggers automatically recalculate both client and group balances
 
   return debtAmount;
 }
@@ -615,7 +614,10 @@ export function useUpdateSharedBudgetBalance() {
 
   return useMutation({
     mutationFn: async ({ groupId, amount }: { groupId: string; amount: number }) => {
-      // Get any member of the group to use the RPC
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Get any member of the group for the transaction
       const { data: anyMember } = await supabase
         .from("client_budget_members")
         .select("client_id")
@@ -625,8 +627,28 @@ export function useUpdateSharedBudgetBalance() {
         
       if (!anyMember) throw new Error("No members in group");
       
-      const result = await applyCreditDelta(anyMember.client_id, amount, 'Manual balance adjustment');
-      return result.new_balance;
+      // Insert a ledger transaction — trigger will sync cached balance
+      const { error: txError } = await supabase
+        .from("credit_transactions")
+        .insert({
+          client_id: anyMember.client_id,
+          amount,
+          type: 'manual',
+          description: 'Ruční úprava sdíleného kreditu',
+          user_id: user.id,
+          group_id: groupId,
+        });
+
+      if (txError) throw txError;
+
+      // Read updated balance
+      const { data: gl } = await supabase
+        .from('vw_group_ledger_balances')
+        .select('ledger_balance')
+        .eq('group_id', groupId)
+        .maybeSingle();
+      
+      return gl?.ledger_balance ?? 0;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });

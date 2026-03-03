@@ -1,7 +1,6 @@
 import { useUndo } from '@/contexts/UndoContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { applyCreditDelta } from '@/hooks/useCreditOperations';
 import { toast } from '@/hooks/use-toast';
 
 /**
@@ -29,8 +28,8 @@ export function useUndoTransaction() {
 
         if (deleteError) throw deleteError;
 
-        // Reverse the credit change
-        await applyCreditDelta(transaction.client_id, -transaction.amount);
+        // Trigger fn_sync_client_credit_balance automatically recalculates
+        // balance from SUM(amount) after DELETE. No manual delta needed.
 
         // Invalidate queries
         queryClient.invalidateQueries({ queryKey: ['credit_transactions'] });
@@ -149,8 +148,8 @@ export function useUndoTrainingComplete() {
 
         if (deleteError) throw deleteError;
 
-        // Return the credit
-        await applyCreditDelta(clientId, price);
+        // Trigger fn_sync_client_credit_balance automatically recalculates
+        // balance from SUM(amount) after DELETE. No manual delta needed.
 
         // Invalidate queries
         queryClient.invalidateQueries({ queryKey: ['training_sessions'] });

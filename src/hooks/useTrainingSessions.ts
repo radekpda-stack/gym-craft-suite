@@ -3,7 +3,7 @@ import { toLocalISOString } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { featureTracker } from "@/hooks/useFeatureTracking";
-import { getClientGroupId, applyCreditDelta } from "./useCreditOperations";
+import { getClientGroupId } from "./useCreditOperations";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { prepareEntryWithPR, recomputePRsAfterChange } from '@/lib/prEngine';
 
@@ -417,8 +417,7 @@ export function useCreateTrainingSession() {
             user_id: user.id,
           });
 
-        // Use atomic credit update to prevent race conditions
-        await applyCreditDelta(input.client_id, -price);
+            // Trigger fn_sync_client_credit_balance handles cached balance update automatically
       }
 
       return { session: parentSession, createdCount };
@@ -537,9 +536,14 @@ export function useUpdateTrainingSession() {
               throw transactionError;
             }
 
-            // Use atomic credit update to prevent race conditions
-            const { balance } = await applyCreditDelta(oldTraining.client_id, -price);
-            newBalance = balance;
+            // Trigger fn_sync_client_credit_balance handles cached balance update automatically
+            // Read updated balance from ledger view
+            const { data: ledger } = await supabase
+              .from('vw_client_ledger_balances')
+              .select('ledger_balance')
+              .eq('client_id', oldTraining.client_id)
+              .maybeSingle();
+            newBalance = ledger?.ledger_balance ?? 0;
             creditDeducted = true;
           }
         } else if (input.final_price) {
@@ -739,21 +743,21 @@ export function useCancelTrainingSession() {
 
         if (transactionError) throw transactionError;
 
-        // Fetch the updated balance (trigger already applied the delta)
+        // Fetch the updated balance from ledger views (trigger already applied the sync)
         if (groupId) {
-          const { data: group } = await supabase
-            .from('client_budget_groups')
-            .select('shared_balance')
-            .eq('id', groupId)
-            .single();
-          newBalance = group?.shared_balance ?? null;
+          const { data: gl } = await supabase
+            .from('vw_group_ledger_balances')
+            .select('ledger_balance')
+            .eq('group_id', groupId)
+            .maybeSingle();
+          newBalance = gl?.ledger_balance ?? null;
         } else {
-          const { data: client } = await supabase
-            .from('clients')
-            .select('credit_balance')
-            .eq('id', client_id)
-            .single();
-          newBalance = client?.credit_balance ?? null;
+          const { data: cl } = await supabase
+            .from('vw_client_ledger_balances')
+            .select('ledger_balance')
+            .eq('client_id', client_id)
+            .maybeSingle();
+          newBalance = cl?.ledger_balance ?? null;
         }
       }
 
@@ -1157,8 +1161,16 @@ export function useChangePaymentMethod() {
             group_id: groupId,
           });
 
-        const { balance } = await applyCreditDelta(clientId, +price);
-        newBalance = balance;
+        // Trigger handles cached balance sync automatically
+        // Read updated balance from ledger view
+        const groupId2 = await getClientGroupId(clientId);
+        if (groupId2) {
+          const { data: gl } = await supabase.from('vw_group_ledger_balances').select('ledger_balance').eq('group_id', groupId2).maybeSingle();
+          newBalance = gl?.ledger_balance ?? 0;
+        } else {
+          const { data: cl } = await supabase.from('vw_client_ledger_balances').select('ledger_balance').eq('client_id', clientId).maybeSingle();
+          newBalance = cl?.ledger_balance ?? 0;
+        }
       } else if (!wasCredit && willBeCredit) {
         // Deduct credit: wasn't paid by credit, now changing to credit
         const groupId = await getClientGroupId(clientId);
@@ -1176,8 +1188,16 @@ export function useChangePaymentMethod() {
             group_id: groupId,
           });
 
-        const { balance } = await applyCreditDelta(clientId, -price);
-        newBalance = balance;
+        // Trigger handles cached balance sync automatically
+        // Read updated balance from ledger view
+        const groupId3 = await getClientGroupId(clientId);
+        if (groupId3) {
+          const { data: gl } = await supabase.from('vw_group_ledger_balances').select('ledger_balance').eq('group_id', groupId3).maybeSingle();
+          newBalance = gl?.ledger_balance ?? 0;
+        } else {
+          const { data: cl } = await supabase.from('vw_client_ledger_balances').select('ledger_balance').eq('client_id', clientId).maybeSingle();
+          newBalance = cl?.ledger_balance ?? 0;
+        }
       }
 
       return { newPaymentStatus, newBalance, wasCredit, willBeCredit, price };
