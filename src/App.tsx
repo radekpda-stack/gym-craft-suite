@@ -9,7 +9,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LanguageProvider } from "@/lib/i18n";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
-import { SessionTrackingProvider } from "@/components/SessionTrackingProvider";
+
 import { DashboardFiltersProvider } from "@/contexts/DashboardFiltersContext";
 import { UndoProvider } from "@/contexts/UndoContext";
 import { TrainingModeProvider } from "@/contexts/TrainingModeContext";
@@ -18,7 +18,7 @@ import { UndoToast } from "@/components/ui/UndoToast";
 import { ClientPortalShell } from "@/components/client-portal/ClientPortalShell";
 import { PageLoader } from "@/components/PageLoader";
 import { ThemeProvider } from "@/hooks/useTheme";
-import { InteractionTracker } from "@/lib/analytics/interaction";
+
 import { LazyRouteWrapper } from "@/components/LazyRouteWrapper";
 import { OrientationLock } from "@/components/OrientationLock";
 
@@ -110,7 +110,6 @@ const App = () => (
               <UndoToast />
             <TrainingModeProvider>
             <BrowserRouter>
-            <InteractionTracker>
             <DemoProvider>
             <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -166,8 +165,7 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <DashboardFiltersProvider>
-                      <SessionTrackingProvider>
-                        <Layout>
+                      <Layout>
                         <Routes>
                           <Route path="/" element={<LazyRouteWrapper><Index /></LazyRouteWrapper>} />
                           <Route path="/clients" element={<LazyRouteWrapper><Clients /></LazyRouteWrapper>} />
@@ -208,7 +206,6 @@ const App = () => (
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Layout>
-                    </SessionTrackingProvider>
                   </DashboardFiltersProvider>
                 </ProtectedRoute>
                 }
@@ -216,7 +213,6 @@ const App = () => (
             </Routes>
             </Suspense>
             </DemoProvider>
-            </InteractionTracker>
           </BrowserRouter>
             </TrainingModeProvider>
           </TooltipProvider>
