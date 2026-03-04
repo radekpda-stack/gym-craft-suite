@@ -11,6 +11,7 @@ import { useClientAnniversaryNotifier } from '@/hooks/useClientAnniversaries';
 import { useClientBirthdayNotifier } from '@/hooks/useClientBirthdayNotifier';
 import { useAppShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { cn } from '@/lib/utils';
+import { useSessionTracking } from '@/hooks/useSessionTracking';
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -23,6 +24,9 @@ export function Layout({ children }: LayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { open: commandOpen, setOpen: setCommandOpen } = useCommandPalette();
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+
+  // Session tracking (replaces SessionTrackingProvider)
+  useSessionTracking();
 
   // Anniversary notifier - checks for client anniversaries
   useClientAnniversaryNotifier();
