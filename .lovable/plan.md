@@ -1,52 +1,64 @@
 
 
-# Další zjednodušení aplikace
-
-Po analýze kódu jsem identifikoval 5 konkrétních oblastí ke zlepšení.
+# Další zjednodušení aplikace – Fáze 4
 
 ---
 
-## 1) Smazat osiřelé settings komponenty (6 souborů)
+## 1) Smazat 10 osiřelých hooků
 
-Tyto soubory v `src/components/settings/` **nejsou nikde importovány**:
+Tyto soubory **nejsou importovány v žádné .tsx komponentě** (max. barrel re-exporty):
 
-- `ComparisonSettings.tsx`
-- `NutritionQuestionnaireSettings.tsx`
-- `DiagnosticQuestionnaireSettings.tsx`
-- `DataExport.tsx`
-- `PaymentTagsManagement.tsx`
-- `NutritionSettings.tsx`
+- `useGoalTracker.ts`
+- `useFeatureFlags.ts`
+- `useStatEvents.ts` (330 řádků)
+- `useAnimatedTransition.ts`
+- `useMobilityEntries.ts`
+- `useSkillEntries.ts`
+- `useCapacityAlerts.ts`
+- `useCapacityTrend.ts`
+- `useCareerStats.ts`
+- `useDemoData.ts` (215 řádků – nikde importován po předchozím čištění)
 
----
-
-## 2) Smazat osiřelou stránku `Tests.tsx` (265 řádků)
-
-Stránka `src/pages/Tests.tsx` **nemá žádnou routu v App.tsx** -- její obsah byl integrován do PerformanceHub přes `TestsContent`. Jde o mrtvý kód.
-
----
-
-## 3) Deduplikovat klientský portál routy v App.tsx
-
-Routy `/zona` a `/client` jsou **identické kopie** (20+ duplicitních řádků). Extrahujeme je do sdíleného pole a renderujeme jednou přes `.map()`.
+Odstraníme i re-exporty z barrel souborů (`hooks/exercises/index.ts`, `hooks/analytics/index.ts`).
 
 ---
 
-## 4) Odstranit `AnimatePresence mode="wait"` ze Sidebar
+## 2) Zjednodušit ClientPortalProfile redirect
 
-V `Sidebar.tsx` je 4x `AnimatePresence mode="wait"` na labely a texty, které se zobrazují/schovávají při collapse. Toto způsobuje zbytečné zpoždění (čekání na exit animaci před vstupní). Nahradíme jednoduchým `AnimatePresence` bez `mode="wait"` pro plynulejší pocit.
-
----
-
-## 5) Zjednodušit DashboardActions – odstranit duplicitní "Hledat"
-
-`DashboardActions` (desktop bottom bar) obsahuje tlačítko "Hledat", které duplikuje vyhledávací pole v top baru (`Layout.tsx` -- `⌘K`). Na desktopu je zbytečné mít dvě místa pro stejnou akci. Odstraníme "Hledat" z bottom baru a necháme jen "Nový trénink" a "Statistiky", čímž bar zjednodušíme.
+`ClientPortalProfile.tsx` je jen `<Navigate to="/client/settings" replace />`. Místo lazy-loadování celé stránky jen kvůli redirectu, nahradíme přímo v `App.tsx` inline `<Navigate>` a smažeme soubor.
 
 ---
 
-## Soubory
+## 3) Odstranit hardcoded owner check v Settings
 
-- **Smazat:** 6 settings komponent + `Tests.tsx` (7 souborů)
-- **Edit:** `src/App.tsx` (deduplikace portal routů)
-- **Edit:** `src/components/layout/Sidebar.tsx` (odstranit `mode="wait"`)
-- **Edit:** `src/components/dashboard/DashboardActions.tsx` (odstranit duplicitní hledání)
+`Settings.tsx` obsahuje `const isOwner = user?.email === 'radek.pda@gmail.com'` – hardcoded email v kódu. Nahradíme kontrolou `isAdmin`, čímž zjednodušíme logiku a odstraníme bezpečnostní anti-pattern.
+
+---
+
+## 4) Zjednodušit Settings page – sloučit kategorii "System" do "App"
+
+Kategorie "Systém" v nastavení obsahuje jen 2-3 položky (refresh, PDF report, usage stats). To je málo na samostatnou kategorii. Sloučíme ji do "Aplikace", čímž zredukujeme počet kategorií z 7 na 6 a zjednodušíme navigaci.
+
+---
+
+## Technické detaily
+
+### Soubory ke smazání (11)
+- `src/hooks/useGoalTracker.ts`
+- `src/hooks/useFeatureFlags.ts`
+- `src/hooks/useStatEvents.ts`
+- `src/hooks/useAnimatedTransition.ts`
+- `src/hooks/useMobilityEntries.ts`
+- `src/hooks/useSkillEntries.ts`
+- `src/hooks/useCapacityAlerts.ts`
+- `src/hooks/useCapacityTrend.ts`
+- `src/hooks/useCareerStats.ts`
+- `src/hooks/useDemoData.ts`
+- `src/pages/client-portal/ClientPortalProfile.tsx`
+
+### Soubory k úpravě
+- `src/hooks/exercises/index.ts` – odebrat re-exporty `useMobilityEntries`, `useSkillEntries`
+- `src/hooks/analytics/index.ts` – odebrat re-exporty `useCapacityTrend`
+- `src/App.tsx` – nahradit lazy `ClientPortalProfile` inline `<Navigate>`
+- `src/pages/Settings.tsx` – sloučit "Systém" do "Aplikace", nahradit `isOwner` za `isAdmin`
 
