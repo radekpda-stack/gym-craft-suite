@@ -47,7 +47,7 @@ import { FeedbackHistoryList } from '@/components/feedback/FeedbackHistoryList';
 import { ClientPreDiagnosticSection } from '@/components/clients/ClientPreDiagnosticSection';
 import { Client } from '@/hooks/useClients';
 import { useToggleFavorite } from '@/hooks/useFavoriteClients';
-import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
+import { useSharedBudgetBalance } from '@/hooks/useCreditOperations';
 import { useCreditBalanceValue } from '@/hooks/useCreditBalance';
 import { clientFormSchema, ClientFormValues } from '@/lib/validations/client';
 import { cn } from '@/lib/utils';

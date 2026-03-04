@@ -15,7 +15,7 @@ import { useClients } from '@/hooks/useClients';
 import { useCreateTransaction } from '@/hooks/useCreditTransactions';
 import { useAddCreditLot } from '@/hooks/useCreditLots';
 import { useUnpaidTrainings, usePayTraining } from '@/hooks/useUnpaidTrainings';
-import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
+import { useSharedBudgetBalance } from '@/hooks/useCreditOperations';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { featureTracker } from '@/hooks/useFeatureTracking';

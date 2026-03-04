@@ -30,7 +30,7 @@ import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Client } from "@/hooks/useClients";
 import { TrainingPrices } from "@/hooks/useAppSettings";
 import { cn } from "@/lib/utils";
-import { useSharedBudgetBalance } from "@/hooks/useSharedBudgetBalance";
+import { useSharedBudgetBalance } from "@/hooks/useCreditOperations";
 import { useFormTracking } from "@/hooks/useFormTracking";
 import { Badge } from "@/components/ui/badge";
 
