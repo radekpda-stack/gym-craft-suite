@@ -14,6 +14,4 @@ export { useBulkExerciseUpdate } from '../useBulkExerciseUpdate';
 export { useEquipment } from '../useEquipment';
 export { useMuscleGroups } from '../useMuscleGroups';
 export { useCardioEntries } from '../useCardioEntries';
-export { useMobilityEntries } from '../useMobilityEntries';
-export { useSkillEntries } from '../useSkillEntries';
 export { useWorkoutEntries } from '../useWorkoutEntries';
