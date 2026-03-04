@@ -59,16 +59,18 @@ export function AgendaItem({
   const leftBgOpacity = useTransform(x, [-SWIPE_THRESHOLD, 0], [1, 0]);
 
   const isScheduled = session.status === 'scheduled';
+  const isInProgress = session.status === 'in_progress';
   const isCompleted = session.status === 'completed';
   const isCanceled = session.status === 'canceled';
   const isPaid = session.payment_status?.startsWith('paid_');
   const needsPayment = isCompleted && !isPaid;
+  const canComplete = isScheduled || isInProgress;
 
   const handleDragEnd = (_: any, info: PanInfo) => {
     setIsDragging(false);
     
-    // Swipe doprava = Dokončit (pokud scheduled)
-    if (info.offset.x > SWIPE_THRESHOLD && isScheduled && onComplete) {
+    // Swipe doprava = Dokončit (pokud scheduled nebo in_progress)
+    if (info.offset.x > SWIPE_THRESHOLD && canComplete && onComplete) {
       onComplete(session);
     }
     // Swipe doleva = Menu (neprovedeme přímou akci)
@@ -79,6 +81,7 @@ export function AgendaItem({
     if (isCanceled) return 'Zrušeno';
     if (isCompleted && isPaid) return 'Zaplaceno';
     if (isCompleted && !isPaid) return 'Čeká na platbu';
+    if (isInProgress) return 'Probíhá';
     return 'Naplánováno';
   };
 
@@ -86,6 +89,7 @@ export function AgendaItem({
     if (isCanceled) return 'text-destructive bg-destructive/10';
     if (isCompleted && isPaid) return 'text-success bg-success/10';
     if (isCompleted && !isPaid) return 'text-warning bg-warning/10';
+    if (isInProgress) return 'text-primary bg-primary/10';
     return 'text-muted-foreground bg-muted/30';
   };
 
@@ -170,31 +174,31 @@ export function AgendaItem({
 
                 {/* Primary actions */}
                 <div className="flex-shrink-0 flex items-center gap-1">
+                  {canComplete && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onComplete?.(session);
+                      }}
+                      className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-success/10 text-success hover:bg-success/20 transition-colors"
+                      title="Dokončit"
+                    >
+                      <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                  )}
                   {isScheduled && (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onComplete?.(session);
-                        }}
-                        className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-success/10 text-success hover:bg-success/20 transition-colors"
-                        title="Dokončit"
-                      >
-                        <Check className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onDelete?.(session);
-                        }}
-                        className="flex items-center justify-center w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                        title="Smazat trénink"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDelete?.(session);
+                      }}
+                      className="flex items-center justify-center w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                      title="Smazat trénink"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   )}
                   {needsPayment && (
                     <button
@@ -216,7 +220,7 @@ export function AgendaItem({
         </ContextMenuTrigger>
 
         <ContextMenuContent className="w-48">
-          {isScheduled && (
+          {canComplete && (
             <ContextMenuItem onClick={() => onComplete?.(session)} className="gap-2">
               <Check className="w-4 h-4 text-success" />
               Dokončit trénink
