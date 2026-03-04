@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useProducts, useCreateProduct, useUpdateProduct, Product } from '@/hooks/useProducts';
-import { useCreateExpense } from '@/hooks/useBusinessExpenses';
-import { useCreateStockMovement } from '@/hooks/useStockMovements';
+import { useProducts, useUpdateProduct, Product } from '@/hooks/useProducts';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -64,10 +63,8 @@ export interface InvoiceImportState {
 
 export function useInvoiceImport() {
   const { data: products = [] } = useProducts();
-  const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
-  const createExpense = useCreateExpense();
-  const createStockMovement = useCreateStockMovement();
+  const queryClient = useQueryClient();
 
   const [state, setState] = useState<InvoiceImportState>({
     status: 'idle',
@@ -307,39 +304,54 @@ export function useInvoiceImport() {
           await updateProduct.mutateAsync(updateData);
 
           // P1: Record stock movement for audit trail
-          await createStockMovement.mutateAsync({
-            product_id: item.matchedProductId,
-            movement_type: 'invoice_import',
-            quantity: item.editedQuantity,
-            unit_price: item.editedPurchasePrice,
-            source_ref: invoiceNumber,
-          });
-
-          updatedProductsCount++;
-        } else {
-          // Create new product
-          const createData = {
-            name: item.name,
-            price: item.editedSellPrice,
-            purchase_price: item.editedPurchasePrice,
-            category: item.editedCategory,
-            kind: 'inventory' as const,
-            stock_quantity: item.editedQuantity,
-            low_stock_threshold: 5,
-            sku_code: (state.saveSkuCodes && item.skuCode) ? item.skuCode : null,
-          };
-
-          const newProduct = await createProduct.mutateAsync(createData);
-
-          // P1: Record stock movement for new product too
-          if (newProduct?.id) {
-            await createStockMovement.mutateAsync({
-              product_id: newProduct.id,
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          if (currentUser) {
+            const { error: mvErr } = await supabase.from('stock_movements').insert({
+              product_id: item.matchedProductId,
+              user_id: currentUser.id,
               movement_type: 'invoice_import',
               quantity: item.editedQuantity,
               unit_price: item.editedPurchasePrice,
               source_ref: invoiceNumber,
             });
+            if (mvErr) console.error('Stock movement error:', mvErr);
+          }
+
+          updatedProductsCount++;
+        } else {
+          // Create new product
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          if (!currentUser) throw new Error('Not authenticated');
+
+          const { data: newProduct, error: createErr } = await supabase
+            .from('products')
+            .insert({
+              name: item.name,
+              price: item.editedSellPrice,
+              purchase_price: item.editedPurchasePrice,
+              category: item.editedCategory || 'supplement',
+              kind: 'inventory',
+              stock_quantity: item.editedQuantity,
+              low_stock_threshold: 5,
+              sku_code: (state.saveSkuCodes && item.skuCode) ? item.skuCode : null,
+              user_id: currentUser.id,
+            })
+            .select()
+            .single();
+
+          if (createErr) throw createErr;
+
+          // P1: Record stock movement for new product too
+          if (newProduct?.id) {
+            const { error: mvErr } = await supabase.from('stock_movements').insert({
+              product_id: newProduct.id,
+              user_id: currentUser.id,
+              movement_type: 'invoice_import',
+              quantity: item.editedQuantity,
+              unit_price: item.editedPurchasePrice,
+              source_ref: invoiceNumber,
+            });
+            if (mvErr) console.error('Stock movement error:', mvErr);
           }
 
           newProductsCount++;
@@ -354,6 +366,9 @@ export function useInvoiceImport() {
     // Create expense record even if some items failed
     if (createExpenseRecord && totalCost > 0) {
       try {
+        const { data: { user: expUser } } = await supabase.auth.getUser();
+        if (!expUser) throw new Error('Not authenticated');
+
         const itemDescriptions = selectedItems
           .map(i => `${i.name} (${i.editedQuantity}x)`)
           .join(', ');
@@ -366,15 +381,20 @@ export function useInvoiceImport() {
           }
         }
 
-        await createExpense.mutateAsync({
-          name: invoiceNumber 
-            ? `Import faktury: ${invoiceNumber}`
-            : `Import faktury: ${selectedItems.length} položek`,
-          description: itemDescriptions,
-          amount: totalCost,
-          date: expenseDate,
-          category: 'inventory',
-        });
+        const { error: expErr } = await supabase
+          .from('business_expenses')
+          .insert({
+            user_id: expUser.id,
+            name: invoiceNumber 
+              ? `Import faktury: ${invoiceNumber}`
+              : `Import faktury: ${selectedItems.length} položek`,
+            description: itemDescriptions,
+            amount: totalCost,
+            date: expenseDate,
+            category: 'inventory',
+          });
+
+        if (expErr) throw expErr;
       } catch (err) {
         console.error('Failed to create expense:', err);
         toast({
@@ -384,6 +404,13 @@ export function useInvoiceImport() {
         });
       }
     }
+
+    // Invalidate all related queries after import
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+    queryClient.invalidateQueries({ queryKey: ['stock_movements'] });
+    queryClient.invalidateQueries({ queryKey: ['business-expenses'] });
+    queryClient.invalidateQueries({ queryKey: ['expense-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['profit-by-period'] });
 
     const successCount = newProductsCount + updatedProductsCount;
 
