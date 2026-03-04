@@ -4,24 +4,10 @@ import { Plus, Search, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
 import { CommandPalette } from '@/components/search/CommandPalette';
-import { useClients } from '@/hooks/useClients';
-import { useCreateTrainingSession } from '@/hooks/useTrainingSessions';
-import { TrainingFormValues } from '@/components/trainings/TrainingForm';
+
 export function DashboardActions() {
   const [showTrainingSheet, setShowTrainingSheet] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  
-  const { data: clients = [] } = useClients();
-  const createTraining = useCreateTrainingSession();
-  
-  const handleCreateTraining = async (formData: any) => {
-    try {
-      await createTraining.mutateAsync(formData);
-      setShowTrainingSheet(false);
-    } catch (error) {
-      console.error('Error creating training:', error);
-    }
-  };
   
   return (
     <>
@@ -71,13 +57,10 @@ export function DashboardActions() {
         </div>
       </div>
       
-      {/* Dialogs */}
+      {/* Dialogs - CreateTrainingSheet now manages its own data */}
       <CreateTrainingSheet
         open={showTrainingSheet}
         onOpenChange={setShowTrainingSheet}
-        onSubmit={handleCreateTraining}
-        isLoading={createTraining.isPending}
-        clients={clients}
       />
       
       <CommandPalette

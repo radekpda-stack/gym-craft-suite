@@ -5,7 +5,7 @@
 export { useBusinessAnalytics } from '../useBusinessAnalytics';
 export { useAppUsageAnalytics } from '../useAppUsageAnalytics';
 export { useAnnualStats } from '../useAnnualStats';
-export { useYearOverYearStats } from '../useYearOverYearStats';
+
 export { useGenderStats } from '../useGenderStats';
 export { useCapacityHeatmap } from '../useCapacityHeatmap';
 export { useCapacitySettings } from '../useCapacitySettings';
