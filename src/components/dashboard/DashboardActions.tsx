@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, BarChart3 } from 'lucide-react';
+import { Plus, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateTrainingSheet } from '@/components/trainings/CreateTrainingSheet';
-import { CommandPalette } from '@/components/search/CommandPalette';
 
 export function DashboardActions() {
   const [showTrainingSheet, setShowTrainingSheet] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
   
   return (
     <>
@@ -29,17 +27,6 @@ export function DashboardActions() {
                 <span className="text-[10px] text-muted-foreground">Nový</span>
               </Button>
               
-              {/* Search */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowSearch(true)}
-                className="flex-1 h-12 rounded-xl hover:bg-secondary/50 flex flex-col items-center gap-0.5"
-              >
-                <Search className="w-5 h-5 text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground">Hledat</span>
-              </Button>
-              
               {/* Statistics */}
               <Button
                 variant="ghost"
@@ -57,15 +44,10 @@ export function DashboardActions() {
         </div>
       </div>
       
-      {/* Dialogs - CreateTrainingSheet now manages its own data */}
+      {/* CreateTrainingSheet manages its own data */}
       <CreateTrainingSheet
         open={showTrainingSheet}
         onOpenChange={setShowTrainingSheet}
-      />
-      
-      <CommandPalette
-        open={showSearch}
-        onOpenChange={setShowSearch}
       />
     </>
   );

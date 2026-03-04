@@ -107,7 +107,7 @@ const NavItemButton = memo(function NavItemButton({
 
 function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       {!collapsed && (
         <motion.span 
           className="px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40"
@@ -218,7 +218,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
           >
             <Zap className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
           </motion.div>
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             {!collapsed && (
               <motion.span 
                 className="text-base font-bold text-sidebar-foreground tracking-tight"
@@ -302,7 +302,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
           whileTap={{ scale: 0.98 }}
         >
           <LogOut className="w-[18px] h-[18px]" strokeWidth={1.5} />
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             {!collapsed && (
               <motion.span 
                 className="text-sm font-medium"
@@ -330,7 +330,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
           >
             <ChevronRight className="w-4 h-4" />
           </motion.div>
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             {!collapsed && (
               <motion.span 
                 className="text-xs"

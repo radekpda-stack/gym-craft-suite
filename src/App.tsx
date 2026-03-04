@@ -137,50 +137,29 @@ const App = () => (
               {/* Demo route - public, no auth required */}
               <Route path="/demo/*" element={<DemoPage />} />
               
-              {/* Client Portal Routes - Short URL /zona */}
-              <Route path="/zona" element={<LazyRouteWrapper><ClientPortalShell /></LazyRouteWrapper>}>
-                <Route index element={<ClientPortalOverview />} />
-                <Route path="progress" element={<ClientPortalProgress />} />
-                <Route path="diary" element={<ClientPortalWorkoutDiary />} />
-                <Route path="homework" element={<ClientPortalHomework />} />
-                <Route path="attendance" element={<ClientPortalAttendance />} />
-                <Route path="credit" element={<ClientPortalCredit />} />
-                <Route path="purchases" element={<ClientPortalPurchases />} />
-                <Route path="nutrition" element={<ClientPortalNutrition />} />
-                {/* challenges redirects to competitions */}
-                <Route path="challenges" element={<Navigate to="../competitions" replace />} />
-                <Route path="badges" element={<ClientPortalBadges />} />
-                <Route path="leaderboard" element={<ClientPortalLeaderboard />} />
-                <Route path="competitions" element={<ClientPortalCompetitions />} />
-                {/* odmeny is legacy, redirect to rewards */}
-                <Route path="odmeny" element={<Navigate to="../rewards" replace />} />
-                <Route path="rewards" element={<ClientPortalRewards />} />
-                <Route path="profile" element={<ClientPortalProfile />} />
-                <Route path="settings" element={<ClientPortalSettings />} />
-                <Route path="chat" element={<ClientPortalChat />} />
-                <Route path="diagnostic" element={<ClientPortalDiagnostic />} />
-              </Route>
-              
-              {/* Legacy Client Portal Routes */}
-              <Route path="/client" element={<LazyRouteWrapper><ClientPortalShell /></LazyRouteWrapper>}>
-                <Route index element={<ClientPortalOverview />} />
-                <Route path="progress" element={<ClientPortalProgress />} />
-                <Route path="diary" element={<ClientPortalWorkoutDiary />} />
-                <Route path="homework" element={<ClientPortalHomework />} />
-                <Route path="attendance" element={<ClientPortalAttendance />} />
-                <Route path="credit" element={<ClientPortalCredit />} />
-                <Route path="purchases" element={<ClientPortalPurchases />} />
-                <Route path="nutrition" element={<ClientPortalNutrition />} />
-                {/* challenges redirects to competitions */}
-                <Route path="challenges" element={<Navigate to="../competitions" replace />} />
-                <Route path="badges" element={<ClientPortalBadges />} />
-                <Route path="leaderboard" element={<ClientPortalLeaderboard />} />
-                <Route path="competitions" element={<ClientPortalCompetitions />} />
-                <Route path="rewards" element={<ClientPortalRewards />} />
-                <Route path="profile" element={<ClientPortalProfile />} />
-                <Route path="settings" element={<ClientPortalSettings />} />
-                <Route path="chat" element={<ClientPortalChat />} />
-              </Route>
+              {/* Client Portal Routes - /zona (primary) and /client (legacy) */}
+              {['/zona', '/client'].map((basePath) => (
+                <Route key={basePath} path={basePath} element={<LazyRouteWrapper><ClientPortalShell /></LazyRouteWrapper>}>
+                  <Route index element={<ClientPortalOverview />} />
+                  <Route path="progress" element={<ClientPortalProgress />} />
+                  <Route path="diary" element={<ClientPortalWorkoutDiary />} />
+                  <Route path="homework" element={<ClientPortalHomework />} />
+                  <Route path="attendance" element={<ClientPortalAttendance />} />
+                  <Route path="credit" element={<ClientPortalCredit />} />
+                  <Route path="purchases" element={<ClientPortalPurchases />} />
+                  <Route path="nutrition" element={<ClientPortalNutrition />} />
+                  <Route path="challenges" element={<Navigate to="../competitions" replace />} />
+                  <Route path="badges" element={<ClientPortalBadges />} />
+                  <Route path="leaderboard" element={<ClientPortalLeaderboard />} />
+                  <Route path="competitions" element={<ClientPortalCompetitions />} />
+                  <Route path="odmeny" element={<Navigate to="../rewards" replace />} />
+                  <Route path="rewards" element={<ClientPortalRewards />} />
+                  <Route path="profile" element={<ClientPortalProfile />} />
+                  <Route path="settings" element={<ClientPortalSettings />} />
+                  <Route path="chat" element={<ClientPortalChat />} />
+                  <Route path="diagnostic" element={<ClientPortalDiagnostic />} />
+                </Route>
+              ))}
               
               <Route
                 path="/*"
