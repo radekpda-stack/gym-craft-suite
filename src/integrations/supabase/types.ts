@@ -12009,6 +12009,10 @@ export type Database = {
           name: string
         }[]
       }
+      rpc_increment_stock: {
+        Args: { p_delta: number; p_product_id: string }
+        Returns: undefined
+      }
       rpc_migrate_credit_to_lot: {
         Args: {
           p_client_id: string

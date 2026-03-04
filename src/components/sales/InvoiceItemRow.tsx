@@ -57,12 +57,16 @@ export function InvoiceItemRow({
     detailsBadges.push({ label: item.extractedDetails.flavor, icon: null });
   }
 
+  const hasImportError = !!item.importError;
+
   return (
     <div className={cn(
       "p-3 sm:p-4 rounded-lg border transition-all",
-      item.selected 
-        ? "bg-secondary/30 border-primary/30" 
-        : "bg-secondary/10 border-border/30 opacity-60"
+      hasImportError
+        ? "bg-destructive/5 border-destructive/50 ring-1 ring-destructive/30"
+        : item.selected 
+          ? "bg-secondary/30 border-primary/30" 
+          : "bg-secondary/10 border-border/30 opacity-60"
     )}>
       {/* Header with checkbox and name */}
       <div className="flex items-start gap-3">
@@ -231,8 +235,19 @@ export function InvoiceItemRow({
         </div>
       )}
 
+      {/* Import error message */}
+      {hasImportError && (
+        <div className="mt-2 p-2 rounded-md bg-destructive/10 border border-destructive/20">
+          <div className="flex items-center gap-1.5 text-xs text-destructive">
+            <AlertTriangle className="w-3 h-3 shrink-0" />
+            <span className="font-medium">Chyba importu:</span>
+            <span>{item.importError}</span>
+          </div>
+        </div>
+      )}
+
       {/* Summary line for selected items */}
-      {item.selected && (
+      {item.selected && !hasImportError && (
         <div className="mt-2 pt-2 border-t border-border/30 flex items-center justify-between text-xs text-muted-foreground">
           <span>
             {item.editedQuantity} ks × {formatCurrency(item.editedPurchasePrice)} = {formatCurrency(item.editedQuantity * item.editedPurchasePrice)}
