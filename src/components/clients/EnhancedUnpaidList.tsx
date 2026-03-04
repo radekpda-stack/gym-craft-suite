@@ -1,9 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { AlertTriangle, CreditCard, Check } from 'lucide-react';
+import { AlertTriangle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { usePayTraining, UnpaidTraining } from '@/hooks/useUnpaidTrainings';
 import {
   Select,
@@ -12,8 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
 import { PaymentMethod } from '@/hooks/useTrainingSessions';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -32,15 +29,22 @@ export function EnhancedUnpaidList({
 }: UnpaidTrainingsListProps) {
   const payTraining = usePayTraining();
   const [payingId, setPayingId] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit');
+  // U3 fix: per-item payment method state
+  const [paymentMethods, setPaymentMethods] = useState<Record<string, PaymentMethod>>({});
+
+  const getPaymentMethod = (trainingId: string): PaymentMethod => paymentMethods[trainingId] || 'credit';
+  const setPaymentMethod = (trainingId: string, method: PaymentMethod) => {
+    setPaymentMethods(prev => ({ ...prev, [trainingId]: method }));
+  };
 
   const handlePay = async (trainingId: string) => {
     setPayingId(trainingId);
+    const method = getPaymentMethod(trainingId);
     try {
       await payTraining.mutateAsync({
         trainingId,
-        paymentMethod,
-        deductCredit: paymentMethod === 'credit',
+        paymentMethod: method,
+        deductCredit: method === 'credit',
       });
     } finally {
       setPayingId(null);
@@ -104,8 +108,8 @@ export function EnhancedUnpaidList({
                 {formatCurrency(training.final_price || 0)}
               </span>
               <Select
-                value={paymentMethod}
-                onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
+                value={getPaymentMethod(training.id)}
+                onValueChange={(v) => setPaymentMethod(training.id, v as PaymentMethod)}
               >
                 <SelectTrigger className="w-28 h-8 text-xs">
                   <SelectValue />

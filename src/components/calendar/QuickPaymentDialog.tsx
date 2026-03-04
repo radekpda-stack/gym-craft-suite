@@ -12,8 +12,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { useUpdateTrainingSession } from '@/hooks/useTrainingSessions';
-import { useAppSettings } from '@/hooks/useAppSettings';
+import { useChangePaymentMethod } from '@/hooks/useTrainingSessions';
 
 type PaymentMethod = 'paid_credit' | 'paid_cash' | 'paid_card' | 'paid_bank';
 
@@ -55,37 +54,31 @@ interface QuickPaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trainingId: string;
+  clientId: string;
   clientName: string;
   currentPaymentStatus: string | null;
+  finalPrice: number;
 }
 
 export function QuickPaymentDialog({
   open,
   onOpenChange,
   trainingId,
+  clientId,
   clientName,
   currentPaymentStatus,
+  finalPrice,
 }: QuickPaymentDialogProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('paid_credit');
-  const updateTraining = useUpdateTrainingSession();
-  const { data: settings } = useAppSettings();
-  const trainingPrices = settings?.training_prices || { '1': 900, '2': 1100, '3': 1300 };
+  const changePayment = useChangePaymentMethod();
 
   const handleSave = async () => {
-    const paymentMethodMap: Record<PaymentMethod, string> = {
-      paid_credit: 'credit',
-      paid_cash: 'cash',
-      paid_card: 'card',
-      paid_bank: 'bank',
-    };
-
-    await updateTraining.mutateAsync({
-      id: trainingId,
-      input: {
-        payment_status: selectedMethod,
-        payment_method: paymentMethodMap[selectedMethod] as any,
-      },
-      trainingPrices: selectedMethod === 'paid_credit' ? trainingPrices : undefined,
+    await changePayment.mutateAsync({
+      trainingId,
+      clientId,
+      currentPaymentStatus: currentPaymentStatus || 'pending',
+      newPaymentStatus: selectedMethod,
+      price: finalPrice,
     });
     
     onOpenChange(false);
@@ -144,11 +137,11 @@ export function QuickPaymentDialog({
         )}
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={updateTraining.isPending}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={changePayment.isPending}>
             Zrušit
           </Button>
-          <Button onClick={handleSave} disabled={updateTraining.isPending}>
-            {updateTraining.isPending ? (
+          <Button onClick={handleSave} disabled={changePayment.isPending}>
+            {changePayment.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Ukládám...
