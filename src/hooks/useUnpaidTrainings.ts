@@ -115,25 +115,35 @@ export function usePayTraining() {
       if (updateError) throw updateError;
 
       // If paying from credit, create a deduction transaction
-      // DB trigger (fn_sync_client_credit_balance) automatically recalculates balance from SUM
+      // C5 fix: idempotency guard — check for existing transaction first
       if (deductCredit && paymentMethod === 'credit' && training.final_price) {
-        const price = training.final_price;
-        const groupId = await getClientGroupId(training.client_id);
-
-        const { error: txError } = await supabase
+        const { data: existing } = await supabase
           .from('credit_transactions')
-          .insert({
-            client_id: training.client_id,
-            amount: -price,
-            type: 'training',
-            description: 'Trénink - zpětná platba',
-            training_session_id: trainingId,
-            user_id: user.id,
-            group_id: groupId,
-          });
+          .select('id')
+          .eq('training_session_id', trainingId)
+          .eq('type', 'training')
+          .limit(1);
 
-        if (txError) throw txError;
-        // No applyCreditDelta call — trigger handles balance sync
+        if (existing && existing.length > 0) {
+          console.warn('Credit transaction already exists for training', trainingId);
+        } else {
+          const price = training.final_price;
+          const groupId = await getClientGroupId(training.client_id);
+
+          const { error: txError } = await supabase
+            .from('credit_transactions')
+            .insert({
+              client_id: training.client_id,
+              amount: -price,
+              type: 'training',
+              description: 'Trénink - zpětná platba',
+              training_session_id: trainingId,
+              user_id: user.id,
+              group_id: groupId,
+            });
+
+          if (txError) throw txError;
+        }
       }
 
       return { trainingId, paymentMethod };

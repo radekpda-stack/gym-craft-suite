@@ -627,15 +627,36 @@ export function useDeleteTrainingSession() {
 
   return useMutation({
     mutationFn: async ({ id, captureForUndo }: { id: string; captureForUndo?: boolean }) => {
-      // Capture training data before deletion if undo is needed
-      let trainingData = null;
-      if (captureForUndo) {
-        const { data } = await supabase
-          .from("training_sessions")
-          .select("*")
-          .eq("id", id)
-          .single();
-        trainingData = data;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Always fetch training data (needed for refund check + optional undo)
+      const { data: trainingData } = await supabase
+        .from("training_sessions")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      let refundAmount = 0;
+
+      // C1 fix: If training was completed and paid via credit, create compensating refund
+      if (trainingData && trainingData.status === 'completed' && trainingData.payment_status === 'paid_credit' && trainingData.final_price) {
+        refundAmount = trainingData.final_price;
+        const groupId = await getClientGroupId(trainingData.client_id);
+
+        const { error: txError } = await supabase
+          .from("credit_transactions")
+          .insert({
+            client_id: trainingData.client_id,
+            amount: +refundAmount,
+            type: "manual",
+            description: "Vratka za smazaný trénink",
+            training_session_id: id,
+            user_id: user.id,
+            group_id: groupId,
+          });
+
+        if (txError) throw txError;
       }
 
       const { error } = await supabase
@@ -645,15 +666,25 @@ export function useDeleteTrainingSession() {
 
       if (error) throw error;
       
-      return { trainingData };
+      return { trainingData: captureForUndo ? trainingData : null, refundAmount };
     },
-    onSuccess: (_result) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
       featureTracker.track('training_delete', 'trainings');
-      toast({
-        title: "Trénink smazán",
-        description: "Trénink byl úspěšně odstraněn.",
-      });
+
+      if (result.refundAmount > 0) {
+        toast({
+          title: "Trénink smazán",
+          description: `Kredit vrácen: +${result.refundAmount} Kč`,
+        });
+      } else {
+        toast({
+          title: "Trénink smazán",
+          description: "Trénink byl úspěšně odstraněn.",
+        });
+      }
     },
     onError: () => {
       toast({
@@ -805,145 +836,7 @@ export interface CompleteTrainingInput {
   notes?: string;
 }
 
-export function useCompleteTrainingSession() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ 
-      id, 
-      client_id, 
-      participant_count, 
-      subjective_rating,
-      notes,
-      trainingPrices 
-    }: CompleteTrainingInput & { trainingPrices: { "1": number; "2": number; "3": number } }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
-
-      // Calculate price based on participant count
-      let price: number;
-      if (participant_count >= 3) {
-        price = trainingPrices["3"];
-      } else if (participant_count === 2) {
-        price = trainingPrices["2"];
-      } else {
-        price = trainingPrices["1"];
-      }
-
-      // Update training status to completed with paid_credit payment status
-      const updateData: Record<string, any> = {
-        status: "completed",
-        participant_count,
-        payment_status: "paid_credit", // Default to paid_credit when completing with credit deduction
-        final_price: price,
-        payment_method: "credit",
-      };
-      if (subjective_rating !== undefined) {
-        updateData.subjective_rating = subjective_rating;
-      }
-      if (notes !== undefined) {
-        updateData.notes = notes;
-      }
-
-      const { data: training, error: trainingError } = await supabase
-        .from("training_sessions")
-        .update(updateData)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (trainingError) throw trainingError;
-
-      // Detect shared budget
-      const groupId = await getClientGroupId(client_id);
-
-      // Create credit transaction (negative amount for deduction)
-      const { error: transactionError } = await supabase
-        .from("credit_transactions")
-        .insert({
-          client_id,
-          amount: -price,
-          type: "training",
-          description: `Trénink (${participant_count} ${participant_count === 1 ? 'osoba' : participant_count < 5 ? 'osoby' : 'osob'})`,
-          training_session_id: id,
-          user_id: user.id,
-          group_id: groupId,
-        });
-
-      if (transactionError) throw transactionError;
-      // Trigger 'sync_balance_after_transaction' automatically updates balance
-      // Just fetch the updated value for UI display
-      const { data: updatedClient } = await supabase
-        .from("clients")
-        .select("credit_balance")
-        .eq("id", client_id)
-        .single();
-      
-      // For shared budgets, fetch group balance instead
-      let newBalance = updatedClient?.credit_balance ?? 0;
-      if (groupId) {
-        const { data: group } = await supabase
-          .from("client_budget_groups")
-          .select("shared_balance")
-          .eq("id", groupId)
-          .single();
-        newBalance = group?.shared_balance ?? 0;
-      }
-
-      // Auto-sync workout entries to exercise_entries
-      await syncWorkoutToExerciseEntries(id, client_id, training.date, user.id);
-
-      // Auto-generate feedback link for completed training
-      try {
-        const { data: client } = await supabase
-          .from("clients")
-          .select("feedback_enabled")
-          .eq("id", client_id)
-          .single();
-
-        if (client?.feedback_enabled !== false) {
-          await supabase.functions.invoke('create-feedback-link', {
-            body: {
-              client_id,
-              training_id: id,
-              // Always use production URL for public feedback links
-              base_url: 'https://justmoveasistent.lovable.app',
-            },
-          });
-        }
-      } catch (feedbackError) {
-        // Non-critical - don't fail the training completion if feedback link fails
-        console.warn('Failed to auto-generate feedback link:', feedbackError);
-      }
-
-      return { training, price, newBalance };
-    },
-    onSuccess: (result, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
-      queryClient.invalidateQueries({ queryKey: ["training_sessions", variables.client_id] });
-      queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["credit_transactions", variables.client_id] });
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
-      queryClient.invalidateQueries({ queryKey: ["client", variables.client_id] });
-      queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
-      queryClient.invalidateQueries({ queryKey: ["client_budget_group"] });
-      queryClient.invalidateQueries({ queryKey: ["exercise-entries"] });
-      
-      toast({
-        title: "Trénink dokončen",
-        description: `Kredit snížen o ${result.price} Kč. Nový zůstatek: ${result.newBalance} Kč`,
-      });
-    },
-    onError: (error) => {
-      console.error("Error completing training:", error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se dokončit trénink.",
-        variant: "destructive",
-      });
-    },
-  });
-}
+// C3: useCompleteTrainingSession removed — dead code, all paths use useCompleteTrainingAtomic
 
 /**
  * Auto-sync workout_entries to exercise_entries when training is completed
@@ -1142,40 +1035,25 @@ export function useChangePaymentMethod() {
         pending: 'nezaplaceno',
       };
 
+      // C6 fix: fetch groupId once and reuse
+      const groupId = await getClientGroupId(clientId);
+
       // Handle credit balance changes
       if (wasCredit && !willBeCredit) {
         // Refund credit: was paid by credit, now changing to another method
-        // Instead of deleting the original transaction, create a COMPENSATING transaction
-        // This preserves the audit trail and maintains transaction immutability
-        const groupId = await getClientGroupId(clientId);
-
         await supabase
           .from("credit_transactions")
           .insert({
             client_id: clientId,
-            amount: +price, // positive amount = credit refund
+            amount: +price,
             type: "manual",
             description: `Oprava platby - vrácení kreditu (změna na ${paymentLabels[newPaymentStatus]})`,
             training_session_id: trainingId,
             user_id: user.id,
             group_id: groupId,
           });
-
-        // Trigger handles cached balance sync automatically
-        // Read updated balance from ledger view
-        const groupId2 = await getClientGroupId(clientId);
-        if (groupId2) {
-          const { data: gl } = await supabase.from('vw_group_ledger_balances').select('ledger_balance').eq('group_id', groupId2).maybeSingle();
-          newBalance = gl?.ledger_balance ?? 0;
-        } else {
-          const { data: cl } = await supabase.from('vw_client_ledger_balances').select('ledger_balance').eq('client_id', clientId).maybeSingle();
-          newBalance = cl?.ledger_balance ?? 0;
-        }
       } else if (!wasCredit && willBeCredit) {
         // Deduct credit: wasn't paid by credit, now changing to credit
-        const groupId = await getClientGroupId(clientId);
-
-        // Create credit transaction
         await supabase
           .from("credit_transactions")
           .insert({
@@ -1187,12 +1065,12 @@ export function useChangePaymentMethod() {
             user_id: user.id,
             group_id: groupId,
           });
+      }
 
-        // Trigger handles cached balance sync automatically
-        // Read updated balance from ledger view
-        const groupId3 = await getClientGroupId(clientId);
-        if (groupId3) {
-          const { data: gl } = await supabase.from('vw_group_ledger_balances').select('ledger_balance').eq('group_id', groupId3).maybeSingle();
+      // Read updated balance from ledger view
+      if (wasCredit !== willBeCredit) {
+        if (groupId) {
+          const { data: gl } = await supabase.from('vw_group_ledger_balances').select('ledger_balance').eq('group_id', groupId).maybeSingle();
           newBalance = gl?.ledger_balance ?? 0;
         } else {
           const { data: cl } = await supabase.from('vw_client_ledger_balances').select('ledger_balance').eq('client_id', clientId).maybeSingle();

@@ -231,6 +231,12 @@ export function useCompleteTrainingAtomic() {
           ]);
         } catch (bgError) {
           console.warn('Background post-completion tasks error:', bgError);
+          // S2: Surface warning to trainer so silent failures don't go unnoticed
+          toast({
+            title: "Upozornění",
+            description: "Trénink byl dokončen, ale některé doplňkové úlohy selhaly. Zkontrolujte kredit klienta.",
+            variant: "destructive",
+          });
         }
       };
 

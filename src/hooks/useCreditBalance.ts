@@ -119,8 +119,8 @@ export function useCreditBalance(
       };
     },
     enabled: enabled && !!clientId,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 5000,
+    refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
 

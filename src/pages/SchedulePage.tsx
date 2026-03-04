@@ -621,8 +621,10 @@ export default function SchedulePage() {
           open={paymentDialog.open}
           onOpenChange={(open) => setPaymentDialog({ open, session: open ? paymentDialog.session : null })}
           trainingId={paymentDialog.session.id}
+          clientId={paymentDialog.session.client_id}
           clientName={getClient(paymentDialog.session.client_id)?.name || 'Klient'}
           currentPaymentStatus={paymentDialog.session.payment_status || 'pending'}
+          finalPrice={paymentDialog.session.final_price || 0}
         />
       )}
 

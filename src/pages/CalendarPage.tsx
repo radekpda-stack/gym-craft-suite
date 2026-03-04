@@ -537,8 +537,10 @@ export default function CalendarPage() {
           open={paymentDialog.open}
           onOpenChange={(open) => setPaymentDialog({ open, session: open ? paymentDialog.session : null })}
           trainingId={paymentDialog.session.id}
+          clientId={paymentDialog.session.client_id}
           clientName={getClient(paymentDialog.session.client_id)?.name || 'klient'}
           currentPaymentStatus={paymentDialog.session.payment_status}
+          finalPrice={paymentDialog.session.final_price || 0}
         />
       )}
     </div>
