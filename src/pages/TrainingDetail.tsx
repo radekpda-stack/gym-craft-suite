@@ -14,7 +14,7 @@ import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { QuickActionsSection } from '@/components/trainings/QuickActionsSection';
+// QuickActionsSection removed — actions merged into TrainingStatusBar
 import {
   useTrainingSession,
   useUpdateTrainingSession,
@@ -503,13 +503,14 @@ export default function TrainingDetail() {
         />
       )}
 
-      {/* Previous session focus reminder */}
+      {/* Previous session focus reminder - merged inline, no separate banner */}
       {training.next_session_focus && training.status !== 'completed' && (
         <div className="rounded-2xl p-4 bg-primary/5 border border-primary/20">
           <p className="text-xs font-medium text-primary mb-1">📌 Zaměření z minulého tréninku</p>
           <p className="text-sm text-foreground">{training.next_session_focus}</p>
         </div>
       )}
+
       {/* Session notes for completed trainings */}
       {training.status === 'completed' && (training.session_notes || training.next_session_focus) && (
         <div className="rounded-2xl p-4 bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm space-y-3">
@@ -528,7 +529,6 @@ export default function TrainingDetail() {
         </div>
       )}
 
-      
       {/* Status banner for partial/warning completions */}
       {(training as any).completion_status === 'partial' && (
         <Alert variant="default" className="border-warning bg-warning/10">
@@ -539,33 +539,6 @@ export default function TrainingDetail() {
         </Alert>
       )}
 
-      {/* Quick Actions - Only for scheduled trainings */}
-      {training.status === 'scheduled' && (
-        <QuickActionsSection
-          trainingId={training.id}
-          trainingDate={training.date}
-          trainingPrice={getTrainingPrice(training.participant_count || 1, trainingPrices)}
-          clientName={client?.name || 'Klient'}
-          onComplete={openCompleteDialog}
-          onCancelWithCredit={async (note) => {
-            await handleCancelWithDeduct(true, note);
-          }}
-          onCancelNoCredit={async (note) => {
-            await handleCancelWithDeduct(false, note);
-          }}
-          onReschedule={async (newDate) => {
-            await updateTraining.mutateAsync({
-              id: training.id,
-              input: { date: newDate.toISOString() },
-            });
-          }}
-          isCompleting={isSubmitting || completeTrainingAtomic.isPending}
-          isCanceling={cancelTraining.isPending}
-          isRescheduling={updateTraining.isPending}
-        />
-      )}
-
-      {/* Smart Completion Sheet - replaces old Dialog */}
       <SmartCompletionSheet
         open={showCompleteDialog}
         onOpenChange={setShowCompleteDialog}
@@ -602,8 +575,30 @@ export default function TrainingDetail() {
           rpeSet={training.rpe !== null && training.rpe !== undefined}
           totalPrice={statusBarTotalPrice}
           rpe={training.rpe || null}
+          trainingDate={training.date}
+          clientName={client?.name || 'Klient'}
           onComplete={openCompleteDialog}
+          onStart={async () => {
+            await updateTraining.mutateAsync({
+              id: training.id,
+              input: { status: 'in_progress' },
+            });
+          }}
+          onCancelWithCredit={async (note) => {
+            await handleCancelWithDeduct(true, note);
+          }}
+          onCancelNoCredit={async (note) => {
+            await handleCancelWithDeduct(false, note);
+          }}
+          onReschedule={async (newDate) => {
+            await updateTraining.mutateAsync({
+              id: training.id,
+              input: { date: newDate.toISOString() },
+            });
+          }}
           isLoading={isSubmitting || completeTrainingAtomic.isPending}
+          isCanceling={cancelTraining.isPending}
+          isRescheduling={updateTraining.isPending}
         />
       )}
 
