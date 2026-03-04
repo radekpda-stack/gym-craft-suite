@@ -24,7 +24,7 @@ export { useClientHealthSnapshot } from '../useClientHealthSnapshot';
 export { useClientLTV } from '../useClientLTV';
 export { useClientsAtRisk } from '../useClientsAtRisk';
 export { useTopClients } from '../useTopClients';
-export { useTopClientsData } from '../useTopClientsData';
+
 export { useClientAttendanceStats } from '../useClientAttendanceStats';
 
 // Audit hooks

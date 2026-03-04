@@ -21,11 +21,9 @@ export default function Index() {
   const { data, isLoading } = useDashboardViewModel();
   const layout = useDashboardLayout();
   
-  // Fetch additional counts for ActionCenter
   const { data: unassignedSessions } = useUnassignedSessions();
   const { data: followups } = useAllUnresolvedFollowups();
 
-  // Calculate alert counts
   const unpaidCount = data?.finance?.unpaidTotal?.count ?? 0;
   const unpaidAmount = data?.finance?.unpaidTotal?.amount ?? 0;
   const debtCount = data?.finance?.creditAtRisk?.count ?? 0;
@@ -39,76 +37,51 @@ export default function Index() {
     <div className="min-h-screen animate-fade-in">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4">
         
-        {/* ═══ HERO - Morning Briefing ═══ */}
-        <section>
-          <SectionErrorBoundary section="Hlavička" compact>
+        {/* ═══ HERO + TIMELINE ═══ */}
+        <SectionErrorBoundary section="Hlavička a timeline" compact>
+          <section>
             <DashboardHeader data={data} isLoading={isLoading} />
-          </SectionErrorBoundary>
-        </section>
-
-        {/* ═══ TODAY TIMELINE ═══ */}
-        <section>
-          <SectionErrorBoundary section="Dnešní tréninky" compact>
+          </section>
+          <section className="mt-4">
             <TodayTimelineCompact 
               trainings={data?.todaySchedule ?? []}
               isLoading={isLoading}
             />
-          </SectionErrorBoundary>
-        </section>
-
-        {/* ═══ ACTION CENTER ═══ */}
-        {hasAnyActions && (
-          <section>
-            <SectionErrorBoundary section="Vyžaduje akci" compact>
-              <ActionCenterCard
-                unpaidCount={unpaidCount}
-                unpaidAmount={unpaidAmount}
-                debtCount={debtCount}
-                debtAmount={debtAmount}
-                unassignedCount={unassignedCount}
-                followupCount={followupCount}
-                isLoading={isLoading}
-              />
-            </SectionErrorBoundary>
           </section>
-        )}
+        </SectionErrorBoundary>
 
-        {/* Pending Performance Approvals */}
-        {layout.showPendingApprovals && (
-          <section>
-            <SectionErrorBoundary section="Čekající schválení" compact>
-              <PendingPerformancesCard />
-            </SectionErrorBoundary>
-          </section>
-        )}
+        {/* ═══ ACTION CENTER + APPROVALS ═══ */}
+        <SectionErrorBoundary section="Akce" compact>
+          {hasAnyActions && (
+            <ActionCenterCard
+              unpaidCount={unpaidCount}
+              unpaidAmount={unpaidAmount}
+              debtCount={debtCount}
+              debtAmount={debtAmount}
+              unassignedCount={unassignedCount}
+              followupCount={followupCount}
+              isLoading={isLoading}
+            />
+          )}
+          {layout.showPendingApprovals && <PendingPerformancesCard />}
+        </SectionErrorBoundary>
 
-        {/* ═══ NEXT MONTH FORECAST ═══ */}
-        <section>
-          <SectionErrorBoundary section="Predikce" compact>
+        {/* ═══ FORECAST + OVERVIEW + STATS + INSIGHTS ═══ */}
+        <SectionErrorBoundary section="Přehled" compact>
+          <section className="space-y-3">
             <NextMonthForecastCard />
-          </SectionErrorBoundary>
-        </section>
 
-        {/* ═══ CONSOLIDATED OVERVIEW - Stats + Finance + Cashflow ═══ */}
-        <section className="space-y-3">
-          {data && (
-            <SectionErrorBoundary section="Přehled" compact>
+            {data && (
               <WeekOverviewCard
                 finance={data.finance}
                 weeklySummary={data.weeklySummary}
                 isLoading={isLoading}
               />
-            </SectionErrorBoundary>
-          )}
+            )}
 
-          {/* Lifetime Stats */}
-          <SectionErrorBoundary section="Celkový přehled" compact>
             <DashboardLifetimeStats />
-          </SectionErrorBoundary>
 
-          {/* Dashboard Insights */}
-          {data && (
-            <SectionErrorBoundary section="Postřehy" compact>
+            {data && (
               <DashboardInsightsRefactored
                 trends={data.trends}
                 finance={data.finance}
@@ -118,16 +91,13 @@ export default function Index() {
                 todayEstimatedIncome={data.todayEstimatedIncome}
                 isLoading={isLoading}
               />
-            </SectionErrorBoundary>
-          )}
-        </section>
+            )}
+          </section>
+        </SectionErrorBoundary>
         
       </div>
       
-      {/* Desktop fixed bottom bar */}
-      <SectionErrorBoundary section="Akce" compact>
-        <DashboardActions />
-      </SectionErrorBoundary>
+      <DashboardActions />
     </div>
   );
 }

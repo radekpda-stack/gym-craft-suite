@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { DashboardViewModel, DayStatus } from '@/hooks/useDashboardViewModel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Users, Banknote, TrendingUp, TrendingDown, Minus, Dumbbell } from 'lucide-react';
+import { formatCurrency } from '@/lib/formatters';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ActivityRing } from '@/components/ui/activity-ring';
@@ -76,15 +77,7 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
   const greeting = getGreeting();
   const capacityProgress = capacity.total > 0 ? Math.round((capacity.completed / capacity.total) * 100) : 0;
   
-  const formatCurrency = (value: number) => {
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}k`;
-    }
-    return new Intl.NumberFormat('cs-CZ', { 
-      style: 'decimal', 
-      maximumFractionDigits: 0 
-    }).format(value);
-  };
+  const formatCompact = (value: number) => formatCurrency(value, { compact: true, showSymbol: false });
 
   const incomeChange = weeklySummary.incomeLastWeek > 0 
     ? Math.round(((weeklySummary.incomeThisWeek - weeklySummary.incomeLastWeek) / weeklySummary.incomeLastWeek) * 100)
@@ -238,7 +231,7 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
             <div className="text-center">
               <div className="flex items-center justify-center gap-1">
                 <p className="text-xl sm:text-2xl font-bold tabular-nums text-foreground">
-                  {formatCurrency(todayEstimatedIncome)}
+                  {formatCompact(todayEstimatedIncome)}
                 </p>
                 <span className="text-sm text-muted-foreground">Kč</span>
               </div>

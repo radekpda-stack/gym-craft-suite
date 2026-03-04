@@ -1,238 +1,74 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
-import { cs } from 'date-fns/locale';
-import { Clock, ExternalLink, Loader2, CheckCheck } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUnpaidTrainings, usePayTraining, UnpaidTraining } from '@/hooks/useUnpaidTrainings';
-import { PaymentMethod } from '@/hooks/useTrainingSessions';
-import { cn } from '@/lib/utils';
+import { useUnpaidTrainings } from '@/hooks/useUnpaidTrainings';
+import { formatCurrency, formatDate } from '@/lib/formatters';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface UnpaidTrainingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(part => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-interface UnpaidTrainingRowProps {
-  training: UnpaidTraining;
-  onPay: (trainingId: string, method: PaymentMethod, deductCredit: boolean) => void;
-  isPaying: boolean;
-}
-
-function UnpaidTrainingRow({ training, onPay, isPaying }: UnpaidTrainingRowProps) {
-  const navigate = useNavigate();
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit');
-
-  const handlePay = () => {
-    onPay(training.id, paymentMethod, paymentMethod === 'credit');
-  };
-
-  return (
-    <div className="p-4 rounded-xl border border-border bg-card hover:bg-accent/5 transition-colors">
-      <div className="flex items-start gap-3">
-        <Avatar className="h-10 w-10 shrink-0">
-          <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-            {getInitials(training.client_name)}
-          </AvatarFallback>
-        </Avatar>
-        
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-foreground truncate">
-            {training.client_name}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {format(new Date(training.date), 'd. MMMM yyyy', { locale: cs })}
-          </p>
-        </div>
-        
-        <div className="text-right shrink-0">
-          <p className="font-semibold text-foreground">
-            {training.final_price?.toLocaleString('cs-CZ')} Kč
-          </p>
-        </div>
-      </div>
-      
-      <div className="flex items-center gap-2 mt-3">
-        <Select
-          value={paymentMethod}
-          onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
-        >
-          <SelectTrigger className="h-9 flex-1">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="credit">Z kreditu</SelectItem>
-            <SelectItem value="cash">Hotovost</SelectItem>
-            <SelectItem value="card">Karta</SelectItem>
-            <SelectItem value="bank">Převodem</SelectItem>
-          </SelectContent>
-        </Select>
-        
-        <Button
-          size="sm"
-          onClick={handlePay}
-          disabled={isPaying}
-          className="shrink-0"
-        >
-          {isPaying ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            'Uhradit'
-          )}
-        </Button>
-        
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => navigate(`/trainings/${training.id}`)}
-          className="shrink-0"
-        >
-          <ExternalLink className="w-4 h-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export function UnpaidTrainingsDialog({ open, onOpenChange }: UnpaidTrainingsDialogProps) {
+  const navigate = useNavigate();
   const { data: trainings, isLoading } = useUnpaidTrainings();
-  const payTraining = usePayTraining();
-  const [payingId, setPayingId] = useState<string | null>(null);
-  const [isPayingAll, setIsPayingAll] = useState(false);
-  const [bulkPaymentMethod, setBulkPaymentMethod] = useState<PaymentMethod>('credit');
-
-  const handlePay = async (trainingId: string, method: PaymentMethod, deductCredit: boolean) => {
-    setPayingId(trainingId);
-    try {
-      await payTraining.mutateAsync({
-        trainingId,
-        paymentMethod: method,
-        deductCredit,
-      });
-    } finally {
-      setPayingId(null);
-    }
-  };
-
-  const handlePayAll = async () => {
-    if (!trainings?.length) return;
-    
-    setIsPayingAll(true);
-    try {
-      for (const training of trainings) {
-        await payTraining.mutateAsync({
-          trainingId: training.id,
-          paymentMethod: bulkPaymentMethod,
-          deductCredit: bulkPaymentMethod === 'credit',
-        });
-      }
-      onOpenChange(false);
-    } finally {
-      setIsPayingAll(false);
-    }
-  };
-
-  const totalAmount = trainings?.reduce((sum, t) => sum + (t.final_price || 0), 0) || 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-warning" />
-            Neuhrazené tréninky
-          </DialogTitle>
+          <DialogTitle>Neuhrazené tréninky</DialogTitle>
+          <DialogDescription>
+            Tréninky čekající na platbu
+          </DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <div className="space-y-2">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="h-14 rounded-lg" />
+            ))}
           </div>
         ) : !trainings?.length ? (
-          <div className="text-center py-8 text-muted-foreground">
+          <p className="text-sm text-muted-foreground py-4 text-center">
             Žádné neuhrazené tréninky
-          </div>
+          </p>
         ) : (
-          <>
-            <ScrollArea className={cn(trainings.length > 4 && 'h-[400px]')}>
-              <div className="space-y-3 pr-4">
-                {trainings.map((training) => (
-                  <UnpaidTrainingRow
-                    key={training.id}
-                    training={training}
-                    onPay={handlePay}
-                    isPaying={payingId === training.id}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
-
-            <div className="pt-4 border-t border-border space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Celkem</span>
-                <span className="text-lg font-semibold">
-                  {totalAmount.toLocaleString('cs-CZ')} Kč
-                </span>
-              </div>
-              
-              {trainings && trainings.length > 1 && (
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={bulkPaymentMethod}
-                    onValueChange={(v) => setBulkPaymentMethod(v as PaymentMethod)}
-                  >
-                    <SelectTrigger className="h-9 flex-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="credit">Z kreditu</SelectItem>
-                      <SelectItem value="cash">Hotovost</SelectItem>
-                      <SelectItem value="card">Karta</SelectItem>
-                      <SelectItem value="bank">Převodem</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Button
-                    onClick={handlePayAll}
-                    disabled={isPayingAll || payingId !== null}
-                    className="flex-1"
-                  >
-                    {isPayingAll ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <CheckCheck className="w-4 h-4 mr-2" />
-                    )}
-                    Uhradit vše
-                  </Button>
+          <div className="space-y-2">
+            {trainings.map((t) => (
+              <div
+                key={t.id}
+                className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card/50"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{t.client_name}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(t.date)}</p>
                 </div>
-              )}
-            </div>
-          </>
+                <p className="text-sm font-bold shrink-0 ml-2">
+                  {formatCurrency(t.final_price)}
+                </p>
+              </div>
+            ))}
+          </div>
         )}
+
+        <Button
+          variant="outline"
+          className="w-full mt-2"
+          onClick={() => {
+            onOpenChange(false);
+            navigate('/finance');
+          }}
+        >
+          Zobrazit vše ve financích
+        </Button>
       </DialogContent>
     </Dialog>
   );

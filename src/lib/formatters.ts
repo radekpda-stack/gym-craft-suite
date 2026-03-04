@@ -9,13 +9,41 @@ import { cs } from 'date-fns/locale';
  */
 export function formatCurrency(
   amount: number | null | undefined, 
-  showSymbol = true,
-  decimals = 0
+  showSymbolOrOptions?: boolean | { showSymbol?: boolean; decimals?: number; compact?: boolean },
+  decimals?: number
 ): string {
+  // Support both legacy positional args and new options object
+  let showSymbol = true;
+  let dec = 0;
+  let compact = false;
+  
+  if (typeof showSymbolOrOptions === 'object' && showSymbolOrOptions !== null) {
+    showSymbol = showSymbolOrOptions.showSymbol ?? true;
+    dec = showSymbolOrOptions.decimals ?? 0;
+    compact = showSymbolOrOptions.compact ?? false;
+  } else {
+    showSymbol = (showSymbolOrOptions as boolean) ?? true;
+    dec = decimals ?? 0;
+  }
+  
   const value = amount ?? 0;
+  
+  if (compact) {
+    const abs = Math.abs(value);
+    let formatted: string;
+    if (abs >= 1_000_000) {
+      formatted = `${(value / 1_000_000).toFixed(1)}M`;
+    } else if (abs >= 1_000) {
+      formatted = `${(value / 1_000).toFixed(abs >= 10_000 ? 0 : 1)}k`;
+    } else {
+      formatted = value.toLocaleString('cs-CZ', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    }
+    return showSymbol ? `${formatted} Kč` : formatted;
+  }
+  
   const formatted = value.toLocaleString('cs-CZ', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
+    minimumFractionDigits: dec,
+    maximumFractionDigits: dec,
   });
   return showSymbol ? `${formatted} Kč` : formatted;
 }

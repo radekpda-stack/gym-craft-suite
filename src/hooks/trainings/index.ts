@@ -14,7 +14,7 @@ export { useTrainingProgress } from '../useTrainingProgress';
 export { useTrainingSessionTags } from '../useTrainingSessionTags';
 export { useTrainingTagValidation } from '../useTrainingTagValidation';
 export { useTrainingAnalytics } from '../useTrainingAnalytics';
-export { useTrainingActivityData } from '../useTrainingActivityData';
+
 export { useTrainingTrend } from '../useTrainingTrend';
 export { usePreviousTraining } from '../usePreviousTraining';
 export { useLastTraining } from '../useLastTraining';
