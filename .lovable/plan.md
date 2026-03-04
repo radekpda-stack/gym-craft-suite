@@ -1,73 +1,75 @@
 
 
-# Audit aplikace – Zrychlení a zjednodušení (Fáze 6)
+# Audit kreditního systému – Jednotný zdroj pravdy (Fáze 7)
 
-Po důkladné analýze kódu jsem identifikoval 5 konkrétních problémů, které zpomalují aplikaci nebo zbytečně zatěžují uživatele.
-
----
-
-## 1) Odstranit InteractionTracker – zbytečná zátěž na každé akci
-
-`InteractionTracker` v `App.tsx` zachytává **každý klik, scroll, hover a focus** a zapisuje je do databáze v reálném čase. To znamená:
-- Každé kliknutí na tlačítko = 1 DB write
-- Každý scroll = opakované DB inserty (každou sekundu)
-- Každý hover na element s `data-track-id` = DB write po 2s
-
-Tento tracker generuje **desítky až stovky zbytečných DB požadavků** za minutu. Data z tabulek `interaction_events`, `scroll_analytics` a `rage_clicks` nejsou nikde v UI aktivně zobrazována (pouze v admin exportu). Tracker navíc zabírá event listenery na `click`, `scroll`, `mouseenter`, `mouseleave`, `focusin`, `focusout` globálně.
-
-**Řešení:** Odebrat `InteractionTracker` z `App.tsx`. Ponechat soubor pro případné budoucí zapnutí, ale nedávat ho do komponentového stromu.
+Systém má definovaný zdroj pravdy (ledger views `vw_client_ledger_balances` / `vw_group_ledger_balances`), ale **ne všechny části aplikace ho používají**. Několik míst stále čte zastaralý cached sloupec `clients.credit_balance` nebo `client_budget_groups.shared_balance`, což vytváří nesoulad.
 
 ---
 
-## 2) Odstranit apiInterceptor – zbytečný fetch wrapper
+## Nalezené problémy
 
-`apiInterceptor.ts` obaluje globální `window.fetch` a na **každý Supabase request** volá `trackApiLatency` a `trackNetworkFailure`, což spouští další DB inserty. Interceptor se inicializuje v `useSessionTracking`.
+### P1: ClientDetailView zobrazuje cached balance místo ledgeru
+`ClientDetailView.tsx` (řádek 387-388) zobrazuje `client.credit_balance || 0` — čte přímo z cached sloupce tabulky `clients`. Tento sloupec se aktualizuje triggerem, ale s prodlevou oproti ledger view.
 
-V produkci to znamená, že každý API požadavek má overhead z trackingu + generuje další API požadavek na záznam výkonu. Klasický "observer effect" – měření zpomaluje to, co měří.
+**Řešení:** Nahradit `client.credit_balance` hodnotou z `useCreditBalanceValue(client.id)`, který čte z ledger view.
 
-**Řešení:** Odstranit volání `initApiInterceptor()` z `useSessionTracking.ts`.
+### P2: useCreateTransaction čte cached balance po mutaci
+`useCreditOperations.ts` (řádky 460-478) po insertu transakce čte `clients.credit_balance` resp. `client_budget_groups.shared_balance` pro zobrazení v toastech. Trigger nemusí stihnout aktualizovat cached sloupec před tímto čtením → zobrazí se stará hodnota.
+
+**Řešení:** Po insertu číst z ledger views (`vw_client_ledger_balances` / `vw_group_ledger_balances`) místo cached sloupců.
+
+### P3: useBusinessHealthScore čte cached balance
+`useBusinessHealthScore.ts` (řádek 60) selectuje `clients.credit_balance` přímo z tabulky pro výpočet health score.
+
+**Řešení:** Joinout s `vw_client_ledger_balances` nebo fetch balances zvlášť z view.
+
+### P4: ClientDetailView umožňuje ruční editaci credit_balance
+V edit mode (řádky 364-384) může trenér ručně přepsat `creditBalance` přes formulář. Tím zapíše přímo do `clients.credit_balance`, čímž obejde ledger. Při dalším triggeru se hodnota přepíše zpět na ledger stav, což je matoucí.
+
+**Řešení:** Odstranit editovatelné pole `creditBalance` z formuláře. Kredit se mění pouze přes transakce (ledger), nikdy přímou editací.
+
+### P5: Duplicitní typy a re-exporty
+`src/types/finance.ts` definuje `CreditTransaction`, `TransactionType`, `PaymentMethod` — ale `useCreditOperations.ts` definuje vlastní verze těchto typů. `useCreditTransactions.ts` je jen re-export barrel. Toto je zdroj potenciálních type-mismatchů.
+
+**Řešení:** Smazat `src/types/finance.ts` (pokud nikdo neimportuje přímo) a `src/hooks/useCreditTransactions.ts` barrel, ponechat kanonické typy v `useCreditOperations.ts`.
 
 ---
 
-## 3) Zjednodušit SessionTrackingProvider
+## Plán oprav
 
-`SessionTrackingProvider` inicializuje `SessionManager` (tabulka `user_sessions`), API interceptor a performance tracking. Po odstranění interceptoru zbude jen session manager, který je legitimní (tracking návštěv). Ale celý wrapper `SessionTrackingProvider.tsx` je zbytečná komponenta – stačí volat `useSessionTracking` přímo v `Layout.tsx`.
+### 1) ClientDetailView — ledger balance
+- Importovat `useCreditBalanceValue` 
+- Nahradit `client.credit_balance || 0` za `useCreditBalanceValue(client.id)` v zobrazení
+- Odstranit `creditBalance` z formuláře (pole i z defaultValues)
 
-**Řešení:** Přesunout `useSessionTracking()` přímo do `Layout.tsx` a smazat `SessionTrackingProvider.tsx`. V `App.tsx` odebrat wrapper.
+### 2) useCreateTransaction — ledger read po mutaci
+- Nahradit čtení z `clients.credit_balance` za `vw_client_ledger_balances.ledger_balance`
+- Nahradit čtení z `client_budget_groups.shared_balance` za `vw_group_ledger_balances.ledger_balance`
 
----
+### 3) useBusinessHealthScore — ledger balance
+- Doplnit fetch z `vw_client_ledger_balances` a mergovat do client dat
 
-## 4) Dashboard: NextMonthForecastCard dělá 5 nezávislých DB queries
-
-`useRevenueForecast` hook vykonává **5 paralelních DB queries** (credit_transactions, training_sessions 2×, business_expenses, clients) při každém načtení dashboardu. Tento hook má `staleTime` jen 2 minuty (default), takže se refetchuje často.
-
-**Řešení:** Zvýšit `staleTime` na 10 minut – predikce se nemusí aktualizovat při každém návratu na dashboard. Přidat `refetchOnMount: false`.
-
----
-
-## 5) Dashboard: useLifetimeStats dělá 6 DB queries
-
-`useLifetimeStats` vykonává 6 paralelních queries bez limitu (stahuje **všechny** completed tréninky, **všechny** credit transakce). U aktivního trenéra s 500+ tréninky a 1000+ transakcemi to znamená stahování velkého množství dat.
-
-**Řešení:** Zvýšit `staleTime` z 5 minut na 30 minut – lifetime stats se mění minimálně. Přidat `refetchOnMount: false`.
+### 4) Smazat duplicitní typy
+- Smazat `src/types/finance.ts` (po ověření, že nikdo neimportuje přímo)
+- Smazat `src/hooks/useCreditTransactions.ts` re-export barrel
+- Smazat `src/hooks/useSharedBudgetBalance.ts` re-export barrel
 
 ---
 
 ## Technické detaily
 
 ### Soubory k úpravě
-- `src/App.tsx` – odebrat `InteractionTracker` wrapper a `SessionTrackingProvider`
-- `src/components/layout/Layout.tsx` – přidat `useSessionTracking()` volání
-- `src/hooks/useSessionTracking.ts` – odebrat `initApiInterceptor()` volání
-- `src/hooks/useRevenueForecast.ts` – zvýšit staleTime na 10 min
-- `src/hooks/useLifetimeStats.ts` – zvýšit staleTime na 30 min
+- `src/components/clients/ClientDetailView.tsx` — ledger balance + odstranit editaci kreditu
+- `src/hooks/useCreditOperations.ts` (řádky 460-478) — číst z ledger views
+- `src/hooks/useBusinessHealthScore.ts` — ledger balances
 
 ### Soubory ke smazání
-- `src/components/SessionTrackingProvider.tsx`
+- `src/types/finance.ts`
+- `src/hooks/useCreditTransactions.ts`
+- `src/hooks/useSharedBudgetBalance.ts`
 
 ### Očekávaný dopad
-- **Eliminace desítek DB požadavků za minutu** z interaction trackingu
-- **Odstranění fetch wrapperu** = čistší network waterfall
-- **Dashboard se načte rychleji** díky méně agresivnímu refetchování forecast a lifetime dat
-- Žádná ztráta funkcionality pro uživatele – odstraněna pouze interní telemetrie
+- **Všechny části aplikace čtou ze stejného zdroje** (ledger views)
+- **Žádná časová prodleva** mezi operací a zobrazením
+- **Odstranění možnosti ruční editace** cached sloupce mimo ledger
 
