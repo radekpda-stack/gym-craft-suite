@@ -57,7 +57,7 @@ export function useBusinessHealthScore() {
         unpaidResult,
         lastWeekSnapshotResult,
       ] = await Promise.all([
-        supabase.from('clients').select('id, is_archived, credit_balance').eq('user_id', user.id),
+        supabase.from('clients').select('id, is_archived').eq('user_id', user.id),
         supabase
           .from('training_sessions')
           .select('id, final_price, client_id')
@@ -95,6 +95,16 @@ export function useBusinessHealthScore() {
 
       const clients = clientsResult.data || [];
       const activeClients = clients.filter(c => !c.is_archived);
+
+      // Fetch ledger balances for credit health calculation
+      const { data: ledgerData } = await supabase
+        .from('vw_client_ledger_balances')
+        .select('client_id, ledger_balance');
+      const ledgerMap = new Map<string, number>();
+      for (const row of ledgerData ?? []) {
+        ledgerMap.set(row.client_id, row.ledger_balance ?? 0);
+      }
+
       const thisMonthTrainings = thisMonthTrainingsResult.data || [];
       const lastMonthTrainings = lastMonthTrainingsResult.data || [];
       const recentTrainings = recentTrainingsResult.data || [];
@@ -109,8 +119,8 @@ export function useBusinessHealthScore() {
       const retentionScore = Math.min(100, retentionRate);
 
       // 2. CREDIT HEALTH SCORE (25%) - NEW: replaces capacity
-      const clientsWithPositiveCredit = activeClients.filter(c => (c.credit_balance || 0) > 0).length;
-      const clientsInDebt = activeClients.filter(c => (c.credit_balance || 0) < 0).length;
+      const clientsWithPositiveCredit = activeClients.filter(c => (ledgerMap.get(c.id) ?? 0) > 0).length;
+      const clientsInDebt = activeClients.filter(c => (ledgerMap.get(c.id) ?? 0) < 0).length;
       const creditHealthRate = activeClients.length > 0 
         ? (clientsWithPositiveCredit / activeClients.length) * 100 
         : 100;
@@ -177,8 +187,8 @@ export function useBusinessHealthScore() {
 
       // Calculate total debt
       const totalDebt = activeClients
-        .filter(c => (c.credit_balance || 0) < 0)
-        .reduce((sum, c) => sum + (c.credit_balance || 0), 0);
+        .filter(c => (ledgerMap.get(c.id) ?? 0) < 0)
+        .reduce((sum, c) => sum + (ledgerMap.get(c.id) ?? 0), 0);
 
       // Confidence calculation based on data points
       const dataPoints = thisMonthTrainings.length + lastMonthTrainings.length;

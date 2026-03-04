@@ -48,6 +48,7 @@ import { ClientPreDiagnosticSection } from '@/components/clients/ClientPreDiagno
 import { Client } from '@/hooks/useClients';
 import { useToggleFavorite } from '@/hooks/useFavoriteClients';
 import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
+import { useCreditBalanceValue } from '@/hooks/useCreditBalance';
 import { clientFormSchema, ClientFormValues } from '@/lib/validations/client';
 import { cn } from '@/lib/utils';
 import { DatePicker } from '@/components/ui/date-time-picker';
@@ -135,6 +136,17 @@ function getCreditColor(credit: number): string {
   return 'text-success';
 }
 
+/** Read-only credit display from ledger */
+function CreditDisplay({ clientId }: { clientId: string }) {
+  const balance = useCreditBalanceValue(clientId);
+  return (
+    <p className={cn('font-bold text-lg', getCreditColor(balance))}>
+      {balance.toLocaleString('cs-CZ')} Kč
+    </p>
+  );
+}
+
+
 export function ClientDetailView({ client, onSave, isLoading }: ClientDetailViewProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [newGoal, setNewGoal] = useState('');
@@ -153,7 +165,6 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
       trainingGoals: client.training_goals || [],
       notes: client.notes || '',
       healthRestrictions: client.health_restrictions || '',
-      creditBalance: client.credit_balance || 0,
       birthDate: client.birth_date || '',
       gender: (client.gender as 'male' | 'female' | undefined) || undefined,
       createdAt: client.created_at ? client.created_at.split('T')[0] : '',
@@ -169,7 +180,6 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
       trainingGoals: client.training_goals || [],
       notes: client.notes || '',
       healthRestrictions: client.health_restrictions || '',
-      creditBalance: client.credit_balance || 0,
       birthDate: client.birth_date || '',
       gender: (client.gender as 'male' | 'female' | undefined) || undefined,
       createdAt: client.created_at ? client.created_at.split('T')[0] : '',
@@ -360,34 +370,7 @@ export function ClientDetailView({ client, onSave, isLoading }: ClientDetailView
                 <CreditCard className="w-4 h-4" />
                 <span className="text-sm">Kredit</span>
               </div>
-              {isEditMode ? (
-                <FormField
-                  control={form.control}
-                  name="creditBalance"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0"
-                          className="bg-secondary border-border"
-                          value={field.value === 0 ? '' : field.value}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            field.onChange(val === '' ? 0 : parseFloat(val));
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ) : (
-                <p className={cn('font-bold text-lg', getCreditColor(client.credit_balance || 0))}>
-                  {(client.credit_balance || 0).toLocaleString('cs-CZ')} Kč
-                </p>
-              )}
+              <CreditDisplay clientId={client.id} />
             </div>
           )}
 

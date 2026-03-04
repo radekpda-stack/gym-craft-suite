@@ -457,24 +457,24 @@ export function useCreateTransaction() {
       let newBalance: number | null = null;
       let entityType: 'client' | 'group' = 'client';
 
-      // Fetch the updated balance for UI/toasts
+      // Fetch the updated balance from ledger views (single source of truth)
       if (groupId) {
         entityType = 'group';
-        const { data: group, error: groupError } = await supabase
-          .from('client_budget_groups')
-          .select('shared_balance')
-          .eq('id', groupId)
+        const { data: groupLedger, error: groupError } = await supabase
+          .from('vw_group_ledger_balances')
+          .select('ledger_balance')
+          .eq('group_id', groupId)
           .maybeSingle();
         if (groupError) throw groupError;
-        newBalance = group?.shared_balance ?? null;
+        newBalance = groupLedger?.ledger_balance ?? null;
       } else {
-        const { data: client, error: clientError } = await supabase
-          .from('clients')
-          .select('credit_balance')
-          .eq('id', input.client_id)
+        const { data: clientLedger, error: clientError } = await supabase
+          .from('vw_client_ledger_balances')
+          .select('ledger_balance')
+          .eq('client_id', input.client_id)
           .maybeSingle();
         if (clientError) throw clientError;
-        newBalance = client?.credit_balance ?? null;
+        newBalance = clientLedger?.ledger_balance ?? null;
       }
 
       return { 
