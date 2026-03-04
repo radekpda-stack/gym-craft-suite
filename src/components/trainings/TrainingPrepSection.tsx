@@ -33,7 +33,9 @@ export function TrainingPrepSection({
   currentTrainingId,
   trainingDate,
 }: TrainingPrepSectionProps) {
+  // Will be set after data loads — auto-open if alerts exist
   const [isOpen, setIsOpen] = useState(false);
+  const [hasAutoOpened, setHasAutoOpened] = useState(false);
   // Client profile data
   const { data: preDiagnostic } = useClientPreDiagnostic(clientId);
   const { data: answers = [] } = usePreDiagnosticAnswers(preDiagnostic?.id);
@@ -74,6 +76,12 @@ export function TrainingPrepSection({
   const hasAlerts = trainingAlert || (hasPain && painAreas?.length);
   const hasFollowups = filteredFollowups.length > 0;
   const hasContent = hasAlerts || hasFollowups || mainGoal;
+
+  // Auto-open when health alerts are present
+  if (hasAlerts && !hasAutoOpened) {
+    setIsOpen(true);
+    setHasAutoOpened(true);
+  }
 
   if (!hasContent) return null;
 

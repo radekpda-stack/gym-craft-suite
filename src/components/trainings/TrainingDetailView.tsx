@@ -19,6 +19,13 @@ import {
   Loader2,
   Trash2,
 } from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useTags } from '@/hooks/useTags';
@@ -266,15 +273,79 @@ export function TrainingDetailView({
         onDeleteClick={onDelete ? () => setShowDeleteDialog(true) : undefined}
       />
 
-      {/* EDIT MODE FORM */}
-      {isEditMode && (
-        <Form {...form}>
-          <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border-2 border-primary/30 shadow-md p-4 space-y-4">
-            {/* Edit mode highlight gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none rounded-2xl" />
-            <div className="relative flex items-center justify-between">
-              <h3 className="font-semibold text-foreground">Upravit trénink</h3>
-              <div className="flex gap-2">
+      {/* EDIT MODE - Bottom Sheet instead of inline form */}
+      <Sheet open={isEditMode} onOpenChange={setIsEditMode}>
+        <SheetContent side="bottom" className="max-h-[70vh]">
+          <SheetHeader>
+            <SheetTitle>Upravit trénink</SheetTitle>
+            <SheetDescription>Upravte datum, délku nebo počet účastníků.</SheetDescription>
+          </SheetHeader>
+          <Form {...form}>
+            <div className="mt-4 space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2 sm:col-span-1">
+                      <Label className="text-xs text-muted-foreground">Datum a čas</Label>
+                      <FormControl>
+                        <DateTimePicker
+                          value={field.value}
+                          onChange={(date) => field.onChange(typeof date === 'string' ? new Date(date) : date)}
+                          returnString={false}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="duration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Label className="text-xs text-muted-foreground">Délka</Label>
+                      <Select value={field.value.toString()} onValueChange={(v) => field.onChange(parseInt(v))}>
+                        <FormControl>
+                          <SelectTrigger className="bg-secondary border-border">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {[30, 45, 60, 75, 90, 120].map((min) => (
+                            <SelectItem key={min} value={min.toString()}>{min} min</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="participant_count"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Label className="text-xs text-muted-foreground">Účastníků</Label>
+                      <Select value={field.value.toString()} onValueChange={(v) => field.onChange(parseInt(v))}>
+                        <FormControl>
+                          <SelectTrigger className="bg-secondary border-border">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5].map((num) => (
+                            <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="flex gap-2 justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={handleCancel} disabled={isLoading}>
                   <X className="w-4 h-4 mr-1" />
                   Zrušit
@@ -285,75 +356,9 @@ export function TrainingDetailView({
                 </Button>
               </div>
             </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="col-span-2 sm:col-span-1">
-                    <Label className="text-xs text-muted-foreground">Datum a čas</Label>
-                    <FormControl>
-                      <DateTimePicker
-                        value={field.value}
-                        onChange={(date) => field.onChange(typeof date === 'string' ? new Date(date) : date)}
-                        returnString={false}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="duration"
-                render={({ field }) => (
-                  <FormItem>
-                    <Label className="text-xs text-muted-foreground">Délka</Label>
-                    <Select value={field.value.toString()} onValueChange={(v) => field.onChange(parseInt(v))}>
-                      <FormControl>
-                        <SelectTrigger className="bg-secondary border-border">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {[30, 45, 60, 75, 90, 120].map((min) => (
-                          <SelectItem key={min} value={min.toString()}>{min} min</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="participant_count"
-                render={({ field }) => (
-                  <FormItem>
-                    <Label className="text-xs text-muted-foreground">Účastníků</Label>
-                    <Select value={field.value.toString()} onValueChange={(v) => field.onChange(parseInt(v))}>
-                      <FormControl>
-                        <SelectTrigger className="bg-secondary border-border">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5].map((num) => (
-                          <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-        </Form>
-      )}
+          </Form>
+        </SheetContent>
+      </Sheet>
 
       {/* PREVIOUS TRAINING - always visible for scheduled/in_progress */}
       {(isScheduled || isInProgress) && (

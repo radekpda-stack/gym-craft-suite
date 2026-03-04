@@ -114,9 +114,18 @@ export function TrainingHeroHeader({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">
-              {client?.name || 'Trénink'}
-            </h1>
+            <div className="flex items-center gap-2 min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">
+                {client?.name || 'Trénink'}
+              </h1>
+              <span className={cn(
+                'shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap',
+                status.bg, status.text, status.border,
+                isInProgress && 'animate-pulse'
+              )}>
+                {status.label}
+              </span>
+            </div>
             
             {/* Meta row - compact */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-sm text-muted-foreground">
@@ -172,16 +181,7 @@ export function TrainingHeroHeader({
         </DropdownMenu>
       </div>
 
-      {/* Status badge - full width, prominent */}
-      <div className="relative mt-3">
-        <div className={cn(
-          'w-full py-2.5 px-3 rounded-xl text-center text-sm font-semibold border backdrop-blur-sm transition-all duration-200',
-          status.bg, status.text, status.border,
-          isInProgress && 'animate-pulse'
-        )}>
-          {status.label}
-        </div>
-      </div>
+      {/* Status badge removed - now inline with name */}
     </div>
   );
 }
