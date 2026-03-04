@@ -175,6 +175,7 @@ export default function ClientDetail() {
 
        {/* SECTION 3: Credit Hero Card - Dominant credit display */}
        <ClientCreditHeroCard
+         clientId={client.id}
          creditBalance={creditBalance}
          isSharedBudget={isSharedBudget}
          budgetGroupName={creditData.groupName}
