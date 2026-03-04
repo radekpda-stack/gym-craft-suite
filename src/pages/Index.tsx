@@ -11,6 +11,7 @@ import { PendingPerformancesCard } from '@/components/performance/PendingPerform
 import { WeekOverviewCard } from '@/components/dashboard/WeekOverviewCard';
 import { DashboardInsightsRefactored } from '@/components/dashboard/DashboardInsightsRefactored';
 import { NextMonthForecastCard } from '@/components/dashboard/NextMonthForecastCard';
+import { DashboardLifetimeStats } from '@/components/dashboard/DashboardLifetimeStats';
 import { useUnassignedSessions } from '@/hooks/useUnassignedSessions';
 import { useAllUnresolvedFollowups } from '@/hooks/useTrainingFollowups';
 
@@ -99,6 +100,11 @@ export default function Index() {
               />
             </SectionErrorBoundary>
           )}
+
+          {/* Lifetime Stats */}
+          <SectionErrorBoundary section="Celkový přehled" compact>
+            <DashboardLifetimeStats />
+          </SectionErrorBoundary>
 
           {/* Dashboard Insights */}
           {data && (
