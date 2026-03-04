@@ -1,50 +1,52 @@
 
 
-# Pokračování ve zlepšení a zjednodušení aplikace
+# Další zjednodušení aplikace
+
+Po analýze kódu jsem identifikoval 5 konkrétních oblastí ke zlepšení.
 
 ---
 
-## 1) Smazat další osiřelé hooky (3 soubory)
+## 1) Smazat osiřelé settings komponenty (6 souborů)
 
-Následující hooky **nejsou importovány v žádné komponentě** (jen v barrel exportech nebo demo wrapperech, které taky nikdo nepoužívá):
+Tyto soubory v `src/components/settings/` **nejsou nikde importovány**:
 
-- `src/hooks/useDashboardStats.ts` – nikde importován v `.tsx`
-- `src/hooks/useDashboardKPIs.ts` – nikde importován v `.tsx`
-- `src/hooks/useSmartDailyPlan.ts` – nikde importován v `.tsx`
-- `src/hooks/useYearOverYearStats.ts` – nikde importován v `.tsx` (jen barrel re-export)
-
-Před smazáním odstraníme i re-exporty z `src/hooks/analytics/index.ts` a případné reference v `useDemoData.ts`.
-
----
-
-## 2) Lazy-load DashboardActions – přesunout data hooky dovnitř sheetu
-
-`DashboardActions` dnes **eager-loaduje** `useClients()` a `useCreateTrainingSession()` i když uživatel tréninkový sheet neotevře (většina návštěv dashboardu). 
-
-Řešení: `CreateTrainingSheet` si bude hooky volat sám – přidáme do něj vlastní `useClients()` a `useCreateTrainingSession()`, a `DashboardActions` je přestane načítat. Interface sheetu se zjednoduší (nebude potřebovat `clients` prop ani `onSubmit`).
+- `ComparisonSettings.tsx`
+- `NutritionQuestionnaireSettings.tsx`
+- `DiagnosticQuestionnaireSettings.tsx`
+- `DataExport.tsx`
+- `PaymentTagsManagement.tsx`
+- `NutritionSettings.tsx`
 
 ---
 
-## 3) Přidat rok-over-rok trend do DashboardLifetimeStats
+## 2) Smazat osiřelou stránku `Tests.tsx` (265 řádků)
 
-Místo samostatného (a nepoužívaného) `useYearOverYearStats`, rozšíříme stávající `useLifetimeStats` o dvě nová pole: `thisYearTrainings` a `lastYearTrainings` (případně i income). Data už stejně načítáme – stačí filtrovat dle roku.
-
-V `DashboardLifetimeStats` u klíčových metrik (tréninky, finance) zobrazíme malý trend badge „letos vs loni" (šipka + %).
+Stránka `src/pages/Tests.tsx` **nemá žádnou routu v App.tsx** -- její obsah byl integrován do PerformanceHub přes `TestsContent`. Jde o mrtvý kód.
 
 ---
 
-## 4) Vyčistit `useDemoData.ts` od mrtvých referencí
+## 3) Deduplikovat klientský portál routy v App.tsx
 
-`useDemoData.ts` importuje a re-exportuje `useDashboardStats`, který jsme v kroku 1 smazali. Odstraníme tyto mrtvé reference.
+Routy `/zona` a `/client` jsou **identické kopie** (20+ duplicitních řádků). Extrahujeme je do sdíleného pole a renderujeme jednou přes `.map()`.
+
+---
+
+## 4) Odstranit `AnimatePresence mode="wait"` ze Sidebar
+
+V `Sidebar.tsx` je 4x `AnimatePresence mode="wait"` na labely a texty, které se zobrazují/schovávají při collapse. Toto způsobuje zbytečné zpoždění (čekání na exit animaci před vstupní). Nahradíme jednoduchým `AnimatePresence` bez `mode="wait"` pro plynulejší pocit.
+
+---
+
+## 5) Zjednodušit DashboardActions – odstranit duplicitní "Hledat"
+
+`DashboardActions` (desktop bottom bar) obsahuje tlačítko "Hledat", které duplikuje vyhledávací pole v top baru (`Layout.tsx` -- `⌘K`). Na desktopu je zbytečné mít dvě místa pro stejnou akci. Odstraníme "Hledat" z bottom baru a necháme jen "Nový trénink" a "Statistiky", čímž bar zjednodušíme.
 
 ---
 
 ## Soubory
-- **Smazat:** `useDashboardStats.ts`, `useDashboardKPIs.ts`, `useSmartDailyPlan.ts`, `useYearOverYearStats.ts`
-- **Edit:** `src/hooks/analytics/index.ts` (odebrat re-exporty)
-- **Edit:** `src/hooks/useDemoData.ts` (odebrat mrtvé importy)
-- **Edit:** `src/components/dashboard/DashboardActions.tsx` (odebrat eager hooky)
-- **Edit:** `src/components/trainings/CreateTrainingSheet.tsx` (přidat vlastní data hooky)
-- **Edit:** `src/hooks/useLifetimeStats.ts` (přidat this/last year data)
-- **Edit:** `src/components/dashboard/DashboardLifetimeStats.tsx` (zobrazit YoY trendy)
+
+- **Smazat:** 6 settings komponent + `Tests.tsx` (7 souborů)
+- **Edit:** `src/App.tsx` (deduplikace portal routů)
+- **Edit:** `src/components/layout/Sidebar.tsx` (odstranit `mode="wait"`)
+- **Edit:** `src/components/dashboard/DashboardActions.tsx` (odstranit duplicitní hledání)
 
