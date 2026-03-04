@@ -105,7 +105,7 @@ export function CancelTrainingDialog({
                 <div className="bg-muted/50 border border-border/30 rounded-xl p-3 flex items-start gap-2">
                   <Clock className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                   <p className="text-sm text-muted-foreground">
-                    Tento trénink již proběhl.
+                    Trénink je v minulosti — zpětné zrušení je možné.
                   </p>
                 </div>
               )}
