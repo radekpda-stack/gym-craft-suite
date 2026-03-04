@@ -9,6 +9,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { TrainingDetailSkeleton } from '@/components/skeletons';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { Label } from '@/components/ui/label';
@@ -467,7 +468,7 @@ export default function TrainingDetail() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className={cn("space-y-6 animate-fade-in", (training.status === 'scheduled' || training.status === 'in_progress') && "pb-36")}>
       {/* Breadcrumbs */}
       <PageBreadcrumbs
         items={[
