@@ -1,98 +1,104 @@
 
 
-# Audit sekce Výkonnost – Zjednodušení a optimalizace (Fáze 8)
+# Audit sekce Prodej + Import faktur – Fáze 9
 
 ---
 
 ## Nalezené problémy
 
-### P1: `usePerformanceOverview` dělá 11 paralelních DB queries
-Hook stahuje **veškerá** data ze 3 tabulek (`exercise_entries`, `cardio_entries`, `skill_entries`) bez omezení — u aktivního trenéra to znamená tisíce řádků. Pak je ručně mapuje na kategorie. Navíc má relativně krátký `staleTime` (5 min), takže se při každém návratu na Přehled znovu spouští.
+### P1: Import faktur NEZAPISUJE stock_movements
+`useInvoiceImport.ts` při importu aktualizuje `stock_quantity` přímo přes `updateProduct.mutateAsync`, ale **nevytváří záznam v `stock_movements`** s typem `invoice_import`. Tím se obchází skladový ledger — pohyby skladu z faktur se nezobrazí v časové ose „Pohyby skladu" a audit trail je neúplný.
 
-**Řešení:** Zvýšit `staleTime` na 10 minut a přidat `refetchOnMount: false`. Omezit "all entries" queries na count-only selecty (`select('id, exercise_id, exercise_name, is_pr', { count: 'exact', head: false })`) kde je to možné.
+**Řešení:** Po každém úspěšném importu položky volat `useCreateStockMovement` s `movement_type: 'invoice_import'`, `quantity`, `unit_price` a `source_ref` (číslo faktury).
 
-### P2: `ClientProgressView.tsx` má 1130 řádků — 6 komponent v jednom souboru
-Celý soubor obsahuje `ExerciseListItem`, `ExerciseDetailView`, `WeekStrip`, `useWeekStrip`, `JournalView`, `ClientList`, `useClientMonthlyStats` a `ClientProgressView` — vše inline. To ztěžuje údržbu a zpomaluje HMR.
+### P2: Import — `updateProduct` přepisuje stock_quantity absolutně
+Řádek 272: `stock_quantity: (item.matchedProduct.stock_quantity || 0) + item.editedQuantity` — ale `matchedProduct` je snapshot z doby parsování. Pokud mezi parsováním a importem proběhl jiný prodej, stock_quantity bude špatně (race condition).
 
-**Řešení:** Extrahovat do samostatných souborů: `ExerciseListItem.tsx`, `ExerciseDetailView.tsx`, `WeekStrip.tsx`, `JournalView.tsx`, `ClientList.tsx`. Hlavní `ClientProgressView.tsx` zůstane jako orchestrátor.
+**Řešení:** Místo absolutního nastavení použít inkrementální přístup — buď RPC `increment_stock(product_id, delta)` nebo alespoň fresh read před zápisem.
 
-### P3: 4 osiřelé soubory v `src/components/exercises/analytics/` — 0 importů
-- `StagnationAlertCard.tsx`
-- `MovementGapsCard.tsx`
-- `ClientAttentionCard.tsx`
-- `UnusedExercisesCard.tsx`
+### P3: Import — edge function posílá celý base64 PDF v body
+Pro velké faktury (multi-page PDF) může base64 překročit limit edge function payload (~6MB). Není žádné upozornění ani validace velikosti na klientovi.
 
-Nikdo je neimportuje (ověřeno search). Mrtvý kód.
+**Řešení:** Přidat validaci velikosti souboru na klientovi (max 5MB) s jasnou chybovou hláškou.
 
-### P4: 4 osiřelé soubory v `src/components/performance/` — 0 importů
-- `ProgressHeroCard.tsx`
-- `ProgressSparklineGrid.tsx`
-- `PRHistoryContent.tsx`
-- `PRHistoryTimeline.tsx`
+### P4: SalesStatistics.tsx má 1130 řádků
+Monolitní komponenta s inline charty, výpočty a filtry. Ztěžuje údržbu.
 
-Nikde importovány. Legacy komponenty.
+**Řešení:** Ponechat pro pozdější fázi — priorita je funkční oprava importu.
 
-### P5: `ExercisesContent.tsx` a `ExerciseLibraryStats.tsx` — 0 importů
-Obě komponenty nejsou nikde importovány. `ExercisesContent` byl nahrazen integrovanou záložkou Cviky v `PerformanceHub`. `ExerciseLibraryStats` používá `MovementPatternsCard` (jinak osiřelou) ale sama není nikde.
+### P5: `useSharedBudgetBalance.ts` je re-export barrel
+Stejný problém jako v předchozích fázích — zbytečný soubor.
 
-### P6: `WeekStrip` a `useClientMonthlyStats` dělají raw `useEffect` + `setState` místo `useQuery`
-Oba hooky dělají `supabase` volání v `useEffect` bez cachování — při každém renderování klientského detailu se znovu spouští 3 paralelní queries. Žádné `staleTime`, žádný cache.
+**Řešení:** Smazat a přesměrovat importy na `useCreditOperations`.
 
-**Řešení:** Přepsat na `useQuery` s `staleTime: 5 * 60 * 1000`.
+### P6: Import — chybí feedback při částečném selhání
+Po importu se zobrazí toast, ale uživatel nevidí KTERÉ položky selhaly a proč. Dialog se zavře po úspěšném importu, takže info zmizí.
+
+**Řešení:** Při částečném selhání nechat dialog otevřený a vizuálně označit selhané položky.
+
+### P7: Import — nové produkty nemají `sku_code` v typu
+`createProduct.mutateAsync` dostává `sku_code` jako `any` cast (řádek 287-299), protože `useCreateProduct` typ `sku_code` nepodporuje. TypeScript to nezachytí.
+
+**Řešení:** Ověřit a doplnit `sku_code` do create product typu, nebo ho zapsat zvlášť přes update po vytvoření.
 
 ---
 
 ## Plán oprav
 
-### 1) Smazat 10 osiřelých souborů
-- `src/components/exercises/analytics/StagnationAlertCard.tsx`
-- `src/components/exercises/analytics/MovementGapsCard.tsx`
-- `src/components/exercises/analytics/ClientAttentionCard.tsx`
-- `src/components/exercises/analytics/UnusedExercisesCard.tsx`
-- `src/components/performance/ProgressHeroCard.tsx`
-- `src/components/performance/ProgressSparklineGrid.tsx`
-- `src/components/performance/PRHistoryContent.tsx`
-- `src/components/performance/PRHistoryTimeline.tsx`
-- `src/components/performance/ExercisesContent.tsx`
-- `src/components/exercises/ExerciseLibraryStats.tsx`
+### 1) Opravit import faktur — stock_movements zápis
+- V `useInvoiceImport.ts` importovat `useCreateStockMovement`
+- Po každém úspěšném `updateProduct` / `createProduct` zapsat `stock_movement` s `movement_type: 'invoice_import'`
+- Jako `source_ref` použít číslo faktury (`state.invoice?.invoiceNumber`)
+- Jako `unit_price` použít `editedPurchasePrice`
 
-### 2) Optimalizovat `usePerformanceOverview`
-- Zvýšit `staleTime` na 10 minut
-- Přidat `refetchOnMount: false`
+### 2) Opravit race condition — inkrementální stock update
+- Vytvořit DB funkci `rpc_increment_stock(p_product_id UUID, p_delta INT)` která atomicky zvýší stock
+- V importu volat tuto RPC místo absolutního nastavení `stock_quantity`
 
-### 3) Rozdělit `ClientProgressView.tsx` (1130 řádků → 5 souborů)
-- `src/components/performance/journal/ExerciseListItem.tsx`
-- `src/components/performance/journal/ExerciseDetailView.tsx`
-- `src/components/performance/journal/WeekStrip.tsx`
-- `src/components/performance/journal/JournalView.tsx`
-- `src/components/performance/journal/ClientList.tsx`
+### 3) Přidat validaci velikosti souboru
+- V `InvoiceImportDialog.tsx` a `useInvoiceImport.ts` přidat check na `file.size > 5 * 1024 * 1024`
+- Zobrazit uživateli srozumitelnou chybovou hlášku
 
-`ClientProgressView.tsx` zůstane jako orchestrátor (~100 řádků).
+### 4) Zlepšit feedback při částečném selhání
+- Při `failedItems.length > 0` a `successCount > 0` nechat dialog otevřený
+- Vizuálně označit selhané řádky (červený border + error message)
+- Přidat tlačítko „Zkusit znovu" pro selhané položky
 
-### 4) Přepsat `useWeekStrip` a `useClientMonthlyStats` na `useQuery`
-Převést raw `useEffect` + `setState` vzor na `useQuery` s cache, aby se data necachovala a nerefetchovala zbytečně.
+### 5) Smazat `useSharedBudgetBalance.ts` barrel
+- Přesměrovat importy v `SalesRegister.tsx` na `useCreditOperations`
 
 ---
 
 ## Technické detaily
 
-### Soubory ke smazání (10)
-Viz seznam výše — všechny mají 0 importů.
+### Nová DB migrace
+```sql
+CREATE OR REPLACE FUNCTION public.rpc_increment_stock(
+  p_product_id UUID, 
+  p_delta INT
+) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+BEGIN
+  UPDATE products 
+  SET stock_quantity = stock_quantity + p_delta 
+  WHERE id = p_product_id;
+END;
+$$;
+```
 
 ### Soubory k úpravě
-- `src/hooks/usePerformanceOverview.ts` — staleTime + refetchOnMount
-- `src/components/performance/ClientProgressView.tsx` — rozdělit na 5 dílčích souborů
+- `src/hooks/useInvoiceImport.ts` — stock_movements zápis, inkrementální stock, file size check, partial failure handling
+- `src/components/sales/InvoiceImportDialog.tsx` — partial failure UI, file size validation
+- `src/components/sales/InvoiceItemRow.tsx` — error state vizualizace
+- `src/components/sales/SalesRegister.tsx` — přesměrovat import z barrel
 
-### Soubory k vytvoření (5)
-- `src/components/performance/journal/ExerciseListItem.tsx`
-- `src/components/performance/journal/ExerciseDetailView.tsx`
-- `src/components/performance/journal/WeekStrip.tsx`
-- `src/components/performance/journal/JournalView.tsx`
-- `src/components/performance/journal/ClientList.tsx`
+### Soubory ke smazání
+- `src/hooks/useSharedBudgetBalance.ts`
 
 ### Očekávaný dopad
-- **Smazání ~2000 řádků** mrtvého kódu (10 souborů)
-- **Rychlejší Přehled** díky méně agresivnímu refetchování
-- **Lepší údržba** — `ClientProgressView` z 1130 → ~100 řádků orchestrátoru
-- **Rychlejší cache** pro WeekStrip a monthly stats díky `useQuery`
+- **Úplný audit trail** — všechny importy faktur viditelné v Pohybech skladu
+- **Žádné ztracené kusy** — atomický inkrement místo absolutního přepisu
+- **Lepší UX** — jasná chybová hlášení, viditelné selhání jednotlivých položek
+- **Čistší kód** — odstranění barrel re-exportu
 
