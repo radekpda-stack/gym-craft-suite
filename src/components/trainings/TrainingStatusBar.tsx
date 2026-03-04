@@ -270,9 +270,9 @@ export function TrainingStatusBar({
               </div>
             )}
             {isPastTraining && (
-              <div className="p-2 rounded bg-destructive/10 text-destructive text-sm flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                Trénink již proběhl
+              <div className="p-2 rounded bg-muted/50 text-muted-foreground text-sm flex items-center gap-2">
+                <CalendarClock className="w-4 h-4 shrink-0" />
+                Trénink je v minulosti — zpětné zrušení je možné
               </div>
             )}
             <div className="space-y-2">
