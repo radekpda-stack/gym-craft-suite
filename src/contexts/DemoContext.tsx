@@ -11,8 +11,6 @@ export const DEMO_USER = {
   isDemo: true,
 } as const;
 
-// Admin email that can see demo link
-export const DEMO_ADMIN_EMAIL = 'radek.pda@gmail.com';
 
 // Demo mode limits
 export const DEMO_LIMITS = {
@@ -156,7 +154,3 @@ export function useDemoMode() {
   return context;
 }
 
-// Helper to check if current user can see demo link
-export function canSeeDemoLink(userEmail: string | null | undefined): boolean {
-  return userEmail === DEMO_ADMIN_EMAIL;
-}
