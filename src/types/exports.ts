@@ -39,13 +39,12 @@ export type {
   TaskSeverity
 } from './dashboard';
 
-// Finance types
+// Finance types - canonical source is useCreditOperations
 export type { 
-  CreditTransaction, 
-  ProductTransaction,
+  CreditTransaction,
   TransactionType, 
   PaymentMethod 
-} from './finance';
+} from '@/hooks/useCreditOperations';
 
 // Feedback types
 export type { 
