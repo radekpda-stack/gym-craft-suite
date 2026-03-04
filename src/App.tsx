@@ -71,7 +71,7 @@ const ClientPortalProgress = lazy(() => import("./pages/client-portal/ClientPort
 const ClientPortalAttendance = lazy(() => import("./pages/client-portal/ClientPortalAttendance"));
 const ClientPortalCredit = lazy(() => import("./pages/client-portal/ClientPortalCredit"));
 const ClientPortalNutrition = lazy(() => import("./pages/client-portal/ClientPortalNutrition"));
-const ClientPortalProfile = lazy(() => import("./pages/client-portal/ClientPortalProfile"));
+
 const ClientPortalSettings = lazy(() => import("./pages/client-portal/ClientPortalSettings"));
 // ClientPortalChallenges is now loaded via ClientPortalCompetitions wrapper
 const ClientPortalWorkoutDiary = lazy(() => import("./pages/client-portal/ClientPortalWorkoutDiary"));
@@ -154,7 +154,7 @@ const App = () => (
                   <Route path="competitions" element={<ClientPortalCompetitions />} />
                   <Route path="odmeny" element={<Navigate to="../rewards" replace />} />
                   <Route path="rewards" element={<ClientPortalRewards />} />
-                  <Route path="profile" element={<ClientPortalProfile />} />
+                  <Route path="profile" element={<Navigate to="../settings" replace />} />
                   <Route path="settings" element={<ClientPortalSettings />} />
                   <Route path="chat" element={<ClientPortalChat />} />
                   <Route path="diagnostic" element={<ClientPortalDiagnostic />} />

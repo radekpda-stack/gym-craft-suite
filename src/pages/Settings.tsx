@@ -68,8 +68,6 @@ export default function Settings() {
   const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState('account');
 
-  const isOwner = user?.email === 'radek.pda@gmail.com';
-
   const categories: SettingsCategory[] = [
     {
       id: 'account',
@@ -93,19 +91,10 @@ export default function Settings() {
       id: 'app',
       title: language === 'cs' ? 'Aplikace' : 'Application',
       description: language === 'cs' 
-        ? 'Moduly, vzhled a personalizace' 
-        : 'Modules, appearance and personalization',
+        ? 'Moduly, vzhled, personalizace a systém' 
+        : 'Modules, appearance, personalization and system',
       icon: Boxes,
       iconColor: 'text-primary',
-    },
-    {
-      id: 'system',
-      title: language === 'cs' ? 'Systém' : 'System',
-      description: language === 'cs' 
-        ? 'Export dat a technické funkce' 
-        : 'Data export and technical functions',
-      icon: Wrench,
-      iconColor: 'text-muted-foreground',
     },
     {
       id: 'social-export',
@@ -338,12 +327,7 @@ export default function Settings() {
             >
               <DefaultValuesSettings />
             </SettingsSection>
-          </>
-        );
 
-      case 'system':
-        return (
-          <>
             <SettingsSection
               title={language === 'cs' ? 'Obnovení aplikace' : 'App Refresh'}
               description={language === 'cs' 
@@ -376,7 +360,7 @@ export default function Settings() {
               </SettingsSection>
             )}
 
-            {isOwner && (
+            {isAdmin && (
               <SettingsSection
                 title={language === 'cs' ? 'Analytický export' : 'Analytics Export'}
                 description={language === 'cs' 

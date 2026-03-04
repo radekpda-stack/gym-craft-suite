@@ -9,7 +9,6 @@ export { useAnnualStats } from '../useAnnualStats';
 export { useGenderStats } from '../useGenderStats';
 export { useCapacityHeatmap } from '../useCapacityHeatmap';
 export { useCapacitySettings } from '../useCapacitySettings';
-export { useCapacityTrend } from '../useCapacityTrend';
 export { useCapacityUtilization } from '../useCapacityUtilization';
 export { usePRMetrics } from '../usePRMetrics';
 export { useStrengthMetrics } from '../useStrengthMetrics';
