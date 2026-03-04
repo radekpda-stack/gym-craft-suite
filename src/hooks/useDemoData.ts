@@ -5,7 +5,6 @@ import { useMemo } from 'react';
 import { useDemoMode } from '@/contexts/DemoContext';
 import { useClients as useRealClients, Client } from './useClients';
 import { useTrainingSessions as useRealTrainingSessions, TrainingSession } from './useTrainingSessions';
-import { useDashboardStats as useRealDashboardStats, DashboardStats } from './useDashboardStats';
 import { toast } from './use-toast';
 
 // Convert demo client to Client type
@@ -33,11 +32,9 @@ function demoClientToClient(demoClient: ReturnType<typeof useDemoMode>['demoClie
     updated_at: demoClient.updated_at,
     user_id: 'demo-admin-0001',
     training_start_date: null,
-    // Custom pricing
     custom_training_price: null,
     custom_price_note: null,
     custom_price_credit_limit: null,
-    // Extended personal data fields
     handedness: null,
     occupation: null,
     sitting_hours_daily: null,
@@ -47,7 +44,6 @@ function demoClientToClient(demoClient: ReturnType<typeof useDemoMode>['demoClie
     stress_level: null,
     dietary_restrictions: null,
     supplements: null,
-    // Pre-diagnostic data fields
     height: null,
     weight: null,
     sleep_quality: null,
@@ -57,7 +53,6 @@ function demoClientToClient(demoClient: ReturnType<typeof useDemoMode>['demoClie
     movement_frequency: null,
     daily_activity_type: null,
     training_dislikes: null,
-    // Price transition fields
     grandfathered_credit: null,
     grandfathered_at: null,
     use_legacy_pricing: false,
@@ -109,23 +104,6 @@ function demoTrainingToSession(demoTraining: ReturnType<typeof useDemoMode>['dem
   };
 }
 
-// Convert demo stats to DashboardStats type
-function demoStatsToStats(demoStats: ReturnType<typeof useDemoMode>['demoDashboardStats']): DashboardStats | null {
-  if (!demoStats) return null;
-  
-  return {
-    totalClients: demoStats.totalClients,
-    sessionsThisWeek: demoStats.weeklyTrainings,
-    sessionsThisMonth: demoStats.completedTrainings,
-    sessionsThisYear: demoStats.totalTrainings,
-    sessionsAllTime: demoStats.totalTrainings,
-    averagePerWeek: demoStats.weeklyTrainings,
-    averageRating: demoStats.averageRating,
-    canceledSessions: 2,
-    lateCancellations: 1,
-  };
-}
-
 // Demo-aware useClients hook
 export function useDemoClients() {
   const { isDemo, demoClient } = useDemoMode();
@@ -164,31 +142,6 @@ export function useDemoTrainingSessions(clientId?: string) {
     if (clientId && session.client_id !== clientId) return [];
     return [session];
   }, [isDemo, demoTraining, clientId]);
-  
-  if (isDemo) {
-    return {
-      data: demoData,
-      isLoading: false,
-      error: null,
-      isError: false,
-      isPending: false,
-      isSuccess: true,
-      refetch: async () => ({ data: demoData, error: null }),
-    };
-  }
-  
-  return realQuery;
-}
-
-// Demo-aware useDashboardStats hook
-export function useDemoDashboardStats() {
-  const { isDemo, demoDashboardStats } = useDemoMode();
-  const realQuery = useRealDashboardStats();
-  
-  const demoData = useMemo(() => {
-    if (!isDemo) return null;
-    return demoStatsToStats(demoDashboardStats);
-  }, [isDemo, demoDashboardStats]);
   
   if (isDemo) {
     return {
