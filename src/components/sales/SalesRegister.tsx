@@ -22,7 +22,7 @@ import { useProductsSortedBySales } from '@/hooks/useProductsSortedBySales';
 import { useClients } from '@/hooks/useClients';
 import { useSalesCartWithDiscount } from '@/hooks/useSalesCartWithDiscount';
 import { processSaleWithDiscount, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
-import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
+import { useSharedBudgetBalance } from '@/hooks/useCreditOperations';
 import { ProductSearchAndFilters } from './ProductSearchAndFilters';
 import { CartPanel } from './CartPanel';
 import { FavoriteProducts } from './FavoriteProducts';

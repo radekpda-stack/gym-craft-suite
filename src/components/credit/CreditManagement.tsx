@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ClientAvatar } from '@/components/ui/client-avatar';
 import { useCreditTransactions, useCreateTransaction, useDeleteTransaction, CreditTransaction } from '@/hooks/useCreditTransactions';
-import { useSharedBudgetBalance, useSharedBudgetTransactions } from '@/hooks/useSharedBudgetBalance';
+import { useSharedBudgetBalance, useSharedBudgetTransactions } from '@/hooks/useCreditOperations';
 import { useProducts } from '@/hooks/useProducts';
 import { useUndoTransaction } from '@/hooks/useUndoActions';
 import { useClientTrainingPrice } from '@/hooks/usePriceTransition';

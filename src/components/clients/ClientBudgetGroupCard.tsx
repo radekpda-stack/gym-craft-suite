@@ -31,7 +31,7 @@ import {
   useClientBudgetGroup, 
   useCreateBudgetGroup 
 } from '@/hooks/useClientBudgetGroups';
-import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
+import { useSharedBudgetBalance } from '@/hooks/useCreditOperations';
 import { useClients } from '@/hooks/useClients';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient, useMutation } from '@tanstack/react-query';

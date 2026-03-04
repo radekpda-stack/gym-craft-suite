@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useProductsSortedBySales } from '@/hooks/useProductsSortedBySales';
 import { useSalesCartWithDiscount } from '@/hooks/useSalesCartWithDiscount';
-import { useSharedBudgetBalance } from '@/hooks/useSharedBudgetBalance';
+import { useSharedBudgetBalance } from '@/hooks/useCreditOperations';
 import { processSaleWithDiscount, showSaleResultToast, PaymentMethod } from '@/services/saleProcessor';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
