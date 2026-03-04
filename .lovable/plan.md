@@ -1,64 +1,69 @@
 
 
-# Další zjednodušení aplikace – Fáze 4
+# Další zjednodušení aplikace – Fáze 5
 
 ---
 
-## 1) Smazat 10 osiřelých hooků
+## 1) Smazat nepoužívané barrel indexy (3 soubory)
 
-Tyto soubory **nejsou importovány v žádné .tsx komponentě** (max. barrel re-exporty):
+Tyto barrel index soubory **nikdo nikde neimportuje** — všechny hooky jsou importovány přímo:
 
-- `useGoalTracker.ts`
-- `useFeatureFlags.ts`
-- `useStatEvents.ts` (330 řádků)
-- `useAnimatedTransition.ts`
-- `useMobilityEntries.ts`
-- `useSkillEntries.ts`
-- `useCapacityAlerts.ts`
-- `useCapacityTrend.ts`
-- `useCareerStats.ts`
-- `useDemoData.ts` (215 řádků – nikde importován po předchozím čištění)
-
-Odstraníme i re-exporty z barrel souborů (`hooks/exercises/index.ts`, `hooks/analytics/index.ts`).
+- `src/hooks/clients/index.ts` — 0 importů
+- `src/hooks/finance/index.ts` — 0 importů
+- `src/hooks/portal/index.ts` — 0 importů
+- `src/hooks/analytics/index.ts` — 0 importů
 
 ---
 
-## 2) Zjednodušit ClientPortalProfile redirect
+## 2) Smazat nepoužívané analytics hooky (3 soubory)
 
-`ClientPortalProfile.tsx` je jen `<Navigate to="/client/settings" replace />`. Místo lazy-loadování celé stránky jen kvůli redirectu, nahradíme přímo v `App.tsx` inline `<Navigate>` a smažeme soubor.
+V `src/lib/analytics/interaction/` jsou 3 hooky, které nikdo neimportuje mimo barrel:
+
+- `useFeatureTime.ts`
+- `useJourney.ts`
+- `usePerformance.ts`
+
+Vyčistíme i re-exporty z `src/lib/analytics/interaction/index.ts` a `src/lib/analytics/index.ts`.
 
 ---
 
-## 3) Odstranit hardcoded owner check v Settings
+## 3) Smazat osiřelé dev nástroje (2 soubory)
 
-`Settings.tsx` obsahuje `const isOwner = user?.email === 'radek.pda@gmail.com'` – hardcoded email v kódu. Nahradíme kontrolou `isAdmin`, čímž zjednodušíme logiku a odstraníme bezpečnostní anti-pattern.
+- `src/components/dev/StressTestIndicator.tsx` — nikde importován
+- `src/components/analytics/AnalyticsDebugPanel.tsx` — nikde importován
+
+Tyto dev panely nejsou zapojené do žádné stránky.
 
 ---
 
-## 4) Zjednodušit Settings page – sloučit kategorii "System" do "App"
+## 4) Smazat nepoužívaný `useClientHub.ts` (172 řádků)
 
-Kategorie "Systém" v nastavení obsahuje jen 2-3 položky (refresh, PDF report, usage stats). To je málo na samostatnou kategorii. Sloučíme ji do "Aplikace", čímž zredukujeme počet kategorií z 7 na 6 a zjednodušíme navigaci.
+Hook `useClientHub` měl být centrální hub pro klientská data, ale **žádná komponenta ho nepoužívá**. Je importován pouze v `src/hooks/clients/index.ts` (který také nikdo neimportuje). Mrtvý kód.
+
+---
+
+## 5) Zjednodušit DemoContext — odstranit hardcoded admin email
+
+`DemoContext.tsx` obsahuje `DEMO_ADMIN_EMAIL = 'radek.pda@gmail.com'` — stejný anti-pattern, který jsme opravili v Settings. Buď ho odstraníme, nebo nahradíme `isAdmin` checkem tam, kde se používá.
 
 ---
 
 ## Technické detaily
 
-### Soubory ke smazání (11)
-- `src/hooks/useGoalTracker.ts`
-- `src/hooks/useFeatureFlags.ts`
-- `src/hooks/useStatEvents.ts`
-- `src/hooks/useAnimatedTransition.ts`
-- `src/hooks/useMobilityEntries.ts`
-- `src/hooks/useSkillEntries.ts`
-- `src/hooks/useCapacityAlerts.ts`
-- `src/hooks/useCapacityTrend.ts`
-- `src/hooks/useCareerStats.ts`
-- `src/hooks/useDemoData.ts`
-- `src/pages/client-portal/ClientPortalProfile.tsx`
+### Soubory ke smazání (10)
+- `src/hooks/clients/index.ts`
+- `src/hooks/finance/index.ts`
+- `src/hooks/portal/index.ts`
+- `src/hooks/analytics/index.ts`
+- `src/lib/analytics/interaction/useFeatureTime.ts`
+- `src/lib/analytics/interaction/useJourney.ts`
+- `src/lib/analytics/interaction/usePerformance.ts`
+- `src/components/dev/StressTestIndicator.tsx`
+- `src/components/analytics/AnalyticsDebugPanel.tsx`
+- `src/hooks/useClientHub.ts`
 
 ### Soubory k úpravě
-- `src/hooks/exercises/index.ts` – odebrat re-exporty `useMobilityEntries`, `useSkillEntries`
-- `src/hooks/analytics/index.ts` – odebrat re-exporty `useCapacityTrend`
-- `src/App.tsx` – nahradit lazy `ClientPortalProfile` inline `<Navigate>`
-- `src/pages/Settings.tsx` – sloučit "Systém" do "Aplikace", nahradit `isOwner` za `isAdmin`
+- `src/lib/analytics/interaction/index.ts` — ponechat jen `InteractionTracker`
+- `src/lib/analytics/index.ts` — odebrat re-exporty smazaných hooků
+- `src/contexts/DemoContext.tsx` — nahradit `DEMO_ADMIN_EMAIL` za `isAdmin` check nebo odstranit
 
