@@ -407,6 +407,7 @@ export function useInvoiceImport() {
 
     // Invalidate all related queries after import
     queryClient.invalidateQueries({ queryKey: ['products'] });
+    queryClient.invalidateQueries({ queryKey: ['products_sorted_by_sales'] });
     queryClient.invalidateQueries({ queryKey: ['stock_movements'] });
     queryClient.invalidateQueries({ queryKey: ['business-expenses'] });
     queryClient.invalidateQueries({ queryKey: ['expense-stats'] });
