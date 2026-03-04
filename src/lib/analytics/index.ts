@@ -5,7 +5,7 @@ export { sessionManager, getDeviceType, getBrowser, getOS } from './SessionManag
 export { EVENT_SCHEMA_VERSION, updateReferrerRoute, getReferrerRoute } from './core/enrichment';
 
 // Interaction analytics
-export { InteractionTracker, useFeatureTime, useJourney, JOURNEY_TYPES, usePerformance, measureRenderTime } from './interaction';
+export { InteractionTracker } from './interaction';
 
 // Performance analytics
 export { trackPageLoadPerformance, trackNavigationPerformance, trackApiLatency } from './performance';
