@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { FileText, Upload, Loader2, CheckCircle, AlertTriangle, Package, Receipt, Hash } from 'lucide-react';
+import { FileText, Upload, Loader2, CheckCircle, AlertTriangle, Package, Receipt, Hash, RotateCcw } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -28,6 +28,7 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
     updateItem,
     changeMatchedProduct,
     importItems,
+    retryFailedItems,
     reset,
     setSaveSkuCodes,
     selectedItems,
@@ -39,7 +40,6 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
 
   const handleClose = () => {
     setOpen(false);
-    // Reset after animation
     setTimeout(reset, 300);
   };
 
@@ -75,16 +75,22 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
     if (success) {
       handleClose();
     }
+    // If not success, dialog stays open (partial_success state)
+  };
+
+  const handleRetry = async () => {
+    const success = await retryFailedItems(createExpense);
+    if (success) {
+      handleClose();
+    }
   };
 
   const allItemsSelected = state.items.length > 0 && state.items.every(i => i.selected);
   const someItemsSelected = state.items.some(i => i.selected);
-
-  // Check if any items have SKU codes
   const hasSkuCodes = state.items.some(i => i.skuCode);
-  
-  // Count items with uncertain matches
   const uncertainMatchCount = state.items.filter(i => i.matchedProductId && i.confidence < 0.8).length;
+  const isPartialSuccess = state.status === 'partial_success';
+  const failedCount = state.failedItems.length;
 
   return (
     <Dialog open={open} onOpenChange={(o) => o ? setOpen(true) : handleClose()}>
@@ -97,11 +103,6 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
         )}
       </DialogTrigger>
 
-      {/*
-        DialogContent má ve výchozím stylu `grid` + `overflow-y-auto`.
-        To koliduje s interním ScrollArea (na mobilu pak seznam nedostane výšku a nesroluje).
-        Proto tady vynucujeme flex layout a vypínáme overflow na rootu.
-      */}
       <DialogContent className="max-w-2xl h-[85vh] !flex !flex-col !overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
@@ -111,7 +112,7 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
         </DialogHeader>
 
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          {/* Upload area - shown when idle or error */}
+          {/* Upload area */}
           {(state.status === 'idle' || state.status === 'error') && (
             <div 
               className={cn(
@@ -138,7 +139,7 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
                   Přetáhněte fakturu sem nebo klikněte pro výběr
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Podporované formáty: PDF, JPG, PNG
+                  Podporované formáty: PDF, JPG, PNG (max 5 MB)
                 </p>
               </label>
               
@@ -167,10 +168,25 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
           )}
 
           {/* Results */}
-          {(state.status === 'ready' || state.status === 'importing') && (
+          {(state.status === 'ready' || state.status === 'importing' || state.status === 'partial_success') && (
             <>
+              {/* Partial success banner */}
+              {isPartialSuccess && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 mb-4">
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      {failedCount} {failedCount === 1 ? 'položka selhala' : failedCount < 5 ? 'položky selhaly' : 'položek selhalo'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Neúspěšné položky jsou označeny červeně. Můžete je zkusit importovat znovu.
+                  </p>
+                </div>
+              )}
+
               {/* Invoice info */}
-              {state.invoice && (
+              {state.invoice && !isPartialSuccess && (
                 <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 mb-4">
                   <div className="flex items-center gap-2 text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500" />
@@ -225,7 +241,7 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
                 </Label>
               </div>
 
-              {/* Items list - scrollable container */}
+              {/* Items list */}
               <div className="flex-1 min-h-0 -mx-6 overflow-hidden">
                 <ScrollArea className="h-full px-6">
                   <div className="space-y-2 pb-4">
@@ -282,7 +298,7 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
                   </div>
                 </div>
 
-                {/* Save SKU codes option - only show if items have SKU codes */}
+                {/* Save SKU codes option */}
                 {hasSkuCodes && newProductsCount > 0 && (
                   <div 
                     className={cn(
@@ -314,25 +330,36 @@ export function InvoiceImportDialog({ trigger }: InvoiceImportDialogProps) {
                 {/* Actions */}
                 <div className="flex items-center justify-end gap-2">
                   <Button variant="outline" onClick={handleClose} disabled={state.status === 'importing'}>
-                    Zrušit
+                    {isPartialSuccess ? 'Zavřít' : 'Zrušit'}
                   </Button>
-                  <Button 
-                    onClick={handleImport}
-                    disabled={selectedItems.length === 0 || state.status === 'importing'}
-                    className="gap-2"
-                  >
-                    {state.status === 'importing' ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Importuji...
-                      </>
-                    ) : (
-                      <>
-                        <Package className="w-4 h-4" />
-                        Naskladnit {selectedItems.length} položek
-                      </>
-                    )}
-                  </Button>
+                  {isPartialSuccess ? (
+                    <Button 
+                      onClick={handleRetry}
+                      disabled={selectedItems.length === 0}
+                      className="gap-2"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Zkusit znovu ({selectedItems.length})
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={handleImport}
+                      disabled={selectedItems.length === 0 || state.status === 'importing'}
+                      className="gap-2"
+                    >
+                      {state.status === 'importing' ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Importuji...
+                        </>
+                      ) : (
+                        <>
+                          <Package className="w-4 h-4" />
+                          Naskladnit {selectedItems.length} položek
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             </>

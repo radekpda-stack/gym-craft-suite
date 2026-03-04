@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProducts, useCreateProduct, useUpdateProduct, Product } from '@/hooks/useProducts';
 import { useCreateExpense } from '@/hooks/useBusinessExpenses';
+import { useCreateStockMovement } from '@/hooks/useStockMovements';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export interface MatchSuggestion {
   productId: string;
@@ -20,7 +23,7 @@ export interface ExtractedDetails {
 }
 
 export interface ParsedInvoiceItem {
-  id: string; // local ID for UI
+  id: string;
   name: string;
   quantity: number;
   purchasePrice: number | null;
@@ -32,15 +35,14 @@ export interface ParsedInvoiceItem {
   confidence: number;
   selected: boolean;
   skuCode: string | null;
-  // Match suggestions for manual correction
   matchSuggestions: MatchSuggestion[];
-  // Extracted details for enrichment
   extractedDetails: ExtractedDetails;
-  // User-editable fields
   editedQuantity: number;
   editedPurchasePrice: number;
   editedSellPrice: number;
   editedCategory: string;
+  // Error state for partial failure UI
+  importError?: string | null;
 }
 
 export interface ParsedInvoice {
@@ -51,12 +53,13 @@ export interface ParsedInvoice {
 }
 
 export interface InvoiceImportState {
-  status: 'idle' | 'uploading' | 'parsing' | 'ready' | 'importing' | 'error';
+  status: 'idle' | 'uploading' | 'parsing' | 'ready' | 'importing' | 'partial_success' | 'error';
   error: string | null;
   invoice: ParsedInvoice | null;
   items: ParsedInvoiceItem[];
   fileName: string | null;
   saveSkuCodes: boolean;
+  failedItems: { itemId: string; name: string; error: string }[];
 }
 
 export function useInvoiceImport() {
@@ -64,6 +67,7 @@ export function useInvoiceImport() {
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const createExpense = useCreateExpense();
+  const createStockMovement = useCreateStockMovement();
 
   const [state, setState] = useState<InvoiceImportState>({
     status: 'idle',
@@ -72,6 +76,7 @@ export function useInvoiceImport() {
     items: [],
     fileName: null,
     saveSkuCodes: true,
+    failedItems: [],
   });
 
   const reset = () => {
@@ -82,6 +87,7 @@ export function useInvoiceImport() {
       items: [],
       fileName: null,
       saveSkuCodes: true,
+      failedItems: [],
     });
   };
 
@@ -90,15 +96,23 @@ export function useInvoiceImport() {
   };
 
   const parseInvoice = async (file: File) => {
-    setState(prev => ({ ...prev, status: 'uploading', error: null, fileName: file.name }));
+    // P3: File size validation
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: 'Soubor je příliš velký',
+        description: `Maximální velikost souboru je 5 MB. Váš soubor má ${(file.size / 1024 / 1024).toFixed(1)} MB.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setState(prev => ({ ...prev, status: 'uploading', error: null, fileName: file.name, failedItems: [] }));
 
     try {
-      // Convert file to base64
       const base64 = await fileToBase64(file);
       
       setState(prev => ({ ...prev, status: 'parsing' }));
 
-      // Prepare existing products for matching - include SKU codes
       const existingProducts = products
         .filter(p => p.is_active && p.kind === 'inventory')
         .map(p => ({
@@ -110,7 +124,6 @@ export function useInvoiceImport() {
           sku_code: (p as any).sku_code || null,
         }));
 
-      // Call edge function
       const { data, error } = await supabase.functions.invoke('parse-invoice', {
         body: {
           fileBase64: base64,
@@ -127,7 +140,6 @@ export function useInvoiceImport() {
         throw new Error(data.error || 'Nepodařilo se zpracovat fakturu');
       }
 
-      // Enhance items with local IDs and product references
       const enhancedItems: ParsedInvoiceItem[] = (data.items || []).map((item: any, index: number) => {
         const matchedProduct = item.matchedProductId 
           ? products.find(p => p.id === item.matchedProductId)
@@ -135,7 +147,6 @@ export function useInvoiceImport() {
 
         const purchasePrice = item.purchasePrice || 0;
 
-        // Enhance match suggestions with full product data
         const matchSuggestions: MatchSuggestion[] = (item.matchSuggestions || []).map((s: any) => ({
           productId: s.productId,
           productName: s.productName,
@@ -143,7 +154,6 @@ export function useInvoiceImport() {
           matchReason: s.matchReason || '',
         }));
 
-        // Pro existující produkty použij jejich aktuální prodejní cenu, jinak navrhni dvojnásobek nákupní
         const existingSellPrice = matchedProduct?.price || 0;
         const suggestedSellPrice = item.suggestedSellPrice || (purchasePrice ? Math.round(purchasePrice * 2) : 0);
 
@@ -162,11 +172,11 @@ export function useInvoiceImport() {
           matchSuggestions,
           extractedDetails: item.extractedDetails || {},
           selected: true,
-          // Editable fields - pro existující produkty použij jejich cenu
           editedQuantity: item.quantity,
           editedPurchasePrice: purchasePrice,
           editedSellPrice: matchedProduct ? existingSellPrice : suggestedSellPrice,
           editedCategory: item.suggestedCategory || 'other',
+          importError: null,
         };
       });
 
@@ -177,6 +187,7 @@ export function useInvoiceImport() {
         items: enhancedItems,
         fileName: file.name,
         saveSkuCodes: true,
+        failedItems: [],
       });
 
       toast({
@@ -221,7 +232,6 @@ export function useInvoiceImport() {
     }));
   };
 
-  // Change matched product for an item (manual correction)
   const changeMatchedProduct = (itemId: string, productId: string | null) => {
     setState(prev => ({
       ...prev,
@@ -237,7 +247,7 @@ export function useInvoiceImport() {
           matchedProductId: productId,
           matchedProductName: matchedProduct?.name || null,
           matchedProduct,
-          confidence: productId ? 1.0 : 0, // Manual selection = 100% confidence
+          confidence: productId ? 1.0 : 0,
         };
       }),
     }));
@@ -254,12 +264,19 @@ export function useInvoiceImport() {
       return false;
     }
 
-    setState(prev => ({ ...prev, status: 'importing' }));
+    setState(prev => ({ ...prev, status: 'importing', failedItems: [] }));
+
+    // Clear previous errors on items
+    setState(prev => ({
+      ...prev,
+      items: prev.items.map(item => ({ ...item, importError: null })),
+    }));
 
     let newProductsCount = 0;
     let updatedProductsCount = 0;
     let totalCost = 0;
-    const failedItems: { name: string; error: string }[] = [];
+    const failedItems: { itemId: string; name: string; error: string }[] = [];
+    const invoiceNumber = state.invoice?.invoiceNumber || null;
 
     for (const item of selectedItems) {
       try {
@@ -267,9 +284,15 @@ export function useInvoiceImport() {
         totalCost += itemTotalCost;
 
         if (item.matchedProductId && item.matchedProduct) {
+          // P2: Use atomic RPC increment instead of absolute stock_quantity set
+          await supabase.rpc('rpc_increment_stock', {
+            p_product_id: item.matchedProductId,
+            p_delta: item.editedQuantity,
+          });
+
+          // Update purchase_price and optionally sell price / SKU
           const updateData: Partial<Product> & { id: string; sku_code?: string } = {
             id: item.matchedProductId,
-            stock_quantity: (item.matchedProduct.stock_quantity || 0) + item.editedQuantity,
             purchase_price: item.editedPurchasePrice,
           };
 
@@ -282,28 +305,48 @@ export function useInvoiceImport() {
           }
 
           await updateProduct.mutateAsync(updateData);
+
+          // P1: Record stock movement for audit trail
+          await createStockMovement.mutateAsync({
+            product_id: item.matchedProductId,
+            movement_type: 'invoice_import',
+            quantity: item.editedQuantity,
+            unit_price: item.editedPurchasePrice,
+            source_ref: invoiceNumber,
+          });
+
           updatedProductsCount++;
         } else {
-          const createData: any = {
+          // Create new product
+          const createData = {
             name: item.name,
             price: item.editedSellPrice,
             purchase_price: item.editedPurchasePrice,
             category: item.editedCategory,
-            kind: 'inventory',
+            kind: 'inventory' as const,
             stock_quantity: item.editedQuantity,
             low_stock_threshold: 5,
+            sku_code: (state.saveSkuCodes && item.skuCode) ? item.skuCode : null,
           };
 
-          if (state.saveSkuCodes && item.skuCode) {
-            createData.sku_code = item.skuCode;
+          const newProduct = await createProduct.mutateAsync(createData);
+
+          // P1: Record stock movement for new product too
+          if (newProduct?.id) {
+            await createStockMovement.mutateAsync({
+              product_id: newProduct.id,
+              movement_type: 'invoice_import',
+              quantity: item.editedQuantity,
+              unit_price: item.editedPurchasePrice,
+              source_ref: invoiceNumber,
+            });
           }
 
-          await createProduct.mutateAsync(createData);
           newProductsCount++;
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Neznámá chyba';
-        failedItems.push({ name: item.name, error: errorMsg });
+        failedItems.push({ itemId: item.id, name: item.name, error: errorMsg });
         console.error(`Failed to import item "${item.name}":`, err);
       }
     }
@@ -315,7 +358,6 @@ export function useInvoiceImport() {
           .map(i => `${i.name} (${i.editedQuantity}x)`)
           .join(', ');
 
-        // Normalize date - support DD.MM.YYYY, D.M.YYYY formats
         let expenseDate = format(new Date(), 'yyyy-MM-dd');
         if (state.invoice?.date) {
           const parsed = parseDateSafe(state.invoice.date);
@@ -325,8 +367,8 @@ export function useInvoiceImport() {
         }
 
         await createExpense.mutateAsync({
-          name: state.invoice?.invoiceNumber 
-            ? `Import faktury: ${state.invoice.invoiceNumber}`
+          name: invoiceNumber 
+            ? `Import faktury: ${invoiceNumber}`
             : `Import faktury: ${selectedItems.length} položek`,
           description: itemDescriptions,
           amount: totalCost,
@@ -350,27 +392,60 @@ export function useInvoiceImport() {
         title: 'Import dokončen',
         description: `Naskladněno: ${newProductsCount} nových, ${updatedProductsCount} aktualizovaných produktů${createExpenseRecord ? `. Náklad: ${totalCost} Kč` : ''}`,
       });
+      reset();
+      return true;
     } else if (successCount > 0) {
+      // P6: Partial failure - keep dialog open, mark failed items
       toast({
         title: 'Import částečně dokončen',
-        description: `Naskladněno ${successCount} produktů, ${failedItems.length} selhalo: ${failedItems.map(f => f.name).join(', ')}`,
+        description: `${successCount} úspěšně, ${failedItems.length} selhalo`,
         variant: 'destructive',
       });
+
+      // Update items with error state and deselect successful ones
+      const failedIds = new Set(failedItems.map(f => f.itemId));
+      setState(prev => ({
+        ...prev,
+        status: 'partial_success',
+        failedItems,
+        items: prev.items.map(item => {
+          const failure = failedItems.find(f => f.itemId === item.id);
+          if (failure) {
+            return { ...item, importError: failure.error, selected: true };
+          }
+          // Deselect successfully imported items
+          if (item.selected) {
+            return { ...item, selected: false, importError: null };
+          }
+          return item;
+        }),
+      }));
+      return false;
     } else {
       toast({
         title: 'Import selhal',
-        description: `Žádný produkt nebyl naskladněn. Chyby: ${failedItems.map(f => `${f.name}: ${f.error}`).join('; ')}`,
+        description: `Žádný produkt nebyl naskladněn.`,
         variant: 'destructive',
       });
-      setState(prev => ({ ...prev, status: 'error', error: 'Všechny položky selhaly' }));
+      setState(prev => ({
+        ...prev,
+        status: 'error',
+        error: 'Všechny položky selhaly',
+        failedItems,
+        items: prev.items.map(item => {
+          const failure = failedItems.find(f => f.itemId === item.id);
+          return failure ? { ...item, importError: failure.error } : item;
+        }),
+      }));
       return false;
     }
-
-    reset();
-    return true;
   };
 
-  // Computed values
+  // Retry only failed items
+  const retryFailedItems = async (createExpenseRecord: boolean) => {
+    return importItems(createExpenseRecord);
+  };
+
   const selectedItems = state.items.filter(item => item.selected);
   const totalSelectedQuantity = selectedItems.reduce((sum, item) => sum + item.editedQuantity, 0);
   const totalPurchaseCost = selectedItems.reduce((sum, item) => sum + (item.editedPurchasePrice * item.editedQuantity), 0);
@@ -379,16 +454,16 @@ export function useInvoiceImport() {
 
   return {
     state,
-    products, // Expose products for manual selection
+    products,
     parseInvoice,
     toggleItemSelection,
     toggleAllItems,
     updateItem,
     changeMatchedProduct,
     importItems,
+    retryFailedItems,
     reset,
     setSaveSkuCodes,
-    // Computed
     selectedItems,
     totalSelectedQuantity,
     totalPurchaseCost,
@@ -397,16 +472,10 @@ export function useInvoiceImport() {
   };
 }
 
-/**
- * Parse date string safely, supporting DD.MM.YYYY, D.M.YYYY and YYYY-MM-DD formats.
- * Returns YYYY-MM-DD string or null if unparseable.
- */
 function parseDateSafe(dateStr: string): string | null {
-  // Already in YYYY-MM-DD format
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     return dateStr;
   }
-  // Czech format: DD.MM.YYYY or D.M.YYYY (with optional spaces)
   const czMatch = dateStr.match(/^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})$/);
   if (czMatch) {
     const day = czMatch[1].padStart(2, '0');
@@ -414,7 +483,6 @@ function parseDateSafe(dateStr: string): string | null {
     const year = czMatch[3];
     return `${year}-${month}-${day}`;
   }
-  // Try native Date parsing as fallback
   const d = new Date(dateStr);
   if (!isNaN(d.getTime())) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -422,14 +490,12 @@ function parseDateSafe(dateStr: string): string | null {
   return null;
 }
 
-// Helper to convert file to base64
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
       const result = reader.result as string;
-      // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
       const base64 = result.split(',')[1];
       resolve(base64);
     };
