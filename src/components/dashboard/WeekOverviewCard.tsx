@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
 import type { FinanceMetrics, WeeklySummary } from '@/types/dashboard';
 import { useCashflowForecast } from '@/hooks/useCashflowForecast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -18,13 +19,6 @@ interface WeekOverviewCardProps {
   weeklySummary: WeeklySummary;
   isLoading?: boolean;
 }
-
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('cs-CZ', { 
-    style: 'currency', currency: 'CZK',
-    minimumFractionDigits: 0, maximumFractionDigits: 0,
-  }).format(value);
-};
 
 const TrendIcon = ({ value, size = 3 }: { value: number; size?: number }) => {
   if (value > 0) return <TrendingUp className={`w-${size} h-${size} text-success`} />;

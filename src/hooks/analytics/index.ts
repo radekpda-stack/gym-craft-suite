@@ -13,7 +13,7 @@ export { useCapacityTrend } from '../useCapacityTrend';
 export { useCapacityUtilization } from '../useCapacityUtilization';
 export { usePRMetrics } from '../usePRMetrics';
 export { useStrengthMetrics } from '../useStrengthMetrics';
-export { usePerformanceMetricsData } from '../usePerformanceMetricsData';
+
 export { usePerformanceBenchmarks } from '../usePerformanceBenchmarks';
 export { useClientTagAnalytics } from '../useClientTagAnalytics';
 export { useClientAttendanceStats } from '../useClientAttendanceStats';
