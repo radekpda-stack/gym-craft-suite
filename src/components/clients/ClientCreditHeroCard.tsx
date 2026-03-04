@@ -4,22 +4,24 @@
   * Dominant hero section for credit balance and recent transactions.
   * Designed as "Credit-First" approach - immediately visible without navigation.
   */
- import { useMemo } from 'react';
- import { useSearchParams } from 'react-router-dom';
- import { 
-   Wallet, 
-   Plus, 
-   CreditCard, 
-   Dumbbell, 
-   Package, 
-   Wrench, 
-   Users, 
-   ArrowRight,
-   TrendingUp,
-   TrendingDown,
-   AlertTriangle,
-   RefreshCw,
- } from 'lucide-react';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { 
+  Wallet, 
+  Plus, 
+  CreditCard, 
+  Dumbbell, 
+  Package, 
+  Wrench, 
+  Users, 
+  ArrowRight,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  RefreshCw,
+  ShoppingBag,
+} from 'lucide-react';
+import { useClientLTV } from '@/hooks/useClientLTV';
  import { Button } from '@/components/ui/button';
  import { Badge } from '@/components/ui/badge';
  import { Skeleton } from '@/components/ui/skeleton';
@@ -37,17 +39,18 @@
    product_id?: string | null;
  }
  
- interface ClientCreditHeroCardProps {
-   creditBalance: number;
-   isSharedBudget: boolean;
-   budgetGroupName?: string | null;
-   transactions: Transaction[];
-   unpaidCount?: number;
-   unpaidAmount?: number;
-   paymentMode?: string | null;
-   isLoading?: boolean;
-   onAddCredit: () => void;
- }
+interface ClientCreditHeroCardProps {
+  clientId: string;
+  creditBalance: number;
+  isSharedBudget: boolean;
+  budgetGroupName?: string | null;
+  transactions: Transaction[];
+  unpaidCount?: number;
+  unpaidAmount?: number;
+  paymentMode?: string | null;
+  isLoading?: boolean;
+  onAddCredit: () => void;
+}
  
  type TransactionType = 'payment' | 'training' | 'product' | 'refund' | 'manual';
  
@@ -103,9 +106,10 @@
    }
  }
  
- export function ClientCreditHeroCard({
-   creditBalance,
-   isSharedBudget,
+export function ClientCreditHeroCard({
+  clientId,
+  creditBalance,
+  isSharedBudget,
    budgetGroupName,
    transactions,
    unpaidCount = 0,
@@ -113,11 +117,12 @@
    paymentMode,
    isLoading = false,
    onAddCredit,
- }: ClientCreditHeroCardProps) {
-   const [, setSearchParams] = useSearchParams();
-   
-   const isCashOnly = paymentMode === 'cash_only';
-   const hasDebt = unpaidCount > 0;
+}: ClientCreditHeroCardProps) {
+  const [, setSearchParams] = useSearchParams();
+  const { data: ltvData } = useClientLTV(clientId);
+  
+  const isCashOnly = paymentMode === 'cash_only';
+  const hasDebt = unpaidCount > 0;
    
    // Get last 5 transactions
    const recentTransactions = useMemo(() => {
@@ -242,25 +247,41 @@
              <span className="text-lg font-normal text-muted-foreground ml-1">Kč</span>
            </div>
            
-           {/* Debt indicator */}
-           {hasDebt && (
-             <div className="flex items-center gap-1.5 text-sm text-destructive mb-3 font-medium">
-               <span className="inline-block w-2 h-2 rounded-full bg-destructive animate-pulse" />
-               {unpaidCount}× nezaplaceno ({formatCurrency(unpaidAmount)})
-             </div>
-           )}
-           
-           {/* CTA Button */}
-           {!isCashOnly && (
-             <Button 
-               onClick={onAddCredit}
-               className="w-full mt-auto gap-2 h-10 rounded-xl shadow-sm hover:shadow-md transition-all"
-               variant="default"
-             >
-               <Plus className="w-4 h-4" />
-               Dobít kredit
-             </Button>
-           )}
+            {/* Debt indicator */}
+            {hasDebt && (
+              <div className="flex items-center gap-1.5 text-sm text-destructive mb-3 font-medium">
+                <span className="inline-block w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                {unpaidCount}× nezaplaceno ({formatCurrency(unpaidAmount)})
+              </div>
+            )}
+            
+            {/* Total spent (LTV) */}
+            {ltvData && ltvData.totalRevenue > 0 && (
+              <div className="border-t border-border/30 pt-2.5 mb-3">
+                <div className="flex items-center gap-1.5 text-muted-foreground mb-0.5">
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">Celkem utraceno</span>
+                </div>
+                <div className="text-lg font-bold text-foreground tabular-nums">
+                  {formatCurrency(ltvData.totalRevenue)}
+                </div>
+                <div className="text-[10px] text-muted-foreground font-medium">
+                  {ltvData.totalTrainings} tréninků • {ltvData.monthsActive} měsíců
+                </div>
+              </div>
+            )}
+            
+            {/* CTA Button */}
+            {!isCashOnly && (
+              <Button 
+                onClick={onAddCredit}
+                className="w-full mt-auto gap-2 h-10 rounded-xl shadow-sm hover:shadow-md transition-all"
+                variant="default"
+              >
+                <Plus className="w-4 h-4" />
+                Dobít kredit
+              </Button>
+            )}
          </div>
          
          {/* Right: Recent Transactions */}
