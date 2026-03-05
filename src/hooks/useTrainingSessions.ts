@@ -425,6 +425,7 @@ export function useCreateTrainingSession() {
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["training_sessions"] });
       queryClient.invalidateQueries({ queryKey: ["training_sessions", variables.client_id] });
+      queryClient.invalidateQueries({ queryKey: ["training-sessions-today-slots"] });
       queryClient.invalidateQueries({ queryKey: ["credit_transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       featureTracker.track('training_create', 'trainings', { recurring: result.createdCount > 1 });

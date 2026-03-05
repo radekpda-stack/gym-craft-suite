@@ -21,7 +21,7 @@ export function useNextAvailableTrainingSlot() {
         .in('status', ['scheduled', 'completed']);
       return data || [];
     },
-    staleTime: 10_000, // refresh every 10s to pick up newly created trainings
+    staleTime: 0, // always refetch to pick up newly created trainings
   });
 
   const nextSlot = useMemo(() => {
