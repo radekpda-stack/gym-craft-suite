@@ -316,18 +316,7 @@ export function TrainingDetailView({
         </div>
       </div>
 
-      {/* EXERCISES - main content */}
-      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-3">
-        <WorkoutExerciseManager
-          trainingSessionId={training.id}
-          clientId={training.client_id}
-          trainingDate={training.date}
-          trainingStatus={training.status}
-          participants={participants}
-        />
-      </div>
-
-      {/* INLINE NOTES - for scheduled/in_progress */}
+      {/* INLINE NOTES - for scheduled/in_progress, above exercises for visibility */}
       {(isScheduled || isInProgress) && onFieldUpdate && (
         <div className="rounded-xl bg-secondary/40 border border-border/30 px-3 py-2.5 space-y-1">
           <p className="text-[11px] font-medium text-muted-foreground">📝 Poznámky k tréninku</p>
@@ -341,6 +330,17 @@ export function TrainingDetailView({
           />
         </div>
       )}
+
+      {/* EXERCISES - main content */}
+      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-3">
+        <WorkoutExerciseManager
+          trainingSessionId={training.id}
+          clientId={training.client_id}
+          trainingDate={training.date}
+          trainingStatus={training.status}
+          participants={participants}
+        />
+      </div>
 
       {/* PREVIOUS TRAINING - collapsible, below exercises */}
       {(isScheduled || isInProgress) && (
