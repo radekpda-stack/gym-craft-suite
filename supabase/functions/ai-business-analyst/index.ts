@@ -111,24 +111,24 @@ serve(async (req) => {
       supabase.from("feedback_requests").select("id, training_session_id, status, created_at, sent_at, completed_at").eq("user_id", userId).gte("created_at", last90days),
       supabase.from("product_sales").select("*, products(name, sell_price, cost_price), clients(name)").eq("user_id", userId).gte("created_at", `${today}T00:00:00`).lt("created_at", `${tomorrow}T00:00:00`).order("created_at", { ascending: false }),
       // NEW queries
-      supabase.from("measurements").select("id, client_id, date, weight, height, body_fat_pct, notes").eq("user_id", userId).order("date", { ascending: false }).limit(200),
-      supabase.from("diagnostics").select("id, client_id, date, category, findings, notes").eq("user_id", userId).order("date", { ascending: false }).limit(100),
+      supabase.from("measurements").select("id, client_id, date, weight, body_fat_percentage, muscle_mass, waist, chest, hips, bmi, visceral_fat, water_percent, notes").eq("user_id", userId).order("date", { ascending: false }).limit(200),
+      supabase.from("diagnostics").select("id, client_id, date, area_type, area_name, findings, notes").eq("user_id", userId).order("date", { ascending: false }).limit(100),
       supabase.from("client_packages").select("id, client_id, package_name, trainings_total, trainings_used, price_paid, is_active, purchased_at, expires_at").eq("user_id", userId).eq("is_active", true),
-      supabase.from("client_xp").select("client_id, current_xp, level, streak_days, updated_at").eq("user_id", userId),
+      supabase.from("client_xp").select("client_id, total_xp, level, level_xp, xp_to_next, last_xp_date, updated_at"),
       supabase.from("loyalty_balance").select("client_id, points_balance, lifetime_points, updated_at"),
       supabase.from("challenges").select("id, title, status, start_at, end_at, scoring_type, primary_metric").eq("created_by_user_id", userId).order("start_at", { ascending: false }).limit(20),
       supabase.from("challenge_submissions").select("id, challenge_id, client_id, score_primary, status, submitted_at, is_winner").order("submitted_at", { ascending: false }).limit(100),
-      supabase.from("nutrition_log_sessions").select("id, client_id, date, meal_type, created_at").eq("user_id", userId).gte("date", last30days).limit(500),
-      supabase.from("stock_movements").select("id, product_id, movement_type, quantity, unit_price, created_at").gte("created_at", last30days).order("created_at", { ascending: false }).limit(200),
+      supabase.from("nutrition_log_sessions").select("id, client_id, start_date, end_date, status, created_at").eq("user_id", userId).gte("start_date", last30days).limit(500),
+      supabase.from("stock_movements").select("id, product_id, user_id, movement_type, quantity, unit_price, created_at").eq("user_id", userId).gte("created_at", last30days).order("created_at", { ascending: false }).limit(200),
       supabase.from("test_definitions").select("id, name, name_cs, category, primary_metric_key, primary_metric_better, is_active").eq("is_active", true),
       supabase.from("test_sessions").select("id, test_definition_id, client_id, date_time, metrics_json, is_valid, rpe_1_10, notes").eq("user_id", userId).order("date_time", { ascending: false }).limit(200),
       supabase.from("client_assigned_workouts").select("id, client_id, title, status, due_date, completed_at, created_at").eq("trainer_id", userId).order("created_at", { ascending: false }).limit(100),
-      supabase.from("pre_session_checkins").select("id, client_id, session_id, energy_level, sleep_quality, stress_level, pain_areas, notes, created_at").eq("user_id", userId).gte("created_at", last30days).order("created_at", { ascending: false }).limit(100),
+      supabase.from("pre_session_checkins").select("id, client_id, training_session_id, energy_level, sleep_quality, pain_area, pain_notes, notes, created_at").eq("user_id", userId).gte("created_at", last30days).order("created_at", { ascending: false }).limit(100),
       supabase.from("client_badges").select("id, client_id, badge_id, earned_at, progress_current, progress_target").order("earned_at", { ascending: false }).limit(50),
       supabase.from("badge_definitions").select("id, name, description, rarity, icon_key, is_active").eq("is_active", true),
-      supabase.from("price_lists").select("id, name, is_active, valid_from, valid_to").eq("user_id", userId).eq("is_active", true),
-      supabase.from("price_items").select("id, price_list_id, name, price, session_count, validity_days").eq("user_id", userId),
-      supabase.from("client_recurring_schedules").select("id, client_id, day_of_week, time, duration_minutes, training_type, is_active").eq("user_id", userId).eq("is_active", true),
+      supabase.from("price_lists").select("id, name, is_active, effective_from, description").eq("user_id", userId).eq("is_active", true),
+      supabase.from("price_items").select("id, price_list_id, service_id, unit_price_czk"),
+      supabase.from("client_recurring_schedules").select("id, client_id, day_of_week, time, duration, is_active, notes").eq("user_id", userId).eq("is_active", true),
     ]);
 
     const clients = clientsRes.data || [];
@@ -155,8 +155,10 @@ serve(async (req) => {
     const measurements = measurementsRes.data || [];
     const diagnostics = diagnosticsRes.data || [];
     const clientPackages = clientPackagesRes.data || [];
-    const clientXp = clientXpRes.data || [];
-    const loyaltyBalances = loyaltyRes.data || [];
+    // Filter client_xp and loyalty_balance by trainer's client IDs (no user_id column)
+    const clientIds = new Set(clientsFull.map((c: any) => c.id));
+    const clientXp = (clientXpRes.data || []).filter((x: any) => clientIds.has(x.client_id));
+    const loyaltyBalances = (loyaltyRes.data || []).filter((l: any) => clientIds.has(l.client_id));
     const challenges = challengesRes.data || [];
     const challengeSubmissions = challengeSubmissionsRes.data || [];
     const nutritionSessions = nutritionSessionsRes.data || [];
@@ -165,10 +167,11 @@ serve(async (req) => {
     const testSessions = testSessionsRes.data || [];
     const assignedWorkouts = assignedWorkoutsRes.data || [];
     const preCheckins = preCheckinRes.data || [];
-    const clientBadges = clientBadgesRes.data || [];
+    const clientBadges = (clientBadgesRes.data || []).filter((b: any) => clientIds.has(b.client_id));
     const badgeDefs = badgeDefsRes.data || [];
     const priceLists = priceListsRes.data || [];
-    const priceItems = priceItemsRes.data || [];
+    const priceListIds = new Set(priceLists.map((pl: any) => pl.id));
+    const priceItems = (priceItemsRes.data || []).filter((pi: any) => priceListIds.has(pi.price_list_id));
     const recurringSchedules = recurringSchedulesRes.data || [];
 
     // Build client name map
@@ -485,14 +488,14 @@ ${(() => {
   if (entries.length === 0) return "Žádná měření";
   return entries.map((m: any) => {
     const name = clientNameMap[m.client_id] || "?";
-    return `- ${name} (${m.date}): váha=${m.weight || "?"}kg, výška=${m.height || "?"}cm, tuk=${m.body_fat_pct || "?"}%${m.notes ? ` | ${m.notes.substring(0, 40)}` : ""}`;
+    return `- ${name} (${m.date}): váha=${m.weight || "?"}kg, tuk=${m.body_fat_percentage || "?"}%, svalstvo=${m.muscle_mass || "?"}kg, pas=${m.waist || "?"}cm, hrudník=${m.chest || "?"}cm, boky=${m.hips || "?"}cm, BMI=${m.bmi || "?"}${m.notes ? ` | ${m.notes.substring(0, 40)}` : ""}`;
   }).join("\n");
 })()}
 
 ## DIAGNOSTIKY
 ${diagnostics.length > 0 ? diagnostics.slice(0, 30).map((d: any) => {
   const name = clientNameMap[d.client_id] || "?";
-  return `- ${name} (${d.date}): [${d.category || "?"}] ${(d.findings || "").substring(0, 80)}${d.notes ? ` | ${d.notes.substring(0, 40)}` : ""}`;
+  return `- ${name} (${d.date}): [${d.area_type || "?"}/${d.area_name || "?"}] ${(d.findings || "").substring(0, 80)}${d.notes ? ` | ${d.notes.substring(0, 40)}` : ""}`;
 }).join("\n") : "Žádné diagnostiky"}
 
 ## BALÍČKY KLIENTŮ (aktivní)
@@ -507,7 +510,7 @@ ${clientPackages.length > 0 ? clientPackages.map((p: any) => {
 ### XP Levely
 ${clientXp.length > 0 ? clientXp.map((x: any) => {
   const name = clientNameMap[x.client_id] || "?";
-  return `- ${name}: Level ${x.level || 0}, XP: ${x.current_xp || 0}, Streak: ${x.streak_days || 0} dní`;
+  return `- ${name}: Level ${x.level || 0}, Total XP: ${x.total_xp || 0}, Level XP: ${x.level_xp || 0}, Do dalšího: ${x.xp_to_next || 0}`;
 }).join("\n") : "Žádná XP data"}
 ### Věrnostní body
 ${loyaltyBalances.length > 0 ? loyaltyBalances.slice(0, 20).map((l: any) => {
@@ -584,9 +587,11 @@ ${(() => {
   if (preCheckins.length === 0) return "Žádné check-iny";
   const avgEnergy = preCheckins.filter((c: any) => c.energy_level).reduce((s: number, c: any) => s + c.energy_level, 0) / (preCheckins.filter((c: any) => c.energy_level).length || 1);
   const avgSleep = preCheckins.filter((c: any) => c.sleep_quality).reduce((s: number, c: any) => s + c.sleep_quality, 0) / (preCheckins.filter((c: any) => c.sleep_quality).length || 1);
-  const avgStress = preCheckins.filter((c: any) => c.stress_level).reduce((s: number, c: any) => s + c.stress_level, 0) / (preCheckins.filter((c: any) => c.stress_level).length || 1);
-  const withPain = preCheckins.filter((c: any) => c.pain_areas && c.pain_areas.length > 0);
-  return `Celkem: ${preCheckins.length} | Prům. energie: ${avgEnergy.toFixed(1)} | Prům. spánek: ${avgSleep.toFixed(1)} | Prům. stres: ${avgStress.toFixed(1)} | S bolestí: ${withPain.length}`;
+  const withPain = preCheckins.filter((c: any) => c.pain_area && c.pain_area.trim() !== "");
+  return `Celkem: ${preCheckins.length} | Prům. energie: ${avgEnergy.toFixed(1)} | Prům. spánek: ${avgSleep.toFixed(1)} | S bolestí: ${withPain.length}${withPain.length > 0 ? "\nBolesti:\n" + withPain.slice(0, 10).map((c: any) => {
+    const name = clientNameMap[c.client_id] || "?";
+    return `  - ${name}: ${c.pain_area}${c.pain_notes ? ` (${c.pain_notes.substring(0, 50)})` : ""}`;
+  }).join("\n") : ""}`;
 })()}
 
 ## ODZNAKY (Badges)
@@ -605,8 +610,8 @@ ${(() => {
 ## CENÍKY
 ${priceLists.length > 0 ? priceLists.map((pl: any) => {
   const items = priceItems.filter((pi: any) => pi.price_list_id === pl.id);
-  const itemsStr = items.map((pi: any) => `${pi.name}: ${pi.price} Kč (${pi.session_count || "?"} tréninků, ${pi.validity_days || "∞"} dní)`).join("; ");
-  return `- "${pl.name}" (od ${pl.valid_from || "?"}):\n  ${itemsStr || "žádné položky"}`;
+  const itemsStr = items.map((pi: any) => `service_id=${pi.service_id}: ${pi.unit_price_czk} Kč`).join("; ");
+  return `- "${pl.name}" (od ${pl.effective_from || "?"})${pl.description ? ` – ${pl.description}` : ""}:\n  ${itemsStr || "žádné položky"}`;
 }).join("\n") : "Žádné aktivní ceníky"}
 
 ## OPAKUJÍCÍ SE ROZVRH
@@ -616,7 +621,7 @@ ${(() => {
   return recurringSchedules.map((rs: any) => {
     const name = clientNameMap[rs.client_id] || "?";
     const day = days[rs.day_of_week] || rs.day_of_week;
-    return `- ${name}: ${day} ${rs.time || "?"} (${rs.duration_minutes || "?"}min, ${rs.training_type || "solo"})`;
+    return `- ${name}: ${day} ${rs.time || "?"} (${rs.duration || "?"}min)${rs.notes ? ` | ${rs.notes.substring(0, 30)}` : ""}`;
   }).join("\n");
 })()}
 `;
