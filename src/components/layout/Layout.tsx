@@ -21,7 +21,10 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebar-collapsed');
+    return saved !== null ? saved === 'true' : false;
+  });
   const { open: commandOpen, setOpen: setCommandOpen } = useCommandPalette();
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
