@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, Send, Loader2, Copy, Download, Trash2, Sparkles } from 'lucide-react';
+import { Bot, Send, Loader2, Copy, Download, FileText, Trash2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,15 +13,23 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import ReactMarkdown from 'react-markdown';
+import jsPDF from 'jspdf';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
 const SUGGESTED_QUESTIONS = [
   'Jaký je aktuální stav kreditů klientů?',
   'Shrň finanční výsledky tohoto měsíce',
+  'Jaká je moje hodinová sazba?',
+  'Kteří klienti mají bolesti nebo red flagy?',
+  'Top 10 klientů podle tržeb',
+  'Statistika storen za posledních 30 dní',
+  'Co mám dnes a zítra v rozvrhu?',
+  'Shrň feedbacky klientů za týden',
   'Které produkty mají nízké zásoby?',
+  'Připrav PDF report',
   'Porovnej tréninky tento a minulý měsíc',
-  'Připrav finanční přehled pro export',
   'Kteří klienti mají dluh?',
 ];
 
@@ -110,7 +118,6 @@ export function BusinessAnalystChat() {
       await streamChat(updated);
     } catch (e: any) {
       toast.error(e.message || 'Chyba při komunikaci s AI');
-      // Remove failed user message
       setMessages(prev => prev.filter((_, i) => i < prev.length));
     } finally {
       setIsLoading(false);
@@ -138,6 +145,91 @@ export function BusinessAnalystChat() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success('Report stažen');
+  };
+
+  const downloadAsPdf = (content: string) => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 15;
+    const maxWidth = pageWidth - margin * 2;
+    let y = 20;
+
+    // Title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('AI Business Report', margin, y);
+    y += 8;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Vygenerováno: ${new Date().toLocaleDateString('cs-CZ')} ${new Date().toLocaleTimeString('cs-CZ')}`, margin, y);
+    y += 10;
+
+    doc.setTextColor(0, 0, 0);
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 8;
+
+    // Content lines
+    const lines = content.split('\n');
+    for (const line of lines) {
+      if (y > doc.internal.pageSize.getHeight() - 20) {
+        doc.addPage();
+        y = 20;
+      }
+
+      const trimmed = line.trim();
+
+      if (trimmed.startsWith('## ')) {
+        y += 4;
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        const wrapped = doc.splitTextToSize(trimmed.replace(/^#+\s*/, ''), maxWidth);
+        doc.text(wrapped, margin, y);
+        y += wrapped.length * 6 + 3;
+      } else if (trimmed.startsWith('### ')) {
+        y += 2;
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        const wrapped = doc.splitTextToSize(trimmed.replace(/^#+\s*/, ''), maxWidth);
+        doc.text(wrapped, margin, y);
+        y += wrapped.length * 5 + 2;
+      } else if (trimmed.startsWith('# ')) {
+        y += 4;
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        const wrapped = doc.splitTextToSize(trimmed.replace(/^#+\s*/, ''), maxWidth);
+        doc.text(wrapped, margin, y);
+        y += wrapped.length * 7 + 3;
+      } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const text = trimmed.replace(/^[-*]\s*/, '').replace(/\*\*/g, '');
+        const wrapped = doc.splitTextToSize(`• ${text}`, maxWidth - 5);
+        doc.text(wrapped, margin + 3, y);
+        y += wrapped.length * 5;
+      } else if (trimmed.startsWith('|')) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const cleanLine = trimmed.replace(/\*\*/g, '');
+        const wrapped = doc.splitTextToSize(cleanLine, maxWidth);
+        doc.text(wrapped, margin, y);
+        y += wrapped.length * 4.5;
+      } else if (trimmed === '') {
+        y += 3;
+      } else {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const cleanLine = trimmed.replace(/\*\*/g, '');
+        const wrapped = doc.splitTextToSize(cleanLine, maxWidth);
+        doc.text(wrapped, margin, y);
+        y += wrapped.length * 5;
+      }
+    }
+
+    doc.save(`ai-report_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success('PDF report stažen');
   };
 
   const clearHistory = () => {
@@ -170,7 +262,7 @@ export function BusinessAnalystChat() {
               </div>
               <div>
                 <SheetTitle className="text-sm">AI Business Analytik</SheetTitle>
-                <p className="text-[11px] text-muted-foreground">Finance · Kredity · Prodeje · Tréninky</p>
+                <p className="text-[11px] text-muted-foreground">Finance · Kredity · Prodeje · Tréninky · Feedbacky</p>
               </div>
             </div>
             {messages.length > 0 && (
@@ -191,7 +283,7 @@ export function BusinessAnalystChat() {
                     <Sparkles className="w-6 h-6 text-primary" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Zeptej se na stav financí, kreditů, prodejů nebo tréninků.
+                    Zeptej se na stav financí, kreditů, prodejů, tréninků nebo feedbacků.
                   </p>
                 </div>
                 <div className="grid gap-2">
@@ -218,11 +310,16 @@ export function BusinessAnalystChat() {
                 )}>
                   {msg.role === 'assistant' ? (
                     <div className="space-y-2">
-                      <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap break-words">
-                        {msg.content}
+                      <div className="prose prose-sm dark:prose-invert max-w-none break-words
+                        prose-headings:my-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1
+                        prose-li:my-0.5 prose-table:my-2 prose-th:px-2 prose-th:py-1
+                        prose-td:px-2 prose-td:py-1 prose-table:text-xs
+                        prose-th:bg-muted/50 prose-th:text-left prose-th:font-semibold
+                        prose-tr:border-b prose-tr:border-border/30">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
                       </div>
                       {!isLoading && (
-                        <div className="flex items-center gap-1 pt-1 border-t border-border/20">
+                        <div className="flex items-center gap-1 pt-1 border-t border-border/20 flex-wrap">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -237,7 +334,15 @@ export function BusinessAnalystChat() {
                             className="h-7 px-2 text-[11px] gap-1"
                             onClick={() => downloadAsText(msg.content)}
                           >
-                            <Download className="w-3 h-3" /> Stáhnout .txt
+                            <Download className="w-3 h-3" /> .txt
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[11px] gap-1"
+                            onClick={() => downloadAsPdf(msg.content)}
+                          >
+                            <FileText className="w-3 h-3" /> PDF
                           </Button>
                         </div>
                       )}
