@@ -5,6 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { Dumbbell, Search } from 'lucide-react';
 
+const normalizeText = (text: string) =>
+  text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
 interface ExerciseAutocompleteProps {
   value: string;
   onChange: (name: string, exerciseId?: string) => void;
@@ -22,7 +25,7 @@ export function ExerciseAutocomplete({ value, onChange, placeholder = "Název cv
   }, [value]);
 
   // Search exercises
-  const { data: suggestions = [] } = useQuery({
+  const { data: rawSuggestions = [] } = useQuery({
     queryKey: ['exercise-suggestions', inputValue],
     enabled: inputValue.length >= 2,
     queryFn: async () => {
@@ -31,12 +34,20 @@ export function ExerciseAutocomplete({ value, onChange, placeholder = "Název cv
         .select('id, name, name_cs, category')
         .or(`name.ilike.%${inputValue}%,name_cs.ilike.%${inputValue}%`)
         .eq('is_archived', false)
-        .limit(8);
+        .limit(20);
 
       if (error) throw error;
       return data || [];
     },
   });
+
+  // Client-side diacritic-insensitive filtering
+  const suggestions = inputValue.length >= 2
+    ? rawSuggestions.filter((ex) => {
+        const q = normalizeText(inputValue);
+        return normalizeText(ex.name).includes(q) || normalizeText(ex.name_cs || '').includes(q);
+      }).slice(0, 8)
+    : [];
 
   // Close dropdown when clicking outside
   useEffect(() => {
