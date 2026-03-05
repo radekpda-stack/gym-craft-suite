@@ -56,7 +56,7 @@ export function PreviousTrainingSummary({ clientId }: PreviousTrainingSummaryPro
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-primary/20 shadow-sm">
+      <div className="section-card border-primary/20">
         {/* Subtle accent stripe */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/60 via-primary/30 to-transparent" />
 

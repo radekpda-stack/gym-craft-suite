@@ -87,7 +87,7 @@ export function TrainingPrepSection({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm">
+      <div className="section-card">
         {/* Header */}
         <CollapsibleTrigger asChild>
           <button className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors rounded-t-2xl">
