@@ -134,7 +134,7 @@ export function CompactTagGridSelector({
   };
 
   return (
-    <div className={cn('space-y-3', className)}>
+    <div className={cn('space-y-2', className)}>
       {/* Header with "Více" button */}
       <div className="flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Klasifikace</span>

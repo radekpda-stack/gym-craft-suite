@@ -264,106 +264,18 @@ export function TrainingDetailView({
   const isCanceled = training.status === 'canceled';
 
   return (
-    <div className="space-y-4 pb-32">
-      {/* HERO HEADER */}
-      <TrainingHeroHeader
-        training={training}
-        client={client}
-        participantCount={participantCount}
-        onEditClick={() => setIsEditMode(true)}
-        onDeleteClick={onDelete ? () => setShowDeleteDialog(true) : undefined}
-      />
-
-      {/* EDIT MODE - Bottom Sheet instead of inline form */}
-      <Sheet open={isEditMode} onOpenChange={setIsEditMode}>
-        <SheetContent side="bottom" className="max-h-[70vh]">
-          <SheetHeader>
-            <SheetTitle>Upravit trénink</SheetTitle>
-            <SheetDescription>Upravte datum, délku nebo počet účastníků.</SheetDescription>
-          </SheetHeader>
-          <Form {...form}>
-            <div className="mt-4 space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2 sm:col-span-1">
-                      <Label className="text-xs text-muted-foreground">Datum a čas</Label>
-                      <FormControl>
-                        <DateTimePicker
-                          value={field.value}
-                          onChange={(date) => field.onChange(typeof date === 'string' ? new Date(date) : date)}
-                          returnString={false}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="duration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Label className="text-xs text-muted-foreground">Délka</Label>
-                      <Select value={field.value.toString()} onValueChange={(v) => field.onChange(parseInt(v))}>
-                        <FormControl>
-                          <SelectTrigger className="bg-secondary border-border">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {[30, 45, 60, 75, 90, 120].map((min) => (
-                            <SelectItem key={min} value={min.toString()}>{min} min</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="participant_count"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Label className="text-xs text-muted-foreground">Účastníků</Label>
-                      <Select value={field.value.toString()} onValueChange={(v) => field.onChange(parseInt(v))}>
-                        <FormControl>
-                          <SelectTrigger className="bg-secondary border-border">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {[1, 2, 3, 4, 5].map((num) => (
-                            <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="flex gap-2 justify-end pt-2">
-                <Button variant="ghost" size="sm" onClick={handleCancel} disabled={isLoading}>
-                  <X className="w-4 h-4 mr-1" />
-                  Zrušit
-                </Button>
-                <Button size="sm" onClick={form.handleSubmit(handleSubmit)} disabled={isLoading}>
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
-                  Uložit
-                </Button>
-              </div>
-            </div>
-          </Form>
-        </SheetContent>
-      </Sheet>
-
-      {/* TAGS - Compact Grid Selector */}
-      <div className="relative rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4">
-        <CompactTagGridSelector
+    <div className="space-y-2 pb-32">
+      {/* HERO + TAGS — merged card */}
+      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm">
+        <TrainingHeroHeader
+          training={training}
+          client={client}
+          participantCount={participantCount}
+          onEditClick={() => setIsEditMode(true)}
+          onDeleteClick={onDelete ? () => setShowDeleteDialog(true) : undefined}
+        />
+        <div className="px-3 pb-3">
+          <CompactTagGridSelector
           trainingType={training.training_type}
           onTrainingTypeChange={async (type) => {
             if (onFieldUpdate) {
@@ -401,10 +313,11 @@ export function TrainingDetailView({
           }}
           trainingStatus={training.status as 'scheduled' | 'completed' | 'canceled'}
         />
+        </div>
       </div>
 
       {/* EXERCISES - main content */}
-      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4">
+      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-3">
         <WorkoutExerciseManager
           trainingSessionId={training.id}
           clientId={training.client_id}
@@ -416,8 +329,8 @@ export function TrainingDetailView({
 
       {/* INLINE NOTES - for scheduled/in_progress */}
       {(isScheduled || isInProgress) && onFieldUpdate && (
-        <div className="rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4 space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">📝 Poznámky k tréninku</p>
+        <div className="rounded-xl bg-secondary/40 border border-border/30 px-3 py-2.5 space-y-1">
+          <p className="text-[11px] font-medium text-muted-foreground">📝 Poznámky k tréninku</p>
           <InlineTextarea
             initialValue={training.notes || ''}
             onSave={async (value) => {

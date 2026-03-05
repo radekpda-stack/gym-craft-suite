@@ -80,7 +80,7 @@ export function InlineRPESelector({
             type="button"
             onClick={() => onChange(rpe)}
             className={cn(
-              'w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-xs font-bold transition-all duration-100',
+              'w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[11px] font-bold transition-all duration-100',
               'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1',
               'active:scale-95',
               value === rpe
