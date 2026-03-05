@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ChevronDown, Activity } from 'lucide-react';
 import { format, differenceInHours } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
@@ -24,6 +25,7 @@ import {
 } from '@/hooks/useTrainingSessions';
 import { useCompleteTrainingAtomic } from '@/hooks/useCompleteTrainingAtomic';
 import { PreSessionCheckinCard } from '@/components/trainings/PreSessionCheckinCard';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 import { useTrainingSessionTags, useUpdateTrainingSessionTags } from '@/hooks/useTrainingSessionTags';
 import { useTrainingPrices, getTrainingPrice, useAppSettings, TrainingPrices } from '@/hooks/useAppSettings';
@@ -495,13 +497,30 @@ export default function TrainingDetail() {
         onFieldUpdate={handleFieldUpdate}
       />
 
-      {/* Pre-session check-in - only for scheduled or in_progress */}
+      {/* Pre-session check-in - collapsible, default closed */}
       {(training.status === 'scheduled' || training.status === 'in_progress') && client && (
-        <PreSessionCheckinCard
-          sessionId={training.id}
-          clientId={training.client_id}
-          clientName={client.name}
-        />
+        <Collapsible>
+          <CollapsibleTrigger className="w-full">
+            <div className="rounded-2xl p-3 bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <Activity className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Jak se dnes cítí {client.name.split(' ')[0]}?</span>
+              </div>
+              <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-2">
+              <PreSessionCheckinCard
+                sessionId={training.id}
+                clientId={training.client_id}
+                clientName={client.name}
+              />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       )}
 
       {/* Previous session focus reminder - merged inline, no separate banner */}
