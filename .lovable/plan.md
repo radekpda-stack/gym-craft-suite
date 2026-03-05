@@ -1,51 +1,61 @@
 
 
-# Modernizace karty tréninku (TrainingCard)
+# Zjednodušení navigace v sekci Výkonnost
 
-## Současný stav
-Karta používá jednoduchý `glass` styl s border-left-4 a lineární layout: jméno → čas → metainfo → tagy → poznámka → akce. Vizuálně je plochá, bez hierarchie.
+## Problém
+Aktuálně je potřeba projít minimálně 3-4 kroky k zápisu výkonu pro konkrétního klienta (Výkonnost → Deník → najít klienta → vybrat → zapsat). Hledání historie cviku vyžaduje podobně zdlouhavý postup.
 
-## Nový design
+## Řešení: Univerzální Command Bar (hledej klienta i cvik na jednom místě)
 
-### Struktura karty
+Rozšířit stávající `ExerciseSearchCommand` na **univerzální vyhledávač**, který hledá **současně klienty i cviky**. Uživatel napíše jméno klienta nebo název cviku a dostane okamžité výsledky s kontextovými akcemi.
+
+### Jak to bude fungovat
 
 ```text
-┌─────────────────────────────────────┐
-│  [Avatar] Jméno klienta    [Status] │
-│           Pá 14:30 · 60min · RPE 7  │
-│                                     │
-│  [Typ]  [Tag1]  [Tag2]       900 Kč │
-│                                     │
-│  📝 Poznámka k tréninku...          │
-│─────────────────────────────────────│
-│              [Dokončit ✓]  [⋮]      │
-└─────────────────────────────────────┘
+┌─────────────────────────────────┐
+│ 🔍 Hledej klienta nebo cvik... │
+├─────────────────────────────────┤
+│ 👤 KLIENTI                     │
+│   Jan Novák        [Zapsat] [→]│
+│   Jana Kolářová    [Zapsat] [→]│
+├─────────────────────────────────┤
+│ 🏋 CVIKY                       │
+│   Bench Press       [Zapsat] [→]│
+│   Deadlift          [Zapsat] [→]│
+├─────────────────────────────────┤
+│ ⚡ RYCHLÉ AKCE                  │
+│   Jan + Bench Press (dnes 14:30)│
+│   Jana + Squat (včera)          │
+└─────────────────────────────────┘
 ```
 
-### Změny v `TrainingCard.tsx`
+### Konkrétní změny
 
-1. **Avatar klienta** — přidat `ClientAvatar` (size `sm`) na levou stranu headeru místo pouhého textu
-2. **Status badge vpravo nahoře** — zachovat `TrainingStatusBadge`, ale jen ikona bez textu na mobilu (kompaktnější)
-3. **Meta řádek** — den+čas, délka, RPE/RIR na jednom řádku s tečkovými separátory místo mezer
-4. **Cena** — zobrazit `final_price` nebo vypočítanou cenu na pravé straně tag řádku (dosud se nezobrazovala)
-5. **Glassmorphism upgrade** — `bg-card/80 backdrop-blur-md` + subtilní `shadow-sm` místo plochého `glass`
-6. **Border-left** — nahradit za tenký horní gradient pruh (2px) podle statusu — modernější vizuál
-7. **Akční tlačítka** — kompaktnější: pill-style místo hranatých, ikona + text
+#### 1. `ExerciseSearchCommand.tsx` → `UniversalSearchCommand.tsx`
+- Přidat `useClients()` hook do vyhledávače
+- Nová sekce **"Klienti"** v CommandList — filtruje klienty podle hledaného textu
+- Akce u klienta: **"Zapsat výkon"** (otevře QuickLogDialog s předvyplněným klientem) a **"Otevřít deník"** (přejde do Deník tabu s vybraným klientem)
+- Akce u cviku: zachovat stávající **"Zapsat výkon"** + **"Detail cviku"**
+- Nová sekce **"Nedávné kombinace"** — posledních 5 unikátních párů klient+cvik z `exercise_entries` pro jeden-tap re-logging
 
-### Změny v `SwipeableTrainingCard.tsx`
-- Pouze drobné: zaoblení `rounded-2xl` místo `rounded-xl`
+#### 2. `PerformanceHub.tsx`
+- Nahradit `<ExerciseSearchCommand>` za `<UniversalSearchCommand>`
+- Předat callback `onSelectClient` pro navigaci do Deníku s vybraným klientem
+- Předat callback `onQuickLog` pro otevření QuickLogDialogu
 
-### Změny v `CompactTrainingRow.tsx`
-- Přidat `ClientAvatar` (size `xs`) místo generic `AvatarFallback`
-- Zarovnat vizuální styl se základní kartou
+#### 3. Nový hook `useRecentClientExercisePairs.ts`
+- Dotaz na posledních 5 unikátních kombinací (client_id, exercise_id) z `exercise_entries`
+- Joinuje jména klientů a cviků
+- Cache 5 min
 
-## Soubory
+### Soubory
 
 | Soubor | Změna |
 |--------|-------|
-| `TrainingCard.tsx` | Nový layout s avatarem, cenovou indikací, gradient border, glassmorphism |
-| `SwipeableTrainingCard.tsx` | `rounded-2xl` |
-| `CompactTrainingRow.tsx` | `ClientAvatar` místo generic avatar |
+| `ExerciseSearchCommand.tsx` → rename na `UniversalSearchCommand.tsx` | Přidat hledání klientů, nedávné páry, kontextové akce |
+| `PerformanceHub.tsx` | Použít nový UniversalSearchCommand, předat callbacky |
+| `useRecentClientExercisePairs.ts` | Nový hook — nedávné kombinace klient+cvik |
+| `RecentExercisesChips.tsx` | Volitelně přidat i klientské chipy (top 3 nejaktivnější) |
 
-Čistě vizuální, žádné DB změny.
+Žádné DB změny. Čistě frontend.
 
