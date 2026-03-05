@@ -1,59 +1,42 @@
 
 
-# Návrh rozšíření AI Business Analytika
+# Plan: Další vylepšení AI Business Analytika
 
-## Co agent umí teď
-- Finanční přehled (kredity, dluhy, příjmy, náklady, hodinová sazba)
-- Tréninkové statistiky (tento/minulý měsíc, rok, typy, storna)
-- Prodejové metriky (tržby, marže, nízké zásoby)
-- Feedbacky klientů (bolesti, red flagy, RPE)
-- Denní rozvrh (dnes, zítra)
-- Top klienti, skupinové rozpočty
-- Export: kopírování, .txt, PDF
+## Co přidáme
 
-## Navrhovaná vylepšení
+### 1. Konverzační paměť (persistence v DB)
+- Nová tabulka `ai_conversations` (id, user_id, messages JSONB, title, created_at, updated_at)
+- Chat se automaticky ukládá po každé odpovědi
+- Při otevření agenta se načte poslední konverzace
+- Tlačítko "Nová konverzace" místo prostého smazání
+- Agent vidí předchozí kontext a může navazovat
 
-### 1. Konverzační paměť a kontextové follow-upy
-Teď se konverzace smaže po zavření panelu. Přidáme možnost uložit konverzaci do databáze, aby agent mohl navázat tam, kde se skončilo, i po restartu.
+### 2. Tréninkové plány do kontextu
+Agent zatím nevidí `training_plans`. Přidáme aktivní plány klientů (cíl, fáze, frekvence) — agent pak dokáže odpovídat: "Které plány jsou aktivní?", "Plníme tréninkové cíle dle plánu?"
 
-### 2. Plná stránka s AI asistentem
-Kromě bočního panelu vytvořit plnou stránku `/ai-analyst` v menu — více prostoru pro dlouhé reporty, tabulky a grafy.
+### 3. Feedback requests + response rate
+Agent vidí feedbacky, ale nevidí `feedback_requests` — nemá přehled o míře odpovědí. Přidáme: počet odeslaných vs. dokončených, response rate, průměrná doba odpovědi.
 
-### 3. Výkonnostní data klientů (cviky, PR, objemy)
-Agent zatím nevidí data o cvicích. Přidáme do edge function data z `exercise_entries` — agent pak dokáže odpovídat na:
-- "Jaké jsou PR klienta XY?"
-- "Kteří klienti mají nejvyšší objem za měsíc?"
-- "Trend síly u klienta XY"
+### 4. Klientská aktivita a retence
+Přidáme analýzu neaktivních klientů — kdo neměl trénink 30+ dní, kdo je "at risk" (dříve aktivní, teď nechodí). Agent proaktivně varuje.
 
-### 4. Automatické denní/týdenní shrnutí
-Přidáme funkci, která při otevření agenta automaticky načte krátký briefing dne (rozvrh, úkoly, varování) bez nutnosti psát dotaz — jako "ranní dashboard".
+### 5. Kontextové follow-up suggestions
+Po každé odpovědi agent nabídne 2-3 relevantní follow-up otázky (ne statické, ale generované AI na základě odpovědi).
 
-### 5. Grafy přímo v chatu
-Agent vrací pouze text. Přidáme detekci strukturovaných dat v odpovědi (tabulky/čísla) a vykreslíme je jako mini-grafy (Recharts) přímo v chatu — např. měsíční trend příjmů jako bar chart.
-
-### 6. Hlasový vstup
-Přidáme mikrofon tlačítko vedle textového vstupu. Použijeme Web Speech API (nativní v prohlížeči) pro speech-to-text — trenér může mluvit místo psaní.
-
-### 7. Srovnání s předchozím obdobím jedním kliknutím
-Přidáme quick-action tlačítka: "vs. minulý měsíc", "vs. minulý rok" — agent automaticky dostane kontext obou období a porovná.
-
-### 8. Zdravotní profil klienta
-Agent vidí feedbacky, ale nevidí `health_restrictions` a `training_goals` z tabulky klientů. Přidáme tato data, aby mohl odpovídat: "Kteří klienti mají zdravotní omezení?" nebo "Plníme tréninkové cíle?"
-
-## Doporučené pořadí implementace
-
-1. **Zdravotní profil klienta** — rychlé, jen přidat data do edge function
-2. **Výkonnostní data** — rozšíření edge function o exercise_entries
-3. **Plná stránka AI** — lepší UX pro reporty
-4. **Automatický briefing** — ranní shrnutí při otevření
-5. **Grafy v chatu** — vizualizace dat
-6. **Konverzační paměť** — persistence
-7. **Hlasový vstup** — kvalita života
-8. **Srovnání období** — quick-actions
+### 6. Vylepšený PDF export
+- Přidat tabulky do PDF (jspdf-autotable, už nainstalovaný)
+- Detekce markdown tabulek → autotable v PDF
+- Logo/branding header
 
 ## Soubory k úpravě
-1. `supabase/functions/ai-business-analyst/index.ts` — rozšíření dat (health, exercise_entries)
-2. `src/components/ai/BusinessAnalystChat.tsx` — briefing, grafy, voice, UI
-3. `src/pages/AIAnalyst.tsx` — nová plná stránka
-4. Routing + navigace
+
+1. **DB migrace** — nová tabulka `ai_conversations` s RLS
+2. **`supabase/functions/ai-business-analyst/index.ts`** — přidat training_plans, feedback_requests, neaktivní klienti, follow-up suggestions instrukce
+3. **`src/components/ai/BusinessAnalystChat.tsx`** — persistence (save/load konverzací), follow-up UI, vylepšený PDF s autotable
+
+## Pořadí
+1. DB tabulka + konverzační paměť
+2. Rozšíření dat (plány, feedback requests, retence)
+3. Follow-up suggestions
+4. Vylepšený PDF
 
