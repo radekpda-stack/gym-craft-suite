@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/formatters';
@@ -9,7 +10,8 @@ interface MobileCartBarProps {
   isProcessing: boolean;
   checkoutDisabled: boolean;
   onCheckout: () => void;
-  onScrollToCart: () => void;
+  onOpenCart: () => void;
+  lastAddedName?: string;
 }
 
 export function MobileCartBar({ 
@@ -18,8 +20,22 @@ export function MobileCartBar({
   isProcessing, 
   checkoutDisabled, 
   onCheckout,
-  onScrollToCart
+  onOpenCart,
+  lastAddedName,
 }: MobileCartBarProps) {
+  const [pulse, setPulse] = useState(false);
+  const prevCount = useRef(itemCount);
+
+  // Pulse animation when item count increases
+  useEffect(() => {
+    if (itemCount > prevCount.current) {
+      setPulse(true);
+      const t = setTimeout(() => setPulse(false), 400);
+      return () => clearTimeout(t);
+    }
+    prevCount.current = itemCount;
+  }, [itemCount]);
+
   if (itemCount === 0) return null;
 
   return (
@@ -27,11 +43,12 @@ export function MobileCartBar({
       <div className={cn(
         "flex items-center justify-between gap-3",
         "px-4 py-3 rounded-2xl",
-        "bg-card/95 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/10"
+        "bg-card/95 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/10",
+        pulse && "animate-pulse"
       )}>
         <button 
-          onClick={onScrollToCart}
-          className="flex items-center gap-2.5 min-w-0"
+          onClick={onOpenCart}
+          className="flex items-center gap-2.5 min-w-0 flex-1"
         >
           <div className="relative">
             <ShoppingCart className="w-5 h-5 text-primary" />
@@ -39,7 +56,14 @@ export function MobileCartBar({
               {itemCount}
             </span>
           </div>
-          <span className="font-bold text-base tabular-nums">{formatCurrency(total)}</span>
+          <div className="flex flex-col min-w-0">
+            <span className="font-bold text-base tabular-nums">{formatCurrency(total)}</span>
+            {lastAddedName && (
+              <span className="text-[11px] text-muted-foreground truncate animate-fade-in">
+                + {lastAddedName}
+              </span>
+            )}
+          </div>
         </button>
 
         <Button

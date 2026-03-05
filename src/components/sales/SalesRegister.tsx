@@ -29,7 +29,9 @@ import { FavoriteProducts } from './FavoriteProducts';
 import { RecentSales } from './RecentSales';
 import { ClientPurchaseSuggestions } from './ClientPurchaseSuggestions';
 import { MobileCartBar } from './MobileCartBar';
+import { MobileCartDrawer } from './MobileCartDrawer';
 import { useRecentSales, RecentSale } from '@/hooks/useRecentSales';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { featureTracker } from '@/hooks/useFeatureTracking';
@@ -56,9 +58,10 @@ interface ProductCardProps {
   isLowStock: (product: Product) => boolean;
   getProductIcon: (product: Product) => React.ReactNode;
   getProductKindLabel: (product: Product) => string;
+  onAddToCart?: (product: Product) => void;
 }
 
-function ProductCard({ product, cart, isLowStock, getProductIcon, getProductKindLabel }: ProductCardProps) {
+function ProductCard({ product, cart, isLowStock, getProductIcon, getProductKindLabel, onAddToCart }: ProductCardProps) {
   const cartItem = cart.getItem(product.id);
   const inCart = !!cartItem;
   const lowStock = isLowStock(product);
@@ -72,7 +75,7 @@ function ProductCard({ product, cart, isLowStock, getProductIcon, getProductKind
 
   return (
     <button
-      onClick={() => !outOfStock && cart.addItem(product)}
+      onClick={() => { if (!outOfStock) { cart.addItem(product); onAddToCart?.(product); } }}
       disabled={outOfStock}
       className={cn(
         "relative overflow-hidden rounded-xl text-left transition-all duration-200",
@@ -98,11 +101,11 @@ function ProductCard({ product, cart, isLowStock, getProductIcon, getProductKind
         </div>
       )}
       
-      <div className="p-3 sm:p-4">
+      <div className="p-2 sm:p-3 sm:p-4">
         {/* Product type badge */}
-        <div className="flex items-center gap-1.5 mb-2">
+        <div className="flex items-center gap-1.5 mb-1.5 sm:mb-2">
           <div className={cn(
-            "p-1 rounded-md",
+            "p-1 rounded-md hidden sm:block",
             product.kind === 'service' ? "bg-accent/10" :
             product.kind === 'credit_topup' ? "bg-warning/10" :
             "bg-primary/10"
@@ -115,8 +118,8 @@ function ProductCard({ product, cart, isLowStock, getProductIcon, getProductKind
         </div>
 
         {/* Name & Price */}
-        <p className="font-medium text-sm sm:text-base line-clamp-2 min-h-[2.5em]">{product.name}</p>
-        <p className="text-lg sm:text-xl font-bold text-primary mt-1 tabular-nums">
+        <p className="font-medium text-xs sm:text-sm line-clamp-2 min-h-[2em] sm:min-h-[2.5em]">{product.name}</p>
+        <p className="text-base sm:text-xl font-bold text-primary mt-0.5 sm:mt-1 tabular-nums">
           {formatCurrency(product.price)}
         </p>
 
@@ -158,6 +161,9 @@ function ProductCard({ product, cart, isLowStock, getProductIcon, getProductKind
 }
 
 export function SalesRegister() {
+  const isMobile = useIsMobile();
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [lastAddedName, setLastAddedName] = useState<string | undefined>();
   const queryClient = useQueryClient();
   const { data: products = [], isLoading: productsLoading } = useProductsSortedBySales(true);
   const { data: clients = [], isLoading: clientsLoading } = useClients();
@@ -501,22 +507,26 @@ export function SalesRegister() {
         <ClientPurchaseSuggestions
           clientId={selectedClient || undefined}
           products={products}
-          onAddToCart={(product) => cart.addItem(product)}
+          onAddToCart={(product) => { cart.addItem(product); setLastAddedName(product.name); }}
           getCartQuantity={(productId) => cart.getItem(productId)?.quantity || 0}
         />
 
         {/* Recent Sales - Quick Repeat */}
-        <RecentSales onRepeatSale={handleRepeatSale} />
+        <RecentSales onRepeatSale={handleRepeatSale} defaultCollapsed={isMobile} />
 
         {/* Favorite Products */}
         <FavoriteProducts
           products={products}
-          onAddToCart={(product) => cart.addItem(product)}
+          onAddToCart={(product) => { cart.addItem(product); setLastAddedName(product.name); }}
           getCartQuantity={(productId) => cart.getItem(productId)?.quantity || 0}
+          defaultCollapsed={isMobile}
         />
 
-        {/* Search and Filters */}
-        <div className="card-floating rounded-xl p-4">
+        {/* Search and Filters - sticky on mobile */}
+        <div className={cn(
+          "card-floating rounded-xl p-3 sm:p-4",
+          "lg:relative sticky top-0 z-30 lg:z-auto"
+        )}>
           <div className="flex items-center justify-between mb-3 gap-2">
             <Label className="text-sm font-medium">Produkty a služby</Label>
             
@@ -606,6 +616,7 @@ export function SalesRegister() {
                       isLowStock={isLowStock}
                       getProductIcon={getProductIcon}
                       getProductKindLabel={getProductKindLabel}
+                      onAddToCart={(p) => setLastAddedName(p.name)}
                     />
                   ))}
                 </div>
@@ -633,6 +644,7 @@ export function SalesRegister() {
                       isLowStock={isLowStock}
                       getProductIcon={getProductIcon}
                       getProductKindLabel={getProductKindLabel}
+                      onAddToCart={(p) => setLastAddedName(p.name)}
                     />
                   ))}
                 </div>
@@ -660,6 +672,7 @@ export function SalesRegister() {
                       isLowStock={isLowStock}
                       getProductIcon={getProductIcon}
                       getProductKindLabel={getProductKindLabel}
+                      onAddToCart={(p) => setLastAddedName(p.name)}
                     />
                   ))}
                 </div>
@@ -669,8 +682,8 @@ export function SalesRegister() {
         )}
       </div>
 
-      {/* Right Column - Sticky Cart Panel */}
-      <div className="lg:sticky lg:top-4 lg:self-start">
+      {/* Right Column - Sticky Cart Panel (hidden on mobile, replaced by drawer) */}
+      <div className="hidden lg:block lg:sticky lg:top-4 lg:self-start">
         <CartPanel
           cart={cart}
           paymentMethod={paymentMethod}
@@ -694,9 +707,26 @@ export function SalesRegister() {
         isProcessing={isProcessing}
         checkoutDisabled={checkoutDisabled}
         onCheckout={handleSale}
-        onScrollToCart={() => {
-          document.querySelector('[data-cart-panel]')?.scrollIntoView({ behavior: 'smooth' });
-        }}
+        onOpenCart={() => setCartDrawerOpen(true)}
+        lastAddedName={lastAddedName}
+      />
+
+      {/* Mobile cart drawer */}
+      <MobileCartDrawer
+        open={cartDrawerOpen}
+        onOpenChange={setCartDrawerOpen}
+        cart={cart}
+        paymentMethod={paymentMethod}
+        onPaymentMethodChange={setPaymentMethod}
+        saleNote={saleNote}
+        onSaleNoteChange={setSaleNote}
+        clientCreditBalance={effectiveBalance}
+        hasCreditTopup={hasCreditTopup}
+        isProcessing={isProcessing}
+        checkoutDisabled={checkoutDisabled}
+        onSale={handleSale}
+        selectedClient={selectedClient}
+        noClient={noClient}
       />
     </div>
   );
