@@ -117,7 +117,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
         title: 'Odhlášení úspěšné',
         description: 'Byli jste odhlášeni.',
       });
-      navigate('/auth', { replace: true });
+      navigate('/login', { replace: true });
     }
     onClose();
   };
