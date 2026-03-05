@@ -576,6 +576,8 @@ export function SalesRegister() {
             onCategoryChange={setSelectedCategory}
             inStockOnly={inStockOnly}
             onInStockOnlyChange={setInStockOnly}
+            products={products}
+            onProductSelect={(product) => { cart.addItem(product); setLastAddedName(product.name); }}
           />
         </div>
 
