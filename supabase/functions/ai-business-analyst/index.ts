@@ -67,11 +67,28 @@ serve(async (req) => {
       cancelledLast30Res,
       exercisePRsRes,
       exerciseVolumesRes,
-      // NEW: training plans, feedback requests
       trainingPlansRes,
       feedbackRequestsRes,
-      // Today's sales
       todaySalesRes,
+      // NEW data sources
+      measurementsRes,
+      diagnosticsRes,
+      clientPackagesRes,
+      clientXpRes,
+      loyaltyRes,
+      challengesRes,
+      challengeSubmissionsRes,
+      nutritionSessionsRes,
+      stockMovementsRes,
+      testDefinitionsRes,
+      testSessionsRes,
+      assignedWorkoutsRes,
+      preCheckinRes,
+      clientBadgesRes,
+      badgeDefsRes,
+      priceListsRes,
+      priceItemsRes,
+      recurringSchedulesRes,
     ] = await Promise.all([
       supabase.from("vw_client_ledger_balances").select("*").eq("user_id", userId),
       supabase.from("clients").select("id, name, health_restrictions, training_goals, is_archived, training_start_date, birth_date, gender, payment_mode").eq("user_id", userId).eq("is_archived", false),
@@ -90,11 +107,28 @@ serve(async (req) => {
       supabase.from("training_sessions").select("id, date, status, final_price, clients(name)").eq("user_id", userId).gte("date", last30days).in("status", ["cancelled", "canceled"]),
       supabase.from("exercise_entries").select("id, exercise_name, client_id, date, sets, reps, weight_kg, is_pr, is_bodyweight").eq("user_id", userId).eq("is_pr", true).order("date", { ascending: false }).limit(100),
       supabase.from("exercise_entries").select("client_id, sets, reps, weight_kg, date").eq("user_id", userId).gte("date", last90days).limit(1000),
-      // NEW queries
       supabase.from("training_plans").select("id, client_id, name, primary_goal, phase, period_start, period_end, days_per_week, is_active, notes").eq("user_id", userId).eq("is_active", true),
       supabase.from("feedback_requests").select("id, training_session_id, status, created_at, sent_at, completed_at").eq("user_id", userId).gte("created_at", last90days),
-      // Today's sales
       supabase.from("product_sales").select("*, products(name, sell_price, cost_price), clients(name)").eq("user_id", userId).gte("created_at", `${today}T00:00:00`).lt("created_at", `${tomorrow}T00:00:00`).order("created_at", { ascending: false }),
+      // NEW queries
+      supabase.from("measurements").select("id, client_id, date, weight, height, body_fat_pct, notes").eq("user_id", userId).order("date", { ascending: false }).limit(200),
+      supabase.from("diagnostics").select("id, client_id, date, category, findings, notes").eq("user_id", userId).order("date", { ascending: false }).limit(100),
+      supabase.from("client_packages").select("id, client_id, package_name, trainings_total, trainings_used, price_paid, is_active, purchased_at, expires_at").eq("user_id", userId).eq("is_active", true),
+      supabase.from("client_xp").select("client_id, current_xp, level, streak_days, updated_at").eq("user_id", userId),
+      supabase.from("loyalty_balance").select("client_id, points_balance, lifetime_points, updated_at"),
+      supabase.from("challenges").select("id, title, status, start_at, end_at, scoring_type, primary_metric").eq("created_by_user_id", userId).order("start_at", { ascending: false }).limit(20),
+      supabase.from("challenge_submissions").select("id, challenge_id, client_id, score_primary, status, submitted_at, is_winner").order("submitted_at", { ascending: false }).limit(100),
+      supabase.from("nutrition_log_sessions").select("id, client_id, date, meal_type, created_at").eq("user_id", userId).gte("date", last30days).limit(500),
+      supabase.from("stock_movements").select("id, product_id, movement_type, quantity, unit_price, created_at").gte("created_at", last30days).order("created_at", { ascending: false }).limit(200),
+      supabase.from("test_definitions").select("id, name, name_cs, category, primary_metric_key, primary_metric_better, is_active").eq("is_active", true),
+      supabase.from("test_sessions").select("id, test_definition_id, client_id, date_time, metrics_json, is_valid, rpe_1_10, notes").eq("user_id", userId).order("date_time", { ascending: false }).limit(200),
+      supabase.from("client_assigned_workouts").select("id, client_id, title, status, due_date, completed_at, created_at").eq("trainer_id", userId).order("created_at", { ascending: false }).limit(100),
+      supabase.from("pre_session_checkins").select("id, client_id, session_id, energy_level, sleep_quality, stress_level, pain_areas, notes, created_at").eq("user_id", userId).gte("created_at", last30days).order("created_at", { ascending: false }).limit(100),
+      supabase.from("client_badges").select("id, client_id, badge_id, earned_at, progress_current, progress_target").order("earned_at", { ascending: false }).limit(50),
+      supabase.from("badge_definitions").select("id, name, description, rarity, icon_key, is_active").eq("is_active", true),
+      supabase.from("price_lists").select("id, name, is_active, valid_from, valid_to").eq("user_id", userId).eq("is_active", true),
+      supabase.from("price_items").select("id, price_list_id, name, price, session_count, validity_days").eq("user_id", userId),
+      supabase.from("client_recurring_schedules").select("id, client_id, day_of_week, time, duration_minutes, training_type, is_active").eq("user_id", userId).eq("is_active", true),
     ]);
 
     const clients = clientsRes.data || [];
@@ -117,6 +151,25 @@ serve(async (req) => {
     const trainingPlans = trainingPlansRes.data || [];
     const feedbackRequests = feedbackRequestsRes.data || [];
     const todaySales = todaySalesRes.data || [];
+    // NEW data extractions
+    const measurements = measurementsRes.data || [];
+    const diagnostics = diagnosticsRes.data || [];
+    const clientPackages = clientPackagesRes.data || [];
+    const clientXp = clientXpRes.data || [];
+    const loyaltyBalances = loyaltyRes.data || [];
+    const challenges = challengesRes.data || [];
+    const challengeSubmissions = challengeSubmissionsRes.data || [];
+    const nutritionSessions = nutritionSessionsRes.data || [];
+    const stockMovements = stockMovementsRes.data || [];
+    const testDefinitions = testDefinitionsRes.data || [];
+    const testSessions = testSessionsRes.data || [];
+    const assignedWorkouts = assignedWorkoutsRes.data || [];
+    const preCheckins = preCheckinRes.data || [];
+    const clientBadges = clientBadgesRes.data || [];
+    const badgeDefs = badgeDefsRes.data || [];
+    const priceLists = priceListsRes.data || [];
+    const priceItems = priceItemsRes.data || [];
+    const recurringSchedules = recurringSchedulesRes.data || [];
 
     // Build client name map
     const clientNameMap: Record<string, string> = {};
@@ -420,18 +473,165 @@ ${formatSchedule(todaySchedule)}
 
 ### Zítřejší rozvrh (${tomorrow})
 ${formatSchedule(tomorrowSchedule)}
+
+## MĚŘENÍ KLIENTŮ
+${(() => {
+  // Latest measurement per client
+  const latestPerClient: Record<string, any> = {};
+  measurements.forEach((m: any) => {
+    if (!latestPerClient[m.client_id]) latestPerClient[m.client_id] = m;
+  });
+  const entries = Object.values(latestPerClient);
+  if (entries.length === 0) return "Žádná měření";
+  return entries.map((m: any) => {
+    const name = clientNameMap[m.client_id] || "?";
+    return `- ${name} (${m.date}): váha=${m.weight || "?"}kg, výška=${m.height || "?"}cm, tuk=${m.body_fat_pct || "?"}%${m.notes ? ` | ${m.notes.substring(0, 40)}` : ""}`;
+  }).join("\n");
+})()}
+
+## DIAGNOSTIKY
+${diagnostics.length > 0 ? diagnostics.slice(0, 30).map((d: any) => {
+  const name = clientNameMap[d.client_id] || "?";
+  return `- ${name} (${d.date}): [${d.category || "?"}] ${(d.findings || "").substring(0, 80)}${d.notes ? ` | ${d.notes.substring(0, 40)}` : ""}`;
+}).join("\n") : "Žádné diagnostiky"}
+
+## BALÍČKY KLIENTŮ (aktivní)
+${clientPackages.length > 0 ? clientPackages.map((p: any) => {
+  const name = clientNameMap[p.client_id] || "?";
+  const remaining = p.trainings_total - p.trainings_used;
+  const expires = p.expires_at ? ` | expiruje: ${p.expires_at.split("T")[0]}` : "";
+  return `- ${name}: "${p.package_name}" | zbývá ${remaining}/${p.trainings_total} tréninků | ${p.price_paid} Kč${expires}`;
+}).join("\n") : "Žádné aktivní balíčky"}
+
+## GAMIFIKACE (XP & Věrnostní body)
+### XP Levely
+${clientXp.length > 0 ? clientXp.map((x: any) => {
+  const name = clientNameMap[x.client_id] || "?";
+  return `- ${name}: Level ${x.level || 0}, XP: ${x.current_xp || 0}, Streak: ${x.streak_days || 0} dní`;
+}).join("\n") : "Žádná XP data"}
+### Věrnostní body
+${loyaltyBalances.length > 0 ? loyaltyBalances.slice(0, 20).map((l: any) => {
+  const name = clientNameMap[l.client_id] || "?";
+  return `- ${name}: ${l.points_balance || 0} bodů (celkem: ${l.lifetime_points || 0})`;
+}).join("\n") : "Žádné věrnostní body"}
+
+## VÝZVY (Challenges)
+${challenges.length > 0 ? challenges.slice(0, 10).map((ch: any) => {
+  const subs = challengeSubmissions.filter((s: any) => s.challenge_id === ch.id);
+  const winners = subs.filter((s: any) => s.is_winner);
+  return `- "${ch.title}" [${ch.status}] ${ch.start_at?.split("T")[0]}–${ch.end_at?.split("T")[0]} | ${subs.length} submissions, ${winners.length} výherců`;
+}).join("\n") : "Žádné výzvy"}
+
+## VÝŽIVA (posledních 30 dní)
+${(() => {
+  const perClient: Record<string, number> = {};
+  nutritionSessions.forEach((n: any) => {
+    perClient[n.client_id] = (perClient[n.client_id] || 0) + 1;
+  });
+  const entries = Object.entries(perClient);
+  if (entries.length === 0) return "Žádné nutriční záznamy";
+  return `Celkem logů: ${nutritionSessions.length}\n` + entries.map(([cid, count]) => {
+    const name = clientNameMap[cid] || "?";
+    return `- ${name}: ${count} záznamů`;
+  }).join("\n");
+})()}
+
+## SKLADOVÉ POHYBY (posledních 30 dní)
+${(() => {
+  const summary: Record<string, number> = {};
+  stockMovements.forEach((m: any) => {
+    summary[m.movement_type] = (summary[m.movement_type] || 0) + (m.quantity || 0);
+  });
+  if (Object.keys(summary).length === 0) return "Žádné pohyby";
+  return `Celkem pohybů: ${stockMovements.length}\n` + Object.entries(summary).map(([type, qty]) => `- ${type}: ${qty} ks`).join("\n");
+})()}
+
+## VÝKONNOSTNÍ TESTY
+### Definice testů
+${testDefinitions.length > 0 ? testDefinitions.map((td: any) => `- ${td.name_cs || td.name} [${td.category}] metr: ${td.primary_metric_key}`).join("\n") : "Žádné testy"}
+### Poslední výsledky
+${(() => {
+  // Latest per client per test
+  const latestPerKey: Record<string, any> = {};
+  testSessions.forEach((ts: any) => {
+    const key = ts.client_id + "|" + ts.test_definition_id;
+    if (!latestPerKey[key]) latestPerKey[key] = ts;
+  });
+  const entries = Object.values(latestPerKey);
+  if (entries.length === 0) return "Žádné výsledky testů";
+  const defMap: Record<string, any> = {};
+  testDefinitions.forEach((td: any) => { defMap[td.id] = td; });
+  return entries.slice(0, 30).map((ts: any) => {
+    const name = clientNameMap[ts.client_id] || "?";
+    const def = defMap[ts.test_definition_id];
+    const testName = def?.name_cs || def?.name || "?";
+    const primaryVal = ts.metrics_json?.[def?.primary_metric_key] ?? "?";
+    return `- ${name} | ${testName}: ${primaryVal} (${ts.date_time?.split("T")[0]})${ts.is_valid === false ? " ❌ nevalidní" : ""}`;
+  }).join("\n");
+})()}
+
+## DOMÁCÍ TRÉNINKY
+${(() => {
+  const total = assignedWorkouts.length;
+  const completed = assignedWorkouts.filter((w: any) => w.status === "completed").length;
+  const pending = assignedWorkouts.filter((w: any) => w.status === "assigned" || w.status === "pending").length;
+  if (total === 0) return "Žádné zadané domácí tréninky";
+  return `Celkem: ${total} | Dokončeno: ${completed} | Čeká: ${pending} | Míra plnění: ${Math.round(completed / total * 100)}%`;
+})()}
+
+## PRE-SESSION CHECKINS (posledních 30 dní)
+${(() => {
+  if (preCheckins.length === 0) return "Žádné check-iny";
+  const avgEnergy = preCheckins.filter((c: any) => c.energy_level).reduce((s: number, c: any) => s + c.energy_level, 0) / (preCheckins.filter((c: any) => c.energy_level).length || 1);
+  const avgSleep = preCheckins.filter((c: any) => c.sleep_quality).reduce((s: number, c: any) => s + c.sleep_quality, 0) / (preCheckins.filter((c: any) => c.sleep_quality).length || 1);
+  const avgStress = preCheckins.filter((c: any) => c.stress_level).reduce((s: number, c: any) => s + c.stress_level, 0) / (preCheckins.filter((c: any) => c.stress_level).length || 1);
+  const withPain = preCheckins.filter((c: any) => c.pain_areas && c.pain_areas.length > 0);
+  return `Celkem: ${preCheckins.length} | Prům. energie: ${avgEnergy.toFixed(1)} | Prům. spánek: ${avgSleep.toFixed(1)} | Prům. stres: ${avgStress.toFixed(1)} | S bolestí: ${withPain.length}`;
+})()}
+
+## ODZNAKY (Badges)
+${(() => {
+  const earned = clientBadges.filter((b: any) => b.earned_at);
+  const defMap: Record<string, any> = {};
+  badgeDefs.forEach((d: any) => { defMap[d.id] = d; });
+  if (earned.length === 0) return "Žádné udělené odznaky";
+  return `Celkem uděleno: ${earned.length}\nPoslední:\n` + earned.slice(0, 10).map((b: any) => {
+    const name = clientNameMap[b.client_id] || "?";
+    const def = defMap[b.badge_id];
+    return `- ${name}: ${def?.name || "?"} [${def?.rarity || "?"}] (${b.earned_at?.split("T")[0]})`;
+  }).join("\n");
+})()}
+
+## CENÍKY
+${priceLists.length > 0 ? priceLists.map((pl: any) => {
+  const items = priceItems.filter((pi: any) => pi.price_list_id === pl.id);
+  const itemsStr = items.map((pi: any) => `${pi.name}: ${pi.price} Kč (${pi.session_count || "?"} tréninků, ${pi.validity_days || "∞"} dní)`).join("; ");
+  return `- "${pl.name}" (od ${pl.valid_from || "?"}):\n  ${itemsStr || "žádné položky"}`;
+}).join("\n") : "Žádné aktivní ceníky"}
+
+## OPAKUJÍCÍ SE ROZVRH
+${(() => {
+  const days = ["Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota", "Neděle"];
+  if (recurringSchedules.length === 0) return "Žádné pravidelné termíny";
+  return recurringSchedules.map((rs: any) => {
+    const name = clientNameMap[rs.client_id] || "?";
+    const day = days[rs.day_of_week] || rs.day_of_week;
+    return `- ${name}: ${day} ${rs.time || "?"} (${rs.duration_minutes || "?"}min, ${rs.training_type || "solo"})`;
+  }).join("\n");
+})()}
 `;
 
     const briefingInstruction = mode === "briefing" ? `
 DŮLEŽITÉ: Uživatel právě otevřel agenta. Automaticky připrav krátký ranní briefing dne. Formát:
 ## 📋 Briefing ${now.toLocaleDateString("cs-CZ")}
 - Dnešní rozvrh (kolik tréninků, klienti)
-- Varování (dluhy, red flagy, nízké zásoby, at-risk klienti, neaktivní klienti)
+- Varování (dluhy, red flagy, nízké zásoby, at-risk klienti, expirující balíčky, neaktivní klienti)
 - Klíčová čísla (příjem tento měsíc, zůstatky)
-- Feedback response rate
-Buď stručný, max 20 řádků.` : "";
+- Feedback response rate, pre-session check-in souhrn
+- Gamifikace highlights (nedávné odznaky, streaky)
+Buď stručný, max 25 řádků.` : "";
 
-    const systemPrompt = `Jsi finanční a business analytik pro fitness trenéra. Tvým úkolem je analyzovat finanční data, kreditní zůstatky, prodeje produktů, tréninkové statistiky, feedbacky klientů, výkonnostní data (PR, objemy), zdravotní profily, tréninkové plány, retenci klientů a rozvrh.
+    const systemPrompt = `Jsi komplexní business analytik pro fitness trenéra. Máš přístup ke VŠEM datům aplikace: finance, kredity, tréninky, prodeje, feedbacky, měření klientů, diagnostiky, balíčky, gamifikace (XP, odznaky, věrnostní body), výzvy, výživa, skladové pohyby, výkonnostní testy, domácí tréninky, pre-session check-iny, ceníky a rozvrh.
 
 ${contextData}
 
@@ -444,18 +644,28 @@ PRAVIDLA:
 - Když se uživatel ptá na export, připrav data ve strukturovaném formátu (tabulka nebo seznam) který lze snadno zkopírovat
 - Pokud uživatel žádá PDF/export, vytvoř přehledný textový formát s jasnou strukturou oddílů a nadpisy
 - Počítej s českými měnovými zvyklostmi (Kč, česká čísla)
-- Nabízej proaktivně insights: trendy, srovnání, varování (nízké zásoby, dluhy klientů, red flagy, bolesti, neaktivní klienti, at-risk klienti)
+- Nabízej proaktivně insights: trendy, srovnání, varování (nízké zásoby, dluhy klientů, red flagy, bolesti, neaktivní klienti, at-risk klienti, blížící se expirace balíčků)
 - Pokud data nestačí pro odpověď, řekni to jasně
 - Formátuj peněžní částky vždy s "Kč" a tisícovými oddělovači
-- Identifikuj rizikové klienty: neaktivní klienti, klienti s bolestmi/red flagy, klienti s dluhem, at-risk klienti
+- Identifikuj rizikové klienty: neaktivní, s bolestmi/red flagy, s dluhem, at-risk, s expirujícím balíčkem
 - Nabízej doporučení a varování proaktivně
 - Pokud uživatel chce report, strukturuj odpověď s jasným nadpisem, sekcemi a shrnutím na konci
 - Umíš porovnávat období (tento vs minulý měsíc, meziměsíční trendy)
 - Hodinovou sazbu počítej ze skutečné duration a final_price
-- Umíš analyzovat výkonnostní data: PR klientů, tréninkové objemy, trendy síly
-- Umíš pracovat se zdravotními profily: identifikuj klienty s omezením, sleduj bolesti ve feedbackech
+- Umíš analyzovat výkonnostní data: PR klientů, tréninkové objemy, trendy síly, výsledky testů
+- Umíš pracovat se zdravotními profily: identifikuj klienty s omezením, sleduj bolesti ve feedbackech a check-inech
 - Umíš analyzovat tréninkové plány: aktivní plány, plnění cílů, frekvence
 - Umíš analyzovat feedback response rate: kolik klientů odpovídá, průměrná doba
+- Umíš analyzovat měření: trendy váhy, tělesného tuku, obvody
+- Umíš analyzovat diagnostiky: problémové oblasti, nálezy per klient
+- Umíš analyzovat balíčky: zbývající tréninky, expirace, doporučení na obnovu
+- Umíš analyzovat gamifikaci: XP levely, streaky, odznaky, věrnostní body
+- Umíš analyzovat výzvy: účast, výsledky, zapojení klientů
+- Umíš analyzovat výživu: frekvence logování, pravidelnost per klient
+- Umíš analyzovat domácí tréninky: míra plnění, compliance per klient
+- Umíš analyzovat pre-session check-iny: průměrná energie, spánek, stres, bolesti
+- Umíš analyzovat ceníky a doporučit cenovou strategii
+- Umíš analyzovat pravidelný rozvrh klientů
 - Pokud uživatel požádá o data ve formátu pro graf, vrať je jako JSON blok s klíči "chartData" a "chartType" (bar/line/pie):
   Příklad: \`\`\`chart {"chartType":"bar","chartData":[{"name":"Leden","value":15},{"name":"Únor","value":22}]} \`\`\`
 
