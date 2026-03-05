@@ -328,9 +328,9 @@ export default function SchedulePage() {
   return (
     <div className="flex flex-col h-full animate-fade-in">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50 px-4 py-3">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-foreground">Rozvrh</h1>
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50 px-3 sm:px-4 py-2 sm:py-3">
+        <div className="flex items-center justify-between mb-2 sm:mb-3">
+          <h1 className="text-lg sm:text-xl font-bold text-foreground">Rozvrh</h1>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <Button
               variant="default"
@@ -398,24 +398,24 @@ export default function SchedulePage() {
           </div>
         </div>
 
-        {/* Week navigation */}
-        <div className="flex items-center gap-2">
+        {/* Week navigation - compact on mobile */}
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={() => navigateWeek('prev')}
-            className="h-8 w-8 rounded-full"
+            className="h-7 w-7 sm:h-8 sm:w-8 rounded-full"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <span className="text-sm font-medium text-muted-foreground">
-            {format(weekStart, 'd. MMM', { locale: cs })} - {format(addDays(weekStart, 6), 'd. MMM yyyy', { locale: cs })}
+          <span className="text-xs sm:text-sm font-medium text-muted-foreground">
+            {format(weekStart, 'd. MMM', { locale: cs })} – {format(addDays(weekStart, 6), 'd. MMM', { locale: cs })}
           </span>
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={() => navigateWeek('next')}
-            className="h-8 w-8 rounded-full"
+            className="h-7 w-7 sm:h-8 sm:w-8 rounded-full"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -424,7 +424,7 @@ export default function SchedulePage() {
 
       {/* Week Grid - with swipe gesture */}
       <motion.div 
-        className="px-4 py-3 border-b border-border/30 overflow-hidden touch-pan-y"
+        className="px-2 sm:px-4 py-2 sm:py-3 border-b border-border/30 overflow-hidden touch-pan-y"
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.2}
@@ -451,17 +451,18 @@ export default function SchedulePage() {
                 key={day.toISOString()}
                 onClick={() => setCurrentDate(day)}
                 className={cn(
-                  'flex flex-col items-center p-2 rounded-xl transition-all touch-target relative',
+                  'flex flex-col items-center p-1.5 sm:p-2 rounded-xl transition-all touch-target relative',
                   isSelected && 'ring-2 ring-primary bg-primary/10',
                   isToday && !isSelected && 'ring-1 ring-primary/50',
-                  !isSelected && !isToday && 'hover:bg-secondary/50'
+                  !isSelected && !isToday && 'hover:bg-secondary/50',
+                  'press-feedback'
                 )}
               >
-                <span className="text-[10px] uppercase font-medium text-muted-foreground">
-                  {format(day, 'EEE', { locale: cs })}
+                <span className="text-[9px] sm:text-[10px] uppercase font-medium text-muted-foreground">
+                  {format(day, 'EEEEE', { locale: cs })}
                 </span>
                 <span className={cn(
-                  'text-lg font-bold mt-0.5',
+                  'text-base sm:text-lg font-bold mt-0.5',
                   isToday ? 'text-primary' : 'text-foreground'
                 )}>
                   {format(day, 'd')}
@@ -499,13 +500,13 @@ export default function SchedulePage() {
       </motion.div>
 
       {/* Day Header */}
-      <div className="px-4 py-3 border-b border-border/30 bg-secondary/30">
+      <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-border/30 bg-secondary/30">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-lg font-semibold text-foreground capitalize">
+            <p className="text-base sm:text-lg font-semibold text-foreground capitalize">
               {format(currentDate, 'EEEE', { locale: cs })}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               {format(currentDate, 'd. MMMM yyyy', { locale: cs })}
             </p>
           </div>
@@ -522,7 +523,7 @@ export default function SchedulePage() {
                 )}
               </>
             ) : (
-              <span className="text-sm font-medium text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-full">
+              <span className="text-xs sm:text-sm font-medium text-success bg-success/10 px-2 py-1 rounded-full">
                 Volný den
               </span>
             )}
@@ -532,7 +533,7 @@ export default function SchedulePage() {
 
 
       {/* Day Events List */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4">
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
