@@ -57,7 +57,7 @@ serve(async (req) => {
       trainingsLastMonthRes,
       trainingsYearRes,
       transactionsRes,
-      productSalesRes,
+      salesOrdersRes,
       expensesRes,
       productsRes,
       feedbackRes,
@@ -69,7 +69,7 @@ serve(async (req) => {
       exerciseVolumesRes,
       trainingPlansRes,
       feedbackRequestsRes,
-      todaySalesRes,
+      salesOrderItemsRes,
       // NEW data sources
       measurementsRes,
       diagnosticsRes,
@@ -97,9 +97,9 @@ serve(async (req) => {
       supabase.from("training_sessions").select("id, date, status, duration, training_type, price, final_price, payment_status, participant_count, clients(name)").eq("user_id", userId).gte("date", lastMonthStart).lt("date", thisMonthStart).order("date", { ascending: false }),
       supabase.from("training_sessions").select("id, date, status, training_type, price, final_price, payment_status, duration, participant_count, client_id, clients(name)").eq("user_id", userId).gte("date", thisYearStart).eq("status", "completed"),
       supabase.from("credit_transactions").select("*").eq("user_id", userId).gte("created_at", thisYearStart).in("type", ["payment", "training", "product", "canceled_training"]).order("created_at", { ascending: false }).limit(1000),
-      supabase.from("product_sales").select("*, products(name, sell_price, cost_price)").eq("user_id", userId).gte("created_at", last90days).order("created_at", { ascending: false }).limit(200),
+      supabase.from("sales_orders").select("id, client_id, total_amount, payment_method, payment_status, created_at, clients(name)").eq("user_id", userId).eq("payment_status", "completed").gte("created_at", last90days).order("created_at", { ascending: false }).limit(300),
       supabase.from("business_expenses").select("*").eq("user_id", userId).gte("date", thisYearStart).order("date", { ascending: false }).limit(200),
-      supabase.from("products").select("id, name, sell_price, cost_price, stock_quantity, category").eq("user_id", userId).eq("is_active", true),
+      supabase.from("products").select("id, name, price, purchase_price, stock_quantity, category").eq("user_id", userId).eq("is_active", true),
       supabase.from("training_feedback").select("id, client_id, training_date, body_feel, pain, rpe_rating, is_red_flag, notes, created_at").eq("user_id", userId).gte("training_date", last90days).order("training_date", { ascending: false }).limit(500),
       supabase.from("vw_group_ledger_balances").select("*").eq("user_id", userId),
       supabase.from("training_sessions").select("id, date, status, duration, training_type, clients(name), participant_count").eq("user_id", userId).gte("date", today).lt("date", tomorrow).order("date", { ascending: true }),
@@ -109,7 +109,7 @@ serve(async (req) => {
       supabase.from("exercise_entries").select("client_id, sets, reps, weight_kg, date").eq("user_id", userId).gte("date", last90days).limit(1000),
       supabase.from("training_plans").select("id, client_id, name, primary_goal, phase, period_start, period_end, days_per_week, is_active, notes").eq("user_id", userId).eq("is_active", true),
       supabase.from("feedback_requests").select("id, training_session_id, status, created_at, sent_at, completed_at").eq("user_id", userId).gte("created_at", last90days),
-      supabase.from("product_sales").select("*, products(name, sell_price, cost_price), clients(name)").eq("user_id", userId).gte("created_at", `${today}T00:00:00`).lt("created_at", `${tomorrow}T00:00:00`).order("created_at", { ascending: false }),
+      supabase.from("sales_order_items").select("id, order_id, product_id, name_snapshot, quantity, unit_price, line_total, line_total_after_discount, products(name, purchase_price), sales_orders!inner(id, user_id, client_id, created_at, payment_status, clients(name))").eq("sales_orders.user_id", userId).eq("sales_orders.payment_status", "completed").gte("sales_orders.created_at", last90days).order("created_at", { ascending: false }).limit(700),
       // NEW queries
       supabase.from("measurements").select("id, client_id, date, weight, body_fat_percentage, muscle_mass, waist, chest, hips, bmi, visceral_fat, water_percent, notes").eq("user_id", userId).order("date", { ascending: false }).limit(200),
       supabase.from("diagnostics").select("id, client_id, date, area_type, area_name, findings, notes").eq("user_id", userId).order("date", { ascending: false }).limit(100),
@@ -138,7 +138,7 @@ serve(async (req) => {
     const trainingsLastMonth = trainingsLastMonthRes.data || [];
     const trainingsYear = trainingsYearRes.data || [];
     const transactions = transactionsRes.data || [];
-    const productSales = productSalesRes.data || [];
+    const salesOrders = salesOrdersRes.data || [];
     const expenses = expensesRes.data || [];
     const products = productsRes.data || [];
     const feedbacks = feedbackRes.data || [];
@@ -150,7 +150,7 @@ serve(async (req) => {
     const exerciseVolumes = exerciseVolumesRes.data || [];
     const trainingPlans = trainingPlansRes.data || [];
     const feedbackRequests = feedbackRequestsRes.data || [];
-    const todaySales = todaySalesRes.data || [];
+    const salesOrderItems = salesOrderItemsRes.data || [];
     // NEW data extractions
     const measurements = measurementsRes.data || [];
     const diagnostics = diagnosticsRes.data || [];
@@ -194,8 +194,16 @@ serve(async (req) => {
 
     const totalExpensesYear = expenses.reduce((s: number, e: any) => s + (e.amount || 0), 0);
 
-    const salesRevenue90d = productSales.reduce((s: number, ps: any) => s + ((ps.products?.sell_price || 0) * (ps.quantity || 1)), 0);
-    const salesCost90d = productSales.reduce((s: number, ps: any) => s + ((ps.products?.cost_price || 0) * (ps.quantity || 1)), 0);
+    const salesRevenue90d = salesOrders.reduce((s: number, o: any) => s + (o.total_amount || 0), 0);
+    const salesCost90d = salesOrderItems.reduce((s: number, item: any) => s + ((item.products?.purchase_price || 0) * (item.quantity || 0)), 0);
+
+    const pragueToday = now.toLocaleDateString("en-CA", { timeZone: "Europe/Prague" });
+    const todaySalesOrders = salesOrders.filter((o: any) =>
+      new Date(o.created_at).toLocaleDateString("en-CA", { timeZone: "Europe/Prague" }) === pragueToday
+    );
+    const todayOrderIds = new Set(todaySalesOrders.map((o: any) => o.id));
+    const todaySalesItems = salesOrderItems.filter((item: any) => todayOrderIds.has(item.order_id));
+    const todaySalesRevenue = todaySalesOrders.reduce((s: number, o: any) => s + (o.total_amount || 0), 0);
 
     const lowStockProducts = products.filter((p: any) => (p.stock_quantity || 0) <= 3 && (p.stock_quantity || 0) >= 0);
 
@@ -411,12 +419,18 @@ ${topClientsByCount.map((c, i) => `${i + 1}. ${c.name}: ${c.count} tréninků ($
 - Náklady: ${salesCost90d.toLocaleString("cs-CZ")} Kč
 - Hrubý zisk: ${(salesRevenue90d - salesCost90d).toLocaleString("cs-CZ")} Kč
 - Marže: ${salesRevenue90d > 0 ? Math.round((salesRevenue90d - salesCost90d) / salesRevenue90d * 100) : 0}%
-- Počet prodejů: ${productSales.length}
+- Počet prodejů: ${salesOrders.length}
 
-### Dnešní prodeje (${today})
-- Počet prodejů dnes: ${todaySales.length}
-- Tržby dnes: ${todaySales.reduce((s: number, ps: any) => s + ((ps.products?.sell_price || 0) * (ps.quantity || 1)), 0).toLocaleString("cs-CZ")} Kč
-${todaySales.length > 0 ? todaySales.map((ps: any) => `  - ${new Date(ps.created_at).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })} | ${ps.products?.name || "?"} × ${ps.quantity || 1} | ${((ps.products?.sell_price || 0) * (ps.quantity || 1)).toLocaleString("cs-CZ")} Kč | Klient: ${ps.clients?.name || "?"}`).join("\n") : "Žádné prodeje dnes"}
+### Dnešní prodeje (${pragueToday})
+- Počet prodejů dnes: ${todaySalesOrders.length}
+- Tržby dnes: ${todaySalesRevenue.toLocaleString("cs-CZ")} Kč
+${todaySalesItems.length > 0 ? todaySalesItems.slice(0, 30).map((item: any) => {
+  const order = item.sales_orders;
+  const itemName = item.name_snapshot || item.products?.name || "?";
+  const lineTotal = item.line_total_after_discount ?? item.line_total ?? ((item.unit_price || 0) * (item.quantity || 1));
+  const time = order?.created_at ? new Date(order.created_at).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }) : "??:??";
+  return `  - ${time} | ${itemName} × ${item.quantity || 1} | ${lineTotal.toLocaleString("cs-CZ")} Kč | Klient: ${order?.clients?.name || "?"}`;
+}).join("\n") : "Žádné prodeje dnes"}
 
 ### Produkty na skladě
 - Celkem aktivních: ${products.length}
