@@ -63,6 +63,7 @@ const MyProfile = lazy(() => import("./pages/MyProfile"));
 // PriceMigration removed - migration completed
 const Notes = lazy(() => import("./pages/Notes"));
 const Expenses = lazy(() => import("./pages/Expenses"));
+const AIAnalyst = lazy(() => import("./pages/AIAnalyst"));
 // FollowupsPage is now integrated into Dashboard via FollowupsSection
 
 // Lazy loaded pages - Client Portal
@@ -198,6 +199,7 @@ const App = () => (
                           <Route path="/my-profile" element={<LazyRouteWrapper><MyProfile /></LazyRouteWrapper>} />
                           <Route path="/notes" element={<LazyRouteWrapper><Notes /></LazyRouteWrapper>} />
                           <Route path="/expenses" element={<LazyRouteWrapper><Expenses /></LazyRouteWrapper>} />
+                          <Route path="/ai-analyst" element={<LazyRouteWrapper><AIAnalyst /></LazyRouteWrapper>} />
                           {/* Legacy followups redirect - now integrated in Dashboard */}
                           <Route path="/pripomenuti" element={<Navigate to="/" replace />} />
                           <Route path="/admin/user-approvals" element={<LazyRouteWrapper><UserApprovals /></LazyRouteWrapper>} />
