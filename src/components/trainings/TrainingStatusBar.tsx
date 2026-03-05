@@ -126,7 +126,7 @@ export function TrainingStatusBar({
         'safe-area-bottom',
         className
       )}>
-        <div className="max-w-2xl mx-auto px-4 py-3 space-y-2">
+        <div className="max-w-2xl mx-auto px-4 py-2 space-y-1.5">
           {/* Readiness indicators */}
           <div className="flex items-center gap-3 text-xs">
             <div className={cn(
@@ -159,7 +159,7 @@ export function TrainingStatusBar({
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-12 px-3 shrink-0"
+                    className="h-11 px-3 shrink-0"
                     disabled={anyActionLoading}
                   >
                     <MoreVertical className="w-5 h-5" />
@@ -211,7 +211,7 @@ export function TrainingStatusBar({
             {status === 'scheduled' && onStart && (
               <Button
                 variant="outline"
-                className="h-12 px-4 font-semibold"
+                className="h-11 px-4 font-semibold"
                 onClick={onStart}
                 disabled={anyActionLoading}
               >
@@ -222,7 +222,7 @@ export function TrainingStatusBar({
 
             {/* Complete button - always primary */}
             <Button
-              className="flex-1 h-12 text-base font-bold bg-success hover:bg-success/90 text-success-foreground shadow-lg shadow-success/20"
+              className="flex-1 h-11 text-base font-bold bg-success hover:bg-success/90 text-success-foreground shadow-lg shadow-success/20"
               onClick={onComplete}
               disabled={anyActionLoading}
             >
