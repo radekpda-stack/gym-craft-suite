@@ -416,110 +416,77 @@ export function SalesRegister() {
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 lg:gap-6">
       {/* Left Column - Client, Search, Products */}
       <div className="space-y-4">
-        {/* Premium Client Selection Card */}
-        <div className="card-floating rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <Label className="flex items-center gap-2 text-sm font-semibold">
-              <div className="p-1.5 rounded-lg bg-primary/10 shadow-sm shadow-primary/20">
-                <User className="w-4 h-4 text-primary" />
-              </div>
-              Klient
-            </Label>
+        {/* Compact Client Selection */}
+        <div className="card-floating rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-1 rounded-md bg-primary/10">
+              <User className="w-3.5 h-3.5 text-primary" />
+            </div>
+            <Label className="text-sm font-medium flex-1">Klient</Label>
             <Button
-              variant={noClient ? "default" : "outline"}
-              size="sm"
+              variant={noClient ? "default" : "ghost"}
+              size="xs"
               onClick={handleNoClientToggle}
-              className="gap-2"
+              className="gap-1 h-7 text-xs"
               disabled={hasCreditTopup}
             >
-              {noClient ? <Check className="w-4 h-4" /> : null}
+              {noClient ? <Check className="w-3 h-3" /> : null}
               Bez klienta
             </Button>
           </div>
           
           {!noClient ? (
-            <ClientSearchSelect
-              clients={sortedClients}
-              value={selectedClient}
-              onValueChange={setSelectedClient}
-              placeholder="Vyhledat klienta..."
-              showCreditBalance={false}
-              filterArchived={false}
-            />
-          ) : (
-            <div className="p-3 rounded-xl bg-secondary/50 backdrop-blur-sm text-sm text-muted-foreground border border-border/30">
-              Prodej bude zaznamenán bez přiřazení klientovi
-              {creditTopupNeedsClient && (
-                <p className="text-destructive mt-1 font-medium">
-                  ⚠️ Dobití kreditu vyžaduje výběr klienta
-                </p>
+            <div className="space-y-2">
+              <ClientSearchSelect
+                clients={sortedClients}
+                value={selectedClient}
+                onValueChange={setSelectedClient}
+                placeholder="Vyhledat klienta..."
+                showCreditBalance={false}
+                filterArchived={false}
+              />
+              {/* Inline credit info */}
+              {selectedClientData && (
+                <div className="flex items-center justify-between px-1 text-xs">
+                  <span className="text-muted-foreground">{selectedClientData.name}</span>
+                  <div className="flex items-center gap-2">
+                    {sharedBudget?.isShared && (
+                      <Badge variant="outline" className="gap-0.5 text-[9px] py-0 px-1 bg-secondary/50">
+                        <Users className="w-2.5 h-2.5" />
+                        {sharedBudget.groupName}
+                      </Badge>
+                    )}
+                    {isBudgetLoading || effectiveBalance === null ? (
+                      <span className="text-muted-foreground animate-pulse">...</span>
+                    ) : (
+                      <span className={cn(
+                        "font-bold tabular-nums",
+                        effectiveBalance < 0 ? "text-destructive" : 
+                        effectiveBalance < 500 ? "text-warning" : "text-success"
+                      )}>
+                        {formatCurrency(effectiveBalance)}
+                      </span>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
-          )}
-
-          {/* Premium client info with credit progress bar */}
-          {selectedClientData && (
-            <div className="mt-3 p-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/30">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-sm">{selectedClientData.name}</span>
-                {sharedBudget?.isShared && (
-                  <Badge variant="outline" className="gap-1 text-[10px] py-0.5 px-1.5 bg-secondary/50">
-                    <Users className="w-3 h-3" />
-                    {sharedBudget.groupName}
-                  </Badge>
-                )}
-              </div>
-              
-              {/* Credit as progress bar */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground text-xs">Kredit</span>
-                  {isBudgetLoading || effectiveBalance === null ? (
-                    <span className="text-xs text-muted-foreground animate-pulse">Načítám...</span>
-                  ) : (
-                    <span className={cn(
-                      "font-bold tabular-nums",
-                      effectiveBalance < 0 ? "text-destructive" : 
-                      effectiveBalance < 500 ? "text-warning" : "text-success"
-                    )}>
-                      {formatCurrency(effectiveBalance)}
-                    </span>
-                  )}
-                </div>
-                {effectiveBalance !== null && !isBudgetLoading && (
-                  <div className="h-1.5 rounded-full bg-secondary/50 overflow-hidden">
-                    <div 
-                      className={cn(
-                        "h-full rounded-full transition-all duration-500",
-                        effectiveBalance < 0 ? "bg-destructive" :
-                        effectiveBalance < 500 ? "bg-warning" : "bg-success"
-                      )}
-                      style={{ width: `${Math.min(100, Math.max(0, (effectiveBalance) / 50))}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground px-1">
+              Prodej bez přiřazení klientovi
+              {creditTopupNeedsClient && (
+                <span className="text-destructive ml-1 font-medium">⚠️ Dobití vyžaduje klienta</span>
+              )}
+            </p>
           )}
         </div>
 
-        {/* Client Purchase Suggestions */}
+        {/* Client Purchase Suggestions - inline, no card wrapper */}
         <ClientPurchaseSuggestions
           clientId={selectedClient || undefined}
           products={products}
           onAddToCart={(product) => { cart.addItem(product); setLastAddedName(product.name); }}
           getCartQuantity={(productId) => cart.getItem(productId)?.quantity || 0}
-        />
-
-        {/* Recent Sales - Quick Repeat */}
-        <RecentSales onRepeatSale={handleRepeatSale} defaultCollapsed={isMobile} />
-
-        {/* Favorite Products */}
-        <FavoriteProducts
-          products={products}
-          onAddToCart={(product) => { cart.addItem(product); setLastAddedName(product.name); }}
-          getCartQuantity={(productId) => cart.getItem(productId)?.quantity || 0}
-          defaultCollapsed={isMobile}
         />
 
         {/* Search and Filters - sticky on mobile */}
@@ -682,6 +649,15 @@ export function SalesRegister() {
             )}
           </div>
         )}
+
+        {/* Secondary sections - below products on mobile */}
+        <RecentSales onRepeatSale={handleRepeatSale} defaultCollapsed={true} />
+        <FavoriteProducts
+          products={products}
+          onAddToCart={(product) => { cart.addItem(product); setLastAddedName(product.name); }}
+          getCartQuantity={(productId) => cart.getItem(productId)?.quantity || 0}
+          defaultCollapsed={true}
+        />
       </div>
 
       {/* Right Column - Sticky Cart Panel (hidden on mobile, replaced by drawer) */}
