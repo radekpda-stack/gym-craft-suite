@@ -70,6 +70,8 @@ serve(async (req) => {
       // NEW: training plans, feedback requests
       trainingPlansRes,
       feedbackRequestsRes,
+      // Today's sales
+      todaySalesRes,
     ] = await Promise.all([
       supabase.from("vw_client_ledger_balances").select("*").eq("user_id", userId),
       supabase.from("clients").select("id, name, health_restrictions, training_goals, is_archived, training_start_date, birth_date, gender, payment_mode").eq("user_id", userId).eq("is_archived", false),
@@ -91,6 +93,8 @@ serve(async (req) => {
       // NEW queries
       supabase.from("training_plans").select("id, client_id, name, primary_goal, phase, period_start, period_end, days_per_week, is_active, notes").eq("user_id", userId).eq("is_active", true),
       supabase.from("feedback_requests").select("id, training_session_id, status, created_at, sent_at, completed_at").eq("user_id", userId).gte("created_at", last90days),
+      // Today's sales
+      supabase.from("product_sales").select("*, products(name, sell_price, cost_price), clients(name)").eq("user_id", userId).gte("created_at", `${today}T00:00:00`).lt("created_at", `${tomorrow}T00:00:00`).order("created_at", { ascending: false }),
     ]);
 
     const clients = clientsRes.data || [];
@@ -112,6 +116,7 @@ serve(async (req) => {
     const exerciseVolumes = exerciseVolumesRes.data || [];
     const trainingPlans = trainingPlansRes.data || [];
     const feedbackRequests = feedbackRequestsRes.data || [];
+    const todaySales = todaySalesRes.data || [];
 
     // Build client name map
     const clientNameMap: Record<string, string> = {};
@@ -351,6 +356,11 @@ ${topClientsByCount.map((c, i) => `${i + 1}. ${c.name}: ${c.count} tréninků ($
 - Hrubý zisk: ${(salesRevenue90d - salesCost90d).toLocaleString("cs-CZ")} Kč
 - Marže: ${salesRevenue90d > 0 ? Math.round((salesRevenue90d - salesCost90d) / salesRevenue90d * 100) : 0}%
 - Počet prodejů: ${productSales.length}
+
+### Dnešní prodeje (${today})
+- Počet prodejů dnes: ${todaySales.length}
+- Tržby dnes: ${todaySales.reduce((s: number, ps: any) => s + ((ps.products?.sell_price || 0) * (ps.quantity || 1)), 0).toLocaleString("cs-CZ")} Kč
+${todaySales.length > 0 ? todaySales.map((ps: any) => `  - ${new Date(ps.created_at).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })} | ${ps.products?.name || "?"} × ${ps.quantity || 1} | ${((ps.products?.sell_price || 0) * (ps.quantity || 1)).toLocaleString("cs-CZ")} Kč | Klient: ${ps.clients?.name || "?"}`).join("\n") : "Žádné prodeje dnes"}
 
 ### Produkty na skladě
 - Celkem aktivních: ${products.length}
