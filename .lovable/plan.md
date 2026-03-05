@@ -1,34 +1,63 @@
 
 
-# Plán: Oprava chybných dotazů AI agenta
-
-Provedl jsem audit všech nových dotazů v edge funkci `ai-business-analyst` oproti skutečnému databázovému schématu. Našel jsem **10 kritických chyb** v názvech sloupců, které způsobují tiché selhání (dotazy vrací prázdná data nebo chyby).
+# Plán: Oprava zbývajících chyb + přidání zápisu dat AI agentem
 
 ## Nalezené chyby
 
-| Tabulka | Dotaz používá | Skutečný sloupec |
-|---------|--------------|-----------------|
-| `measurements` | `height`, `body_fat_pct` | **není `height`**, `body_fat_percentage` |
-| `diagnostics` | `category` | `area_type` + `area_name` |
-| `client_xp` | `current_xp`, `streak_days` | `total_xp`, `level_xp` (není `streak_days`) |
-| `loyalty_balance` | žádný filtr na user | **nemá `user_id`** – potřeba joinovat přes clients |
-| `nutrition_log_sessions` | `date`, `meal_type` | `start_date`, `end_date` (není `meal_type`) |
-| `pre_session_checkins` | `stress_level`, `sleep_quality`, `pain_areas` | `pain_area`, `pain_notes` (není `stress_level`/`sleep_quality`) |
-| `client_recurring_schedules` | `duration_minutes`, `training_type` | `duration` (není `training_type`) |
-| `price_lists` | `valid_from`, `valid_to` | `effective_from` (není `valid_to`) |
-| `price_items` | `name`, `price`, `session_count`, `validity_days` | `service_id`, `unit_price_czk` (zcela jiná struktura) |
-| `stock_movements` | žádný filtr na user | **má `user_id`** – chybí `.eq("user_id", userId)` |
+### 1. `vw_client_ledger_balances` nemá sloupec `user_id`
+Řádek 93: `.eq("user_id", userId)` **tiše vrací prázdná data**, protože view nemá `user_id`. View je postavený nad `clients` tabulkou, ale `user_id` neexponuje.
 
-## Implementace
+**Řešení:** Odebrat `.eq("user_id", userId)` z dotazu na view. Místo toho filtrovat výsledky v paměti přes `clientIds` (stejně jako u `client_xp` a `loyalty_balance`).
 
-### Soubor: `supabase/functions/ai-business-analyst/index.ts`
+### 2. `c.balance` neexistuje (řádek 182-184)
+View má `ledger_balance` a `stored_balance`, ale kód referencuje `c.balance`.
 
-1. **Opravit SELECT sloupce** ve všech dotazech dle skutečného schématu
-2. **Opravit kontextové sekce** které referencují neexistující sloupce
-3. **Přidat chybějící filtry** (`user_id` na `stock_movements`, join pro `loyalty_balance`)
-4. **Přizpůsobit `price_items`** – joinovat přes `service_id` nebo zobrazit `unit_price_czk`
-5. **Opravit `measurements`** – přidat `body_fat_percentage`, `muscle_mass`, `waist`, `chest`, `hips` místo neexistujících sloupců
-6. **Opravit `pre_session_checkins`** – použít `energy_level`, `pain_area`, `pain_notes` (bez `stress_level`/`sleep_quality`)
-7. **Opravit `nutrition_log_sessions`** – použít `start_date` místo `date`
-8. **Re-deploy** edge funkci a ověřit logy
+**Řešení:** Změnit na `c.ledger_balance`.
+
+### 3. `vw_group_ledger_balances` — stejný problém?
+Řádek 104 filtruje `.eq("user_id", userId)` — potřeba ověřit jestli má `user_id`. Pravděpodobně ano (skupiny mají `user_id`), ale stojí za kontrolu.
+
+---
+
+## Nová funkcionalita: AI agent umí zapisovat data
+
+Aktuálně je agent **čistě read-only** — neumí provést žádnou akci. Přidáme **tool calling** (function calling), kde AI model rozhodne, že chce provést akci, a edge funkce ji vykoná.
+
+### Podporované akce (tools):
+
+| Akce | Tabulka | Popis |
+|------|---------|-------|
+| `record_pr` | `exercise_entries` | Zaznamenat PR klienta (cvik, váha, sety, repy) |
+| `create_sale` | `sales_orders` + `sales_order_items` | Vytvořit prodej (produkt, množství, klient) |
+| `add_measurement` | `measurements` | Přidat měření klienta (váha, tuk, obvody) |
+| `add_note` | Poznámka do konverzace | Poznámka k budoucímu sledování |
+| `schedule_training` | `training_sessions` | Naplánovat trénink |
+
+### Implementace
+
+#### A. Edge funkce (`ai-business-analyst/index.ts`)
+
+1. **Přidat `tools` definice** do AI request body — každý tool má `name`, `description` a `parameters` (JSON Schema)
+2. **Detekovat tool calls v odpovědi** — pokud AI vrátí `tool_calls` místo textu, vykonat akci přes Supabase
+3. **Vrátit výsledek akce zpět AI** — AI pak odpoví uživateli s potvrzením
+4. **Bezpečnost:** Validovat `client_id` patří trenérovi, validovat `product_id` existuje a má stock
+
+#### B. Frontend (`BusinessAnalystChat.tsx`)
+
+1. **Upravit streaming parser** — zpracovat případné multi-turn odpovědi (tool call → result → final response)
+2. **Přidat vizuální indikátor** — "Provádím akci..." spinner když agent zapisuje
+
+#### C. System prompt
+
+Rozšířit pravidla:
+- Agent smí zapisovat data pouze po explicitním pokynu uživatele
+- Před zápisem vždy sumarizovat co udělá a požádat o potvrzení (v textu)
+- Po zápisu potvrdit výsledek
+
+### Opravy v jednom kroku:
+1. Fix `vw_client_ledger_balances` query (odebrat neexistující filtr, opravit `balance` → `ledger_balance`)
+2. Přidat tool calling infrastrukturu
+3. Implementovat 3 základní tools: `record_pr`, `create_sale`, `add_measurement`
+4. Aktualizovat frontend pro multi-turn streaming
+5. Re-deploy
 
