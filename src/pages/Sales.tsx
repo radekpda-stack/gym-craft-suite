@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { CreditCard, Package, BarChart3, History, ShoppingCart, TrendingUp, AlertTriangle, Lightbulb, User } from 'lucide-react';
+import { CreditCard, Package, BarChart3, History, ShoppingCart, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { SalesRegister } from '@/components/sales/SalesRegister';
@@ -9,7 +9,7 @@ import { SalesHistory } from '@/components/sales/SalesHistory';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useProducts } from '@/hooks/useProducts';
 import { useSalesStats } from '@/hooks/useSalesStats';
-import { useSalesSmartTips } from '@/hooks/useSalesSmartTips';
+import { useSalesSmartTips } from '@/hooks/useSalesSmartTips'; // todayTotal, yesterdayTotal
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +27,7 @@ export default function Sales() {
   // Get stats for hero KPIs
   const { data: salesStats } = useSalesStats();
   const { data: products = [] } = useProducts();
-  const { tips, todayTotal, todayCount, yesterdayTotal } = useSalesSmartTips();
+  const { todayTotal, yesterdayTotal } = useSalesSmartTips();
   
   // Calculate low stock count
   const lowStockCount = useMemo(() => {
@@ -45,68 +45,42 @@ export default function Sales() {
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Premium Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-5 sm:p-6">
-        {/* Background glow effects */}
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-accent/10 rounded-full blur-2xl pointer-events-none" />
-        
-        <div className="relative flex items-start gap-4">
-          {/* Icon with glow */}
-          <div className="p-3 rounded-2xl bg-primary/20 backdrop-blur-sm shadow-lg shadow-primary/20 shrink-0">
-            <ShoppingCart className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+      {/* Compact Hero Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-transparent p-3 sm:p-5">
+        <div className="relative flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-primary/15 shrink-0">
+            <ShoppingCart className="w-6 h-6 text-primary" />
           </div>
           
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Prodej</h1>
-            <p className="text-muted-foreground mt-0.5 text-xs sm:text-sm">
-              Pokladna, sklad a statistiky na jednom místě
-            </p>
-            
-            {/* Mini KPI chips */}
-            <div className="flex flex-wrap gap-2 mt-3">
-              <Badge variant="outline" className="gap-1.5 bg-card/60 backdrop-blur-sm border-border/50 py-1 px-2.5">
-                <ShoppingCart className="w-3 h-3 text-primary" />
-                <span className="text-xs font-medium">Dnes: {formatCurrency(todayTotal)}</span>
+            <h1 className="text-lg sm:text-2xl font-bold text-foreground">Prodej</h1>
+            {/* Inline KPI chips */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Dnes: <span className="text-foreground font-bold">{formatCurrency(todayTotal)}</span>
                 {todayChange !== null && Math.abs(todayChange) >= 5 && (
                   <span className={cn(
-                    "text-[10px] font-bold",
+                    "ml-1 text-[10px] font-bold",
                     todayChange > 0 ? "text-success" : "text-destructive"
                   )}>
                     {todayChange > 0 ? '+' : ''}{todayChange.toFixed(0)}%
                   </span>
                 )}
-              </Badge>
-              <Badge variant="outline" className="gap-1.5 bg-card/60 backdrop-blur-sm border-border/50 py-1 px-2.5">
-                <TrendingUp className="w-3 h-3 text-success" />
-                <span className="text-xs font-medium">Měsíc: {formatCurrency(salesStats?.totalRevenue || 0)}</span>
-              </Badge>
+              </span>
+              <span className="text-border">·</span>
+              <span className="text-xs text-muted-foreground">
+                Měsíc: <span className="text-foreground font-medium">{formatCurrency(salesStats?.totalRevenue || 0)}</span>
+              </span>
               {lowStockCount > 0 && (
-                <Badge variant="outline" className="gap-1.5 bg-warning/10 text-warning border-warning/30 py-1 px-2.5">
-                  <AlertTriangle className="w-3 h-3" />
-                  <span className="text-xs font-medium">{lowStockCount} nízký sklad</span>
-                </Badge>
+                <>
+                  <span className="text-border">·</span>
+                  <span className="text-xs text-warning font-medium">
+                    <AlertTriangle className="w-3 h-3 inline mr-0.5" />
+                    {lowStockCount} nízký sklad
+                  </span>
+                </>
               )}
             </div>
-
-            {/* Smart Tips - max 2 on mobile */}
-            {tips.length > 0 && (
-              <div className="flex flex-col gap-1.5 mt-3">
-                {tips.slice(0, 2).map(tip => (
-                  <div key={tip.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {tip.icon === 'user' ? (
-                      <User className="w-3 h-3 text-accent shrink-0" />
-                    ) : (
-                      <Lightbulb className="w-3 h-3 text-warning shrink-0" />
-                    )}
-                    <span className="font-medium text-foreground line-clamp-1">{tip.text}</span>
-                    {tip.subtext && (
-                      <span className="text-muted-foreground hidden sm:inline">— {tip.subtext}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </div>
