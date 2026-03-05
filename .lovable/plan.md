@@ -1,63 +1,84 @@
 
 
-# Plán: Oprava zbývajících chyb + přidání zápisu dat AI agentem
+# Plán: Redesign mobilního UI kategorie Prodej (Pokladna)
 
-## Nalezené chyby
+## Problém
 
-### 1. `vw_client_ledger_balances` nemá sloupec `user_id`
-Řádek 93: `.eq("user_id", userId)` **tiše vrací prázdná data**, protože view nemá `user_id`. View je postavený nad `clients` tabulkou, ale `user_id` neexponuje.
+Na mobilu je pokladna nepřehledná — uživatel musí scrollovat přes 5+ sekcí (klient, návrhy, poslední prodeje, oblíbené, filtry) než se dostane k produktům. Košík je zcela mimo viewport. Celkově to není "app-like" cashier zážitek.
 
-**Řešení:** Odebrat `.eq("user_id", userId)` z dotazu na view. Místo toho filtrovat výsledky v paměti přes `clientIds` (stejně jako u `client_xp` a `loyalty_balance`).
+## Řešení: Kompaktní mobilní pokladna
 
-### 2. `c.balance` neexistuje (řádek 182-184)
-View má `ledger_balance` a `stored_balance`, ale kód referencuje `c.balance`.
+### 1. Sbalení sekcí nad produkty (pouze mobil)
 
-**Řešení:** Změnit na `c.ledger_balance`.
+Na mobilu **sbalit** sekundární sekce do horizontálních chipů/accordion:
+- **"Obvykle kupuje"** → horizontální scroll chipů (už tak funguje, OK)
+- **"Poslední prodeje"** → sbalit do `Collapsible`, defaultně zavřený na mobilu
+- **"Top produkty"** → sbalit do `Collapsible`, defaultně zavřený na mobilu
+- **Výběr klienta** — ponechat viditelný, ale kompaktnější (menší padding)
 
-### 3. `vw_group_ledger_balances` — stejný problém?
-Řádek 104 filtruje `.eq("user_id", userId)` — potřeba ověřit jestli má `user_id`. Pravděpodobně ano (skupiny mají `user_id`), ale stojí za kontrolu.
+### 2. Sticky vyhledávání
 
----
+Na mobilu **fixovat search bar** pod hlavičkou, aby byl vždy dostupný. Uživatel nemusí scrollovat zpět nahoru.
 
-## Nová funkcionalita: AI agent umí zapisovat data
+### 3. Kompaktnější produktové karty na mobilu
 
-Aktuálně je agent **čistě read-only** — neumí provést žádnou akci. Přidáme **tool calling** (function calling), kde AI model rozhodne, že chce provést akci, a edge funkce ji vykoná.
+Aktuálně mají karty velký padding a zbytečný prostor:
+- Zmenšit padding na mobilu (`p-2` místo `p-3`)
+- Zmenšit font ceny (`text-base` místo `text-lg`)
+- Skrýt type badge ikonu na mobilu (šetří řádek)
+- Výsledek: více produktů viditelných najednou
 
-### Podporované akce (tools):
+### 4. Vylepšený MobileCartBar
 
-| Akce | Tabulka | Popis |
-|------|---------|-------|
-| `record_pr` | `exercise_entries` | Zaznamenat PR klienta (cvik, váha, sety, repy) |
-| `create_sale` | `sales_orders` + `sales_order_items` | Vytvořit prodej (produkt, množství, klient) |
-| `add_measurement` | `measurements` | Přidat měření klienta (váha, tuk, obvody) |
-| `add_note` | Poznámka do konverzace | Poznámka k budoucímu sledování |
-| `schedule_training` | `training_sessions` | Naplánovat trénink |
+Aktuální bar ukazuje jen počet a celkem. Rozšířit o:
+- Název posledního přidaného produktu (fade-in animace)
+- Vizuální feedback při přidání (pulse efekt)
 
-### Implementace
+### 5. Mobilní checkout jako Sheet (bottom drawer)
 
-#### A. Edge funkce (`ai-business-analyst/index.ts`)
+Místo scrollování ke CartPanelu na mobilu — při kliknutí na MobileCartBar otevřít **bottom sheet** (vaul `Drawer`) s kompletním košíkem, platební metodou a tlačítkem "Dokončit prodej".
 
-1. **Přidat `tools` definice** do AI request body — každý tool má `name`, `description` a `parameters` (JSON Schema)
-2. **Detekovat tool calls v odpovědi** — pokud AI vrátí `tool_calls` místo textu, vykonat akci přes Supabase
-3. **Vrátit výsledek akce zpět AI** — AI pak odpoví uživateli s potvrzením
-4. **Bezpečnost:** Validovat `client_id` patří trenérovi, validovat `product_id` existuje a má stock
+```text
+┌─────────────────────────┐
+│ [Klient: Jan]           │  ← kompaktní
+│ [🔍 Hledat produkt...] │  ← sticky
+│ ─ Obvykle kupuje ─────  │  ← chips horizontálně
+│ ┌───┐ ┌───┐ ┌───┐ ┌──┐ │
+│ │Pro│ │Pro│ │Pro│ │Pr│ │  ← 2-col grid, kompaktní
+│ │35 │ │45 │ │25 │ │30│ │
+│ └───┘ └───┘ └───┘ └──┘ │
+│ ┌───┐ ┌───┐ ┌───┐      │
+│ │   │ │   │ │   │      │
+│ └───┘ └───┘ └───┘      │
+│                         │
+│ ┌─[🛒 2] ── 155 Kč ─[Zaplatit]─┐ ← sticky bar
+│ └───────────────────────────────┘
+└─────────────────────────┘
 
-#### B. Frontend (`BusinessAnalystChat.tsx`)
+        Klik na bar → Sheet:
+┌─────────────────────────┐
+│ ═══════                 │  ← drag handle
+│ Košík (2 položky)       │
+│ ├ Protein bar  1× 35Kč │
+│ ├ BCAA         1× 120Kč│
+│ Platba: [Hotově][Kredit]│
+│ Celkem:        155 Kč   │
+│ [══ Dokončit prodej ══] │
+└─────────────────────────┘
+```
 
-1. **Upravit streaming parser** — zpracovat případné multi-turn odpovědi (tool call → result → final response)
-2. **Přidat vizuální indikátor** — "Provádím akci..." spinner když agent zapisuje
+## Soubory k úpravě
 
-#### C. System prompt
+| Soubor | Změna |
+|--------|-------|
+| `SalesRegister.tsx` | Obalit RecentSales a FavoriteProducts do Collapsible na mobilu; sticky search wrapper; skrýt CartPanel na mobilu (nahrazeno Drawer) |
+| `ProductCard` (v SalesRegister) | Kompaktnější padding a font na mobilu |
+| `MobileCartBar.tsx` | Klik na košík otevře Drawer místo scrollu; přidat animaci při přidání |
+| Nový: `MobileCartDrawer.tsx` | Bottom sheet (vaul Drawer) s CartPanel obsahem pro mobil |
+| `RecentSales.tsx` | Přidat `collapsible` prop, defaultně sbalený na mobilu |
+| `FavoriteProducts.tsx` | Přidat `collapsible` prop, defaultně sbalený na mobilu |
+| `ProductSearchAndFilters.tsx` | Menší category chips na mobilu |
 
-Rozšířit pravidla:
-- Agent smí zapisovat data pouze po explicitním pokynu uživatele
-- Před zápisem vždy sumarizovat co udělá a požádat o potvrzení (v textu)
-- Po zápisu potvrdit výsledek
-
-### Opravy v jednom kroku:
-1. Fix `vw_client_ledger_balances` query (odebrat neexistující filtr, opravit `balance` → `ledger_balance`)
-2. Přidat tool calling infrastrukturu
-3. Implementovat 3 základní tools: `record_pr`, `create_sale`, `add_measurement`
-4. Aktualizovat frontend pro multi-turn streaming
-5. Re-deploy
+## Bezpečnost
+Žádné změny v datové vrstvě — čistě UI refactor.
 
