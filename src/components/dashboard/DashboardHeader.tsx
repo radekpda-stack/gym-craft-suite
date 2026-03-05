@@ -84,20 +84,19 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
     : 0;
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Premium Hero Card with Status Bar */}
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
         className={cn(
-          "relative overflow-hidden rounded-2xl p-4",
-          "bg-card/80 backdrop-blur-md border border-border/30",
+          "section-card p-3 sm:p-4",
           statusGlow[dayStatus]
         )}
       >
         {/* Status Gradient Bar */}
-        <div className="relative h-1.5 rounded-full overflow-hidden bg-muted/30 mb-4">
+        <div className="relative h-1 sm:h-1.5 rounded-full overflow-hidden bg-muted/30 mb-3 sm:mb-4">
           <motion.div 
             initial={{ width: 0 }}
             animate={{ width: '100%' }}
@@ -113,12 +112,12 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
         </div>
 
         {/* Greeting + Date + Action */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+            <p className="text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground font-medium">
               {greeting}
             </p>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+            <h1 className="text-lg sm:text-2xl font-bold text-foreground tracking-tight">
               {format(today, 'EEEE', { locale: cs })}, {format(today, 'd. MMMM', { locale: cs })}
             </h1>
           </div>
@@ -126,31 +125,23 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
           <Button
             onClick={() => navigate('/training-mode')}
             className={cn(
-              "shrink-0 h-10 px-4 rounded-xl font-semibold",
+              "shrink-0 h-9 sm:h-10 px-3 sm:px-4 rounded-xl font-semibold text-sm",
               "bg-primary hover:bg-primary/90",
-              "shadow-lg shadow-primary/25",
-              "transition-all duration-200 hover:shadow-xl hover:shadow-primary/30"
+              "shadow-lg shadow-primary/25 press-feedback"
             )}
           >
-            <Dumbbell className="w-4 h-4 mr-2" />
+            <Dumbbell className="w-4 h-4 mr-1.5" />
             <span className="hidden sm:inline">Trénink</span>
           </Button>
         </div>
       </motion.div>
       
-      {/* Premium Metric Instruments - Large Cards */}
-      <div className="flex overflow-x-auto snap-x snap-mandatory gap-2 sm:gap-3 -mx-1 px-1 pb-1 scrollbar-hide sm:grid sm:grid-cols-3 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0">
+      {/* Metric Instruments */}
+      <div className="flex overflow-x-auto snap-x snap-mandatory gap-2 -mx-1 px-1 pb-1 scrollbar-hide sm:grid sm:grid-cols-3 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0">
         {/* Capacity Card with Activity Ring */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.2, delay: 0.1 }}
-          whileHover={{ y: -2, scale: 1.02 }}
-          className={cn(
-            "relative p-3 sm:p-4 rounded-2xl",
-            "bg-card/80 backdrop-blur-md border border-border/30",
-            "transition-all duration-200 hover:shadow-lg",
-            "min-w-[120px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink"
+        <div className={cn(
+            "section-card p-3 sm:p-4",
+            "min-w-[110px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink"
           )}
         >
           <div className="flex flex-col items-center gap-2">
@@ -163,10 +154,10 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
                 strokeWidth={6}
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl sm:text-2xl font-bold tabular-nums leading-none">
+                <span className="text-lg sm:text-2xl font-bold tabular-nums leading-none">
                   {capacity.completed}
                 </span>
-                <span className="text-xs text-muted-foreground">/{capacity.total}</span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground">/{capacity.total}</span>
               </div>
             </div>
             
@@ -179,28 +170,21 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
               </p>
             </div>
           </div>
-        </motion.div>
+        </div>
         
         {/* Clients Card */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.2, delay: 0.15 }}
-          whileHover={{ y: -2, scale: 1.02 }}
-          className={cn(
-            "relative p-3 sm:p-4 rounded-2xl",
-            "bg-card/80 backdrop-blur-md border border-border/30",
-            "transition-all duration-200 hover:shadow-lg",
-            "min-w-[120px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink"
+        <div className={cn(
+            "section-card p-3 sm:p-4",
+            "min-w-[110px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink"
           )}
         >
           <div className="flex flex-col items-center gap-2 h-full justify-center">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Users className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
+            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Users className="w-5 h-5 sm:w-7 sm:h-7 text-primary" />
             </div>
             
             <div className="text-center">
-              <p className="text-2xl sm:text-3xl font-bold tabular-nums text-foreground">
+              <p className="text-xl sm:text-3xl font-bold tabular-nums text-foreground">
                 {uniqueClientsToday}
               </p>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
@@ -208,32 +192,25 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
               </p>
             </div>
           </div>
-        </motion.div>
+        </div>
         
         {/* Income Card */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.2, delay: 0.2 }}
-          whileHover={{ y: -2, scale: 1.02 }}
-          className={cn(
-            "relative p-3 sm:p-4 rounded-2xl",
-            "bg-card/80 backdrop-blur-md border border-border/30",
-            "transition-all duration-200 hover:shadow-lg",
-            "min-w-[120px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink"
+        <div className={cn(
+            "section-card p-3 sm:p-4",
+            "min-w-[110px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink"
           )}
         >
           <div className="flex flex-col items-center gap-2 h-full justify-center">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-success/10 flex items-center justify-center">
-              <Banknote className="w-6 h-6 sm:w-7 sm:h-7 text-success" />
+            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-success/10 flex items-center justify-center">
+              <Banknote className="w-5 h-5 sm:w-7 sm:h-7 text-success" />
             </div>
             
             <div className="text-center">
               <div className="flex items-center justify-center gap-1">
-                <p className="text-xl sm:text-2xl font-bold tabular-nums text-foreground">
+                <p className="text-lg sm:text-2xl font-bold tabular-nums text-foreground">
                   {formatCompact(todayEstimatedIncome)}
                 </p>
-                <span className="text-sm text-muted-foreground">Kč</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">Kč</span>
               </div>
               <div className="flex items-center justify-center gap-1 mt-0.5">
                 <TrendIndicator 
@@ -252,7 +229,7 @@ export function DashboardHeader({ data, isLoading }: DashboardHeaderProps) {
               </p>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
