@@ -1,55 +1,51 @@
 
 
-# Modernizace sekce Výkonnost (Performance Hub)
+# Modernizace karty tréninku (TrainingCard)
 
-## Analýza současného stavu
+## Současný stav
+Karta používá jednoduchý `glass` styl s border-left-4 a lineární layout: jméno → čas → metainfo → tagy → poznámka → akce. Vizuálně je plochá, bez hierarchie.
 
-Sekce má solidní datovou vrstvu, ale UI je vizuálně těžkopádné a na mobilu zabírá hodně prostoru. Hlavní problémy:
+## Nový design
 
-1. **Hero header** je příliš velký (gradient + ikona + search + CTA = ~200px na mobilu)
-2. **KPI bar** a **CategoryCards** jsou vizuálně duplicitní (obě zobrazují počty cviků s progress bary)
-3. **6 tabů** na mobilu se špatně čte (text "Testy" a "Výzvy" je hidden na mobilu)
-4. **Overview tab** má lineární seznam 5 sekcí pod sebou bez vizuální hierarchie
-5. **Leaderboard** zabírá hodně místa s opakujícím se UI vzorem
+### Struktura karty
 
-## Plán modernizace
+```text
+┌─────────────────────────────────────┐
+│  [Avatar] Jméno klienta    [Status] │
+│           Pá 14:30 · 60min · RPE 7  │
+│                                     │
+│  [Typ]  [Tag1]  [Tag2]       900 Kč │
+│                                     │
+│  📝 Poznámka k tréninku...          │
+│─────────────────────────────────────│
+│              [Dokončit ✓]  [⋮]      │
+└─────────────────────────────────────┘
+```
 
-### 1. Kompaktní Hero Header
-- Zmenšit hero na 1 řádek: ikona + "Výkonnost" + datum na jednom řádku
-- Search bar zůstane, ale bez CTA tlačítka "Zapsat výkon klientovi" (to je v FAB)
-- Odstranit duplicitní CTA button — FAB již obsahuje "Zapsat výkon"
-- Úspora: ~80px vertikálního prostoru na mobilu
+### Změny v `TrainingCard.tsx`
 
-### 2. Sloučit KPI bar do CategoryCards
-- Nahradit samostatný KPI bar a CategoryCards jedním kompaktním widgetem
-- 3 karty (Síla/Kardio/Plyo) s integrovanými čísly: počet cviků + záznamy tento měsíc + PR tento měsíc
-- Každá karta má mini progress ring místo horizontálního baru
-- Celkové PRs a záznamy se zobrazí jako sumární řádek nad kartami
+1. **Avatar klienta** — přidat `ClientAvatar` (size `sm`) na levou stranu headeru místo pouhého textu
+2. **Status badge vpravo nahoře** — zachovat `TrainingStatusBadge`, ale jen ikona bez textu na mobilu (kompaktnější)
+3. **Meta řádek** — den+čas, délka, RPE/RIR na jednom řádku s tečkovými separátory místo mezer
+4. **Cena** — zobrazit `final_price` nebo vypočítanou cenu na pravé straně tag řádku (dosud se nezobrazovala)
+5. **Glassmorphism upgrade** — `bg-card/80 backdrop-blur-md` + subtilní `shadow-sm` místo plochého `glass`
+6. **Border-left** — nahradit za tenký horní gradient pruh (2px) podle statusu — modernější vizuál
+7. **Akční tlačítka** — kompaktnější: pill-style místo hranatých, ikona + text
 
-### 3. Modernizace Overview tab layoutu
-- **Aktivita dnes**: Kompaktnější — max 3 záznamy s "Zobrazit vše" odkazem
-- **Leaderboard**: Zobrazit jen top 3 klienty s horizontálním layoutem (avatary vedle sebe) místo vertikálního seznamu 5 klientů
-- **Nedávné PR**: Horizontální scroll strip místo vertikálního seznamu
-- **Nedávno použité cviky**: Zachovat chipy, ale přesunout pod search jako "rychlý přístup"
+### Změny v `SwipeableTrainingCard.tsx`
+- Pouze drobné: zaoblení `rounded-2xl` místo `rounded-xl`
 
-### 4. Vylepšení tab navigace
-- Přepnout na scrollovatelný pill-style tab strip místo rovnoměrně rozloženého gridu
-- Všechny taby mají viditelný text i na mobilu (menší font + horizontální scroll)
+### Změny v `CompactTrainingRow.tsx`
+- Přidat `ClientAvatar` (size `xs`) místo generic `AvatarFallback`
+- Zarovnat vizuální styl se základní kartou
 
-### 5. Vylepšení ExerciseListItem v Deníku
-- Přidat mini sparkline (3-4 body) trendu vedle hlavní hodnoty
-- Zvýraznit aktivní PR badge animací (pulse)
-
-## Soubory k úpravě
+## Soubory
 
 | Soubor | Změna |
 |--------|-------|
-| `src/pages/PerformanceHub.tsx` | Kompaktní hero, sloučení KPI+Categories, nový tab strip, omezení "Aktivita dnes" na 3 záznamy |
-| `src/components/performance/PerformanceKPIBar.tsx` | Sloučit s CategoryCards do nové `PerformanceQuickStats` komponenty |
-| `src/components/performance/CategoryCards.tsx` | Integrovat do PerformanceQuickStats |
-| `src/components/performance/ClientProgressLeaderboard.tsx` | Kompaktní horizontální layout pro top 3 |
-| `src/components/performance/RecentPRsCompact.tsx` | Horizontální scroll strip |
-| `src/components/performance/RecentExercisesChips.tsx` | Přesunout pod search v hero |
+| `TrainingCard.tsx` | Nový layout s avatarem, cenovou indikací, gradient border, glassmorphism |
+| `SwipeableTrainingCard.tsx` | `rounded-2xl` |
+| `CompactTrainingRow.tsx` | `ClientAvatar` místo generic avatar |
 
-Žádné DB změny. Čistě UI/UX modernizace.
+Čistě vizuální, žádné DB změny.
 
