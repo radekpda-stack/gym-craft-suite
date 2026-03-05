@@ -195,6 +195,90 @@ serve(async (req) => {
 
     const totalExpensesYear = expenses.reduce((s: number, e: any) => s + (e.amount || 0), 0);
 
+    // === ENHANCED MONTHLY FINANCIAL BREAKDOWN ===
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const lastMonth = `${now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()}-${String(now.getMonth() === 0 ? 12 : now.getMonth()).padStart(2, "0")}`;
+
+    // Training revenue per month (from completed training prices)
+    const monthlyRevenue: Record<string, { trainingRevenue: number; trainingCount: number; cancelFees: number; productRevenue: number; expenses: number; creditTopUps: number }> = {};
+    const initMonth = (m: string) => {
+      if (!monthlyRevenue[m]) monthlyRevenue[m] = { trainingRevenue: 0, trainingCount: 0, cancelFees: 0, productRevenue: 0, expenses: 0, creditTopUps: 0 };
+    };
+
+    // Training revenue from actual completed trainings (real cashflow)
+    trainingsYear.forEach((t: any) => {
+      const m = t.date?.substring(0, 7);
+      if (!m) return;
+      initMonth(m);
+      monthlyRevenue[m].trainingRevenue += (t.final_price || t.price || 0);
+      monthlyRevenue[m].trainingCount++;
+    });
+
+    // Credit top-ups per month
+    transactions.filter((t: any) => t.type === "payment").forEach((t: any) => {
+      const m = t.created_at?.substring(0, 7);
+      if (!m) return;
+      initMonth(m);
+      monthlyRevenue[m].creditTopUps += (t.amount || 0);
+    });
+
+    // Cancel fees per month
+    transactions.filter((t: any) => t.type === "canceled_training").forEach((t: any) => {
+      const m = t.created_at?.substring(0, 7);
+      if (!m) return;
+      initMonth(m);
+      monthlyRevenue[m].cancelFees += Math.abs(t.amount || 0);
+    });
+
+    // Product revenue per month from sales_orders
+    salesOrders.forEach((o: any) => {
+      const m = o.created_at?.substring(0, 7);
+      if (!m) return;
+      initMonth(m);
+      monthlyRevenue[m].productRevenue += (o.total_amount || 0);
+    });
+
+    // Expenses per month
+    expenses.forEach((e: any) => {
+      const m = e.date?.substring(0, 7);
+      if (!m) return;
+      initMonth(m);
+      monthlyRevenue[m].expenses += (e.amount || 0);
+    });
+
+    // This month vs last month calculations
+    const thisMonthData = monthlyRevenue[currentMonth] || { trainingRevenue: 0, trainingCount: 0, cancelFees: 0, productRevenue: 0, expenses: 0, creditTopUps: 0 };
+    const lastMonthData = monthlyRevenue[lastMonth] || { trainingRevenue: 0, trainingCount: 0, cancelFees: 0, productRevenue: 0, expenses: 0, creditTopUps: 0 };
+
+    const thisMonthGrossIncome = thisMonthData.trainingRevenue + thisMonthData.productRevenue + thisMonthData.cancelFees;
+    const thisMonthNetProfit = thisMonthGrossIncome - thisMonthData.expenses;
+    const lastMonthGrossIncome = lastMonthData.trainingRevenue + lastMonthData.productRevenue + lastMonthData.cancelFees;
+    const lastMonthNetProfit = lastMonthGrossIncome - lastMonthData.expenses;
+    const monthOverMonthChange = lastMonthGrossIncome > 0 ? Math.round(((thisMonthGrossIncome - lastMonthGrossIncome) / lastMonthGrossIncome) * 100) : 0;
+
+    // Average revenue per training this month vs last
+    const avgRevenuePerTrainingThisMonth = thisMonthData.trainingCount > 0 ? Math.round(thisMonthData.trainingRevenue / thisMonthData.trainingCount) : 0;
+    const avgRevenuePerTrainingLastMonth = lastMonthData.trainingCount > 0 ? Math.round(lastMonthData.trainingRevenue / lastMonthData.trainingCount) : 0;
+
+    // Revenue by training type this month
+    const revenueByType: Record<string, { count: number; revenue: number }> = {};
+    trainingsThisMonth.filter((t: any) => t.status === "completed").forEach((t: any) => {
+      const type = t.training_type || "solo";
+      if (!revenueByType[type]) revenueByType[type] = { count: 0, revenue: 0 };
+      revenueByType[type].count++;
+      revenueByType[type].revenue += (t.final_price || t.price || 0);
+    });
+
+    // Days elapsed this month + projection
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysElapsed = now.getDate();
+    const projectedMonthlyIncome = daysElapsed > 0 ? Math.round(thisMonthGrossIncome / daysElapsed * daysInMonth) : 0;
+
+    // Year-to-date totals
+    const ytdGrossIncome = Object.values(monthlyRevenue).reduce((s, m) => s + m.trainingRevenue + m.productRevenue + m.cancelFees, 0);
+    const ytdExpenses = Object.values(monthlyRevenue).reduce((s, m) => s + m.expenses, 0);
+    const ytdNetProfit = ytdGrossIncome - ytdExpenses;
+
     const salesRevenue90d = salesOrders.reduce((s: number, o: any) => s + (o.total_amount || 0), 0);
     const salesCost90d = salesOrderItems.reduce((s: number, item: any) => s + ((item.products?.purchase_price || 0) * (item.quantity || 0)), 0);
 
@@ -409,11 +493,54 @@ ${topClientsByRevenue.map((c, i) => `${i + 1}. ${c.name}: ${c.revenue.toLocaleSt
 ### Top 10 klientů dle počtu tréninků
 ${topClientsByCount.map((c, i) => `${i + 1}. ${c.name}: ${c.count} tréninků (${c.revenue.toLocaleString("cs-CZ")} Kč)`).join("\n")}
 
-### Příjmy - rok ${now.getFullYear()}
+### Příjmy - rok ${now.getFullYear()} (kreditový systém)
 - Dobití kreditů: ${incomeThisYear.toLocaleString("cs-CZ")} Kč
 - Čerpáno tréninky: ${trainingSpendThisYear.toLocaleString("cs-CZ")} Kč
 - Čerpáno produkty: ${productIncomeThisYear.toLocaleString("cs-CZ")} Kč
 - Storno poplatky: ${cancelFees.toLocaleString("cs-CZ")} Kč
+
+### 💰 MĚSÍČNÍ P&L (Profit & Loss)
+
+#### Tento měsíc (${currentMonth})
+- Tržby z tréninků: ${thisMonthData.trainingRevenue.toLocaleString("cs-CZ")} Kč (${thisMonthData.trainingCount} tréninků)
+- Průměrná cena za trénink: ${avgRevenuePerTrainingThisMonth.toLocaleString("cs-CZ")} Kč
+- Tržby z produktů: ${thisMonthData.productRevenue.toLocaleString("cs-CZ")} Kč
+- Storno poplatky: ${thisMonthData.cancelFees.toLocaleString("cs-CZ")} Kč
+- **Hrubý příjem: ${thisMonthGrossIncome.toLocaleString("cs-CZ")} Kč**
+- Provozní náklady: ${thisMonthData.expenses.toLocaleString("cs-CZ")} Kč
+- **Čistý zisk: ${thisMonthNetProfit.toLocaleString("cs-CZ")} Kč**
+- Projekce na celý měsíc (${daysElapsed}/${daysInMonth} dní): ~${projectedMonthlyIncome.toLocaleString("cs-CZ")} Kč
+- Dobití kreditů tento měsíc: ${thisMonthData.creditTopUps.toLocaleString("cs-CZ")} Kč
+
+#### Minulý měsíc (${lastMonth})
+- Tržby z tréninků: ${lastMonthData.trainingRevenue.toLocaleString("cs-CZ")} Kč (${lastMonthData.trainingCount} tréninků)
+- Průměrná cena za trénink: ${avgRevenuePerTrainingLastMonth.toLocaleString("cs-CZ")} Kč
+- Tržby z produktů: ${lastMonthData.productRevenue.toLocaleString("cs-CZ")} Kč
+- Storno poplatky: ${lastMonthData.cancelFees.toLocaleString("cs-CZ")} Kč
+- **Hrubý příjem: ${lastMonthGrossIncome.toLocaleString("cs-CZ")} Kč**
+- Provozní náklady: ${lastMonthData.expenses.toLocaleString("cs-CZ")} Kč
+- **Čistý zisk: ${lastMonthNetProfit.toLocaleString("cs-CZ")} Kč**
+
+#### Srovnání měsíců
+- Změna hrubého příjmu: ${monthOverMonthChange > 0 ? "+" : ""}${monthOverMonthChange}%
+- Změna počtu tréninků: ${thisMonthData.trainingCount} vs ${lastMonthData.trainingCount}
+- Změna avg. ceny/trénink: ${avgRevenuePerTrainingThisMonth.toLocaleString("cs-CZ")} vs ${avgRevenuePerTrainingLastMonth.toLocaleString("cs-CZ")} Kč
+
+#### Rozpad příjmů tohoto měsíce dle typu tréninku
+${Object.entries(revenueByType).map(([type, data]) => `- ${type}: ${(data as any).count}× tréninků, ${((data as any).revenue as number).toLocaleString("cs-CZ")} Kč (avg ${Math.round((data as any).revenue / (data as any).count).toLocaleString("cs-CZ")} Kč/trénink)`).join("\n") || "Žádná data"}
+
+#### P&L rok ${now.getFullYear()} (Year-to-Date)
+- Celkový hrubý příjem: ${ytdGrossIncome.toLocaleString("cs-CZ")} Kč
+- Celkové náklady: ${ytdExpenses.toLocaleString("cs-CZ")} Kč
+- **Čistý zisk YTD: ${ytdNetProfit.toLocaleString("cs-CZ")} Kč**
+- Marže: ${ytdGrossIncome > 0 ? Math.round(ytdNetProfit / ytdGrossIncome * 100) : 0}%
+
+#### Měsíční vývoj P&L
+${Object.entries(monthlyRevenue).sort().map(([m, d]) => {
+  const gross = d.trainingRevenue + d.productRevenue + d.cancelFees;
+  const net = gross - d.expenses;
+  return `- ${m}: příjmy ${gross.toLocaleString("cs-CZ")} Kč | náklady ${d.expenses.toLocaleString("cs-CZ")} Kč | zisk ${net.toLocaleString("cs-CZ")} Kč | ${d.trainingCount} tréninků`;
+}).join("\n") || "Žádná data"}
 
 ### Prodeje produktů (posledních 90 dní)
 - Tržby: ${salesRevenue90d.toLocaleString("cs-CZ")} Kč
@@ -441,10 +568,6 @@ ${todaySalesItems.length > 0 ? todaySalesItems.slice(0, 30).map((item: any) => {
 - Celkem: ${totalExpensesYear.toLocaleString("cs-CZ")} Kč
 - Rozpad kategorií: ${Object.entries(expenseCategories).map(([k, v]) => `${k}: ${(v as number).toLocaleString("cs-CZ")} Kč`).join(", ")}
 
-### Čistý zisk (odhad, rok ${now.getFullYear()})
-- Příjmy (dobití): ${incomeThisYear.toLocaleString("cs-CZ")} Kč
-- Tržby produkty: ${salesRevenue90d.toLocaleString("cs-CZ")} Kč (90 dní)
-- Náklady: ${totalExpensesYear.toLocaleString("cs-CZ")} Kč
 
 ### Feedbacky klientů (posledních 90 dní)
 - Celkem feedbacků: ${feedbacks.length}
@@ -830,6 +953,16 @@ PRAVIDLA:
 - Hodinovou sazbu počítej ze skutečné duration a final_price
 - Pokud data nestačí, řekni to jasně
 - Pro graf vrať JSON blok: \`\`\`chart {"chartType":"bar","chartData":[{"name":"X","value":1}]} \`\`\`
+
+FINANČNÍ PŘESNOST (KRITICKÁ PRAVIDLA):
+- "Měsíční zisk" = tržby z tréninků + prodeje + storno poplatky - náklady. Vždy čti ze sekce MĚSÍČNÍ P&L.
+- "Příjmy z tréninků" = součet final_price/price dokončených tréninků (reálný cashflow), NE dobití kreditů.
+- "Dobití kreditů" ≠ příjem. Kredit je předplacený zůstatek, příjem vzniká až při odtrénování.
+- Při srovnání měsíců vždy uváděj % změnu A absolutní čísla.
+- Projekci na celý měsíc počítej: (aktuální příjem / uplynulé dny) × dní v měsíci.
+- Při dotazu na zisk VŽDY rozlišuj hrubý příjem (bez nákladů) a čistý zisk (po odečtu nákladů).
+- Při dotazu na hodinovou sazbu používej SKUTEČNOU délku tréninku (duration), ne plánovanou.
+- Uváděj kontext: "Tento měsíc je teprve X. den, data se mohou ještě výrazně změnit."
 
 FOLLOW-UP SUGGESTIONS:
 Na konci KAŽDÉ odpovědi přidej blok:
