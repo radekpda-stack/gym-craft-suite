@@ -90,7 +90,7 @@ serve(async (req) => {
       priceItemsRes,
       recurringSchedulesRes,
     ] = await Promise.all([
-      supabase.from("vw_client_ledger_balances").select("*").eq("user_id", userId),
+      supabase.from("vw_client_ledger_balances").select("*"),
       supabase.from("clients").select("id, name, health_restrictions, training_goals, is_archived, training_start_date, birth_date, gender, payment_mode").eq("user_id", userId).eq("is_archived", false),
       supabase.from("credit_transactions").select("*").eq("user_id", userId).gte("created_at", last90days).order("created_at", { ascending: false }).limit(500),
       supabase.from("training_sessions").select("id, date, status, duration, training_type, price, final_price, payment_status, participant_count, clients(name)").eq("user_id", userId).gte("date", thisMonthStart).order("date", { ascending: false }),
@@ -131,7 +131,7 @@ serve(async (req) => {
       supabase.from("client_recurring_schedules").select("id, client_id, day_of_week, time, duration, is_active, notes").eq("user_id", userId).eq("is_active", true),
     ]);
 
-    const clients = clientsRes.data || [];
+    const clientsRaw = clientsRes.data || [];
     const clientsFull = clientsFullRes.data || [];
     const ledger = ledgerRes.data || [];
     const trainingsThisMonth = trainingsThisMonthRes.data || [];
@@ -157,6 +157,7 @@ serve(async (req) => {
     const clientPackages = clientPackagesRes.data || [];
     // Filter client_xp and loyalty_balance by trainer's client IDs (no user_id column)
     const clientIds = new Set(clientsFull.map((c: any) => c.id));
+    const clients = clientsRaw.filter((c: any) => clientIds.has(c.client_id));
     const clientXp = (clientXpRes.data || []).filter((x: any) => clientIds.has(x.client_id));
     const loyaltyBalances = (loyaltyRes.data || []).filter((l: any) => clientIds.has(l.client_id));
     const challenges = challengesRes.data || [];
@@ -179,9 +180,9 @@ serve(async (req) => {
     clientsFull.forEach((c: any) => { clientNameMap[c.id] = c.name; });
 
     // Compute aggregates
-    const totalClientsBalance = clients.reduce((s: number, c: any) => s + (c.balance || 0), 0);
-    const clientsWithDebt = clients.filter((c: any) => (c.balance || 0) < 0);
-    const clientsWithCredit = clients.filter((c: any) => (c.balance || 0) > 0);
+    const totalClientsBalance = clients.reduce((s: number, c: any) => s + (c.ledger_balance || 0), 0);
+    const clientsWithDebt = clients.filter((c: any) => (c.ledger_balance || 0) < 0);
+    const clientsWithCredit = clients.filter((c: any) => (c.ledger_balance || 0) > 0);
 
     const completedThisMonth = trainingsThisMonth.filter((t: any) => t.status === "completed");
     const canceledThisMonth = trainingsThisMonth.filter((t: any) => t.status === "canceled" || t.status === "cancelled");
@@ -371,8 +372,8 @@ serve(async (req) => {
 
 ### Kreditní přehled
 - Celkový zůstatek všech klientů: ${totalClientsBalance.toLocaleString("cs-CZ")} Kč
-- Klienti s kreditem (${clientsWithCredit.length}): ${clientsWithCredit.slice(0, 15).map((c: any) => `${c.client_name}: ${c.balance?.toLocaleString("cs-CZ")} Kč`).join(", ")}
-- Klienti s dluhem (${clientsWithDebt.length}): ${clientsWithDebt.map((c: any) => `${c.client_name}: ${c.balance?.toLocaleString("cs-CZ")} Kč`).join(", ") || "žádní"}
+- Klienti s kreditem (${clientsWithCredit.length}): ${clientsWithCredit.slice(0, 15).map((c: any) => `${c.client_name || clientNameMap[c.client_id] || "?"}: ${(c.ledger_balance || 0).toLocaleString("cs-CZ")} Kč`).join(", ")}
+- Klienti s dluhem (${clientsWithDebt.length}): ${clientsWithDebt.map((c: any) => `${c.client_name || clientNameMap[c.client_id] || "?"}: ${(c.ledger_balance || 0).toLocaleString("cs-CZ")} Kč`).join(", ") || "žádní"}
 
 ### Skupinové rozpočty
 ${groupBalanceSummary || "Žádné skupiny"}
@@ -638,6 +639,13 @@ ${(() => {
     return `- ${name}: ${day} ${rs.time || "?"} (${rs.duration || "?"}min)${rs.notes ? ` | ${rs.notes.substring(0, 30)}` : ""}`;
   }).join("\n");
 })()}
+
+## REFERENCE DATA (pro nástroje / tool calling)
+### Klienti (ID → jméno)
+${clientsFull.map((c: any) => `- ${c.id}: ${c.name}`).join("\n")}
+
+### Produkty (ID → název, cena, sklad)
+${products.map((p: any) => `- ${p.id}: ${p.name} | ${p.price} Kč | sklad: ${p.stock_quantity}`).join("\n")}
 `;
 
     const briefingInstruction = mode === "briefing" ? `
@@ -650,52 +658,193 @@ DŮLEŽITÉ: Uživatel právě otevřel agenta. Automaticky připrav krátký ra
 - Gamifikace highlights (nedávné odznaky, streaky)
 Buď stručný, max 25 řádků.` : "";
 
-    const systemPrompt = `Jsi komplexní business analytik pro fitness trenéra. Máš přístup ke VŠEM datům aplikace: finance, kredity, tréninky, prodeje, feedbacky, měření klientů, diagnostiky, balíčky, gamifikace (XP, odznaky, věrnostní body), výzvy, výživa, skladové pohyby, výkonnostní testy, domácí tréninky, pre-session check-iny, ceníky a rozvrh.
+    // --- TOOLS DEFINITION ---
+    const tools = [
+      {
+        type: "function" as const,
+        function: {
+          name: "record_pr",
+          description: "Zaznamenat osobní rekord (PR) nebo cvičení klienta. Použij když trenér řekne 'zapiš PR', 'klient udělal bench 100kg' apod.",
+          parameters: {
+            type: "object",
+            properties: {
+              client_id: { type: "string", description: "ID klienta (z reference dat)" },
+              exercise_name: { type: "string", description: "Název cviku česky" },
+              weight_kg: { type: "number", description: "Váha v kg (0 pro bodyweight)" },
+              sets: { type: "integer", description: "Počet sérií" },
+              reps: { type: "integer", description: "Počet opakování" },
+              date: { type: "string", description: "Datum YYYY-MM-DD, výchozí dnes" },
+              notes: { type: "string", description: "Poznámky" },
+            },
+            required: ["client_id", "exercise_name", "weight_kg", "sets", "reps"],
+          },
+        },
+      },
+      {
+        type: "function" as const,
+        function: {
+          name: "create_sale",
+          description: "Vytvořit prodej produktu klientovi. Použij když trenér řekne 'prodej', 'prodal jsem tyčinku' apod.",
+          parameters: {
+            type: "object",
+            properties: {
+              client_id: { type: "string", description: "ID klienta" },
+              product_id: { type: "string", description: "ID produktu ze seznamu produktů" },
+              quantity: { type: "integer", description: "Množství, výchozí 1" },
+              payment_method: { type: "string", enum: ["cash", "card", "credit", "transfer"], description: "Způsob platby, výchozí cash" },
+            },
+            required: ["client_id", "product_id"],
+          },
+        },
+      },
+      {
+        type: "function" as const,
+        function: {
+          name: "add_measurement",
+          description: "Přidat tělesné měření klienta (váha, tuk, obvody). Použij když trenér řekne 'zapiš měření', 'váží 85 kg' apod.",
+          parameters: {
+            type: "object",
+            properties: {
+              client_id: { type: "string", description: "ID klienta" },
+              date: { type: "string", description: "Datum YYYY-MM-DD, výchozí dnes" },
+              weight_kg: { type: "number", description: "Váha v kg" },
+              body_fat_percentage: { type: "number", description: "Procento tělesného tuku" },
+              muscle_mass: { type: "number", description: "Svalová hmota v kg" },
+              waist: { type: "number", description: "Obvod pasu v cm" },
+              chest: { type: "number", description: "Obvod hrudníku v cm" },
+              hips: { type: "number", description: "Obvod boků v cm" },
+              notes: { type: "string", description: "Poznámky" },
+            },
+            required: ["client_id"],
+          },
+        },
+      },
+    ];
+
+    // --- TOOL EXECUTION ---
+    async function executeTool(toolCall: any): Promise<any> {
+      const { name, arguments: argsStr } = toolCall.function;
+      let args: any;
+      try { args = JSON.parse(argsStr); } catch { return { error: "Neplatné argumenty nástroje" }; }
+
+      if (args.client_id && !clientIds.has(args.client_id)) {
+        return { error: "Klient nepatří tomuto trenérovi" };
+      }
+
+      switch (name) {
+        case "record_pr": {
+          const { data, error } = await supabase.from("exercise_entries").insert({
+            user_id: userId,
+            client_id: args.client_id,
+            exercise_name: args.exercise_name,
+            weight_kg: args.weight_kg || 0,
+            sets: args.sets || 1,
+            reps: args.reps || 1,
+            date: args.date || today,
+            is_pr: true,
+            is_bodyweight: (args.weight_kg || 0) === 0,
+            notes: args.notes || null,
+          }).select("id").single();
+          if (error) return { error: error.message };
+          const cName = clientNameMap[args.client_id] || "?";
+          return { success: true, message: `PR zaznamenán: ${cName} – ${args.exercise_name} ${args.weight_kg}kg ${args.sets}×${args.reps}`, id: data.id };
+        }
+        case "create_sale": {
+          const { data: product, error: pErr } = await supabase.from("products").select("id, name, price, purchase_price, stock_quantity").eq("id", args.product_id).eq("user_id", userId).single();
+          if (pErr || !product) return { error: "Produkt nenalezen nebo nepatří trenérovi" };
+          const qty = args.quantity || 1;
+          if ((product.stock_quantity || 0) < qty) return { error: `Nedostatek na skladě: ${product.name} (${product.stock_quantity} ks)` };
+          const totalAmount = (product.price || 0) * qty;
+          const { data: order, error: oErr } = await supabase.from("sales_orders").insert({
+            user_id: userId,
+            client_id: args.client_id,
+            total_amount: totalAmount,
+            payment_method: args.payment_method || "cash",
+            payment_status: "completed",
+          }).select("id").single();
+          if (oErr) return { error: oErr.message };
+          await supabase.from("sales_order_items").insert({
+            order_id: order.id,
+            product_id: product.id,
+            name_snapshot: product.name,
+            quantity: qty,
+            unit_price: product.price,
+            line_total: totalAmount,
+            line_total_after_discount: totalAmount,
+          });
+          await supabase.from("products").update({ stock_quantity: (product.stock_quantity || 0) - qty }).eq("id", product.id);
+          const cName = clientNameMap[args.client_id] || "?";
+          return { success: true, message: `Prodej vytvořen: ${product.name} × ${qty} = ${totalAmount} Kč pro ${cName}` };
+        }
+        case "add_measurement": {
+          const insertData: any = {
+            user_id: userId,
+            client_id: args.client_id,
+            date: args.date || today,
+          };
+          if (args.weight_kg != null) insertData.weight = args.weight_kg;
+          if (args.body_fat_percentage != null) insertData.body_fat_percentage = args.body_fat_percentage;
+          if (args.muscle_mass != null) insertData.muscle_mass = args.muscle_mass;
+          if (args.waist != null) insertData.waist = args.waist;
+          if (args.chest != null) insertData.chest = args.chest;
+          if (args.hips != null) insertData.hips = args.hips;
+          if (args.notes) insertData.notes = args.notes;
+          const { data, error } = await supabase.from("measurements").insert(insertData).select("id").single();
+          if (error) return { error: error.message };
+          const cName = clientNameMap[args.client_id] || "?";
+          return { success: true, message: `Měření přidáno pro ${cName}`, id: data.id };
+        }
+        default:
+          return { error: `Neznámý nástroj: ${name}` };
+      }
+    }
+
+    const systemPrompt = `Jsi komplexní business analytik a asistent pro fitness trenéra. Máš přístup ke VŠEM datům aplikace a UMÍŠ I ZAPISOVAT DATA pomocí nástrojů (tools).
 
 ${contextData}
 
 ${briefingInstruction}
 
+DOSTUPNÉ NÁSTROJE (tools):
+- record_pr: Zaznamenat PR/cvičení klienta (cvik, váha, sety, repy)
+- create_sale: Vytvořit prodej produktu klientovi
+- add_measurement: Přidat tělesné měření klienta (váha, tuk, obvody)
+
+PRAVIDLA PRO ZÁPIS DAT:
+- Pokud uživatel jasně říká co chce zapsat, rovnou použij příslušný nástroj
+- Pokud je požadavek nejednoznačný, zeptej se na upřesnění
+- Pokud uživatel zmíní klienta jménem, najdi správné client_id z REFERENCE DATA
+- Pokud uživatel zmíní produkt, najdi správné product_id z REFERENCE DATA
+- Po úspěšném zápisu potvrď co bylo zapsáno
+- Pokud chybí povinné údaje, zeptej se na ně
+
 PRAVIDLA:
 - Odpovídej vždy ČESKY
 - Buď stručný, konkrétní a orientovaný na čísla
-- Používej formátování markdown (tabulky, odrážky, tučné písmo pro důležitá čísla)
-- Když se uživatel ptá na export, připrav data ve strukturovaném formátu (tabulka nebo seznam) který lze snadno zkopírovat
-- Pokud uživatel žádá PDF/export, vytvoř přehledný textový formát s jasnou strukturou oddílů a nadpisy
-- Počítej s českými měnovými zvyklostmi (Kč, česká čísla)
-- Nabízej proaktivně insights: trendy, srovnání, varování (nízké zásoby, dluhy klientů, red flagy, bolesti, neaktivní klienti, at-risk klienti, blížící se expirace balíčků)
-- Pokud data nestačí pro odpověď, řekni to jasně
+- Používej formátování markdown (tabulky, odrážky, tučné písmo)
+- Počítej s českými měnovými zvyklostmi (Kč)
+- Nabízej proaktivně insights: trendy, srovnání, varování
 - Formátuj peněžní částky vždy s "Kč" a tisícovými oddělovači
-- Identifikuj rizikové klienty: neaktivní, s bolestmi/red flagy, s dluhem, at-risk, s expirujícím balíčkem
-- Nabízej doporučení a varování proaktivně
-- Pokud uživatel chce report, strukturuj odpověď s jasným nadpisem, sekcemi a shrnutím na konci
-- Umíš porovnávat období (tento vs minulý měsíc, meziměsíční trendy)
+- Identifikuj rizikové klienty
+- Umíš porovnávat období
 - Hodinovou sazbu počítej ze skutečné duration a final_price
-- Umíš analyzovat výkonnostní data: PR klientů, tréninkové objemy, trendy síly, výsledky testů
-- Umíš pracovat se zdravotními profily: identifikuj klienty s omezením, sleduj bolesti ve feedbackech a check-inech
-- Umíš analyzovat tréninkové plány: aktivní plány, plnění cílů, frekvence
-- Umíš analyzovat feedback response rate: kolik klientů odpovídá, průměrná doba
-- Umíš analyzovat měření: trendy váhy, tělesného tuku, obvody
-- Umíš analyzovat diagnostiky: problémové oblasti, nálezy per klient
-- Umíš analyzovat balíčky: zbývající tréninky, expirace, doporučení na obnovu
-- Umíš analyzovat gamifikaci: XP levely, streaky, odznaky, věrnostní body
-- Umíš analyzovat výzvy: účast, výsledky, zapojení klientů
-- Umíš analyzovat výživu: frekvence logování, pravidelnost per klient
-- Umíš analyzovat domácí tréninky: míra plnění, compliance per klient
-- Umíš analyzovat pre-session check-iny: průměrná energie, spánek, stres, bolesti
-- Umíš analyzovat ceníky a doporučit cenovou strategii
-- Umíš analyzovat pravidelný rozvrh klientů
-- Pokud uživatel požádá o data ve formátu pro graf, vrať je jako JSON blok s klíči "chartData" a "chartType" (bar/line/pie):
-  Příklad: \`\`\`chart {"chartType":"bar","chartData":[{"name":"Leden","value":15},{"name":"Únor","value":22}]} \`\`\`
+- Pokud data nestačí, řekni to jasně
+- Pro graf vrať JSON blok: \`\`\`chart {"chartType":"bar","chartData":[{"name":"X","value":1}]} \`\`\`
 
 FOLLOW-UP SUGGESTIONS:
-Na konci KAŽDÉ odpovědi přidej blok s 2-3 relevantnímí follow-up otázkami ve formátu:
+Na konci KAŽDÉ odpovědi přidej blok:
 \`\`\`suggestions
-["Otázka 1 relevantní k odpovědi?", "Otázka 2 relevantní k odpovědi?", "Otázka 3 relevantní k odpovědi?"]
-\`\`\`
-Otázky musí být specifické a navazovat na kontext odpovědi (ne generické).`;
+["Otázka 1?", "Otázka 2?", "Otázka 3?"]
+\`\`\``;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // --- AI CALL WITH TOOL SUPPORT ---
+    const aiMessages: any[] = [
+      { role: "system", content: systemPrompt },
+      ...messages,
+    ];
+
+    // Phase 1: Non-streaming call with tools enabled
+    const firstResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -703,35 +852,105 @@ Otázky musí být specifické a navazovat na kontext odpovědi (ne generické).
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-        stream: true,
+        messages: aiMessages,
+        tools,
+        stream: false,
       }),
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
+    if (!firstResponse.ok) {
+      if (firstResponse.status === 429) {
         return new Response(JSON.stringify({ error: "Příliš mnoho požadavků, zkuste to později." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
+      if (firstResponse.status === 402) {
         return new Response(JSON.stringify({ error: "Nedostatek kreditu pro AI." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const text = await response.text();
-      console.error("AI gateway error:", response.status, text);
+      const errText = await firstResponse.text();
+      console.error("AI gateway error:", firstResponse.status, errText);
       return new Response(JSON.stringify({ error: "Chyba AI služby" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-    });
+    const firstResult = await firstResponse.json();
+    const choice = firstResult.choices?.[0];
+    if (!choice) throw new Error("Prázdná odpověď od AI");
+
+    const enc = new TextEncoder();
+
+    // Check for tool calls
+    if (choice.finish_reason === "tool_calls" || (choice.message?.tool_calls && choice.message.tool_calls.length > 0)) {
+      const toolCalls = choice.message.tool_calls;
+      console.log("Tool calls:", toolCalls.map((tc: any) => tc.function.name));
+
+      // Execute tools
+      const toolResults: any[] = [];
+      for (const tc of toolCalls) {
+        const result = await executeTool(tc);
+        console.log(`Tool ${tc.function.name} result:`, result);
+        toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
+      }
+
+      // Phase 2: Streaming call with tool results
+      const secondResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [...aiMessages, choice.message, ...toolResults],
+          stream: true,
+        }),
+      });
+
+      if (!secondResponse.ok) {
+        const t = await secondResponse.text();
+        console.error("AI second call error:", secondResponse.status, t);
+        throw new Error("Chyba při potvrzení akce");
+      }
+
+      // Prepend status indicator then pipe streaming response
+      const reader = secondResponse.body!.getReader();
+      const stream = new ReadableStream({
+        async start(controller) {
+          controller.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "⚙️ *Akce provedena.*\n\n" } }] })}\n\n`));
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            controller.enqueue(value);
+          }
+          controller.close();
+        },
+      });
+
+      return new Response(stream, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    } else {
+      // No tool calls — send content as SSE chunks
+      const content = choice.message?.content || "Nemám odpověď.";
+      const stream = new ReadableStream({
+        start(controller) {
+          const chunkSize = 80;
+          for (let i = 0; i < content.length; i += chunkSize) {
+            const chunk = content.slice(i, i + chunkSize);
+            controller.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk } }] })}\n\n`));
+          }
+          controller.enqueue(enc.encode("data: [DONE]\n\n"));
+          controller.close();
+        },
+      });
+
+      return new Response(stream, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
   } catch (error) {
     console.error("AI business analyst error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Neznámá chyba" }), {
