@@ -3,13 +3,14 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useExercises } from '@/hooks/useExercises';
+import { usePopularStrengthExercises } from '@/hooks/usePopularExercises';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ExerciseAutocomplete } from '@/components/client-portal/workout-diary/ExerciseAutocomplete';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Loader2, Dumbbell, Check } from 'lucide-react';
@@ -18,21 +19,13 @@ interface TrainerStrengthInputFormProps {
   clientId: string;
 }
 
-const POPULAR_EXERCISES = [
-  'Bench Press',
-  'Squat',
-  'Deadlift',
-  'Overhead Press',
-  'Barbell Row',
-  'Pull-up',
-  'Dip',
-];
 
 export function TrainerStrengthInputForm({ clientId }: TrainerStrengthInputFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { exercises } = useExercises();
+  const { data: popularExercises = [] } = usePopularStrengthExercises(6);
 
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [exerciseId, setExerciseId] = useState('');
@@ -44,10 +37,6 @@ export function TrainerStrengthInputForm({ clientId }: TrainerStrengthInputFormP
   const [notes, setNotes] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Filter strength exercises
-  const strengthExercises = exercises.filter(
-    (e) => e.category === 'Síla' || e.category === 'Strength' || !e.is_time_based
-  );
 
   const createEntry = useMutation({
     mutationFn: async () => {
@@ -103,27 +92,23 @@ export function TrainerStrengthInputForm({ clientId }: TrainerStrengthInputFormP
     },
   });
 
-  const handleExerciseChange = (id: string) => {
-    setExerciseId(id);
-    const exercise = exercises.find(e => e.id === id);
-    if (exercise) {
-      setExerciseName(exercise.name);
-      setIsBodyweight(exercise.is_bodyweight);
+  const handleAutocompleteSelect = (name: string, id?: string) => {
+    setExerciseName(name);
+    setExerciseId(id || '');
+    if (id) {
+      const exercise = exercises.find(e => e.id === id);
+      if (exercise) {
+        setIsBodyweight(exercise.is_bodyweight);
+      }
     }
   };
 
-  const handleQuickExercise = (name: string) => {
-    const exercise = exercises.find(
-      e => e.name.toLowerCase().includes(name.toLowerCase()) ||
-           e.name_cs?.toLowerCase().includes(name.toLowerCase())
-    );
+  const handleQuickExercise = (id: string, name: string) => {
+    setExerciseId(id);
+    setExerciseName(name);
+    const exercise = exercises.find(e => e.id === id);
     if (exercise) {
-      setExerciseId(exercise.id);
-      setExerciseName(exercise.name);
       setIsBodyweight(exercise.is_bodyweight);
-    } else {
-      setExerciseId('');
-      setExerciseName(name);
     }
   };
 
@@ -138,36 +123,37 @@ export function TrainerStrengthInputForm({ clientId }: TrainerStrengthInputFormP
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Quick select popular exercises */}
-        <div className="flex flex-wrap gap-2">
-          {POPULAR_EXERCISES.map((name) => (
-            <Button
-              key={name}
-              variant={exerciseName.toLowerCase().includes(name.toLowerCase()) ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handleQuickExercise(name)}
-              className="text-xs"
-            >
-              {name}
-            </Button>
-          ))}
-        </div>
+        {/* Popular exercises chips */}
+        {popularExercises.length > 0 && (
+          <div className="space-y-1.5">
+            <span className="text-xs text-muted-foreground">Nejpoužívanější</span>
+            <div className="flex flex-wrap gap-1.5">
+              {popularExercises.map((ex) => (
+                <Button
+                  key={ex.id}
+                  variant={exerciseId === ex.id ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleQuickExercise(ex.id, ex.name_cs || ex.name)}
+                  className="text-xs h-7"
+                >
+                  {ex.name_cs || ex.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {/* Exercise select */}
+        {/* Exercise autocomplete search */}
         <div className="space-y-2">
           <Label>Cvik</Label>
-          <Select value={exerciseId} onValueChange={handleExerciseChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Vyberte cvik..." />
-            </SelectTrigger>
-            <SelectContent className="max-h-60">
-              {strengthExercises.slice(0, 100).map((exercise) => (
-                <SelectItem key={exercise.id} value={exercise.id}>
-                  {exercise.name_cs || exercise.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ExerciseAutocomplete
+            value={exerciseName}
+            onChange={handleAutocompleteSelect}
+            placeholder="Vyhledat cvik..."
+          />
+          {exerciseName && (
+            <p className="text-xs text-muted-foreground">Vybraný: <span className="font-medium text-foreground">{exerciseName}</span></p>
+          )}
         </div>
 
         {/* Date */}
