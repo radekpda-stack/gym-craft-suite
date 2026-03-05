@@ -150,30 +150,27 @@ export function ClientDetailTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      {/* Tab Navigation - horizontal scroll on mobile */}
-      <div className="relative -mx-4 px-4 sm:mx-0 sm:px-0 mb-4">
-        {/* Gradient fade hint for scroll on mobile */}
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none sm:hidden" />
-        <div className="overflow-x-auto scrollbar-hide">
-          <TabsList className="w-max sm:w-full h-auto flex justify-start gap-1 bg-secondary/30 backdrop-blur-sm p-1 rounded-xl border border-border/30">
-            {tabs.map((tab) => (
-              <TabsTrigger
-                key={tab.id}
-                value={tab.id}
-                className={cn(
-                  "flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 shrink-0",
+      {/* Tab Navigation - icon-only on mobile, with labels on sm+ */}
+      <div className="relative -mx-3 px-3 sm:-mx-4 sm:px-4 lg:mx-0 lg:px-0 mb-3 sm:mb-4">
+        <TabsList className="w-full h-auto flex justify-between sm:justify-start gap-0.5 sm:gap-1 bg-secondary/30 backdrop-blur-sm p-1 rounded-xl border border-border/30">
+          {tabs.map((tab) => (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              className={cn(
+                "relative flex items-center justify-center sm:justify-start gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex-1 sm:flex-initial",
                 "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
                 "data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground",
                 "data-[state=inactive]:hover:bg-secondary/80 data-[state=inactive]:hover:text-foreground"
               )}
             >
-              <tab.icon className="w-4 h-4" />
-              <span className="text-xs sm:text-sm">{tab.label}</span>
+              <tab.icon className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline text-xs sm:text-sm">{tab.label}</span>
               {tab.badge && (
                 <Badge 
                   variant={tab.badgeVariant === 'destructive' ? 'destructive' : 'secondary'}
                   className={cn(
-                    "h-5 min-w-5 px-1 text-[10px] shadow-sm",
+                    "absolute -top-1 -right-1 sm:static h-4 min-w-4 sm:h-5 sm:min-w-5 px-1 text-[9px] sm:text-[10px] shadow-sm",
                     tab.badgeVariant === 'warning' && "bg-warning/20 text-warning border-warning/30",
                     tab.badgeVariant === 'destructive' && "animate-pulse"
                   )}
@@ -181,10 +178,9 @@ export function ClientDetailTabs({
                   {tab.badge}
                 </Badge>
               )}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
+            </TabsTrigger>
+          ))}
+        </TabsList>
       </div>
 
       {/* Tab: Profile + Settings (merged) */}
