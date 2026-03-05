@@ -70,22 +70,10 @@ export function RecentExercisesChips({ recentExercises, isLoading, onQuickLog }:
   }
 
   return (
-    <div className="bg-card/80 backdrop-blur-md border border-border/50 rounded-xl p-4 shadow-sm space-y-3">
-      {/* Section header */}
-      <div className="flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-muted/50">
-          <Clock className="w-4 h-4 text-muted-foreground" />
-        </div>
-        <span className="text-sm font-medium text-foreground">Nedávno použité cviky</span>
-        {onQuickLog && (
-          <span className="text-[10px] text-muted-foreground/60 ml-auto">Klikni + pro rychlý zápis</span>
-        )}
-      </div>
-      
-      {/* Chips */}
-      <TooltipProvider>
-        <div className="flex flex-wrap gap-2">
-          {recentExercises.map((exercise) => {
+    <div className="space-y-2">
+      {/* Horizontal scroll chips */}
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
+        {recentExercises.map((exercise) => {
             const config = CATEGORY_CONFIG[exercise.category];
             const Icon = config.icon;
             const timeAgo = formatDistanceToNow(new Date(exercise.lastUsed), { 
@@ -161,9 +149,8 @@ export function RecentExercisesChips({ recentExercises, isLoading, onQuickLog }:
                 )}
               </div>
             );
-          })}
-        </div>
-      </TooltipProvider>
+        })}
+      </div>
     </div>
   );
 }

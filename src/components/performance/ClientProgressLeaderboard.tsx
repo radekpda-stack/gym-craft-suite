@@ -1,9 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Trophy, TrendingUp, TrendingDown, Minus, ChevronRight, Medal } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
 interface TopClient {
@@ -19,61 +17,21 @@ interface ClientProgressLeaderboardProps {
   isLoading?: boolean;
 }
 
-const RANK_STYLES = [
-  { 
-    color: 'text-yellow-500', 
-    glow: 'shadow-yellow-500/30', 
-    bg: 'bg-yellow-500/10',
-    border: 'border-yellow-500/40',
-    hoverShadow: 'hover:shadow-yellow-500/20',
-  }, // 1st - Gold
-  { 
-    color: 'text-gray-400', 
-    glow: 'shadow-gray-400/20', 
-    bg: 'bg-gray-400/10',
-    border: 'border-gray-400/40',
-    hoverShadow: 'hover:shadow-gray-400/20',
-  }, // 2nd - Silver
-  { 
-    color: 'text-amber-600', 
-    glow: 'shadow-amber-600/20', 
-    bg: 'bg-amber-600/10',
-    border: 'border-amber-600/40',
-    hoverShadow: 'hover:shadow-amber-600/20',
-  }, // 3rd - Bronze
-  { 
-    color: 'text-muted-foreground', 
-    glow: '', 
-    bg: 'bg-muted/30',
-    border: 'border-border/30',
-    hoverShadow: '',
-  },
-  { 
-    color: 'text-muted-foreground', 
-    glow: '', 
-    bg: 'bg-muted/30',
-    border: 'border-border/30',
-    hoverShadow: '',
-  },
+const RANK_CONFIG = [
+  { color: 'text-yellow-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', ring: 'ring-yellow-500/20' },
+  { color: 'text-gray-400', bg: 'bg-gray-400/10', border: 'border-gray-400/30', ring: 'ring-gray-400/20' },
+  { color: 'text-amber-600', bg: 'bg-amber-600/10', border: 'border-amber-600/30', ring: 'ring-amber-600/20' },
 ];
 
 export function ClientProgressLeaderboard({ topClients, isLoading }: ClientProgressLeaderboardProps) {
   const navigate = useNavigate();
 
-  // Calculate max entries for progress bar
-  const maxEntries = Math.max(...topClients.map((c) => c.entriesCount), 1);
-
   if (isLoading) {
     return (
-      <div className="bg-card/80 backdrop-blur-md border border-border/50 rounded-xl p-4 space-y-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-8 w-16" />
-        </div>
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-16 rounded-xl" />
-          ))}
+      <div className="bg-card/80 backdrop-blur-md border border-border/50 rounded-xl p-4 space-y-3">
+        <Skeleton className="h-5 w-40" />
+        <div className="grid grid-cols-3 gap-2">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
       </div>
     );
@@ -81,116 +39,78 @@ export function ClientProgressLeaderboard({ topClients, isLoading }: ClientProgr
 
   if (topClients.length === 0) {
     return (
-      <div className="bg-card/80 backdrop-blur-md border border-border/50 rounded-xl p-4 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 rounded-lg bg-warning/10 shadow-lg shadow-warning/20">
-            <Trophy className="w-4 h-4 text-warning" />
-          </div>
-          <h3 className="font-semibold text-foreground">Top aktivní klienti</h3>
+      <div className="bg-card/80 backdrop-blur-md border border-border/50 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Trophy className="w-4 h-4 text-warning" />
+          <h3 className="font-semibold text-sm">Top aktivní klienti</h3>
           <Badge variant="secondary" className="text-[10px]">30 dní</Badge>
         </div>
-        <p className="text-sm text-muted-foreground text-center py-6">
+        <p className="text-sm text-muted-foreground text-center py-4">
           Zatím žádné záznamy v tomto období
         </p>
       </div>
     );
   }
 
+  const top3 = topClients.slice(0, 3);
+
   return (
-    <div className="bg-card/80 backdrop-blur-md border border-border/50 rounded-xl p-4 space-y-4 shadow-sm">
+    <div className="bg-card/80 backdrop-blur-md border border-border/50 rounded-xl p-4 space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2.5 rounded-xl bg-warning/15 shadow-lg shadow-warning/25">
-            <Trophy className="w-5 h-5 text-warning" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">Top aktivní klienti</h3>
-            <p className="text-[10px] text-muted-foreground">Podle počtu záznamů</p>
-          </div>
-          <Badge variant="secondary" className="text-[10px] ml-1">30 dní</Badge>
+          <Trophy className="w-4 h-4 text-warning" />
+          <h3 className="font-semibold text-sm">Top klienti</h3>
+          <Badge variant="secondary" className="text-[10px] h-4 px-1.5">30 dní</Badge>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs gap-1 h-7"
+        <button
           onClick={() => navigate('/clients')}
+          className="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-0.5"
         >
-          Více
-          <ChevronRight className="w-3 h-3" />
-        </Button>
+          Více <ChevronRight className="w-3 h-3" />
+        </button>
       </div>
 
-      {/* Leaderboard */}
-      <div className="space-y-2">
-        {topClients.map((client, index) => {
-          const progressPercent = (client.entriesCount / maxEntries) * 100;
+      {/* Horizontal top 3 cards */}
+      <div className="grid grid-cols-3 gap-2">
+        {top3.map((client, index) => {
+          const rank = RANK_CONFIG[index];
           const TrendIcon = client.trend > 0 ? TrendingUp : client.trend < 0 ? TrendingDown : Minus;
-          const trendColor = 'text-muted-foreground';
-          const rankStyle = RANK_STYLES[index] || RANK_STYLES[4];
-          const isTopThree = index < 3;
-
+          
           return (
             <button
               key={client.id}
               onClick={() => navigate(`/clients/${client.id}`)}
               className={cn(
-                'w-full flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3.5 rounded-xl',
-                'bg-background/60 backdrop-blur-sm',
-                'border shadow-sm',
-                rankStyle.border,
-                'hover:shadow-lg',
-                'transition-all duration-200',
-                'text-left',
-                isTopThree && rankStyle.glow && `shadow-sm ${rankStyle.glow}`
+                'relative flex flex-col items-center text-center p-3 rounded-xl',
+                'bg-background/60 border shadow-sm',
+                rank.border,
+                'hover:shadow-md hover:-translate-y-0.5 transition-all duration-200',
+                'focus:outline-none'
               )}
             >
-              {/* Rank Badge */}
-              <div className={cn(
-                'w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center font-bold text-sm shrink-0',
-                rankStyle.bg,
-              )}>
-                {isTopThree ? (
-                  <Medal className={cn('w-4 h-4 sm:w-5 sm:h-5', rankStyle.color)} />
-                ) : (
-                  <span className={cn("text-xs sm:text-sm", rankStyle.color)}>{index + 1}</span>
-                )}
+              {/* Rank medal */}
+              <div className={cn('w-8 h-8 rounded-full flex items-center justify-center mb-1.5', rank.bg)}>
+                <Medal className={cn('w-4 h-4', rank.color)} />
               </div>
+              
+              {/* Name */}
+              <p className="text-xs font-semibold text-foreground truncate w-full leading-tight">
+                {client.name.split(' ')[0]}
+              </p>
+              
+              {/* Stats */}
+              <p className="text-lg font-bold tabular-nums text-foreground leading-tight mt-1">
+                {client.entriesCount}
+              </p>
+              <p className="text-[9px] text-muted-foreground">zázn.</p>
 
-              {/* Client info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-                  <p className="font-semibold text-sm text-foreground truncate">
-                    {client.name}
-                  </p>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {client.prCount > 0 && (
-                      <Badge variant="outline" className="text-[9px] sm:text-[10px] text-warning border-warning/30 bg-warning/10 px-1.5 py-0">
-                        <Trophy className="w-2.5 h-2.5 mr-0.5" />
-                        {client.prCount}
-                      </Badge>
-                    )}
-                    <div className={cn('flex items-center gap-0.5 text-[10px] font-medium', trendColor)}>
-                      <TrendIcon className="w-3 h-3" />
-                    </div>
-                  </div>
+              {client.prCount > 0 && (
+                <div className="flex items-center gap-0.5 mt-1">
+                  <Trophy className="w-2.5 h-2.5 text-warning" />
+                  <span className="text-[9px] font-semibold text-warning">{client.prCount} PR</span>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 sm:h-2 rounded-full bg-muted/30 overflow-hidden">
-                    <div 
-                      className={cn(
-                        "h-full rounded-full transition-all duration-500",
-                        isTopThree ? "bg-gradient-to-r from-primary/80 to-primary" : "bg-primary/50"
-                      )}
-                      style={{ width: `${progressPercent}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] sm:text-xs text-muted-foreground w-12 sm:w-16 text-right tabular-nums font-medium">
-                    {client.entriesCount} zázn.
-                  </span>
-                </div>
-              </div>
+              )}
             </button>
           );
         })}
