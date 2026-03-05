@@ -1,39 +1,43 @@
 
 
-# Oprava: Chybějící tréninkové transakce v kartě kreditu
+# Plán: Kompaktnější a přehlednější karta tréninku
 
-## Příčina problému
+## Problémy
+1. Příliš velké mezery mezi sekcemi (`space-y-4`) a uvnitř karet (`p-4`, `space-y-3`)
+2. Každá sekce je samostatná karta s bordery, stíny a blur — vizuální šum
+3. Hero header, Tags a Notes jsou 3 oddělené karty — zbytečně roztažené
+4. RPE selector zabírá plnou šířku s velkými tlačítky
+5. Poznámky mají zbytečně velký padding a vlastní kartu
 
-Nalezena chyba v zabezpečení přístupu k datům (RLS policy). Funkce `rpc_complete_training_session`, která vytváří transakce při dokončení tréninku, **nenastavuje `user_id`** u záznamů v tabulce `credit_transactions`. 
+## Navrhované změny
 
-Pravidlo přístupu k datům ale vyžaduje `auth.uid() = user_id` — takže transakce s prázdným `user_id` jsou pro trenéra **neviditelné**.
+### 1. Sloučit Hero + Tags do jedné karty
+Místo dvou oddělených karet (Hero header + Klasifikace) je sloučit do jednoho bloku. Odstraní se duplicitní bordery, padding a vizuální mezera.
 
-**Rozsah problému:** 202 z 499 tréninkových transakcí v databázi má `user_id = NULL` a jsou neviditelné.
+### 2. Zmenšit mezery v celém layoutu
+- `TrainingDetailView`: `space-y-4` → `space-y-2`
+- Karty: `p-4` → `p-3`
+- `CompactTagGridSelector`: `space-y-3` → `space-y-2`
 
-## Řešení (2 kroky)
+### 3. Kompaktnější RPE selector
+- Zmenšit tlačítka z `w-8 h-8 sm:w-9 sm:h-9` na `w-7 h-7 sm:w-8 sm:h-8`
+- Přesunout label inline vedle tlačítek (ne nad nimi)
 
-### 1. Opravit RLS policy na `credit_transactions`
-Nahradit stávající SELECT policy `"Users can view their own credit_transactions"` novou, která umožní trenérovi vidět i transakce bez `user_id`:
+### 4. Poznámky integrovat přímo pod cviky bez samostatné karty
+- Místo vlastní karty s `rounded-2xl bg-card border shadow p-4` zobrazit poznámky jako jednoduchý inline blok uvnitř sekce cviků, nebo minimálně bez vizuálně těžké karty — jen lehký background.
 
-```sql
-DROP POLICY "Users can view their own credit_transactions" ON credit_transactions;
-CREATE POLICY "Users can view their own credit_transactions" 
-  ON credit_transactions FOR SELECT TO authenticated
-  USING (auth.uid() = user_id OR user_id IS NULL);
-```
+### 5. PreviousTrainingSummary — kompaktnější header
+- Zmenšit padding, sloučit date do header řádku místo subline
 
-### 2. Backfill — opravit existující záznamy
-Nastavit `user_id` u všech existujících transakcí s `NULL` user_id na ID trenéra (jediný uživatel systému):
+## Soubory k úpravě
 
-```sql
-UPDATE credit_transactions 
-SET user_id = '7f53e3c4-5ae8-421b-b59e-d6bf451b32b7'
-WHERE user_id IS NULL;
-```
+| Soubor | Změna |
+|--------|-------|
+| `TrainingDetailView.tsx` | Sloučit Hero + Tags do jedné karty; `space-y-4` → `space-y-2`; zjednodušit notes wrapper |
+| `TrainingHeroHeader.tsx` | Odebrat vnější kartu wrapper (bude součástí merged karty) |
+| `CompactTagGridSelector.tsx` | `space-y-3` → `space-y-2` |
+| `InlineRPESelector.tsx` | Menší RPE tlačítka |
+| `PreviousTrainingSummary.tsx` | Tighter padding |
 
-### 3. Opravit `rpc_complete_training_session`
-Přidat `user_id` = `p_trainer_id` do obou INSERT příkazů (pro skupinový i individuální kredit), aby se problém neopakoval.
-
-## Žádné změny v kódu
-Fronted kód je v pořádku — `useCreditTransactions` a `ClientCreditHeroCard` správně zobrazují data. Problém je čistě na úrovni databáze (RLS + chybějící sloupec v INSERT).
+Žádné DB změny — čistě vizuální úpravy spacingu a sloučení karet.
 
