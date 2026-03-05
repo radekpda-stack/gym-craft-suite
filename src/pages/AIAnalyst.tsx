@@ -13,7 +13,7 @@ export default function AIAnalyst() {
             AI Business Analytik
             <Sparkles className="w-4 h-4 text-primary" />
           </h1>
-          <p className="text-sm text-muted-foreground">Finance · Kredity · Výkonnost · Zdraví · Tréninky · Feedbacky</p>
+          <p className="text-sm text-muted-foreground">Finance · Kredity · Výkonnost · Zdraví · Tréninky · Feedbacky · Měření · Balíčky · Výzvy · Testy</p>
         </div>
       </div>
       <div className="flex-1 min-h-0">
