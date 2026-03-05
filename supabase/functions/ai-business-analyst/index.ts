@@ -38,10 +38,15 @@ serve(async (req) => {
 
     const userId = user.id;
     const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const dayAfterTomorrow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
     const thisYearStart = new Date(now.getFullYear(), 0, 1).toISOString();
     const last90days = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const last30days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const last7days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     // Parallel data fetching
     const [
@@ -54,25 +59,31 @@ serve(async (req) => {
       productSalesRes,
       expensesRes,
       productsRes,
+      feedbackRes,
+      groupBalancesRes,
+      todayScheduleRes,
+      tomorrowScheduleRes,
+      cancelledLast30Res,
     ] = await Promise.all([
-      // All clients with balances
       supabase.from("vw_client_ledger_balances").select("*").eq("user_id", userId),
-      // Credit transactions last 90 days
       supabase.from("credit_transactions").select("*").eq("user_id", userId).gte("created_at", last90days).order("created_at", { ascending: false }).limit(500),
-      // Trainings this month
-      supabase.from("training_sessions").select("id, date, status, duration, training_type, price, payment_status, clients(name)").eq("user_id", userId).gte("date", thisMonthStart).order("date", { ascending: false }),
-      // Trainings last month
-      supabase.from("training_sessions").select("id, date, status, duration, training_type, price, payment_status, clients(name)").eq("user_id", userId).gte("date", lastMonthStart).lt("date", thisMonthStart).order("date", { ascending: false }),
-      // Trainings this year
-      supabase.from("training_sessions").select("id, date, status, training_type, price, payment_status, duration").eq("user_id", userId).gte("date", thisYearStart).eq("status", "completed"),
-      // Credit transactions for income analysis
+      supabase.from("training_sessions").select("id, date, status, duration, training_type, price, final_price, payment_status, participant_count, clients(name)").eq("user_id", userId).gte("date", thisMonthStart).order("date", { ascending: false }),
+      supabase.from("training_sessions").select("id, date, status, duration, training_type, price, final_price, payment_status, participant_count, clients(name)").eq("user_id", userId).gte("date", lastMonthStart).lt("date", thisMonthStart).order("date", { ascending: false }),
+      supabase.from("training_sessions").select("id, date, status, training_type, price, final_price, payment_status, duration, participant_count, client_id, clients(name)").eq("user_id", userId).gte("date", thisYearStart).eq("status", "completed"),
       supabase.from("credit_transactions").select("*").eq("user_id", userId).gte("created_at", thisYearStart).in("type", ["payment", "training", "product", "canceled_training"]).order("created_at", { ascending: false }).limit(1000),
-      // Product sales
       supabase.from("product_sales").select("*, products(name, sell_price, cost_price)").eq("user_id", userId).gte("created_at", last90days).order("created_at", { ascending: false }).limit(200),
-      // Business expenses
       supabase.from("business_expenses").select("*").eq("user_id", userId).gte("date", thisYearStart).order("date", { ascending: false }).limit(200),
-      // Products with stock
       supabase.from("products").select("id, name, sell_price, cost_price, stock_quantity, category").eq("user_id", userId).eq("is_active", true),
+      // Feedbacks last 90 days
+      supabase.from("training_feedback").select("id, client_id, training_date, body_feel, pain, rpe_rating, is_red_flag, notes, created_at").eq("user_id", userId).gte("training_date", last90days).order("training_date", { ascending: false }).limit(500),
+      // Group balances
+      supabase.from("vw_group_ledger_balances").select("*").eq("user_id", userId),
+      // Today's schedule
+      supabase.from("training_sessions").select("id, date, status, duration, training_type, clients(name), participant_count").eq("user_id", userId).gte("date", today).lt("date", tomorrow).order("date", { ascending: true }),
+      // Tomorrow's schedule
+      supabase.from("training_sessions").select("id, date, status, duration, training_type, clients(name), participant_count").eq("user_id", userId).gte("date", tomorrow).lt("date", dayAfterTomorrow).order("date", { ascending: true }),
+      // Cancelled last 30 days
+      supabase.from("training_sessions").select("id, date, status, final_price, clients(name)").eq("user_id", userId).gte("date", last30days).in("status", ["cancelled", "canceled"]),
     ]);
 
     const clients = clientsRes.data || [];
@@ -84,6 +95,11 @@ serve(async (req) => {
     const productSales = productSalesRes.data || [];
     const expenses = expensesRes.data || [];
     const products = productsRes.data || [];
+    const feedbacks = feedbackRes.data || [];
+    const groupBalances = groupBalancesRes.data || [];
+    const todaySchedule = todayScheduleRes.data || [];
+    const tomorrowSchedule = tomorrowScheduleRes.data || [];
+    const cancelledLast30 = cancelledLast30Res.data || [];
 
     // Compute aggregates
     const totalClientsBalance = clients.reduce((s: number, c: any) => s + (c.balance || 0), 0);
@@ -91,12 +107,13 @@ serve(async (req) => {
     const clientsWithCredit = clients.filter((c: any) => (c.balance || 0) > 0);
 
     const completedThisMonth = trainingsThisMonth.filter((t: any) => t.status === "completed");
-    const canceledThisMonth = trainingsThisMonth.filter((t: any) => t.status === "canceled");
+    const canceledThisMonth = trainingsThisMonth.filter((t: any) => t.status === "canceled" || t.status === "cancelled");
     const completedLastMonth = trainingsLastMonth.filter((t: any) => t.status === "completed");
 
     const incomeThisYear = transactions.filter((t: any) => t.type === "payment").reduce((s: number, t: any) => s + (t.amount || 0), 0);
     const trainingSpendThisYear = transactions.filter((t: any) => t.type === "training").reduce((s: number, t: any) => s + Math.abs(t.amount || 0), 0);
     const productIncomeThisYear = transactions.filter((t: any) => t.type === "product").reduce((s: number, t: any) => s + Math.abs(t.amount || 0), 0);
+    const cancelFees = transactions.filter((t: any) => t.type === "canceled_training").reduce((s: number, t: any) => s + Math.abs(t.amount || 0), 0);
 
     const totalExpensesYear = expenses.reduce((s: number, e: any) => s + (e.amount || 0), 0);
 
@@ -107,6 +124,12 @@ serve(async (req) => {
 
     const totalDurationYear = trainingsYear.reduce((s: number, t: any) => s + (t.duration || 0), 0);
     const avgDuration = trainingsYear.length > 0 ? Math.round(totalDurationYear / trainingsYear.length) : 0;
+
+    // Hourly rate calculation
+    const trainingsWithPrice = trainingsYear.filter((t: any) => (t.final_price || t.price) && t.duration);
+    const totalRevForHourly = trainingsWithPrice.reduce((s: number, t: any) => s + (t.final_price || t.price || 0), 0);
+    const totalHoursForHourly = trainingsWithPrice.reduce((s: number, t: any) => s + (t.duration || 0), 0) / 60;
+    const hourlyRate = totalHoursForHourly > 0 ? Math.round(totalRevForHourly / totalHoursForHourly) : 0;
 
     // Training type breakdown
     const typeBreakdown: Record<string, number> = {};
@@ -128,6 +151,42 @@ serve(async (req) => {
       expenseCategories[e.category] = (expenseCategories[e.category] || 0) + (e.amount || 0);
     });
 
+    // Top clients by trainings and revenue
+    const clientStats: Record<string, { name: string; count: number; revenue: number }> = {};
+    trainingsYear.forEach((t: any) => {
+      const cid = t.client_id;
+      const cname = t.clients?.name || "Neznámý";
+      if (!clientStats[cid]) clientStats[cid] = { name: cname, count: 0, revenue: 0 };
+      clientStats[cid].count++;
+      clientStats[cid].revenue += (t.final_price || t.price || 0);
+    });
+    const topClientsByRevenue = Object.values(clientStats).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
+    const topClientsByCount = Object.values(clientStats).sort((a, b) => b.count - a.count).slice(0, 10);
+
+    // Cancellation stats (30 days)
+    const totalLast30 = cancelledLast30.length;
+    const trainingsLast30Res = trainingsThisMonth.length + (cancelledLast30.length); // approximate
+    const cancellationRate = trainingsLast30Res > 0 ? Math.round((totalLast30 / trainingsLast30Res) * 100) : 0;
+    const cancelFeeLast30 = cancelledLast30.reduce((s: number, t: any) => s + (t.final_price || 0), 0);
+
+    // Feedback analysis
+    const redFlags = feedbacks.filter((f: any) => f.is_red_flag);
+    const feedbacksWithPain = feedbacks.filter((f: any) => f.pain && f.pain >= 3);
+    const avgBodyFeel = feedbacks.filter((f: any) => f.body_feel).reduce((s: number, f: any) => s + f.body_feel, 0) / (feedbacks.filter((f: any) => f.body_feel).length || 1);
+    const avgPain = feedbacks.filter((f: any) => f.pain != null).reduce((s: number, f: any) => s + f.pain, 0) / (feedbacks.filter((f: any) => f.pain != null).length || 1);
+
+    // Recent feedbacks (last 7 days)
+    const recentFeedbacks = feedbacks.filter((f: any) => f.training_date >= last7days.split("T")[0]);
+
+    // Group balances summary
+    const groupBalanceSummary = groupBalances.map((g: any) => `${g.group_name}: ${(g.ledger_balance || 0).toLocaleString("cs-CZ")} Kč`).join(", ");
+
+    // Schedule formatting
+    const formatSchedule = (items: any[]) => items.map((t: any) => {
+      const time = t.date ? new Date(t.date).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }) : "?";
+      return `${time} - ${t.clients?.name || "?"} (${t.training_type || "solo"}${t.participant_count > 1 ? `, ${t.participant_count} os.` : ""}, ${t.duration || "?"} min) [${t.status}]`;
+    }).join("\n") || "Žádné tréninky";
+
     const contextData = `
 ## FINANČNÍ DATA (aktuální k ${now.toLocaleDateString("cs-CZ")})
 
@@ -135,6 +194,15 @@ serve(async (req) => {
 - Celkový zůstatek všech klientů: ${totalClientsBalance.toLocaleString("cs-CZ")} Kč
 - Klienti s kreditem (${clientsWithCredit.length}): ${clientsWithCredit.slice(0, 15).map((c: any) => `${c.client_name}: ${c.balance?.toLocaleString("cs-CZ")} Kč`).join(", ")}
 - Klienti s dluhem (${clientsWithDebt.length}): ${clientsWithDebt.map((c: any) => `${c.client_name}: ${c.balance?.toLocaleString("cs-CZ")} Kč`).join(", ") || "žádní"}
+
+### Skupinové rozpočty
+${groupBalanceSummary || "Žádné skupiny"}
+
+### Hodinová sazba
+- Skutečná hodinová sazba (rok ${now.getFullYear()}): ${hourlyRate.toLocaleString("cs-CZ")} Kč/hod
+- Počet tréninků s cenou a délkou: ${trainingsWithPrice.length}
+- Celkové tržby z tréninků: ${totalRevForHourly.toLocaleString("cs-CZ")} Kč
+- Celkový čas: ${Math.round(totalHoursForHourly)} hodin
 
 ### Tréninky - tento měsíc
 - Dokončeno: ${completedThisMonth.length}
@@ -149,10 +217,23 @@ serve(async (req) => {
 - Rozpad typů: ${Object.entries(typeBreakdown).map(([k, v]) => `${k}: ${v}`).join(", ")}
 - Měsíční trend: ${Object.entries(monthlyTrainings).sort().map(([m, c]) => `${m}: ${c}`).join(", ")}
 
+### Storno statistika (posledních 30 dní)
+- Zrušeno tréninků: ${totalLast30}
+- Míra storna: ${cancellationRate}%
+- Storno poplatky: ${cancelFeeLast30.toLocaleString("cs-CZ")} Kč
+- Celkové storno poplatky (rok): ${cancelFees.toLocaleString("cs-CZ")} Kč
+
+### Top 10 klientů dle tržeb (rok ${now.getFullYear()})
+${topClientsByRevenue.map((c, i) => `${i + 1}. ${c.name}: ${c.revenue.toLocaleString("cs-CZ")} Kč (${c.count} tréninků)`).join("\n")}
+
+### Top 10 klientů dle počtu tréninků
+${topClientsByCount.map((c, i) => `${i + 1}. ${c.name}: ${c.count} tréninků (${c.revenue.toLocaleString("cs-CZ")} Kč)`).join("\n")}
+
 ### Příjmy - rok ${now.getFullYear()}
 - Dobití kreditů: ${incomeThisYear.toLocaleString("cs-CZ")} Kč
 - Čerpáno tréninky: ${trainingSpendThisYear.toLocaleString("cs-CZ")} Kč
 - Čerpáno produkty: ${productIncomeThisYear.toLocaleString("cs-CZ")} Kč
+- Storno poplatky: ${cancelFees.toLocaleString("cs-CZ")} Kč
 
 ### Prodeje produktů (posledních 90 dní)
 - Tržby: ${salesRevenue90d.toLocaleString("cs-CZ")} Kč
@@ -173,9 +254,24 @@ serve(async (req) => {
 - Příjmy (dobití): ${incomeThisYear.toLocaleString("cs-CZ")} Kč
 - Tržby produkty: ${salesRevenue90d.toLocaleString("cs-CZ")} Kč (90 dní)
 - Náklady: ${totalExpensesYear.toLocaleString("cs-CZ")} Kč
+
+### Feedbacky klientů (posledních 90 dní)
+- Celkem feedbacků: ${feedbacks.length}
+- Průměrný pocit z těla (body_feel): ${avgBodyFeel.toFixed(1)}/5
+- Průměrná bolest: ${avgPain.toFixed(1)}/5
+- Red flagy: ${redFlags.length} ${redFlags.length > 0 ? `(${redFlags.slice(0, 5).map((f: any) => `${f.training_date}${f.notes ? ': ' + f.notes.substring(0, 50) : ''}`).join("; ")})` : ""}
+- Klienti s bolestí ≥3: ${feedbacksWithPain.length}
+- Feedbacky za posledních 7 dní: ${recentFeedbacks.length}
+${recentFeedbacks.length > 0 ? recentFeedbacks.slice(0, 10).map((f: any) => `  - ${f.training_date}: body_feel=${f.body_feel || "?"}, pain=${f.pain || "?"}, rpe=${f.rpe_rating || "?"}${f.is_red_flag ? " ⚠️ RED FLAG" : ""}${f.notes ? ` "${f.notes.substring(0, 60)}"` : ""}`).join("\n") : ""}
+
+### Dnešní rozvrh (${today})
+${formatSchedule(todaySchedule)}
+
+### Zítřejší rozvrh (${tomorrow})
+${formatSchedule(tomorrowSchedule)}
 `;
 
-    const systemPrompt = `Jsi finanční a business analytik pro fitness trenéra. Tvým úkolem je analyzovat finanční data, kreditní zůstatky, prodeje produktů a tréninkové statistiky.
+    const systemPrompt = `Jsi finanční a business analytik pro fitness trenéra. Tvým úkolem je analyzovat finanční data, kreditní zůstatky, prodeje produktů, tréninkové statistiky, feedbacky klientů a rozvrh.
 
 ${contextData}
 
@@ -184,11 +280,16 @@ PRAVIDLA:
 - Buď stručný, konkrétní a orientovaný na čísla
 - Používej formátování markdown (tabulky, odrážky, tučné písmo pro důležitá čísla)
 - Když se uživatel ptá na export, připrav data ve strukturovaném formátu (tabulka nebo seznam) který lze snadno zkopírovat
-- Pokud uživatel žádá PDF/export, vytvoř přehledný textový formát s jasnou strukturou oddílů
+- Pokud uživatel žádá PDF/export, vytvoř přehledný textový formát s jasnou strukturou oddílů a nadpisy
 - Počítej s českými měnovými zvyklostmi (Kč, česká čísla)
-- Nabízej proaktivně insights: trendy, srovnání, varování (nízké zásoby, dluhy klientů)
+- Nabízej proaktivně insights: trendy, srovnání, varování (nízké zásoby, dluhy klientů, red flagy, bolesti)
 - Pokud data nestačí pro odpověď, řekni to jasně
-- Formátuj peněžní částky vždy s "Kč" a tisícovými oddělovači`;
+- Formátuj peněžní částky vždy s "Kč" a tisícovými oddělovači
+- Identifikuj rizikové klienty: neaktivní klienti, klienti s bolestmi/red flagy, klienti s dluhem
+- Nabízej doporučení a varování proaktivně (např. "Klient X má opakované bolesti", "Zásoby produktu Y jsou na nule")
+- Pokud uživatel chce report, strukturuj odpověď s jasným nadpisem, sekcemi a shrnutím na konci
+- Umíš porovnávat období (tento vs minulý měsíc, meziměsíční trendy)
+- Hodinovou sazbu počítej ze skutečné duration a final_price`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
