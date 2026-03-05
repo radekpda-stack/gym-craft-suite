@@ -57,8 +57,8 @@ export function ClientStickyHeader({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/50 shadow-sm animate-in slide-in-from-top duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="fixed top-0 left-0 right-0 z-50 lg:top-0 bg-background/95 backdrop-blur-lg border-b border-border/50 shadow-sm animate-in slide-in-from-top duration-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 lg:pl-4">
         <div className="flex items-center justify-between h-14 gap-4">
           {/* Left: Back + Avatar + Name */}
           <div className="flex items-center gap-3 min-w-0">

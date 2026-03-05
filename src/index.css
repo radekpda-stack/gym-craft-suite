@@ -798,6 +798,24 @@ input, select, textarea {
     @apply min-h-[48px] min-w-[48px];
   }
 
+  /* Active press feedback for interactive cards/buttons */
+  .press-feedback {
+    @apply transition-transform duration-100 active:scale-[0.97];
+  }
+
+  .press-feedback-subtle {
+    @apply transition-transform duration-100 active:scale-[0.99];
+  }
+
+  /* Sticky header offset for sidebar on desktop */
+  .sticky-header-offset {
+    @apply lg:left-56;
+  }
+
+  .sticky-header-offset-collapsed {
+    @apply lg:left-16;
+  }
+
   /* ========================================
      ANIMATIONS - 120-180ms, ease-out only
      ======================================== */
