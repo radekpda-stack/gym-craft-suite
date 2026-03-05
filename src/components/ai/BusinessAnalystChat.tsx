@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, Send, Loader2, Copy, Download, FileText, Trash2, Sparkles, Mic, MicOff, BarChart3, ArrowLeftRight } from 'lucide-react';
+import { Bot, Send, Loader2, Copy, Download, FileText, Trash2, Sparkles, Mic, MicOff, BarChart3, ArrowLeftRight, Plus, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,8 +13,10 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type Message = { role: 'user' | 'assistant'; content: string };
@@ -36,6 +38,9 @@ const SUGGESTED_QUESTIONS = [
   'Kteří klienti mají zdravotní omezení?',
   'Klienti s nejvyšším tréninkovým objemem',
   'Plníme tréninkové cíle klientů?',
+  'Které tréninkové plány jsou aktivní?',
+  'Jaká je response rate feedbacků?',
+  'Kteří klienti jsou "at risk"?',
 ];
 
 const COMPARISON_ACTIONS = [
@@ -59,12 +64,27 @@ function parseCharts(content: string): { text: string; charts: ChartBlock[] } {
       const parsed = JSON.parse(json);
       if (parsed.chartData && parsed.chartType) {
         charts.push(parsed);
-        return ''; // remove from text
+        return '';
       }
     } catch { /* ignore */ }
     return _;
   });
   return { text: text.trim(), charts };
+}
+
+function parseSuggestions(content: string): { text: string; suggestions: string[] } {
+  let suggestions: string[] = [];
+  const text = content.replace(/```suggestions\s*(\[[\s\S]*?\])\s*```/g, (_, json) => {
+    try {
+      const parsed = JSON.parse(json);
+      if (Array.isArray(parsed)) {
+        suggestions = parsed;
+        return '';
+      }
+    } catch { /* ignore */ }
+    return _;
+  });
+  return { text: text.trim(), suggestions };
 }
 
 function InlineChart({ chart }: { chart: ChartBlock }) {
@@ -123,16 +143,66 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
   const [isLoading, setIsLoading] = useState(false);
   const [briefingLoaded, setBriefingLoaded] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [followUpSuggestions, setFollowUpSuggestions] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
-  const { session } = useAuth();
+  const { session, user } = useAuth();
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Load last conversation on mount
+  useEffect(() => {
+    if (!user?.id) return;
+    const loadConversation = async () => {
+      const { data } = await supabase
+        .from('ai_conversations')
+        .select('id, messages, title')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data && Array.isArray(data.messages) && (data.messages as any[]).length > 0) {
+        setConversationId(data.id);
+        setMessages(data.messages as Message[]);
+        setBriefingLoaded(true);
+      }
+    };
+    loadConversation();
+  }, [user?.id]);
+
+  // Save conversation after each assistant response
+  const saveConversation = useCallback(async (msgs: Message[]) => {
+    if (!user?.id || msgs.length === 0) return;
+
+    // Generate title from first user message
+    const firstUserMsg = msgs.find(m => m.role === 'user');
+    const title = firstUserMsg ? firstUserMsg.content.substring(0, 80) : 'Nová konverzace';
+
+    try {
+      if (conversationId) {
+        await supabase
+          .from('ai_conversations')
+          .update({ messages: msgs as any, title, updated_at: new Date().toISOString() })
+          .eq('id', conversationId);
+      } else {
+        const { data } = await supabase
+          .from('ai_conversations')
+          .insert({ user_id: user.id, messages: msgs as any, title })
+          .select('id')
+          .single();
+        if (data) setConversationId(data.id);
+      }
+    } catch (e) {
+      console.error('Failed to save conversation:', e);
+    }
+  }, [user?.id, conversationId]);
 
   const streamChat = useCallback(async (allMessages: Message[], mode?: string) => {
     const resp = await fetch(CHAT_URL, {
@@ -188,6 +258,14 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
         } catch { /* partial JSON */ }
       }
     }
+
+    // Extract follow-up suggestions from final content
+    const { suggestions } = parseSuggestions(assistantContent);
+    if (suggestions.length > 0) {
+      setFollowUpSuggestions(suggestions);
+    }
+
+    return assistantContent;
   }, [session]);
 
   // Auto briefing on open
@@ -196,11 +274,12 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
     setBriefingLoaded(true);
     setIsLoading(true);
     try {
-      await streamChat([{ role: 'user', content: 'Připrav ranní briefing dne.' }], 'briefing');
-      // Prepend a hidden user message
+      const content = await streamChat([{ role: 'user', content: 'Připrav ranní briefing dne.' }], 'briefing');
       setMessages(prev => {
         if (prev.length > 0 && prev[0].role === 'assistant') {
-          return [{ role: 'user', content: '📋 Ranní briefing' }, ...prev];
+          const newMsgs = [{ role: 'user' as const, content: '📋 Ranní briefing' }, ...prev];
+          saveConversation(newMsgs);
+          return newMsgs;
         }
         return prev;
       });
@@ -209,7 +288,7 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
     } finally {
       setIsLoading(false);
     }
-  }, [briefingLoaded, messages.length, streamChat]);
+  }, [briefingLoaded, messages.length, streamChat, saveConversation]);
 
   useEffect(() => {
     if (open && !briefingLoaded && messages.length === 0) {
@@ -217,7 +296,6 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
     }
   }, [open, briefingLoaded, messages.length, loadBriefing]);
 
-  // Auto briefing for full page
   useEffect(() => {
     if (fullPage && !briefingLoaded && messages.length === 0) {
       loadBriefing();
@@ -231,9 +309,15 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
     setMessages(updated);
     setInput('');
     setIsLoading(true);
+    setFollowUpSuggestions([]);
 
     try {
       await streamChat(updated);
+      // Save after stream completes
+      setMessages(prev => {
+        saveConversation(prev);
+        return prev;
+      });
     } catch (e: any) {
       toast.error(e.message || 'Chyba při komunikaci s AI');
     } finally {
@@ -287,14 +371,53 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
     doc.line(margin, y, pageWidth - margin, y);
     y += 8;
 
-    const lines = content.split('\n');
-    for (const line of lines) {
+    // Remove suggestions block from PDF content
+    const cleanContent = content.replace(/```suggestions\s*\[[\s\S]*?\]\s*```/g, '').trim();
+    const lines = cleanContent.split('\n');
+
+    // Detect markdown tables and render with autotable
+    let i = 0;
+    while (i < lines.length) {
       if (y > doc.internal.pageSize.getHeight() - 20) {
         doc.addPage();
         y = 20;
       }
 
-      const trimmed = line.trim();
+      const trimmed = lines[i].trim();
+
+      // Detect markdown table (starts with | and has at least a separator row)
+      if (trimmed.startsWith('|') && i + 1 < lines.length && lines[i + 1]?.trim().match(/^\|[\s-:|]+\|$/)) {
+        // Collect all table rows
+        const tableRows: string[] = [];
+        let j = i;
+        while (j < lines.length && lines[j].trim().startsWith('|')) {
+          tableRows.push(lines[j].trim());
+          j++;
+        }
+
+        if (tableRows.length >= 2) {
+          // Parse header
+          const headerCells = tableRows[0].split('|').filter(c => c.trim() !== '').map(c => c.trim().replace(/\*\*/g, ''));
+          // Skip separator row (index 1)
+          const bodyRows = tableRows.slice(2).map(row =>
+            row.split('|').filter(c => c.trim() !== '').map(c => c.trim().replace(/\*\*/g, ''))
+          );
+
+          autoTable(doc, {
+            startY: y,
+            head: [headerCells],
+            body: bodyRows,
+            margin: { left: margin, right: margin },
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+          });
+
+          y = (doc as any).lastAutoTable.finalY + 6;
+          i = j;
+          continue;
+        }
+      }
 
       if (trimmed.startsWith('## ')) {
         y += 4;
@@ -324,13 +447,6 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
         const wrapped = doc.splitTextToSize(`• ${text}`, maxWidth - 5);
         doc.text(wrapped, margin + 3, y);
         y += wrapped.length * 5;
-      } else if (trimmed.startsWith('|')) {
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        const cleanLine = trimmed.replace(/\*\*/g, '');
-        const wrapped = doc.splitTextToSize(cleanLine, maxWidth);
-        doc.text(wrapped, margin, y);
-        y += wrapped.length * 4.5;
       } else if (trimmed === '') {
         y += 3;
       } else {
@@ -341,16 +457,20 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
         doc.text(wrapped, margin, y);
         y += wrapped.length * 5;
       }
+
+      i++;
     }
 
     doc.save(`ai-report_${new Date().toISOString().split('T')[0]}.pdf`);
     toast.success('PDF report stažen');
   };
 
-  const clearHistory = () => {
+  const startNewConversation = () => {
     setMessages([]);
+    setConversationId(null);
     setBriefingLoaded(false);
-    toast.success('Historie vymazána');
+    setFollowUpSuggestions([]);
+    toast.success('Nová konverzace');
   };
 
   // Voice input
@@ -402,7 +522,7 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
                   <Sparkles className="w-6 h-6 text-primary" />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Zeptej se na finance, kredity, prodeje, tréninky, výkonnost klientů nebo feedbacky.
+                  Zeptej se na finance, kredity, prodeje, tréninky, výkonnost, plány, feedbacky nebo retenci klientů.
                 </p>
               </div>
 
@@ -437,7 +557,10 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
           )}
 
           {messages.map((msg, i) => {
-            const { text, charts } = msg.role === 'assistant' ? parseCharts(msg.content) : { text: msg.content, charts: [] };
+            const isLast = i === messages.length - 1;
+            const rawContent = msg.role === 'assistant' ? msg.content : msg.content;
+            const { text: textWithoutSuggestions } = msg.role === 'assistant' ? parseSuggestions(rawContent) : { text: rawContent };
+            const { text, charts } = msg.role === 'assistant' ? parseCharts(textWithoutSuggestions) : { text: textWithoutSuggestions, charts: [] };
             
             return (
               <div key={i} className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
@@ -496,6 +619,25 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
             </div>
           )}
 
+          {/* Follow-up suggestions */}
+          {followUpSuggestions.length > 0 && !isLoading && messages.length > 0 && (
+            <div className="space-y-2 pt-2">
+              <p className="text-[11px] text-muted-foreground text-center">Navazující otázky:</p>
+              <div className="flex flex-col gap-1.5">
+                {followUpSuggestions.map((suggestion, i) => (
+                  <button
+                    key={i}
+                    onClick={() => send(suggestion)}
+                    className="text-left text-xs px-3 py-2 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition-all duration-200 text-foreground"
+                  >
+                    <MessageSquare className="w-3 h-3 inline mr-1.5 text-primary" />
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Comparison buttons after conversation */}
           {messages.length > 0 && !isLoading && (
             <div className="flex items-center gap-2 justify-center flex-wrap pt-2">
@@ -533,7 +675,7 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Zeptej se na finance, výkonnost, zdraví klientů..."
+            placeholder="Zeptej se na finance, výkonnost, zdraví, plány klientů..."
             className="min-h-[44px] max-h-[120px] resize-none text-sm rounded-xl"
             rows={1}
           />
@@ -554,6 +696,13 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
   if (fullPage) {
     return (
       <div className="flex flex-col h-[calc(100vh-4rem)]">
+        <div className="flex items-center justify-end px-4 pb-2">
+          {messages.length > 0 && (
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={startNewConversation}>
+              <Plus className="w-3 h-3" /> Nová konverzace
+            </Button>
+          )}
+        </div>
         {renderChatContent()}
       </div>
     );
@@ -584,14 +733,21 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
               </div>
               <div>
                 <SheetTitle className="text-sm">AI Business Analytik</SheetTitle>
-                <p className="text-[11px] text-muted-foreground">Finance · Kredity · Výkonnost · Zdraví · Tréninky</p>
+                <p className="text-[11px] text-muted-foreground">Finance · Kredity · Výkonnost · Plány · Retence</p>
               </div>
             </div>
-            {messages.length > 0 && (
-              <Button variant="ghost" size="icon" onClick={clearHistory} className="h-8 w-8" title="Vymazat historii">
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <>
+                  <Button variant="ghost" size="icon" onClick={startNewConversation} className="h-8 w-8" title="Nová konverzace">
+                    <Plus className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={startNewConversation} className="h-8 w-8" title="Vymazat historii">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </SheetHeader>
 
