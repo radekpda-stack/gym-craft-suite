@@ -120,8 +120,9 @@ export function TrainingStatusBar({
   return (
     <>
       <div className={cn(
-        'fixed bottom-0 left-0 right-0 z-40 border-t border-border/50',
+        'fixed left-0 right-0 z-40 border-t border-border/50',
         'bg-card/95 backdrop-blur-xl shadow-[0_-4px_24px_rgba(0,0,0,0.15)]',
+        'bottom-[88px] lg:bottom-0',
         'safe-area-bottom',
         className
       )}>
