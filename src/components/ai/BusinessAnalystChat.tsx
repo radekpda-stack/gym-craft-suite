@@ -659,7 +659,10 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
       </ScrollArea>
 
       {/* Input */}
-      <div className={cn("flex-shrink-0 p-3 border-t border-border/50 bg-background/80 backdrop-blur-sm", fullPage && "max-w-4xl mx-auto w-full")}>
+      <div className={cn(
+        "flex-shrink-0 p-3 border-t border-border/50 bg-background/80 backdrop-blur-sm",
+        fullPage && "max-w-4xl mx-auto w-full"
+      )}>
         <div className="flex items-end gap-2">
           <Button
             variant={isListening ? "default" : "outline"}
@@ -695,7 +698,7 @@ export function BusinessAnalystChat({ fullPage = false }: BusinessAnalystChatPro
   // Full page mode - no Sheet wrapper
   if (fullPage) {
     return (
-      <div className="flex flex-col h-[calc(100vh-4rem)]">
+      <div className="flex flex-col h-full pb-32 lg:pb-0">
         <div className="flex items-center justify-end px-4 pb-2">
           {messages.length > 0 && (
             <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={startNewConversation}>

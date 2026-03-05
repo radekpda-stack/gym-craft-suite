@@ -3,8 +3,8 @@ import { BusinessAnalystChat } from '@/components/ai/BusinessAnalystChat';
 
 export default function AIAnalyst() {
   return (
-    <div className="px-4 lg:px-8 pt-4">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="flex flex-col h-[calc(100vh-0px)] lg:h-auto">
+      <div className="flex items-center gap-3 px-4 lg:px-8 pt-4 pb-2 shrink-0">
         <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
           <Bot className="w-5 h-5 text-primary" />
         </div>
@@ -16,7 +16,9 @@ export default function AIAnalyst() {
           <p className="text-sm text-muted-foreground">Finance · Kredity · Výkonnost · Zdraví · Tréninky · Feedbacky</p>
         </div>
       </div>
-      <BusinessAnalystChat fullPage />
+      <div className="flex-1 min-h-0">
+        <BusinessAnalystChat fullPage />
+      </div>
     </div>
   );
 }
