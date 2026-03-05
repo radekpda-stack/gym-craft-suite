@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { TrainingTypeBadge } from './TrainingTypeSelector';
 import { MoreHorizontal, Play, Check, Clock, X } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ClientAvatar } from '@/components/ui/client-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -155,11 +155,11 @@ export const CompactTrainingRow = memo(function CompactTrainingRow({
 
           {/* Avatar + Name */}
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <Avatar className="h-9 w-9 flex-shrink-0">
-              <AvatarFallback className="bg-muted text-muted-foreground text-xs font-medium">
-                {client ? getInitials(client.name) : '?'}
-              </AvatarFallback>
-            </Avatar>
+            <ClientAvatar
+              name={client?.name || '?'}
+              size="xs"
+              className="flex-shrink-0"
+            />
             <div className="min-w-0">
               <span className="font-medium text-foreground truncate block">
                 {client?.name || 'Neznámý klient'}

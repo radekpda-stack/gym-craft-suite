@@ -67,7 +67,7 @@ export const SwipeableTrainingCard = memo(function SwipeableTrainingCard({
   const showCancelHint = direction === 'left' && isScheduled;
 
   return (
-    <div className={cn('relative overflow-hidden rounded-xl', className)}>
+    <div className={cn('relative overflow-hidden rounded-2xl', className)}>
       {/* Background hints - Complete (right swipe) */}
       {canSwipe && (
         <div 
