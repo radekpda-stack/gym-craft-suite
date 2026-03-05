@@ -1,50 +1,84 @@
 
 
-# Vylepšení grafů a statistik u cviků a klientů
+# QA Audit — JustMove Asistent
 
-## Problém
-Současné zobrazení dat u cviků a klientů je omezené:
-- `ExerciseProgressGraph` ukazuje jen jednu metriku (váha NEBO čas), jednoduchý line chart bez kontextu
-- `ExerciseHistorySheet` má základní graf + seznam, ale chybí srovnání období, % zlepšení, průměry, volume trend
-- `ClientPRsCard` zobrazuje jen nejlepší hodnotu bez kontextu progrese
-- Nikde není vidět porovnání "tento měsíc vs minulý", RPE korelace s výkonem, nebo volume trendy
+## Kritické problémy (Breaking functionality)
 
-## Plán
+### 1. Navigace na `/auth` místo `/login` — mrtvé přesměrování
+**Problém:** Aplikace má route `/login` (UnifiedLogin), ale `/auth` je jen redirect na `/login`. Přesto 5 míst v kódu naviguje přímo na `/auth`:
+- `ProtectedRoute.tsx` → `<Navigate to="/auth">`
+- `WaitingForApproval.tsx` → `<Navigate to="/auth">`
+- `DemoPage.tsx` → `<Navigate to="/auth">`
+- `Sidebar.tsx` → `navigate('/auth')` po odhlášení
+- `MobileMenu.tsx` → `navigate('/auth')` po odhlášení
 
-### 1. Vylepšit `ExerciseProgressGraph` na multi-metrický graf
-- Přidat sekundární osu Y pro **volume** (sets x reps x weight) jako sloupcový graf pod hlavní křivkou
-- Zobrazit **RPE overlay** jako barevné tečky na křivce (zelená=nízké RPE, červená=vysoké)
-- Přidat **trendovou linii** (lineární regrese) pro vizuální směr progrese
-- Oblast grafu barevně rozlišit: zelená zóna = nad průměrem, červená = pod průměrem
+**Dopad:** Zbytečný redirect hop (`/auth` → `/login`). Funguje díky redirect route, ale přidává latenci a je matoucí pro debugging.
 
-### 2. Rozšířit `ExerciseHistorySheet` o analytický panel
-- Nový tab **"Analýza"** (vedle Graf a Historie):
-  - **Period comparison**: Porovnání průměrné hodnoty za posledních 30 dní vs předchozích 30 dní s % změnou
-  - **Consistency score**: Kolikrát za měsíc klient cvičí tento cvik (frekvence)
-  - **RPE vs výkon korelace**: Mini scatter plot — pokud RPE roste ale výkon ne, signál únavy
-  - **Volume trend**: Celkový objem (sets x reps x weight) za týden v sloupcovém grafu
-- Vylepšit stávající **quick stats** (3 karty): přidat 4. kartu "Trend" s % změnou za 30 dní
+**Fix:** Nahradit všechny `"/auth"` za `"/login"` v těchto 5 souborech.
 
-### 3. Vylepšit `ClientPRsCard` o kontext progrese
-- Ke každému PR přidat mini-indikátor: **"↑ 12% za 3 měs."** (porovnání aktuální PR vs hodnota před 3 měsíci)
-- Přidat **"Stáří PR"** badge: "Nový!" (< 7 dní), "Tento měsíc", "3+ měs." — vizuálně odlišit čerstvé vs staré PR
-- Pod seznamem PR přidat sumární řádek: "X nových PR tento měsíc | Y cviků s rostoucím trendem"
+### 2. Kliknutí na "Analytika" v Klientech → 404
+**Problém:** `Clients.tsx` řádek 313 naviguje na `/clients/analytics`, ale v `App.tsx` je tento route přesměrován na `/statistics?tab=clients`. Redirect existuje, takže to technicky funguje, ale je to zbytečný hop.
 
-### 4. Nová komponenta `ExerciseInsightPanel`
-- Reusable panel zobrazující pokročilé metriky pro libovolný cvik:
-  - **Progression classification**: "Skutečná síla" / "Nárůst úsilí" / "Signál únavy" (z RPE logiky)
-  - **Best set vs average set**: Porovnání nejlepší série s průměrem
-  - **Frequency heatmap**: Mini kalendář posledních 12 týdnů s barevnou intenzitou
+**Fix:** Změnit `navigate('/clients/analytics')` na `navigate('/statistics?tab=clients')`.
 
-## Soubory k úpravě
+## Vysoký dopad (High-impact improvements)
 
-| Soubor | Změna |
-|--------|-------|
-| `ExerciseProgressGraph.tsx` | Multi-metrický graf: volume bary, RPE overlay, trend line, barevné zóny |
-| `ExerciseHistorySheet.tsx` | Nový "Analýza" tab s period comparison, RPE korelací, volume trend |
-| `ClientPRsCard.tsx` | PR stáří badge, % improvement indikátor, sumární řádek |
-| `ExerciseInsightPanel.tsx` | Nová komponenta: progression class, best vs avg, frequency heatmap |
-| `useExerciseHistory.ts` | Rozšířit o computed fields: volume, trend %, period averages |
+### 3. Dashboard nemá link na `/` v mobile bottom nav
+**Problém:** `MobileNav.tsx` obsahuje pouze 4 položky: Oznámení, Rozvrh, Klienti, Prodeje + Více. Chybí přímý přístup k Dashboardu — uživatel musí kliknout Více → Dashboard.
 
-Žádné DB změny — vše se počítá z existujících dat v `exercise_entries`, `cardio_entries`, `skill_entries`.
+**Dopad:** Dashboard je nejpoužívanější stránka, ale na mobilu vyžaduje 2 tapy místo 1.
+
+**Fix:** Přidat Dashboard jako první položku v `mainNavItems` nebo nahradit Oznámení (přesunout do overflow).
+
+### 4. Sidebar defaultně collapsed — skryté labels
+**Problém:** `Sidebar.tsx` řádek 129: `useState(true)` — sidebar je defaultně zavřený. Nový uživatel vidí jen ikony bez textů, neví co která ikona znamená.
+
+**Dopad:** Confusing onboarding, zvlášť pro ne-tech uživatele.
+
+**Fix:** Default `false` (expanded) nebo persist stav do localStorage.
+
+### 5. Chybí loading/disabled stav na "Přidat kredit" tlačítku
+**Problém:** V `Clients.tsx` handler `handleAddCredit` nemá disabled stav na tlačítku během mutace (`createTransaction.isPending`). Uživatel může kliknout vícekrát.
+
+**Fix:** Přidat `disabled={createTransaction.isPending}` a spinner.
+
+### 6. Password reset redirect URL nesedí
+**Problém:** `useAuth.ts` → `resetPasswordForEmail` nastavuje `redirectTo: '/auth?type=recovery'`, ale login page je `/login`. `UnifiedLogin` pak hledá `searchParams.get('type') === 'recovery'`. Redirect z `/auth` na `/login` ztratí query parametry.
+
+**Dopad:** Password reset flow je potenciálně broken — uživatel se po kliknutí na email link nedostane na "Nové heslo" formulář.
+
+**Fix:** Změnit redirectTo na `${window.location.origin}/login?type=recovery`.
+
+## Nice-to-have vylepšení
+
+### 7. Duplicitní toast při trainer login
+**Problém:** `handleSignIn` v `UnifiedLogin.tsx` zobrazí success toast a pak `navigate('/')`. Ale `useAuth` hook má `onAuthStateChange` listener, který změní `isAuthenticated`, což triggeruje useEffect na řádku 82-86 s dalším `navigate`. Dva navigace = potenciální race condition.
+
+**Fix:** Odstranit ruční `navigate('/')` z `handleSignIn` — nechat to na useEffect.
+
+### 8. Konzistentní padding na stránkách
+**Problém:** Některé stránky (Sales, PerformanceHub) mají `pb-32` pro mobile bottom nav, jiné ne (Index má `pb-36 lg:pb-0` v Layout). Padding by měl být konzistentně v Layout, ne na jednotlivých stránkách.
+
+### 9. Mobile swipe na SchedulePage může kolidovat se scroll
+**Problém:** `drag="x"` na week grid může zachytit vertikální scroll gesty na mobilu kvůli `touch-pan-y`.
+
+### 10. Missing `key` prop concern
+V `App.tsx` řádky 141-162 — mapping přes `['/zona', '/client']` pro portal routes je funkční, ale vytváří duplicitní route trees.
+
+## Prioritizovaný seznam
+
+| # | Priorita | Problém | Effort |
+|---|----------|---------|--------|
+| 6 | Kritický | Password reset redirect broken | 5 min |
+| 1 | Vysoký | `/auth` → `/login` všude | 10 min |
+| 2 | Nízký | Clients analytika redirect hop | 2 min |
+| 3 | Vysoký | Dashboard chybí v mobile nav | 5 min |
+| 4 | Střední | Sidebar default collapsed | 2 min |
+| 5 | Střední | Credit button double-click | 2 min |
+| 7 | Nízký | Duplicitní navigate po login | 5 min |
+| 8 | Nízký | Padding inkonsistence | 15 min |
+
+## Doporučený postup
+
+Opravit položky 6, 1, 3, 4, 5 v jednom průchodu — celkem ~25 min práce, pokrývá všechny kritické a high-impact problémy.
 
