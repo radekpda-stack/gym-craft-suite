@@ -532,7 +532,7 @@ export default function SchedulePage() {
 
 
       {/* Day Events List */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 pb-32">
+      <div className="flex-1 overflow-y-auto px-4 py-4">
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
