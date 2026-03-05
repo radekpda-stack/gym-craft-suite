@@ -1,61 +1,50 @@
 
 
-# Zjednodušení navigace v sekci Výkonnost
+# Vylepšení grafů a statistik u cviků a klientů
 
 ## Problém
-Aktuálně je potřeba projít minimálně 3-4 kroky k zápisu výkonu pro konkrétního klienta (Výkonnost → Deník → najít klienta → vybrat → zapsat). Hledání historie cviku vyžaduje podobně zdlouhavý postup.
+Současné zobrazení dat u cviků a klientů je omezené:
+- `ExerciseProgressGraph` ukazuje jen jednu metriku (váha NEBO čas), jednoduchý line chart bez kontextu
+- `ExerciseHistorySheet` má základní graf + seznam, ale chybí srovnání období, % zlepšení, průměry, volume trend
+- `ClientPRsCard` zobrazuje jen nejlepší hodnotu bez kontextu progrese
+- Nikde není vidět porovnání "tento měsíc vs minulý", RPE korelace s výkonem, nebo volume trendy
 
-## Řešení: Univerzální Command Bar (hledej klienta i cvik na jednom místě)
+## Plán
 
-Rozšířit stávající `ExerciseSearchCommand` na **univerzální vyhledávač**, který hledá **současně klienty i cviky**. Uživatel napíše jméno klienta nebo název cviku a dostane okamžité výsledky s kontextovými akcemi.
+### 1. Vylepšit `ExerciseProgressGraph` na multi-metrický graf
+- Přidat sekundární osu Y pro **volume** (sets x reps x weight) jako sloupcový graf pod hlavní křivkou
+- Zobrazit **RPE overlay** jako barevné tečky na křivce (zelená=nízké RPE, červená=vysoké)
+- Přidat **trendovou linii** (lineární regrese) pro vizuální směr progrese
+- Oblast grafu barevně rozlišit: zelená zóna = nad průměrem, červená = pod průměrem
 
-### Jak to bude fungovat
+### 2. Rozšířit `ExerciseHistorySheet` o analytický panel
+- Nový tab **"Analýza"** (vedle Graf a Historie):
+  - **Period comparison**: Porovnání průměrné hodnoty za posledních 30 dní vs předchozích 30 dní s % změnou
+  - **Consistency score**: Kolikrát za měsíc klient cvičí tento cvik (frekvence)
+  - **RPE vs výkon korelace**: Mini scatter plot — pokud RPE roste ale výkon ne, signál únavy
+  - **Volume trend**: Celkový objem (sets x reps x weight) za týden v sloupcovém grafu
+- Vylepšit stávající **quick stats** (3 karty): přidat 4. kartu "Trend" s % změnou za 30 dní
 
-```text
-┌─────────────────────────────────┐
-│ 🔍 Hledej klienta nebo cvik... │
-├─────────────────────────────────┤
-│ 👤 KLIENTI                     │
-│   Jan Novák        [Zapsat] [→]│
-│   Jana Kolářová    [Zapsat] [→]│
-├─────────────────────────────────┤
-│ 🏋 CVIKY                       │
-│   Bench Press       [Zapsat] [→]│
-│   Deadlift          [Zapsat] [→]│
-├─────────────────────────────────┤
-│ ⚡ RYCHLÉ AKCE                  │
-│   Jan + Bench Press (dnes 14:30)│
-│   Jana + Squat (včera)          │
-└─────────────────────────────────┘
-```
+### 3. Vylepšit `ClientPRsCard` o kontext progrese
+- Ke každému PR přidat mini-indikátor: **"↑ 12% za 3 měs."** (porovnání aktuální PR vs hodnota před 3 měsíci)
+- Přidat **"Stáří PR"** badge: "Nový!" (< 7 dní), "Tento měsíc", "3+ měs." — vizuálně odlišit čerstvé vs staré PR
+- Pod seznamem PR přidat sumární řádek: "X nových PR tento měsíc | Y cviků s rostoucím trendem"
 
-### Konkrétní změny
+### 4. Nová komponenta `ExerciseInsightPanel`
+- Reusable panel zobrazující pokročilé metriky pro libovolný cvik:
+  - **Progression classification**: "Skutečná síla" / "Nárůst úsilí" / "Signál únavy" (z RPE logiky)
+  - **Best set vs average set**: Porovnání nejlepší série s průměrem
+  - **Frequency heatmap**: Mini kalendář posledních 12 týdnů s barevnou intenzitou
 
-#### 1. `ExerciseSearchCommand.tsx` → `UniversalSearchCommand.tsx`
-- Přidat `useClients()` hook do vyhledávače
-- Nová sekce **"Klienti"** v CommandList — filtruje klienty podle hledaného textu
-- Akce u klienta: **"Zapsat výkon"** (otevře QuickLogDialog s předvyplněným klientem) a **"Otevřít deník"** (přejde do Deník tabu s vybraným klientem)
-- Akce u cviku: zachovat stávající **"Zapsat výkon"** + **"Detail cviku"**
-- Nová sekce **"Nedávné kombinace"** — posledních 5 unikátních párů klient+cvik z `exercise_entries` pro jeden-tap re-logging
-
-#### 2. `PerformanceHub.tsx`
-- Nahradit `<ExerciseSearchCommand>` za `<UniversalSearchCommand>`
-- Předat callback `onSelectClient` pro navigaci do Deníku s vybraným klientem
-- Předat callback `onQuickLog` pro otevření QuickLogDialogu
-
-#### 3. Nový hook `useRecentClientExercisePairs.ts`
-- Dotaz na posledních 5 unikátních kombinací (client_id, exercise_id) z `exercise_entries`
-- Joinuje jména klientů a cviků
-- Cache 5 min
-
-### Soubory
+## Soubory k úpravě
 
 | Soubor | Změna |
 |--------|-------|
-| `ExerciseSearchCommand.tsx` → rename na `UniversalSearchCommand.tsx` | Přidat hledání klientů, nedávné páry, kontextové akce |
-| `PerformanceHub.tsx` | Použít nový UniversalSearchCommand, předat callbacky |
-| `useRecentClientExercisePairs.ts` | Nový hook — nedávné kombinace klient+cvik |
-| `RecentExercisesChips.tsx` | Volitelně přidat i klientské chipy (top 3 nejaktivnější) |
+| `ExerciseProgressGraph.tsx` | Multi-metrický graf: volume bary, RPE overlay, trend line, barevné zóny |
+| `ExerciseHistorySheet.tsx` | Nový "Analýza" tab s period comparison, RPE korelací, volume trend |
+| `ClientPRsCard.tsx` | PR stáří badge, % improvement indikátor, sumární řádek |
+| `ExerciseInsightPanel.tsx` | Nová komponenta: progression class, best vs avg, frequency heatmap |
+| `useExerciseHistory.ts` | Rozšířit o computed fields: volume, trend %, period averages |
 
-Žádné DB změny. Čistě frontend.
+Žádné DB změny — vše se počítá z existujících dat v `exercise_entries`, `cardio_entries`, `skill_entries`.
 
