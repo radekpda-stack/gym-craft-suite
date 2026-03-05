@@ -15,7 +15,7 @@ export default function WaitingForApproval() {
 
   // If user is not logged in, send them to auth
   if (!authLoading && !isAuthenticated) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // If account is already approved, do not keep them stuck here

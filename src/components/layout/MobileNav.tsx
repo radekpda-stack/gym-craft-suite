@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
+  LayoutDashboard,
   CalendarDays,
   Users,
   ShoppingCart,
@@ -16,6 +17,7 @@ import { useTrainerConversations } from '@/hooks/useChatMessages';
 import { Badge } from '@/components/ui/badge';
 
 const mainNavItems = [
+  { to: '/', icon: LayoutDashboard, label: 'Přehled' },
   { to: '/schedule', icon: CalendarDays, label: 'Rozvrh' },
   { to: '/clients', icon: Users, label: 'Klienti' },
   { to: '/sales', icon: ShoppingCart, label: 'Prodeje' },

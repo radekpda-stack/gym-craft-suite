@@ -126,7 +126,10 @@ function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean 
 }
 
 export function Sidebar({ onCollapseChange }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(true); // Default collapsed for premium look
+  const [collapsed, setCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebar-collapsed');
+    return saved !== null ? saved === 'true' : false;
+  });
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
@@ -191,7 +194,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         title: t.auth.logoutSuccess,
         description: t.auth.logoutSuccessDesc,
       });
-      navigate('/auth', { replace: true });
+      navigate('/login', { replace: true });
     }
   };
 
@@ -199,6 +202,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
   const handleToggleCollapse = () => {
     const newCollapsed = !collapsed;
     setCollapsed(newCollapsed);
+    localStorage.setItem('sidebar-collapsed', String(newCollapsed));
     onCollapseChange?.(newCollapsed);
   };
 

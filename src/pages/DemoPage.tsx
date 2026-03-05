@@ -20,7 +20,7 @@ export default function DemoPage() {
   }, []);
 
   if (!isDemo) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return (
