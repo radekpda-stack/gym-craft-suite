@@ -11,7 +11,7 @@ import { TestsContent } from '@/components/performance/TestsContent';
 import { ChallengesContent } from '@/components/performance/ChallengesContent';
 import { RecentPRsCompact } from '@/components/performance/RecentPRsCompact';
 import { PerformanceQuickStats } from '@/components/performance/PerformanceQuickStats';
-import { ExerciseSearchCommand } from '@/components/performance/ExerciseSearchCommand';
+import { UniversalSearchCommand } from '@/components/performance/UniversalSearchCommand';
 import { ClientProgressLeaderboard } from '@/components/performance/ClientProgressLeaderboard';
 import { RecentExercisesChips } from '@/components/performance/RecentExercisesChips';
 import { ClientProgressView } from '@/components/performance/ClientProgressView';
@@ -44,9 +44,17 @@ export default function PerformanceHub() {
   const [showQuickLog, setShowQuickLog] = useState(false);
   const [quickLogExerciseId, setQuickLogExerciseId] = useState<string | undefined>();
 
-  const handleQuickLogFromSearch = (exerciseId: string, _exerciseName: string) => {
-    setQuickLogExerciseId(exerciseId);
+  const [quickLogClientId, setQuickLogClientId] = useState<string | undefined>();
+
+  const handleQuickLogFromSearch = (exerciseId: string, _exerciseName: string, clientId?: string) => {
+    setQuickLogExerciseId(exerciseId || undefined);
+    setQuickLogClientId(clientId || undefined);
     setShowQuickLog(true);
+  };
+
+  const handleSelectClientFromSearch = (clientId: string) => {
+    setActiveTab('clients');
+    setSearchParams({ tab: 'clients', client: clientId });
   };
 
   const { data: overview, isLoading: overviewLoading } = usePerformanceOverview();
@@ -111,7 +119,7 @@ export default function PerformanceHub() {
 
       {/* Search + recent exercises chips */}
       <div className="space-y-2">
-        <ExerciseSearchCommand onQuickLog={handleQuickLogFromSearch} />
+        <UniversalSearchCommand onQuickLog={handleQuickLogFromSearch} onSelectClient={handleSelectClientFromSearch} />
         <RecentExercisesChips
           recentExercises={overview?.recentExercises || []}
           isLoading={overviewLoading}
@@ -280,8 +288,9 @@ export default function PerformanceHub() {
 
       <QuickLogDialog
         open={showQuickLog}
-        onOpenChange={(open) => { setShowQuickLog(open); if (!open) setQuickLogExerciseId(undefined); }}
+        onOpenChange={(open) => { setShowQuickLog(open); if (!open) { setQuickLogExerciseId(undefined); setQuickLogClientId(undefined); } }}
         exerciseId={quickLogExerciseId}
+        clientId={quickLogClientId}
       />
     </div>
   );
