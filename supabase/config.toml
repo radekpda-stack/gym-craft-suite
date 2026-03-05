@@ -143,3 +143,6 @@ verify_jwt = false
 
 [functions.public-trainer-stats]
 verify_jwt = false
+
+[functions.ai-business-analyst]
+verify_jwt = true

@@ -29,6 +29,7 @@ import { useLanguage } from '@/lib/i18n';
 import { Separator } from '@/components/ui/separator';
 import { useModuleSettings } from '@/hooks/useModuleSettings';
 import { Badge } from '@/components/ui/badge';
+import { BusinessAnalystChat } from '@/components/ai/BusinessAnalystChat';
 
 interface NavItem {
   id: string;
@@ -235,11 +236,13 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
         <AnimatePresence>
           {!collapsed && (
             <motion.div
+              className="flex items-center gap-1"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: 0.15 }}
             >
+              <BusinessAnalystChat />
               <NotificationCenter />
             </motion.div>
           )}

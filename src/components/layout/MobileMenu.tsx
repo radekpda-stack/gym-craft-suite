@@ -26,6 +26,7 @@ import { toast } from '@/hooks/use-toast';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import { Separator } from '@/components/ui/separator';
 import { useModuleSettings } from '@/hooks/useModuleSettings';
+import { BusinessAnalystChat } from '@/components/ai/BusinessAnalystChat';
 
 interface MobileMenuProps {
   open: boolean;
@@ -166,6 +167,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
                 <span className="text-base font-bold tracking-tight">Just Move</span>
               </div>
               <div className="flex items-center gap-1">
+                <BusinessAnalystChat />
                 <NotificationCenter />
                 <motion.button
                   onClick={onClose}
