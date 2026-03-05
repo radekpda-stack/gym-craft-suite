@@ -1,94 +1,51 @@
 
 
-# Audit karty tréninku — návrh úprav
+# Plan: Rozšíření AI Business Analytika
 
-## Současný stav
+## Co agent umí teď
+- Finanční přehled (kredity, dluhy, příjmy, náklady)
+- Tréninkové statistiky (tento/minulý měsíc, roční trend, typy)
+- Prodejové metriky (tržby, marže, nízké zásoby)
+- Export: kopírování textu, stažení .txt
 
-Detail tréninku (`TrainingDetail.tsx`, 627 řádků) je rozložen do těchto sekcí:
+## Co chybí a co doplníme
 
-```text
-┌─ Breadcrumbs ─────────────────────────┐
-│ HeroHeader (avatar, jméno, čas, stav) │
-│ [Edit mode form — pokud aktivní]      │
-│ PreviousTrainingSummary               │
-│ CompactTagGridSelector (Klasifikace)  │
-│ WorkoutExerciseManager (cviky)        │
-│ TrainingPrepSection (sbalená)         │
-│ TrainingParticipantsManager           │
-│ ParticipantsPRsSection                │
-│ TrainingQuickSale                     │
-│ PreSessionCheckinCard                 │
-│ "Zaměření z minula" banner            │
-│ QuickActionsSection (4 tlačítka)      │
-│ ──── fixní spodní lišta ────          │
-│ TrainingStatusBar (Tagy/RPE/Cena)     │
-└───────────────────────────────────────┘
-```
+### 1. Rozšíření datového kontextu (edge function)
+Přidáme do funkce `ai-business-analyst` načítání dalších dat:
 
-## Nalezené problémy
+- **Feedbacky klientů** — z `training_feedback` (body_feel, pain, energy, red flags za posledních 90 dní) pro analýzu spokojenosti a health-rizik
+- **Účastníci tréninků** — z `training_participants` pro přesné počty duo/group tréninků a vytížení klientů
+- **Skupinové rozpočty** — z `vw_group_ledger_balances` pro přehled skupinových kreditů
+- **Hodinová sazba** — výpočet skutečné hodinové sazby z `duration` a `final_price`
+- **Top klienti** — seřazení dle počtu tréninků a útraty za rok
+- **Storno statistiky** — míra zrušení, storno poplatky
+- **Denní rozvrh** — dnešní a zítřejší naplánované tréninky
 
-### 1. Duplicitní "Dokončit" CTA
-`QuickActionsSection` obsahuje velké "DOKONČIT TRÉNINK" tlačítko **a zároveň** fixní `TrainingStatusBar` dole má vlastní "Dokončit trénink". Trenér vidí dvě tlačítka pro stejnou akci — matoucí a zabírá místo.
+### 2. Rozšíření suggested prompts
+Přidáme nové rychlé dotazy:
+- "Jaká je moje hodinová sazba?"
+- "Kteří klienti mají bolesti nebo red flagy?"
+- "Top 10 klientů podle tržeb"
+- "Statistika storen za posledních 30 dní"
+- "Co mám dnes a zítra v rozvrhu?"
+- "Shrň feedbacky klientů za týden"
+- "Připrav PDF report"
 
-**Návrh:** Odstranit `QuickActionsSection` jako samostatnou sekci. Přesunout sekundární akce (Zrušit strhnout / Zrušit bez kreditu / Přesunout) do dropdown menu v `TrainingStatusBar` nebo do `HeroHeader` menu. Primární CTA zůstane jen ve fixním baru dole.
+### 3. PDF export
+Přidáme tlačítko "Stáhnout PDF" vedle existujícího "Stáhnout .txt" — využije `jspdf` (už nainstalovaný) pro vytvoření formátovaného PDF reportu z AI odpovědi.
 
-### 2. Příliš mnoho sekcí pod sebou — kognitivní přetížení
-Pro naplánovaný trénink je na stránce **9+ vizuálních bloků**. Trenér v posilovně potřebuje rychle vidět: kdo, kdy, co minule, tagy, cviky — zbytek je noise.
+### 4. Markdown rendering
+Nahradíme plain-text rendering za `react-markdown` pro správné zobrazení tabulek, odrážek a formátování z AI odpovědí. Bude potřeba přidat závislost `react-markdown`.
 
-**Návrh:** Sloučit `PreSessionCheckinCard` + "Zaměření z minula" banner do `PreviousTrainingSummary` (jedna karta = vše z minula). Odstranit `ParticipantsPRsSection` jako separátní blok — PR data zobrazit inline v `WorkoutExerciseManager` u každého cviku.
+### 5. Vylepšení system promptu
+Rozšíříme instrukce pro AI:
+- Proaktivní doporučení a varování
+- Možnost generovat strukturované reporty pro PDF
+- Analýza trendů a srovnání období
+- Schopnost identifikovat rizikové klienty (neaktivní, bolesti, dluhy)
 
-### 3. `TrainingPrepSection` je ve výchozím stavu sbalená
-Sekce s upozorněními na bolest a omezení klienta je sbalená — trenér ji snadno přehlédne. Pokud obsahuje health alert, měla by být **automaticky rozbalená**.
-
-**Návrh:** `TrainingPrepSection` otevřít automaticky pokud `hasAlerts === true` (zdravotní omezení nebo bolest).
-
-### 4. Status badge zabírá celý řádek zbytečně
-V `HeroHeader` je status badge ("Naplánováno") na vlastním řádku, full-width, s `py-2.5`. Pro jednoduché slovo je to moc prostoru.
-
-**Návrh:** Přesunout status badge inline vedle jména klienta (jako pill/chip), ušetří vertikální prostor.
-
-### 5. `TrainingStatusBar` — tlačítko "Zahájit" se nikdy nezobrazí
-Prop `onStart` se nikdy nepředává z `TrainingDetail.tsx`, takže "Zahájit" tlačítko v baru neexistuje. Buď přidat logiku pro "scheduled → in_progress" přechod, nebo odstranit mrtvý kód.
-
-**Návrh:** Přidat `onStart` handler — kliknutí změní status na `in_progress` (vizuální indikátor pro trenéra že lekce běží).
-
-### 6. `TrainingQuickSale` — zbytečná sekce pro 80% tréninků
-Většina tréninků nemá prodej produktu. Sekce zabírá místo i když je prázdná.
-
-**Návrh:** Zobrazit jen jako kompaktní "+Produkt" tlačítko v baru nebo v menu, ne jako separátní sekci.
-
-### 7. Edit mode form — plnohodnotný formulář pro drobnou změnu
-Kliknutí na "Upravit" v menu otevře inline formulář se 3 selecty. Většinou trenér mění jen čas nebo trvání. Formulář zabere celou šířku a posune obsah dolů.
-
-**Návrh:** Použít Sheet (bottom sheet) místo inline formuláře — nezasahuje do hlavního obsahu stránky.
-
----
-
-## Plán implementace
-
-### Fáze 1: Zjednodušení akcí (nejvyšší dopad)
-1. **Sloučit akce do StatusBar** — přidat Cancel/Reschedule do dropdown v `TrainingStatusBar`, přidat `onStart` handler pro "Zahájit". Odstranit `QuickActionsSection` z `TrainingDetail.tsx`.
-2. **Status badge inline** — přesunout status z full-width řádku do řádku vedle jména v `TrainingHeroHeader`.
-
-### Fáze 2: Redukce sekcí
-3. **Auto-open PrepSection** — pokud `hasAlerts`, nastavit `isOpen: true` jako výchozí.
-4. **Sloučit "Zaměření z minula" do PreviousTrainingSummary** — přidat `nextSessionFocus` prop, zobrazit jako highlight řádek uvnitř karty minulého tréninku.
-5. **QuickSale jako tlačítko** — místo separátní sekce zobrazit kompaktní "Přidat produkt" tlačítko v exercise manageru nebo hero headeru.
-
-### Fáze 3: Edit mode
-6. **Sheet místo inline formu** — přesunout edit formulář do bottom Sheet, otevíratelný z menu.
-
-### Soubory k úpravě
-- `src/components/trainings/TrainingStatusBar.tsx` — přidat Cancel/Reschedule dropdown, onStart
-- `src/components/trainings/TrainingHeroHeader.tsx` — inline status badge
-- `src/components/trainings/TrainingPrepSection.tsx` — auto-open při alerts
-- `src/components/trainings/PreviousTrainingSummary.tsx` — přidat next_session_focus
-- `src/components/trainings/TrainingDetailView.tsx` — Sheet pro edit, odstranit QuickSale sekci
-- `src/pages/TrainingDetail.tsx` — odstranit QuickActionsSection, propojit nové handlery
-
-### Očekávaný dopad
-- Méně scrollování — z 9+ bloků na 5-6
-- Jasná vizuální hierarchie — jedna CTA dole, žádná duplikace
-- Zdravotní upozornění nelze přehlédnout
-- Trenér se dostane k cvikům rychleji
+## Soubory k úpravě
+1. **`supabase/functions/ai-business-analyst/index.ts`** — rozšíření datových dotazů + system prompt
+2. **`src/components/ai/BusinessAnalystChat.tsx`** — markdown rendering, PDF export, nové suggested prompts
+3. Instalace balíčku `react-markdown`
 
