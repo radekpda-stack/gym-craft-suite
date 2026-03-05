@@ -44,7 +44,7 @@ export default function Sales() {
     : null;
 
   return (
-    <div className="space-y-4 sm:space-y-6 animate-fade-in pb-32 sm:pb-6">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Premium Hero Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-5 sm:p-6">
         {/* Background glow effects */}

@@ -160,7 +160,7 @@ export default function UnifiedLogin() {
         title: 'Přihlášení úspěšné',
         description: 'Vítejte zpět!',
       });
-      navigate('/', { replace: true });
+      // Navigation handled by useEffect watching isTrainerAuth
     }
   };
 

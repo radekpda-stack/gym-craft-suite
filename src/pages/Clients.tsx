@@ -310,7 +310,7 @@ export default function Clients() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => navigate('/clients/analytics')}>
+              <DropdownMenuItem onClick={() => navigate('/statistics?tab=clients')}>
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Analytika
               </DropdownMenuItem>
