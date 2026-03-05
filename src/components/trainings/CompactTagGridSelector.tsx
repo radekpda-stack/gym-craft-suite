@@ -135,22 +135,22 @@ export function CompactTagGridSelector({
 
   return (
     <div className={cn('space-y-2', className)}>
-      {/* Header with "Více" button */}
-      <div className="flex items-center justify-between">
+      {/* Header with "Více" button - tighter */}
+      <div className="flex items-center justify-between -mb-0.5">
         <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Klasifikace</span>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setShowExpandedModal(true)}
-          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+          className="h-6 px-1.5 text-[11px] text-muted-foreground hover:text-foreground hover:bg-secondary/80"
         >
-          <Settings2 className="h-3.5 w-3.5 mr-1" />
+          <Settings2 className="h-3 w-3 mr-0.5" />
           Více
         </Button>
       </div>
 
-      {/* 3-dropdown grid: Typ, Zaměření, Partie */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* 2-row compact grid: Row1 = Typ + Zaměření/Partie, Row2 = RPE inline */}
+      <div className="grid grid-cols-3 gap-1.5">
         {/* Typ tréninku - always visible */}
         <TagDropdownSelect
           label="Typ"
@@ -218,19 +218,16 @@ export function CompactTagGridSelector({
         )}
       </div>
 
-      {/* Inline RPE selector */}
+      {/* RPE inline - compact single row */}
       <InlineRPESelector
         value={coachRPE}
         onChange={onCoachRPEChange}
-        showDescription={true}
+        showDescription={false}
       />
 
-      {/* Validation warning */}
+      {/* Validation warning - subtle, no animation */}
       {trainingStatus === 'completed' && !coachRPE && (
-        <div className="p-3 bg-warning/10 border border-warning/30 rounded-xl text-xs text-warning flex items-center gap-2 animate-pulse">
-          <span className="text-base">⚠️</span>
-          <span>RPE je povinné pro dokončené tréninky</span>
-        </div>
+        <p className="text-[11px] text-warning px-1">⚠️ RPE je povinné pro dokončené tréninky</p>
       )}
 
       {/* Expanded modal - without intensity props */}

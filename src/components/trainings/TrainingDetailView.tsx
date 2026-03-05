@@ -18,6 +18,7 @@ import {
   Save,
   Loader2,
   Trash2,
+  ChevronDown,
 } from 'lucide-react';
 import {
   Sheet,
@@ -35,6 +36,7 @@ import { PaymentMethod } from '@/components/trainings/ChangePaymentMethodDialog'
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useFeedbackRequests } from '@/hooks/useFeedbackRequests';
 import { useTrainingParticipants } from '@/hooks/useTrainingParticipants';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import {
   Form,
@@ -316,19 +318,38 @@ export function TrainingDetailView({
         </div>
       </div>
 
-      {/* INLINE NOTES - for scheduled/in_progress, above exercises for visibility */}
+      {/* INLINE NOTES - compact collapsible */}
       {(isScheduled || isInProgress) && onFieldUpdate && (
-        <div className="rounded-xl bg-secondary/40 border border-border/30 px-3 py-2.5 space-y-1">
-          <p className="text-[11px] font-medium text-muted-foreground">📝 Poznámky k tréninku</p>
-          <InlineTextarea
-            initialValue={training.notes || ''}
-            onSave={async (value) => {
-              await onFieldUpdate('notes', value);
-            }}
-            placeholder="Poznámky pro tento nebo příští trénink..."
-            minHeight="50px"
-          />
-        </div>
+        <Collapsible open={showNote} onOpenChange={setShowNote}>
+          <div className="rounded-xl bg-secondary/30 border border-border/20 overflow-hidden">
+            <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-2 hover:bg-secondary/40 transition-colors">
+              <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                📝 Poznámky
+                {training.notes && !showNote && (
+                  <span className="text-foreground/60 truncate max-w-[200px] inline-block align-bottom text-xs font-normal">
+                    — {training.notes}
+                  </span>
+                )}
+              </span>
+              <ChevronDown className={cn(
+                "w-3.5 h-3.5 text-muted-foreground transition-transform",
+                showNote && "rotate-180"
+              )} />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-3 pb-2.5">
+                <InlineTextarea
+                  initialValue={training.notes || ''}
+                  onSave={async (value) => {
+                    await onFieldUpdate('notes', value);
+                  }}
+                  placeholder="Poznámky pro tento nebo příští trénink..."
+                  minHeight="44px"
+                />
+              </div>
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
       )}
 
       {/* EXERCISES - main content */}
@@ -357,29 +378,37 @@ export function TrainingDetailView({
         />
       )}
 
-      {/* PARTICIPANTS - for scheduled/in_progress */}
+      {/* SECONDARY SECTIONS - grouped collapsible for scheduled/in_progress */}
       {(isScheduled || isInProgress) && (
-        <TrainingParticipantsManager
-          trainingId={training.id}
-          primaryClientId={training.client_id}
-          primaryClientName={client?.name || 'Primární klient'}
-          currentParticipantCount={training.participant_count || 1}
-          isEditable={true}
-        />
-      )}
-
-      {/* PARTICIPANTS PRs - for scheduled/in_progress */}
-      {(isScheduled || isInProgress) && participants.length > 0 && (
-        <ParticipantsPRsSection participants={participants} />
-      )}
-
-      {/* QUICK SALE - for scheduled/in_progress */}
-      {(isScheduled || isInProgress) && participants.length > 0 && (
-        <TrainingQuickSale
-          trainingId={training.id}
-          participants={participants}
-          primaryClientId={training.client_id}
-        />
+        <Collapsible>
+          <div className="rounded-2xl bg-card/60 backdrop-blur-sm border border-border/30 overflow-hidden">
+            <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/30 transition-colors">
+              <span className="text-sm font-medium text-muted-foreground">Účastníci, PR & Prodej</span>
+              <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform [[data-state=open]_&]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-3 pb-3 space-y-2">
+                <TrainingParticipantsManager
+                  trainingId={training.id}
+                  primaryClientId={training.client_id}
+                  primaryClientName={client?.name || 'Primární klient'}
+                  currentParticipantCount={training.participant_count || 1}
+                  isEditable={true}
+                />
+                {participants.length > 0 && (
+                  <ParticipantsPRsSection participants={participants} />
+                )}
+                {participants.length > 0 && (
+                  <TrainingQuickSale
+                    trainingId={training.id}
+                    participants={participants}
+                    primaryClientId={training.client_id}
+                  />
+                )}
+              </div>
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
       )}
 
       {/* CLOSE SECTION - only for completed */}
