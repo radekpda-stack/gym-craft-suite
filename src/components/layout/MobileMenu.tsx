@@ -20,6 +20,7 @@ import {
   LucideIcon,
   Utensils,
   LayoutTemplate,
+  Bot,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -64,6 +65,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
       {
         label: 'Data & Výkonnost',
         items: [
+          { to: '/ai-analyst', icon: Bot, label: 'AI Analytik' },
           { to: '/performance', icon: Zap, label: 'Výkonnost' },
           { to: '/records', icon: Activity, label: 'Záznamy' },
           ...(isModuleEnabled('training_templates') ? [{ to: '/training-templates', icon: LayoutTemplate, label: 'Workouty' }] : []),
