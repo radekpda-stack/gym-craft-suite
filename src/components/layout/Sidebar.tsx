@@ -20,6 +20,7 @@ import {
   Receipt,
   UserCircle,
   StickyNote,
+  Bot,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
@@ -160,6 +161,7 @@ export function Sidebar({ onCollapseChange }: SidebarProps) {
           { id: 'sales', to: '/sales', icon: ShoppingBag, label: t.nav.sales },
           { id: 'expenses', to: '/expenses', icon: Receipt, label: 'Náklady' },
           { id: 'statistics', to: '/statistics', icon: BarChart3, label: 'Statistiky' },
+          { id: 'ai-analyst', to: '/ai-analyst', icon: Bot, label: 'AI Analytik' },
         ],
       },
       {

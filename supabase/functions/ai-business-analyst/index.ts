@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, mode } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -51,6 +51,7 @@ serve(async (req) => {
     // Parallel data fetching
     const [
       clientsRes,
+      clientsFullRes,
       ledgerRes,
       trainingsThisMonthRes,
       trainingsLastMonthRes,
@@ -64,8 +65,12 @@ serve(async (req) => {
       todayScheduleRes,
       tomorrowScheduleRes,
       cancelledLast30Res,
+      exercisePRsRes,
+      exerciseVolumesRes,
     ] = await Promise.all([
       supabase.from("vw_client_ledger_balances").select("*").eq("user_id", userId),
+      // Full client data for health + goals
+      supabase.from("clients").select("id, name, health_restrictions, training_goals, is_archived, training_start_date, birth_date, gender, payment_mode").eq("user_id", userId).eq("is_archived", false),
       supabase.from("credit_transactions").select("*").eq("user_id", userId).gte("created_at", last90days).order("created_at", { ascending: false }).limit(500),
       supabase.from("training_sessions").select("id, date, status, duration, training_type, price, final_price, payment_status, participant_count, clients(name)").eq("user_id", userId).gte("date", thisMonthStart).order("date", { ascending: false }),
       supabase.from("training_sessions").select("id, date, status, duration, training_type, price, final_price, payment_status, participant_count, clients(name)").eq("user_id", userId).gte("date", lastMonthStart).lt("date", thisMonthStart).order("date", { ascending: false }),
@@ -74,19 +79,19 @@ serve(async (req) => {
       supabase.from("product_sales").select("*, products(name, sell_price, cost_price)").eq("user_id", userId).gte("created_at", last90days).order("created_at", { ascending: false }).limit(200),
       supabase.from("business_expenses").select("*").eq("user_id", userId).gte("date", thisYearStart).order("date", { ascending: false }).limit(200),
       supabase.from("products").select("id, name, sell_price, cost_price, stock_quantity, category").eq("user_id", userId).eq("is_active", true),
-      // Feedbacks last 90 days
       supabase.from("training_feedback").select("id, client_id, training_date, body_feel, pain, rpe_rating, is_red_flag, notes, created_at").eq("user_id", userId).gte("training_date", last90days).order("training_date", { ascending: false }).limit(500),
-      // Group balances
       supabase.from("vw_group_ledger_balances").select("*").eq("user_id", userId),
-      // Today's schedule
       supabase.from("training_sessions").select("id, date, status, duration, training_type, clients(name), participant_count").eq("user_id", userId).gte("date", today).lt("date", tomorrow).order("date", { ascending: true }),
-      // Tomorrow's schedule
       supabase.from("training_sessions").select("id, date, status, duration, training_type, clients(name), participant_count").eq("user_id", userId).gte("date", tomorrow).lt("date", dayAfterTomorrow).order("date", { ascending: true }),
-      // Cancelled last 30 days
       supabase.from("training_sessions").select("id, date, status, final_price, clients(name)").eq("user_id", userId).gte("date", last30days).in("status", ["cancelled", "canceled"]),
+      // Exercise PRs - strength entries marked as PR
+      supabase.from("exercise_entries").select("id, exercise_name, client_id, date, sets, reps, weight_kg, is_pr, is_bodyweight").eq("user_id", userId).eq("is_pr", true).order("date", { ascending: false }).limit(100),
+      // Exercise volumes last 90 days for top volume clients
+      supabase.from("exercise_entries").select("client_id, sets, reps, weight_kg, date").eq("user_id", userId).gte("date", last90days).limit(1000),
     ]);
 
     const clients = clientsRes.data || [];
+    const clientsFull = clientsFullRes.data || [];
     const ledger = ledgerRes.data || [];
     const trainingsThisMonth = trainingsThisMonthRes.data || [];
     const trainingsLastMonth = trainingsLastMonthRes.data || [];
@@ -100,6 +105,12 @@ serve(async (req) => {
     const todaySchedule = todayScheduleRes.data || [];
     const tomorrowSchedule = tomorrowScheduleRes.data || [];
     const cancelledLast30 = cancelledLast30Res.data || [];
+    const exercisePRs = exercisePRsRes.data || [];
+    const exerciseVolumes = exerciseVolumesRes.data || [];
+
+    // Build client name map
+    const clientNameMap: Record<string, string> = {};
+    clientsFull.forEach((c: any) => { clientNameMap[c.id] = c.name; });
 
     // Compute aggregates
     const totalClientsBalance = clients.reduce((s: number, c: any) => s + (c.balance || 0), 0);
@@ -165,8 +176,8 @@ serve(async (req) => {
 
     // Cancellation stats (30 days)
     const totalLast30 = cancelledLast30.length;
-    const trainingsLast30Res = trainingsThisMonth.length + (cancelledLast30.length); // approximate
-    const cancellationRate = trainingsLast30Res > 0 ? Math.round((totalLast30 / trainingsLast30Res) * 100) : 0;
+    const trainingsLast30Res2 = trainingsThisMonth.length + cancelledLast30.length;
+    const cancellationRate = trainingsLast30Res2 > 0 ? Math.round((totalLast30 / trainingsLast30Res2) * 100) : 0;
     const cancelFeeLast30 = cancelledLast30.reduce((s: number, t: any) => s + (t.final_price || 0), 0);
 
     // Feedback analysis
@@ -186,6 +197,38 @@ serve(async (req) => {
       const time = t.date ? new Date(t.date).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }) : "?";
       return `${time} - ${t.clients?.name || "?"} (${t.training_type || "solo"}${t.participant_count > 1 ? `, ${t.participant_count} os.` : ""}, ${t.duration || "?"} min) [${t.status}]`;
     }).join("\n") || "Žádné tréninky";
+
+    // --- NEW: Health & Goals ---
+    const clientsWithHealth = clientsFull.filter((c: any) => c.health_restrictions && c.health_restrictions.trim() !== "");
+    const clientsWithGoals = clientsFull.filter((c: any) => c.training_goals && c.training_goals.length > 0);
+    
+    const healthSummary = clientsWithHealth.length > 0
+      ? clientsWithHealth.map((c: any) => `- ${c.name}: ${c.health_restrictions}`).join("\n")
+      : "Žádná zdravotní omezení";
+    
+    const goalsSummary = clientsWithGoals.length > 0
+      ? clientsWithGoals.map((c: any) => `- ${c.name}: ${(c.training_goals || []).join(", ")}`).join("\n")
+      : "Žádné tréninkové cíle";
+
+    // --- NEW: Exercise PRs ---
+    const prSummary = exercisePRs.length > 0
+      ? exercisePRs.slice(0, 30).map((pr: any) => {
+          const clientName = clientNameMap[pr.client_id] || "?";
+          const weight = pr.is_bodyweight ? "BW" : `${pr.weight_kg || 0} kg`;
+          return `- ${pr.date} | ${clientName} | ${pr.exercise_name}: ${pr.sets}×${pr.reps || "?"} @ ${weight}`;
+        }).join("\n")
+      : "Žádné PR záznamy";
+
+    // --- NEW: Volume analysis per client ---
+    const clientVolumes: Record<string, number> = {};
+    exerciseVolumes.forEach((e: any) => {
+      const vol = (e.sets || 0) * (e.reps || 0) * (e.weight_kg || 0);
+      clientVolumes[e.client_id] = (clientVolumes[e.client_id] || 0) + vol;
+    });
+    const topVolumeClients = Object.entries(clientVolumes)
+      .map(([cid, vol]) => ({ name: clientNameMap[cid] || "?", volume: vol as number }))
+      .sort((a, b) => b.volume - a.volume)
+      .slice(0, 10);
 
     const contextData = `
 ## FINANČNÍ DATA (aktuální k ${now.toLocaleDateString("cs-CZ")})
@@ -264,6 +307,20 @@ ${topClientsByCount.map((c, i) => `${i + 1}. ${c.name}: ${c.count} tréninků ($
 - Feedbacky za posledních 7 dní: ${recentFeedbacks.length}
 ${recentFeedbacks.length > 0 ? recentFeedbacks.slice(0, 10).map((f: any) => `  - ${f.training_date}: body_feel=${f.body_feel || "?"}, pain=${f.pain || "?"}, rpe=${f.rpe_rating || "?"}${f.is_red_flag ? " ⚠️ RED FLAG" : ""}${f.notes ? ` "${f.notes.substring(0, 60)}"` : ""}`).join("\n") : ""}
 
+### Zdravotní omezení klientů
+- Klientů se zdravotním omezením: ${clientsWithHealth.length}
+${healthSummary}
+
+### Tréninkové cíle klientů
+- Klientů s cíli: ${clientsWithGoals.length}
+${goalsSummary}
+
+### Osobní rekordy (PR) - posledních ${exercisePRs.length} záznamů
+${prSummary}
+
+### Top 10 klientů dle tréninkového objemu (90 dní, sets×reps×kg)
+${topVolumeClients.map((c, i) => `${i + 1}. ${c.name}: ${Math.round(c.volume).toLocaleString("cs-CZ")} kg`).join("\n") || "Žádná data"}
+
 ### Dnešní rozvrh (${today})
 ${formatSchedule(todaySchedule)}
 
@@ -271,9 +328,19 @@ ${formatSchedule(todaySchedule)}
 ${formatSchedule(tomorrowSchedule)}
 `;
 
-    const systemPrompt = `Jsi finanční a business analytik pro fitness trenéra. Tvým úkolem je analyzovat finanční data, kreditní zůstatky, prodeje produktů, tréninkové statistiky, feedbacky klientů a rozvrh.
+    const briefingInstruction = mode === "briefing" ? `
+DŮLEŽITÉ: Uživatel právě otevřel agenta. Automaticky připrav krátký ranní briefing dne. Formát:
+## 📋 Briefing ${now.toLocaleDateString("cs-CZ")}
+- Dnešní rozvrh (kolik tréninků, klienti)
+- Varování (dluhy, red flagy, nízké zásoby)
+- Klíčová čísla (příjem tento měsíc, zůstatky)
+Buď stručný, max 15 řádků.` : "";
+
+    const systemPrompt = `Jsi finanční a business analytik pro fitness trenéra. Tvým úkolem je analyzovat finanční data, kreditní zůstatky, prodeje produktů, tréninkové statistiky, feedbacky klientů, výkonnostní data (PR, objemy), zdravotní profily a rozvrh.
 
 ${contextData}
+
+${briefingInstruction}
 
 PRAVIDLA:
 - Odpovídej vždy ČESKY
@@ -289,7 +356,11 @@ PRAVIDLA:
 - Nabízej doporučení a varování proaktivně (např. "Klient X má opakované bolesti", "Zásoby produktu Y jsou na nule")
 - Pokud uživatel chce report, strukturuj odpověď s jasným nadpisem, sekcemi a shrnutím na konci
 - Umíš porovnávat období (tento vs minulý měsíc, meziměsíční trendy)
-- Hodinovou sazbu počítej ze skutečné duration a final_price`;
+- Hodinovou sazbu počítej ze skutečné duration a final_price
+- Umíš analyzovat výkonnostní data: PR klientů, tréninkové objemy, trendy síly
+- Umíš pracovat se zdravotními profily: identifikuj klienty s omezením, sleduj bolesti ve feedbackech
+- Pokud uživatel požádá o data ve formátu pro graf, vrať je jako JSON blok s klíči "chartData" a "chartType" (bar/line/pie):
+  Příklad: \`\`\`chart {"chartType":"bar","chartData":[{"name":"Leden","value":15},{"name":"Únor","value":22}]} \`\`\``;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
