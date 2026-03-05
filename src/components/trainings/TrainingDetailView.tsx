@@ -268,7 +268,7 @@ export function TrainingDetailView({
   return (
     <div className="space-y-2">
       {/* HERO + TAGS — merged card */}
-      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm">
+      <div className="section-card">
         <TrainingHeroHeader
           training={training}
           client={client}
@@ -353,7 +353,7 @@ export function TrainingDetailView({
       )}
 
       {/* EXERCISES - main content */}
-      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-3">
+      <div className="section-card-compact">
         <WorkoutExerciseManager
           trainingSessionId={training.id}
           clientId={training.client_id}

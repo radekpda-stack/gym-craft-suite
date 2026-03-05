@@ -568,13 +568,13 @@ export function SalesRegister() {
             {groupedProducts.services.length > 0 && (
               <div>
                 {/* Premium section divider */}
-                <div className="flex items-center gap-3 mb-3">
+                <div className="section-divider">
                   <div className="p-1.5 rounded-lg bg-accent/10">
                     <Wrench className="w-4 h-4 text-accent" />
                   </div>
                   <span className="text-sm font-semibold">Služby</span>
                   <span className="text-xs text-muted-foreground">({groupedProducts.services.length})</span>
-                  <div className="flex-1 h-px bg-border/50" />
+                  <div className="section-divider-line" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
                   {groupedProducts.services.map((product) => (
@@ -596,13 +596,13 @@ export function SalesRegister() {
             {groupedProducts.inventory.length > 0 && (
               <div>
                 {/* Premium section divider */}
-                <div className="flex items-center gap-3 mb-3">
+                <div className="section-divider">
                   <div className="p-1.5 rounded-lg bg-primary/10">
                     <Package className="w-4 h-4 text-primary" />
                   </div>
                   <span className="text-sm font-semibold">Produkty</span>
                   <span className="text-xs text-muted-foreground">({groupedProducts.inventory.length})</span>
-                  <div className="flex-1 h-px bg-border/50" />
+                  <div className="section-divider-line" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
                   {groupedProducts.inventory.map((product) => (
@@ -624,13 +624,13 @@ export function SalesRegister() {
             {groupedProducts.creditTopups.length > 0 && (
               <div>
                 {/* Premium section divider */}
-                <div className="flex items-center gap-3 mb-3">
+                <div className="section-divider">
                   <div className="p-1.5 rounded-lg bg-warning/10">
                     <Coins className="w-4 h-4 text-warning" />
                   </div>
                   <span className="text-sm font-semibold">Dobití kreditu</span>
                   <span className="text-xs text-muted-foreground">({groupedProducts.creditTopups.length})</span>
-                  <div className="flex-1 h-px bg-border/50" />
+                  <div className="section-divider-line" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
                   {groupedProducts.creditTopups.map((product) => (

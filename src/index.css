@@ -1484,12 +1484,30 @@ input, select, textarea {
 }
 
 /* ========================================
+   UNIFIED SECTION CARDS
+   Standardized card patterns for consistency
+   ======================================== */
+
+/* Section card - the most common pattern across the app */
+.section-card {
+  @apply relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm;
+}
+
+.section-card-compact {
+  @apply section-card p-3;
+}
+
+.section-card-padded {
+  @apply section-card p-4;
+}
+
+/* ========================================
    TRAINING CARD SECTIONS
    Unified design system for training detail
    ======================================== */
 
 .training-section {
-  @apply rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden;
+  @apply section-card overflow-hidden;
 }
 
 .training-section-header {
@@ -1498,4 +1516,13 @@ input, select, textarea {
 
 .training-section-title {
   @apply text-xs font-semibold text-muted-foreground uppercase tracking-wide;
+}
+
+/* Section divider - icon + label + line */
+.section-divider {
+  @apply flex items-center gap-3 mb-3;
+}
+
+.section-divider-line {
+  @apply flex-1 h-px bg-border/50;
 }

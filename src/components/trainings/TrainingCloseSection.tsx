@@ -102,7 +102,7 @@ export function TrainingCloseSection({
   }, [training.id, training.status, participants]);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4 space-y-4">
+    <div className="section-card-padded space-y-4">
       {/* Subtle success gradient for completed */}
       <div className="absolute inset-0 bg-gradient-to-br from-success/5 via-transparent to-transparent pointer-events-none" />
       
