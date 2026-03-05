@@ -470,7 +470,7 @@ export default function TrainingDetail() {
   };
 
   return (
-    <div className={cn("space-y-6 animate-fade-in", (training.status === 'scheduled' || training.status === 'in_progress') && "pb-36")}>
+    <div className={cn("space-y-6 animate-fade-in", (training.status === 'scheduled' || training.status === 'in_progress') && "pb-56")}>
       {/* Breadcrumbs */}
       <PageBreadcrumbs
         items={[

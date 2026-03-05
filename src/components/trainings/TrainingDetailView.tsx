@@ -264,7 +264,7 @@ export function TrainingDetailView({
   const isCanceled = training.status === 'canceled';
 
   return (
-    <div className="space-y-2 pb-52">
+    <div className="space-y-2">
       {/* HERO + TAGS — merged card */}
       <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm">
         <TrainingHeroHeader
