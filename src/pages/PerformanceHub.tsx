@@ -105,7 +105,7 @@ export default function PerformanceHub() {
   ];
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 pb-32">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4">
       {/* Compact Hero Header – single row */}
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-xl bg-primary/15 shadow-sm ring-1 ring-primary/20">
