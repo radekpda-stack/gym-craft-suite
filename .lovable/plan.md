@@ -1,51 +1,59 @@
 
 
-# Plan: Rozšíření AI Business Analytika
+# Návrh rozšíření AI Business Analytika
 
 ## Co agent umí teď
-- Finanční přehled (kredity, dluhy, příjmy, náklady)
-- Tréninkové statistiky (tento/minulý měsíc, roční trend, typy)
+- Finanční přehled (kredity, dluhy, příjmy, náklady, hodinová sazba)
+- Tréninkové statistiky (tento/minulý měsíc, rok, typy, storna)
 - Prodejové metriky (tržby, marže, nízké zásoby)
-- Export: kopírování textu, stažení .txt
+- Feedbacky klientů (bolesti, red flagy, RPE)
+- Denní rozvrh (dnes, zítra)
+- Top klienti, skupinové rozpočty
+- Export: kopírování, .txt, PDF
 
-## Co chybí a co doplníme
+## Navrhovaná vylepšení
 
-### 1. Rozšíření datového kontextu (edge function)
-Přidáme do funkce `ai-business-analyst` načítání dalších dat:
+### 1. Konverzační paměť a kontextové follow-upy
+Teď se konverzace smaže po zavření panelu. Přidáme možnost uložit konverzaci do databáze, aby agent mohl navázat tam, kde se skončilo, i po restartu.
 
-- **Feedbacky klientů** — z `training_feedback` (body_feel, pain, energy, red flags za posledních 90 dní) pro analýzu spokojenosti a health-rizik
-- **Účastníci tréninků** — z `training_participants` pro přesné počty duo/group tréninků a vytížení klientů
-- **Skupinové rozpočty** — z `vw_group_ledger_balances` pro přehled skupinových kreditů
-- **Hodinová sazba** — výpočet skutečné hodinové sazby z `duration` a `final_price`
-- **Top klienti** — seřazení dle počtu tréninků a útraty za rok
-- **Storno statistiky** — míra zrušení, storno poplatky
-- **Denní rozvrh** — dnešní a zítřejší naplánované tréninky
+### 2. Plná stránka s AI asistentem
+Kromě bočního panelu vytvořit plnou stránku `/ai-analyst` v menu — více prostoru pro dlouhé reporty, tabulky a grafy.
 
-### 2. Rozšíření suggested prompts
-Přidáme nové rychlé dotazy:
-- "Jaká je moje hodinová sazba?"
-- "Kteří klienti mají bolesti nebo red flagy?"
-- "Top 10 klientů podle tržeb"
-- "Statistika storen za posledních 30 dní"
-- "Co mám dnes a zítra v rozvrhu?"
-- "Shrň feedbacky klientů za týden"
-- "Připrav PDF report"
+### 3. Výkonnostní data klientů (cviky, PR, objemy)
+Agent zatím nevidí data o cvicích. Přidáme do edge function data z `exercise_entries` — agent pak dokáže odpovídat na:
+- "Jaké jsou PR klienta XY?"
+- "Kteří klienti mají nejvyšší objem za měsíc?"
+- "Trend síly u klienta XY"
 
-### 3. PDF export
-Přidáme tlačítko "Stáhnout PDF" vedle existujícího "Stáhnout .txt" — využije `jspdf` (už nainstalovaný) pro vytvoření formátovaného PDF reportu z AI odpovědi.
+### 4. Automatické denní/týdenní shrnutí
+Přidáme funkci, která při otevření agenta automaticky načte krátký briefing dne (rozvrh, úkoly, varování) bez nutnosti psát dotaz — jako "ranní dashboard".
 
-### 4. Markdown rendering
-Nahradíme plain-text rendering za `react-markdown` pro správné zobrazení tabulek, odrážek a formátování z AI odpovědí. Bude potřeba přidat závislost `react-markdown`.
+### 5. Grafy přímo v chatu
+Agent vrací pouze text. Přidáme detekci strukturovaných dat v odpovědi (tabulky/čísla) a vykreslíme je jako mini-grafy (Recharts) přímo v chatu — např. měsíční trend příjmů jako bar chart.
 
-### 5. Vylepšení system promptu
-Rozšíříme instrukce pro AI:
-- Proaktivní doporučení a varování
-- Možnost generovat strukturované reporty pro PDF
-- Analýza trendů a srovnání období
-- Schopnost identifikovat rizikové klienty (neaktivní, bolesti, dluhy)
+### 6. Hlasový vstup
+Přidáme mikrofon tlačítko vedle textového vstupu. Použijeme Web Speech API (nativní v prohlížeči) pro speech-to-text — trenér může mluvit místo psaní.
+
+### 7. Srovnání s předchozím obdobím jedním kliknutím
+Přidáme quick-action tlačítka: "vs. minulý měsíc", "vs. minulý rok" — agent automaticky dostane kontext obou období a porovná.
+
+### 8. Zdravotní profil klienta
+Agent vidí feedbacky, ale nevidí `health_restrictions` a `training_goals` z tabulky klientů. Přidáme tato data, aby mohl odpovídat: "Kteří klienti mají zdravotní omezení?" nebo "Plníme tréninkové cíle?"
+
+## Doporučené pořadí implementace
+
+1. **Zdravotní profil klienta** — rychlé, jen přidat data do edge function
+2. **Výkonnostní data** — rozšíření edge function o exercise_entries
+3. **Plná stránka AI** — lepší UX pro reporty
+4. **Automatický briefing** — ranní shrnutí při otevření
+5. **Grafy v chatu** — vizualizace dat
+6. **Konverzační paměť** — persistence
+7. **Hlasový vstup** — kvalita života
+8. **Srovnání období** — quick-actions
 
 ## Soubory k úpravě
-1. **`supabase/functions/ai-business-analyst/index.ts`** — rozšíření datových dotazů + system prompt
-2. **`src/components/ai/BusinessAnalystChat.tsx`** — markdown rendering, PDF export, nové suggested prompts
-3. Instalace balíčku `react-markdown`
+1. `supabase/functions/ai-business-analyst/index.ts` — rozšíření dat (health, exercise_entries)
+2. `src/components/ai/BusinessAnalystChat.tsx` — briefing, grafy, voice, UI
+3. `src/pages/AIAnalyst.tsx` — nová plná stránka
+4. Routing + navigace
 
