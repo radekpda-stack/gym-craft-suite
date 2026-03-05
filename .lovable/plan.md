@@ -1,51 +1,39 @@
 
 
-# Plán: Přehlednější karta tréninku (Cockpit)
+# Oprava: Chybějící tréninkové transakce v kartě kreditu
 
-## Identifikované problémy
+## Příčina problému
 
-1. **Chybí poznámky u naplánovaných tréninků** — `notes` pole se zobrazuje pouze u dokončených tréninků v `TrainingCloseSection`. U scheduled/in_progress tréninků trenér nemá kam psát poznámky pro příští trénink.
+Nalezena chyba v zabezpečení přístupu k datům (RLS policy). Funkce `rpc_complete_training_session`, která vytváří transakce při dokončení tréninku, **nenastavuje `user_id`** u záznamů v tabulce `credit_transactions`. 
 
-2. **PreSessionCheckinCard je vždy otevřený** — velká karta s emoji a pain areas zabírá hodně místa. Po vyplnění se sbalí, ale před vyplněním je plně rozbalená a tlačí důležitější obsah (cviky) dolů.
+Pravidlo přístupu k datům ale vyžaduje `auth.uid() = user_id` — takže transakce s prázdným `user_id` jsou pro trenéra **neviditelné**.
 
-3. **Příliš mnoho sekcí pod sebou** — pořadí sekcí je: Hero → PreviousTraining → Tags/Klasifikace → Cviky → Příprava → Účastníci → PRs → Rychlý prodej → CheckIn → Focus reminder. Trenér musí scrollovat přes 8+ karet, než se dostane ke cvikům, což je hlavní pracovní plocha.
+**Rozsah problému:** 202 z 499 tréninkových transakcí v databázi má `user_id = NULL` a jsou neviditelné.
 
-## Navrhované změny
+## Řešení (2 kroky)
 
-### 1. Přidat inline poznámky pro scheduled/in_progress tréninky
-- V `TrainingDetailView.tsx` přidat `InlineTextarea` pod sekci Cviky (nebo nad Přípavu) s auto-save
-- Pole `notes` se bude ukládat přes existující `onFieldUpdate('notes', value)`
-- Viditelné vždy (ne za Switch jako u completed)
+### 1. Opravit RLS policy na `credit_transactions`
+Nahradit stávající SELECT policy `"Users can view their own credit_transactions"` novou, která umožní trenérovi vidět i transakce bez `user_id`:
 
-### 2. PreSessionCheckinCard — defaultně sbalený (Collapsible)
-- Obalit `PreSessionCheckinCard` v `TrainingDetail.tsx` do `Collapsible`
-- Defaultně zavřený, zobrazuje jen kompaktní řádek "Jak se cítí [jméno]? ▼"
-- Pokud už je vyplněný, zobrazit kompaktní shrnutí (už existuje — `saved` stav)
-- Tím se uvolní prostor pro cviky
-
-### 3. Přeuspořádat sekce — cviky výš
-Aktuální pořadí v `TrainingDetailView.tsx`:
+```sql
+DROP POLICY "Users can view their own credit_transactions" ON credit_transactions;
+CREATE POLICY "Users can view their own credit_transactions" 
+  ON credit_transactions FOR SELECT TO authenticated
+  USING (auth.uid() = user_id OR user_id IS NULL);
 ```
-Hero → PreviousTraining → Tags → Cviky → Příprava → Účastníci → PRs → Prodej
+
+### 2. Backfill — opravit existující záznamy
+Nastavit `user_id` u všech existujících transakcí s `NULL` user_id na ID trenéra (jediný uživatel systému):
+
+```sql
+UPDATE credit_transactions 
+SET user_id = '7f53e3c4-5ae8-421b-b59e-d6bf451b32b7'
+WHERE user_id IS NULL;
 ```
-Nové pořadí:
-```
-Hero → Tags → Cviky → Poznámky (NOVÉ) → PreviousTraining → Příprava → Účastníci → PRs → Prodej
-```
-Cviky se posunou hned za tagy (o 1 pozici výš). PreviousTraining se přesune pod cviky — trenér se na něj podívá jednou na začátku a pak pracuje s cviky.
 
-### 4. Kompaktnější PreviousTrainingSummary
-- Přidat `Collapsible` wrapper — defaultně zobrazit jen header + quick stats (typ, RPE, body parts)
-- Cviky a poznámky schovat do rozbalitelné části
-- Ušetří ~50% výšky karty
+### 3. Opravit `rpc_complete_training_session`
+Přidat `user_id` = `p_trainer_id` do obou INSERT příkazů (pro skupinový i individuální kredit), aby se problém neopakoval.
 
-## Soubory k úpravě
-
-| Soubor | Změna |
-|--------|-------|
-| `TrainingDetailView.tsx` | Přeuspořádat sekce (cviky výš, previous training níž); přidat InlineTextarea pro poznámky u scheduled/in_progress |
-| `TrainingDetail.tsx` (page) | Obalit PreSessionCheckinCard do Collapsible |
-| `PreviousTrainingSummary.tsx` | Přidat Collapsible — cviky a poznámky defaultně sbalené |
-
-Žádné DB změny — čistě UI refactor.
+## Žádné změny v kódu
+Fronted kód je v pořádku — `useCreditTransactions` a `ClientCreditHeroCard` správně zobrazují data. Problém je čistě na úrovni databáze (RLS + chybějící sloupec v INSERT).
 
