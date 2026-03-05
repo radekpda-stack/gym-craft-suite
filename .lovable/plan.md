@@ -1,42 +1,66 @@
 
 
-# Plan: Další vylepšení AI Business Analytika
+# Plán: AI Agent – přístup ke všem datům aplikace
 
-## Co přidáme
+## Současný stav
 
-### 1. Konverzační paměť (persistence v DB)
-- Nová tabulka `ai_conversations` (id, user_id, messages JSONB, title, created_at, updated_at)
-- Chat se automaticky ukládá po každé odpovědi
-- Při otevření agenta se načte poslední konverzace
-- Tlačítko "Nová konverzace" místo prostého smazání
-- Agent vidí předchozí kontext a může navazovat
+Agent aktuálně vidí:
+- Klienty (základní info, zdravotní omezení, cíle)
+- Kreditní zůstatky (vw_client_ledger_balances, vw_group_ledger_balances)
+- Transakce (credit_transactions)
+- Tréninky (training_sessions) – tento měsíc, minulý měsíc, celý rok
+- Prodeje produktů (product_sales) + dnešní prodeje
+- Produkty na skladě
+- Náklady (business_expenses)
+- Feedbacky (training_feedback) + feedback_requests
+- Cvičební záznamy (exercise_entries) – PR a objemy
+- Tréninkové plány (training_plans)
+- Rozvrh dnes/zítra
 
-### 2. Tréninkové plány do kontextu
-Agent zatím nevidí `training_plans`. Přidáme aktivní plány klientů (cíl, fáze, frekvence) — agent pak dokáže odpovídat: "Které plány jsou aktivní?", "Plníme tréninkové cíle dle plánu?"
+## Chybějící data (přidáme)
 
-### 3. Feedback requests + response rate
-Agent vidí feedbacky, ale nevidí `feedback_requests` — nemá přehled o míře odpovědí. Přidáme: počet odeslaných vs. dokončených, response rate, průměrná doba odpovědi.
+| Oblast | Tabulky | Co agent získá |
+|--------|---------|---------------|
+| **Měření** | `measurements` | Tělesné rozměry klientů, trendy váhy/obvodu |
+| **Diagnostiky** | `diagnostics` | Diagnostická zjištění, problémové oblasti |
+| **Balíčky** | `client_packages` | Aktivní balíčky, zbývající tréninky, expirace |
+| **XP & Gamifikace** | `client_xp`, `loyalty_balance` | Levely klientů, body věrnosti |
+| **Výzvy** | `challenges`, `challenge_submissions` | Aktivní výzvy, účast, výsledky |
+| **Výživa** | `nutrition_log_sessions`, `nutrition_food_entries` | Stravovací návyky klientů |
+| **Skladu pohyby** | `stock_movements` | Naskladnění, inventura, trendy |
+| **Testy** | `test_definitions`, `test_sessions` | Výkonnostní testy, výsledky, PR |
+| **Domácí tréninky** | `client_assigned_workouts` | Zadané workouty, plnění |
+| **Pre-session checkin** | `pre_session_checkins` | Stav klientů před tréninkem |
+| **Odznaky** | `client_badges`, `badge_definitions` | Earned achievements |
+| **Ceníky** | `price_lists`, `price_items` | Aktuální ceníky |
+| **Opakující se rozvrh** | `client_recurring_schedules` | Pravidelné termíny klientů |
 
-### 4. Klientská aktivita a retence
-Přidáme analýzu neaktivních klientů — kdo neměl trénink 30+ dní, kdo je "at risk" (dříve aktivní, teď nechodí). Agent proaktivně varuje.
+## Implementace
 
-### 5. Kontextové follow-up suggestions
-Po každé odpovědi agent nabídne 2-3 relevantní follow-up otázky (ne statické, ale generované AI na základě odpovědi).
+### Soubor: `supabase/functions/ai-business-analyst/index.ts`
 
-### 6. Vylepšený PDF export
-- Přidat tabulky do PDF (jspdf-autotable, už nainstalovaný)
-- Detekce markdown tabulek → autotable v PDF
-- Logo/branding header
+1. **Rozšířit Promise.all** o ~15 nových dotazů (všechny filtrovány na `userId`, s rozumnými limity)
+2. **Přidat nové sekce do `contextData`**:
+   - `### Měření klientů` – poslední měření, trendy váhy
+   - `### Diagnostiky` – nálezy podle klientů
+   - `### Balíčky` – aktivní, zbývající tréninky, blížící se expirace
+   - `### Gamifikace` – XP levely, věrnostní body
+   - `### Výzvy` – aktivní, účast, výsledky
+   - `### Výživa` – počet logů, frekvence per klient
+   - `### Skladové pohyby` – restock/sale/inventura souhrn
+   - `### Výkonnostní testy` – definice, poslední výsledky
+   - `### Domácí tréninky` – zadané vs dokončené
+   - `### Pre-session checkins` – souhrn posledních check-inů
+   - `### Odznaky` – nejčastější, nedávno udělené
+   - `### Ceníky` – aktivní ceník
+   - `### Opakující se rozvrh` – pravidelné termíny
+3. **Aktualizovat system prompt** – rozšířit pravidla o nové analytické schopnosti (měření, diagnostiky, gamifikace, výživa, testy)
+4. **Optimalizace**: Všechny dotazy agregovat/limitovat aby kontext nepřekročil rozumnou velikost (~15-20k tokenů)
 
-## Soubory k úpravě
-
-1. **DB migrace** — nová tabulka `ai_conversations` s RLS
-2. **`supabase/functions/ai-business-analyst/index.ts`** — přidat training_plans, feedback_requests, neaktivní klienti, follow-up suggestions instrukce
-3. **`src/components/ai/BusinessAnalystChat.tsx`** — persistence (save/load konverzací), follow-up UI, vylepšený PDF s autotable
-
-## Pořadí
-1. DB tabulka + konverzační paměť
-2. Rozšíření dat (plány, feedback requests, retence)
-3. Follow-up suggestions
-4. Vylepšený PDF
+### Omezení velikosti kontextu
+- Měření: jen poslední per klient (ne celá historie)
+- Výživa: jen souhrn posledních 30 dní (počet logů, průměr)
+- Testy: jen poslední výsledek per test per klient
+- Odznaky: jen počet a posledních 10 udělených
+- Stock movements: jen souhrn za 30 dní
 
