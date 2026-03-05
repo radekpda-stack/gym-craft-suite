@@ -1,66 +1,34 @@
 
 
-# Plán: AI Agent – přístup ke všem datům aplikace
+# Plán: Oprava chybných dotazů AI agenta
 
-## Současný stav
+Provedl jsem audit všech nových dotazů v edge funkci `ai-business-analyst` oproti skutečnému databázovému schématu. Našel jsem **10 kritických chyb** v názvech sloupců, které způsobují tiché selhání (dotazy vrací prázdná data nebo chyby).
 
-Agent aktuálně vidí:
-- Klienty (základní info, zdravotní omezení, cíle)
-- Kreditní zůstatky (vw_client_ledger_balances, vw_group_ledger_balances)
-- Transakce (credit_transactions)
-- Tréninky (training_sessions) – tento měsíc, minulý měsíc, celý rok
-- Prodeje produktů (product_sales) + dnešní prodeje
-- Produkty na skladě
-- Náklady (business_expenses)
-- Feedbacky (training_feedback) + feedback_requests
-- Cvičební záznamy (exercise_entries) – PR a objemy
-- Tréninkové plány (training_plans)
-- Rozvrh dnes/zítra
+## Nalezené chyby
 
-## Chybějící data (přidáme)
-
-| Oblast | Tabulky | Co agent získá |
-|--------|---------|---------------|
-| **Měření** | `measurements` | Tělesné rozměry klientů, trendy váhy/obvodu |
-| **Diagnostiky** | `diagnostics` | Diagnostická zjištění, problémové oblasti |
-| **Balíčky** | `client_packages` | Aktivní balíčky, zbývající tréninky, expirace |
-| **XP & Gamifikace** | `client_xp`, `loyalty_balance` | Levely klientů, body věrnosti |
-| **Výzvy** | `challenges`, `challenge_submissions` | Aktivní výzvy, účast, výsledky |
-| **Výživa** | `nutrition_log_sessions`, `nutrition_food_entries` | Stravovací návyky klientů |
-| **Skladu pohyby** | `stock_movements` | Naskladnění, inventura, trendy |
-| **Testy** | `test_definitions`, `test_sessions` | Výkonnostní testy, výsledky, PR |
-| **Domácí tréninky** | `client_assigned_workouts` | Zadané workouty, plnění |
-| **Pre-session checkin** | `pre_session_checkins` | Stav klientů před tréninkem |
-| **Odznaky** | `client_badges`, `badge_definitions` | Earned achievements |
-| **Ceníky** | `price_lists`, `price_items` | Aktuální ceníky |
-| **Opakující se rozvrh** | `client_recurring_schedules` | Pravidelné termíny klientů |
+| Tabulka | Dotaz používá | Skutečný sloupec |
+|---------|--------------|-----------------|
+| `measurements` | `height`, `body_fat_pct` | **není `height`**, `body_fat_percentage` |
+| `diagnostics` | `category` | `area_type` + `area_name` |
+| `client_xp` | `current_xp`, `streak_days` | `total_xp`, `level_xp` (není `streak_days`) |
+| `loyalty_balance` | žádný filtr na user | **nemá `user_id`** – potřeba joinovat přes clients |
+| `nutrition_log_sessions` | `date`, `meal_type` | `start_date`, `end_date` (není `meal_type`) |
+| `pre_session_checkins` | `stress_level`, `sleep_quality`, `pain_areas` | `pain_area`, `pain_notes` (není `stress_level`/`sleep_quality`) |
+| `client_recurring_schedules` | `duration_minutes`, `training_type` | `duration` (není `training_type`) |
+| `price_lists` | `valid_from`, `valid_to` | `effective_from` (není `valid_to`) |
+| `price_items` | `name`, `price`, `session_count`, `validity_days` | `service_id`, `unit_price_czk` (zcela jiná struktura) |
+| `stock_movements` | žádný filtr na user | **má `user_id`** – chybí `.eq("user_id", userId)` |
 
 ## Implementace
 
 ### Soubor: `supabase/functions/ai-business-analyst/index.ts`
 
-1. **Rozšířit Promise.all** o ~15 nových dotazů (všechny filtrovány na `userId`, s rozumnými limity)
-2. **Přidat nové sekce do `contextData`**:
-   - `### Měření klientů` – poslední měření, trendy váhy
-   - `### Diagnostiky` – nálezy podle klientů
-   - `### Balíčky` – aktivní, zbývající tréninky, blížící se expirace
-   - `### Gamifikace` – XP levely, věrnostní body
-   - `### Výzvy` – aktivní, účast, výsledky
-   - `### Výživa` – počet logů, frekvence per klient
-   - `### Skladové pohyby` – restock/sale/inventura souhrn
-   - `### Výkonnostní testy` – definice, poslední výsledky
-   - `### Domácí tréninky` – zadané vs dokončené
-   - `### Pre-session checkins` – souhrn posledních check-inů
-   - `### Odznaky` – nejčastější, nedávno udělené
-   - `### Ceníky` – aktivní ceník
-   - `### Opakující se rozvrh` – pravidelné termíny
-3. **Aktualizovat system prompt** – rozšířit pravidla o nové analytické schopnosti (měření, diagnostiky, gamifikace, výživa, testy)
-4. **Optimalizace**: Všechny dotazy agregovat/limitovat aby kontext nepřekročil rozumnou velikost (~15-20k tokenů)
-
-### Omezení velikosti kontextu
-- Měření: jen poslední per klient (ne celá historie)
-- Výživa: jen souhrn posledních 30 dní (počet logů, průměr)
-- Testy: jen poslední výsledek per test per klient
-- Odznaky: jen počet a posledních 10 udělených
-- Stock movements: jen souhrn za 30 dní
+1. **Opravit SELECT sloupce** ve všech dotazech dle skutečného schématu
+2. **Opravit kontextové sekce** které referencují neexistující sloupce
+3. **Přidat chybějící filtry** (`user_id` na `stock_movements`, join pro `loyalty_balance`)
+4. **Přizpůsobit `price_items`** – joinovat přes `service_id` nebo zobrazit `unit_price_czk`
+5. **Opravit `measurements`** – přidat `body_fat_percentage`, `muscle_mass`, `waist`, `chest`, `hips` místo neexistujících sloupců
+6. **Opravit `pre_session_checkins`** – použít `energy_level`, `pain_area`, `pain_notes` (bez `stress_level`/`sleep_quality`)
+7. **Opravit `nutrition_log_sessions`** – použít `start_date` místo `date`
+8. **Re-deploy** edge funkci a ověřit logy
 
