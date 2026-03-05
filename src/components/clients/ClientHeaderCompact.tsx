@@ -282,7 +282,7 @@ export function ClientHeaderCompact({
   };
 
   return (
-    <div className="bg-card/80 backdrop-blur-lg border border-border/50 rounded-2xl p-3 sm:p-4 sticky top-0 z-30 shadow-sm transition-all duration-200">
+    <div className="section-card p-3 sm:p-4 sticky top-0 z-30 transition-all duration-200">
       {/* Row 1: Back + Avatar + Name + Year/Age */}
       <div className="flex items-center gap-2 sm:gap-3">
         <Link 
@@ -292,8 +292,8 @@ export function ClientHeaderCompact({
           <ChevronLeft className="w-5 h-5" />
         </Link>
         
-        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
-          <AvatarFallback className="bg-primary/10 text-primary text-base sm:text-lg font-semibold">
+        <Avatar className="h-9 w-9 sm:h-12 sm:w-12 shrink-0 ring-2 ring-primary/20">
+          <AvatarFallback className="bg-primary/10 text-primary text-sm sm:text-lg font-semibold">
             {[(client.first_name || '')[0], (client.last_name || '')[0]].filter(Boolean).join('').slice(0, 2) || client.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
           </AvatarFallback>
         </Avatar>
