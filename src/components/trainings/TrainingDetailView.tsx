@@ -72,6 +72,7 @@ import { TrainingParticipantsManager } from './TrainingParticipantsManager';
 import { ParticipantsPRsSection } from './ParticipantsPRsSection';
 import { TrainingQuickSale } from './TrainingQuickSale';
 import { PreviousTrainingSummary } from './PreviousTrainingSummary';
+import { InlineTextarea } from './InlineTextarea';
 
 const trainingDetailSchema = z.object({
   date: z.date(),
@@ -360,12 +361,7 @@ export function TrainingDetailView({
         </SheetContent>
       </Sheet>
 
-      {/* PREVIOUS TRAINING - always visible for scheduled/in_progress */}
-      {(isScheduled || isInProgress) && (
-        <PreviousTrainingSummary clientId={training.client_id} />
-      )}
-
-      {/* TAGS - Compact Grid Selector (moved ABOVE exercises) */}
+      {/* TAGS - Compact Grid Selector */}
       <div className="relative rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4">
         <CompactTagGridSelector
           trainingType={training.training_type}
@@ -417,6 +413,26 @@ export function TrainingDetailView({
           participants={participants}
         />
       </div>
+
+      {/* INLINE NOTES - for scheduled/in_progress */}
+      {(isScheduled || isInProgress) && onFieldUpdate && (
+        <div className="rounded-2xl bg-card/80 backdrop-blur-md border border-border/50 shadow-sm p-4 space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground">📝 Poznámky k tréninku</p>
+          <InlineTextarea
+            initialValue={training.notes || ''}
+            onSave={async (value) => {
+              await onFieldUpdate('notes', value);
+            }}
+            placeholder="Poznámky pro tento nebo příští trénink..."
+            minHeight="50px"
+          />
+        </div>
+      )}
+
+      {/* PREVIOUS TRAINING - collapsible, below exercises */}
+      {(isScheduled || isInProgress) && (
+        <PreviousTrainingSummary clientId={training.client_id} />
+      )}
 
       {/* PREP SECTION - collapsed by default, only for scheduled/in_progress */}
       {(isScheduled || isInProgress) && (
