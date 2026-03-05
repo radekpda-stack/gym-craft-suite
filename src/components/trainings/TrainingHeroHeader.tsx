@@ -79,21 +79,8 @@ export function TrainingHeroHeader({
   const isInProgress = training.status === 'in_progress';
 
   return (
-    <div className={cn(
-      "relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-md border shadow-sm transition-all duration-200 hover:shadow-md p-4",
-      training.status === 'scheduled' && "border-primary/30",
-      training.status === 'in_progress' && "border-warning/40 ring-1 ring-warning/20",
-      training.status === 'completed' && "border-success/30",
-      training.status === 'canceled' && "border-destructive/30",
-      !['scheduled', 'in_progress', 'completed', 'canceled'].includes(training.status) && "border-border/50"
-    )}>
-      {/* Subtle gradient overlay */}
-      <div className={cn(
-        "absolute inset-0 pointer-events-none",
-        training.status === 'in_progress' 
-          ? "bg-gradient-to-br from-warning/10 via-transparent to-transparent" 
-          : "bg-gradient-to-br from-primary/5 via-transparent to-transparent"
-      )} />
+    <div className="relative p-3">
+      {/* Border/ring handled by parent merged card */}
       
       {/* Row 1: Avatar + Name + Menu */}
       <div className="relative flex items-start justify-between gap-3">
@@ -181,7 +168,6 @@ export function TrainingHeroHeader({
         </DropdownMenu>
       </div>
 
-      {/* Status badge removed - now inline with name */}
     </div>
   );
 }

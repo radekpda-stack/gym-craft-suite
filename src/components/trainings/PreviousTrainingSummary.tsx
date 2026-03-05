@@ -60,7 +60,7 @@ export function PreviousTrainingSummary({ clientId }: PreviousTrainingSummaryPro
         {/* Subtle accent stripe */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/60 via-primary/30 to-transparent" />
 
-        <div className="p-4 space-y-3">
+        <div className="p-3 space-y-2">
           {/* Header row - always visible */}
           <CollapsibleTrigger className="w-full">
             <div className="flex items-center justify-between">
