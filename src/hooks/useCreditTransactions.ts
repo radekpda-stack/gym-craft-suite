@@ -2,7 +2,7 @@
 export {
   useCreditTransactions,
   useCreateTransaction,
-  useDeleteTransaction,
+  useDeleteTransaction, // Now uses reversal instead of DELETE
   useUpdateTransactionPaymentMethod,
   useProductSales,
   type CreditTransaction,

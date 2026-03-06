@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Plus, Minus, Trash2, Package, Dumbbell, CreditCard, Edit3, Download, FileText, Users, AlertTriangle, History, FileSpreadsheet } from 'lucide-react';
+import { Plus, Minus, Undo2, Package, Dumbbell, CreditCard, Edit3, Download, FileText, Users, AlertTriangle, History, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -153,6 +153,8 @@ export function CreditManagement({ clientId, clientName, clientEmail, currentBal
         return <Dumbbell className="w-4 h-4 text-primary" />;
       case 'canceled_training':
         return <Dumbbell className="w-4 h-4 text-destructive" />;
+      case 'reversal':
+        return <Undo2 className="w-4 h-4 text-destructive" />;
       case 'product':
         return <Package className="w-4 h-4 text-warning" />;
       default:
@@ -510,7 +512,7 @@ export function CreditManagement({ clientId, clientName, clientEmail, currentBal
                     onClick={() => handleDeleteTransaction(transaction)}
                     className="text-muted-foreground hover:text-destructive"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Undo2 className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
