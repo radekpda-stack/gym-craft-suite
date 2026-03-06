@@ -1053,7 +1053,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          leaderboard: leaderboard.slice(0, 20),
+          leaderboard,
           total_participants: leaderboard.length,
           client_rank: clientEntry?.rank || null,
           client_percentile: clientPercentile,

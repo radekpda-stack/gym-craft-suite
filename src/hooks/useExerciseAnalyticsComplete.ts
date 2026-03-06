@@ -1177,7 +1177,7 @@ export function useExerciseAnalyticsComplete(
         weightProgression,
         topExercisesByGender,
         prDistribution,
-        clientProgressRanking: clientProgressRanking.slice(0, 15),
+        clientProgressRanking,
         clientVolumeComparison,
         exerciseByClient: exerciseByClient.slice(0, 20),
         clientWeightProgression,

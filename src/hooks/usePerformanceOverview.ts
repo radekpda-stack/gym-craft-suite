@@ -353,7 +353,7 @@ export function usePerformanceOverview() {
           };
         })
         .sort((a, b) => b.entriesCount - a.entriesCount)
-        .slice(0, 5);
+        ;
 
       // Process recent exercises (deduplicated)
       const seenExercises = new Set<string>();

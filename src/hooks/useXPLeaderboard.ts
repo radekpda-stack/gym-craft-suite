@@ -107,7 +107,7 @@ export function useXPLeaderboard() {
         : null;
 
       return {
-        leaderboard: entries.slice(0, 20), // Top 20
+        leaderboard: entries,
         clientRank,
         clientPercentile,
         totalParticipants,
