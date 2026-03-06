@@ -1,26 +1,26 @@
 
 
-## Fix: Remove `user_id` from `client_confirmed_workouts` INSERT
+## Fix: Add `performed_at` to `client_confirmed_workouts` INSERT
 
 ### Problem
-Line 126 of `rpc_complete_training_session` inserts into `client_confirmed_workouts` with a `user_id` column that doesn't exist on the table. The table only has: `id, client_id, performed_at, performed_date, workout_type, confirmed_by, xp, training_session_id, notes, created_at`.
+The `performed_at` column on `client_confirmed_workouts` is `NOT NULL` with no default value. The current `rpc_complete_training_session` INSERT omits it, causing the error.
 
 ### Solution
-One database migration to replace the function, changing:
+One database migration to recreate the function, changing the INSERT from:
 
 ```sql
--- FROM:
-INSERT INTO client_confirmed_workouts (client_id, training_session_id, performed_date, user_id)
-VALUES (v_participant.client_id, p_session_id, v_session_record.date::date, p_trainer_id)
-
--- TO:
 INSERT INTO client_confirmed_workouts (client_id, training_session_id, performed_date, confirmed_by)
 VALUES (v_participant.client_id, p_session_id, v_session_record.date::date, 'trainer')
 ```
 
-This uses the existing `confirmed_by` text column (which accepts 'trainer' or 'client') instead of a non-existent `user_id` column.
+to:
+
+```sql
+INSERT INTO client_confirmed_workouts (client_id, training_session_id, performed_date, performed_at, confirmed_by)
+VALUES (v_participant.client_id, p_session_id, v_session_record.date::date, NOW(), 'trainer')
+```
 
 ### Scope
-- Single migration dropping and recreating `rpc_complete_training_session` with the corrected INSERT statement
+- Single migration to drop and recreate `rpc_complete_training_session` with the added `performed_at` column
 - No frontend changes needed
 
