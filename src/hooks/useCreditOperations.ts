@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { featureTracker } from "@/hooks/useFeatureTracking";
 
 // ==================== Types ====================
-export type TransactionType = 'payment' | 'training' | 'product' | 'manual' | 'canceled_training' | 'transfer';
+export type TransactionType = 'payment' | 'training' | 'product' | 'manual' | 'canceled_training' | 'transfer' | 'reversal' | 'deduct';
 export type PaymentMethod = 'cash' | 'credit' | 'card' | 'bank' | null;
 
 export interface CreditTransaction {
@@ -135,27 +135,27 @@ export async function applyCreditDelta(
 }
 
 /**
- * @deprecated Use applyCreditDelta instead - this is for backwards compatibility
+ * @deprecated Use applyCreditDelta instead - this is for backwards compatibility.
+ * LEGACY: Still exported for backwards compat but wraps applyCreditDelta.
  */
 export async function updateSharedBalance(groupId: string, delta: number): Promise<number> {
-  // Get any member of the group to use the RPC
+  console.warn('updateSharedBalance is deprecated. Use applyCreditDelta instead.');
   const { data: anyMember } = await supabase
     .from("client_budget_members")
     .select("client_id")
     .eq("group_id", groupId)
     .limit(1)
     .single();
-    
   if (!anyMember) throw new Error("No members in group");
-  
   const result = await applyCreditDelta(anyMember.client_id, delta);
   return result.new_balance;
 }
 
 /**
- * @deprecated Use applyCreditDelta instead - this is for backwards compatibility
+ * @deprecated Use applyCreditDelta instead - this is for backwards compatibility.
  */
 export async function updateClientBalance(clientId: string, delta: number): Promise<number> {
+  console.warn('updateClientBalance is deprecated. Use applyCreditDelta instead.');
   const result = await applyCreditDelta(clientId, delta);
   return result.new_balance;
 }
@@ -528,6 +528,10 @@ export function useCreateTransaction() {
   });
 }
 
+/**
+ * Reverse a transaction (immutable ledger - no DELETE allowed).
+ * Creates a reversal transaction with opposite amount.
+ */
 export function useDeleteTransaction() {
   const queryClient = useQueryClient();
 
@@ -535,15 +539,17 @@ export function useDeleteTransaction() {
     mutationFn: async ({ id, clientId, amount }: { id: string; clientId: string; amount: number }) => {
       const groupId = await getClientGroupId(clientId);
 
-      const { error: deleteError } = await supabase
-        .from("credit_transactions")
-        .delete()
-        .eq("id", id);
+      const { data, error } = await supabase.rpc('rpc_reverse_transaction', {
+        p_transaction_id: id,
+        p_reason: 'Storno transakce',
+      });
 
-      if (deleteError) throw deleteError;
-
-      // DB trigger (fn_sync_client_credit_balance) automatically recalculates
-      // balance from SUM(amount) after DELETE. No manual delta needed.
+      if (error) throw error;
+      
+      const result = data as unknown as { success: boolean; error?: string };
+      if (!result.success) {
+        throw new Error((result as any).error || 'Nepodařilo se stornovat transakci');
+      }
 
       return { isSharedBudget: !!groupId };
     },
@@ -553,12 +559,14 @@ export function useDeleteTransaction() {
       queryClient.invalidateQueries({ queryKey: ["shared_budget_balance"] });
       queryClient.invalidateQueries({ queryKey: ["budget_groups"] });
       queryClient.invalidateQueries({ queryKey: ["pending_payments"] });
+      queryClient.invalidateQueries({ queryKey: ["credit_balance_v2"] });
+      queryClient.invalidateQueries({ queryKey: ["ledger_balances_bulk"] });
       
       const budgetType = result.isSharedBudget ? "Sdílený kredit" : "Kredit";
-      toast({ title: "Transakce smazána", description: `Transakce odstraněna, ${budgetType.toLowerCase()} upraven.` });
+      toast({ title: "Transakce stornována", description: `Transakce stornována, ${budgetType.toLowerCase()} upraven.` });
     },
-    onError: () => {
-      toast({ title: "Chyba", description: "Nepodařilo se smazat transakci.", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "Chyba", description: error.message || "Nepodařilo se stornovat transakci.", variant: "destructive" });
     },
   });
 }

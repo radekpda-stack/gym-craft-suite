@@ -3757,9 +3757,11 @@ export type Database = {
           group_id: string | null
           id: string
           idempotency_key: string | null
+          is_reversal: boolean
           payment_method: string | null
           product_id: string | null
           reference_id: string | null
+          reversed_by_id: string | null
           sale_order_id: string | null
           source_id: string | null
           source_type: string | null
@@ -3778,9 +3780,11 @@ export type Database = {
           group_id?: string | null
           id?: string
           idempotency_key?: string | null
+          is_reversal?: boolean
           payment_method?: string | null
           product_id?: string | null
           reference_id?: string | null
+          reversed_by_id?: string | null
           sale_order_id?: string | null
           source_id?: string | null
           source_type?: string | null
@@ -3799,9 +3803,11 @@ export type Database = {
           group_id?: string | null
           id?: string
           idempotency_key?: string | null
+          is_reversal?: boolean
           payment_method?: string | null
           product_id?: string | null
           reference_id?: string | null
+          reversed_by_id?: string | null
           sale_order_id?: string | null
           source_id?: string | null
           source_type?: string | null
@@ -3851,6 +3857,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_reversed_by_id_fkey"
+            columns: ["reversed_by_id"]
+            isOneToOne: false
+            referencedRelation: "credit_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -11972,6 +11985,20 @@ export type Database = {
             }
             Returns: Json
           }
+        | {
+            Args: {
+              p_idempotency_key: string
+              p_notes?: string
+              p_participants: Json
+              p_payment_method: string
+              p_session_id: string
+              p_subjective_rating?: number
+              p_total_price?: number
+              p_trainer_id: string
+              p_trainer_summary?: string
+            }
+            Returns: Json
+          }
       rpc_credit_add: {
         Args: {
           p_amount: number
@@ -12079,6 +12106,10 @@ export type Database = {
       }
       rpc_refund_sale: {
         Args: { p_order_id: string; p_user_id: string }
+        Returns: Json
+      }
+      rpc_reverse_transaction: {
+        Args: { p_reason?: string; p_transaction_id: string }
         Returns: Json
       }
       rpc_update_sale_payment: {
