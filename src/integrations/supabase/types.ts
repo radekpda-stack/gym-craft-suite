@@ -11961,15 +11961,15 @@ export type Database = {
       }
       rpc_complete_training_session: {
         Args: {
-          p_idempotency_key?: string
-          p_notes?: string
-          p_participants?: Json
-          p_payment_method?: string
+          p_idempotency_key: string
+          p_notes: string
+          p_participants: Json
+          p_payment_method: string
           p_session_id: string
-          p_subjective_rating?: number
-          p_total_price?: number
+          p_subjective_rating: number
+          p_total_price: number
           p_trainer_id: string
-          p_trainer_summary?: string
+          p_trainer_summary: string
         }
         Returns: Json
       }
