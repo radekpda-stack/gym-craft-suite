@@ -11959,46 +11959,20 @@ export type Database = {
           running_balance: number
         }[]
       }
-      rpc_complete_training_session:
-        | {
-            Args: {
-              p_idempotency_key: string
-              p_notes?: string
-              p_participants: Json
-              p_payment_method: string
-              p_session_id: string
-              p_subjective_rating?: number
-              p_total_price: number
-              p_trainer_id: string
-              p_trainer_summary?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_idempotency_key: string
-              p_participants: Json
-              p_payment_method: string
-              p_session_id: string
-              p_trainer_id: string
-              p_trainer_summary?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_idempotency_key: string
-              p_notes?: string
-              p_participants: Json
-              p_payment_method: string
-              p_session_id: string
-              p_subjective_rating?: number
-              p_total_price?: number
-              p_trainer_id: string
-              p_trainer_summary?: string
-            }
-            Returns: Json
-          }
+      rpc_complete_training_session: {
+        Args: {
+          p_idempotency_key: string
+          p_notes?: string
+          p_participants?: Json
+          p_payment_method: string
+          p_session_id: string
+          p_subjective_rating?: number
+          p_total_price?: number
+          p_trainer_id: string
+          p_trainer_summary?: string
+        }
+        Returns: Json
+      }
       rpc_credit_add: {
         Args: {
           p_amount: number
