@@ -98,6 +98,15 @@ export default function Settings() {
       iconColor: 'text-primary',
     },
     {
+      id: 'data-export',
+      title: language === 'cs' ? 'Export dat' : 'Data Export',
+      description: language === 'cs' 
+        ? 'Klienti a výkonnost ke kopírování' 
+        : 'Clients and performance for copying',
+      icon: Download,
+      iconColor: 'text-emerald-500',
+    },
+    {
       id: 'social-export',
       title: language === 'cs' ? 'Export pro sítě' : 'Social Media Export',
       description: language === 'cs' 
