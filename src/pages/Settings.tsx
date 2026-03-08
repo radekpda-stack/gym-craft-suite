@@ -25,6 +25,7 @@ import {
   Share2,
   Sparkles,
   Calculator,
+  Download,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -55,6 +56,7 @@ import { PublicStatsSettings } from '@/components/settings/PublicStatsSettings';
 import { AIAssistantSettings } from '@/components/settings/AIAssistantSettings';
 // CalendarSyncSettings moved to SchedulePage
 import { CreditAuditPanel } from '@/components/settings/CreditAuditPanel';
+import { DataExportSettings } from '@/components/settings/DataExportSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -95,6 +97,15 @@ export default function Settings() {
         : 'Modules, appearance, personalization and system',
       icon: Boxes,
       iconColor: 'text-primary',
+    },
+    {
+      id: 'data-export',
+      title: language === 'cs' ? 'Export dat' : 'Data Export',
+      description: language === 'cs' 
+        ? 'Klienti a výkonnost ke kopírování' 
+        : 'Clients and performance for copying',
+      icon: Download,
+      iconColor: 'text-emerald-500',
     },
     {
       id: 'social-export',
@@ -372,6 +383,19 @@ export default function Settings() {
               </SettingsSection>
             )}
           </>
+        );
+
+      case 'data-export':
+        return (
+          <SettingsSection
+            title={language === 'cs' ? 'Export dat' : 'Data Export'}
+            description={language === 'cs' 
+              ? 'Exportujte data klientů a výkonnosti ve formátu CSV pro přenos do jiných systémů' 
+              : 'Export client and performance data in CSV format for transfer to other systems'}
+            icon={Download}
+          >
+            <DataExportSettings />
+          </SettingsSection>
         );
 
       case 'social-export':
