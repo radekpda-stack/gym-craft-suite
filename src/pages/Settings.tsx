@@ -385,6 +385,19 @@ export default function Settings() {
           </>
         );
 
+      case 'data-export':
+        return (
+          <SettingsSection
+            title={language === 'cs' ? 'Export dat' : 'Data Export'}
+            description={language === 'cs' 
+              ? 'Exportujte data klientů a výkonnosti ve formátu CSV pro přenos do jiných systémů' 
+              : 'Export client and performance data in CSV format for transfer to other systems'}
+            icon={Download}
+          >
+            <DataExportSettings />
+          </SettingsSection>
+        );
+
       case 'social-export':
         return (
           <>
