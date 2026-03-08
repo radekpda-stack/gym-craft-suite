@@ -25,6 +25,7 @@ import {
   Share2,
   Sparkles,
   Calculator,
+  Download,
 } from 'lucide-react';
 import { SettingsLayout, SettingsCategory } from '@/components/settings/SettingsLayout';
 import { SettingsSection } from '@/components/settings/SettingsSection';
