@@ -55,6 +55,7 @@ import { PublicStatsSettings } from '@/components/settings/PublicStatsSettings';
 import { AIAssistantSettings } from '@/components/settings/AIAssistantSettings';
 // CalendarSyncSettings moved to SchedulePage
 import { CreditAuditPanel } from '@/components/settings/CreditAuditPanel';
+import { DataExportSettings } from '@/components/settings/DataExportSettings';
 import { useLanguage } from '@/lib/i18n';
 import { usePageTracking } from '@/hooks/useFeatureTracking';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
