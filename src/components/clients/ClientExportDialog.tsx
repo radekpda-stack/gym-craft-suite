@@ -47,6 +47,8 @@ export function ClientExportDialog({ clients, genderFilter }: ClientExportDialog
       'Pohlaví': formatGender(client.gender),
       'Email': client.email || '',
       'Telefon': client.phone || '',
+      'Datum narození': client.birth_date ? formatDate(new Date(client.birth_date), 'd.M.yyyy', { locale: cs }) : '',
+      'Trénuje od': client.training_start_date ? formatDate(new Date(client.training_start_date), 'd.M.yyyy', { locale: cs }) : '',
       'Datum založení': formatDate(new Date(client.created_at), 'd.M.yyyy', { locale: cs }),
     }));
   };
