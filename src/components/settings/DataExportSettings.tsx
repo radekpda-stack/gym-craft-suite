@@ -245,7 +245,8 @@ export function DataExportSettings() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${activeTab === 'clients' ? 'klienti' : 'vykonnost'}-export-${new Date().toISOString().split('T')[0]}.csv`;
+    const tabNames: Record<ExportTab, string> = { clients: 'klienti', performance: 'vykonnost', cardio: 'kardio', skills: 'plyo-skill' };
+    link.download = `${tabNames[activeTab]}-export-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     toast({ title: 'Soubor stažen' });
