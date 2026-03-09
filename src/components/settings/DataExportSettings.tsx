@@ -263,7 +263,15 @@ export function DataExportSettings() {
           </TabsTrigger>
           <TabsTrigger value="performance" className="flex-1 gap-2">
             <Dumbbell className="w-4 h-4" />
-            Výkonnost
+            Síla
+          </TabsTrigger>
+          <TabsTrigger value="cardio" className="flex-1 gap-2">
+            <Heart className="w-4 h-4" />
+            Kardio
+          </TabsTrigger>
+          <TabsTrigger value="skills" className="flex-1 gap-2">
+            <Zap className="w-4 h-4" />
+            Plyo/Skill
           </TabsTrigger>
         </TabsList>
 
@@ -274,7 +282,17 @@ export function DataExportSettings() {
         </TabsContent>
         <TabsContent value="performance" className="mt-4">
           <p className="text-sm text-muted-foreground mb-3">
-            Export všech cvičebních záznamů napříč klienty — váhy, opakování, časy, PR a další.
+            Export všech silových cvičebních záznamů — váhy, opakování, časy, PR a další.
+          </p>
+        </TabsContent>
+        <TabsContent value="cardio" className="mt-4">
+          <p className="text-sm text-muted-foreground mb-3">
+            Export všech kardio záznamů — doba, vzdálenost, tepová frekvence, watty a další.
+          </p>
+        </TabsContent>
+        <TabsContent value="skills" className="mt-4">
+          <p className="text-sm text-muted-foreground mb-3">
+            Export všech plyo/skill záznamů — pokusy, úspěšnost, technika a další.
           </p>
         </TabsContent>
       </Tabs>
