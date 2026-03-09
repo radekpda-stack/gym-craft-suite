@@ -59,7 +59,6 @@ export function DataExportSettings() {
     setLoading(true);
     setCsvData(null);
     try {
-      // Fetch in batches to avoid the 1000 row limit
       let allRows: string[] = [];
       let offset = 0;
       const batchSize = 1000;
@@ -111,9 +110,125 @@ export function DataExportSettings() {
     }
   };
 
+  const loadCardio = async () => {
+    if (!user) return;
+    setLoading(true);
+    setCsvData(null);
+    try {
+      let allRows: string[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('cardio_entries')
+          .select(`
+            date, exercise_name, duration_seconds, distance_meters,
+            avg_speed_kmh, avg_heart_rate, max_heart_rate,
+            avg_watts, max_watts, rpe, is_pr, is_test, leg_fatigue, notes,
+            clients!inner(name)
+          `)
+          .eq('user_id', user.id)
+          .order('date', { ascending: false })
+          .range(offset, offset + batchSize - 1);
+
+        if (error) throw error;
+
+        const rows = (data || []).map((e: any) => {
+          return [
+            e.clients?.name || '',
+            e.date || '',
+            e.exercise_name || '',
+            e.duration_seconds ?? '',
+            e.distance_meters ?? '',
+            e.avg_speed_kmh ?? '',
+            e.avg_heart_rate ?? '',
+            e.max_heart_rate ?? '',
+            e.avg_watts ?? '',
+            e.max_watts ?? '',
+            e.rpe ?? '',
+            e.is_pr ? 'true' : 'false',
+            e.is_test ? 'true' : 'false',
+            e.leg_fatigue ? 'true' : 'false',
+            (e.notes || '').replace(/;/g, ',').replace(/\n/g, ' '),
+          ].join(';');
+        });
+
+        allRows = [...allRows, ...rows];
+        hasMore = (data?.length || 0) === batchSize;
+        offset += batchSize;
+      }
+
+      const header = 'Klient;Datum;Cvik;Doba (s);Vzdálenost (m);Průměrná rychlost;Průměrný tep;Max tep;Průměrné watty;Max watty;RPE;PR;Test;Únava nohou;Poznámky';
+      setCsvData([header, ...allRows].join('\n'));
+      toast({ title: `${allRows.length} záznamů načteno` });
+    } catch (e: any) {
+      toast({ title: 'Chyba', description: e.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSkills = async () => {
+    if (!user) return;
+    setLoading(true);
+    setCsvData(null);
+    try {
+      let allRows: string[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('skill_entries')
+          .select(`
+            date, exercise_name, duration_seconds, attempts, successful,
+            rpe, technique_rating, is_breakthrough, notes,
+            clients!inner(name)
+          `)
+          .eq('user_id', user.id)
+          .order('date', { ascending: false })
+          .range(offset, offset + batchSize - 1);
+
+        if (error) throw error;
+
+        const rows = (data || []).map((e: any) => {
+          return [
+            e.clients?.name || '',
+            e.date || '',
+            e.exercise_name || '',
+            e.duration_seconds ?? '',
+            e.attempts ?? '',
+            e.successful ?? '',
+            e.rpe ?? '',
+            e.technique_rating || '',
+            e.is_breakthrough ? 'true' : 'false',
+            (e.notes || '').replace(/;/g, ',').replace(/\n/g, ' '),
+          ].join(';');
+        });
+
+        allRows = [...allRows, ...rows];
+        hasMore = (data?.length || 0) === batchSize;
+        offset += batchSize;
+      }
+
+      const header = 'Klient;Datum;Cvik;Doba (s);Pokusy;Úspěšné;RPE;Technika;Průlom;Poznámky';
+      setCsvData([header, ...allRows].join('\n'));
+      toast({ title: `${allRows.length} záznamů načteno` });
+    } catch (e: any) {
+      toast({ title: 'Chyba', description: e.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLoad = () => {
     if (activeTab === 'clients') loadClients();
-    else loadPerformance();
+    else if (activeTab === 'performance') loadPerformance();
+    else if (activeTab === 'cardio') loadCardio();
+    else loadSkills();
   };
 
   const handleCopy = async () => {
