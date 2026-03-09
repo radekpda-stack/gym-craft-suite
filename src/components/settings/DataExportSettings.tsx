@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, Loader2, Users, Dumbbell, Download } from 'lucide-react';
+import { Copy, Check, Loader2, Users, Dumbbell, Download, Heart, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-type ExportTab = 'clients' | 'performance';
+type ExportTab = 'clients' | 'performance' | 'cardio' | 'skills';
 
 export function DataExportSettings() {
   const { user } = useAuth();
