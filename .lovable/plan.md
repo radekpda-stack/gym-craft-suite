@@ -1,20 +1,26 @@
 
 
-## Plán: Přidat export kardio a skill/plyo dat do Nastavení
+## Fix: Add `performed_at` to `client_confirmed_workouts` INSERT
 
-Aktuálně sekce "Export dat" v Nastavení exportuje pouze `exercise_entries` (síla). Chybí data z tabulek `cardio_entries` a `skill_entries`.
+### Problem
+The `performed_at` column on `client_confirmed_workouts` is `NOT NULL` with no default value. The current `rpc_complete_training_session` INSERT omits it, causing the error.
 
-### Změny v `DataExportSettings.tsx`
+### Solution
+One database migration to recreate the function, changing the INSERT from:
 
-**1. Přidat dvě nové záložky** — rozšířit `ExportTab` na `'clients' | 'performance' | 'cardio' | 'skills'`
+```sql
+INSERT INTO client_confirmed_workouts (client_id, training_session_id, performed_date, confirmed_by)
+VALUES (v_participant.client_id, p_session_id, v_session_record.date::date, 'trainer')
+```
 
-**2. Nová funkce `loadCardio`** — dávkově načte `cardio_entries` s joinem na `clients(name)`:
-- Sloupce CSV: `Klient;Datum;Cvik;Doba (s);Vzdálenost (m);Průměrná rychlost;Průměrný tep;Max tep;Průměrné watty;Max watty;RPE;PR;Poznámky`
+to:
 
-**3. Nová funkce `loadSkills`** — dávkově načte `skill_entries` s joinem na `clients(name)`:
-- Sloupce CSV: `Klient;Datum;Cvik;Doba (s);Pokusy;Úspěšné;RPE;Technika;Průlom;Poznámky`
+```sql
+INSERT INTO client_confirmed_workouts (client_id, training_session_id, performed_date, performed_at, confirmed_by)
+VALUES (v_participant.client_id, p_session_id, v_session_record.date::date, NOW(), 'trainer')
+```
 
-**4. UI** — TabsList se 4 záložkami (Klienti, Výkonnost, Kardio, Dovednosti) s příslušnými ikonami a popisky. Stejná logika kopírování/stahování CSV.
-
-Obě nové funkce použijí stejný batching pattern (po 1000 záznamech) jako stávající `loadPerformance`.
+### Scope
+- Single migration to drop and recreate `rpc_complete_training_session` with the added `performed_at` column
+- No frontend changes needed
 

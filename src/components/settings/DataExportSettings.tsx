@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, Loader2, Users, Dumbbell, Download } from 'lucide-react';
+import { Copy, Check, Loader2, Users, Dumbbell, Download, Heart, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-type ExportTab = 'clients' | 'performance';
+type ExportTab = 'clients' | 'performance' | 'cardio' | 'skills';
 
 export function DataExportSettings() {
   const { user } = useAuth();
@@ -59,7 +59,6 @@ export function DataExportSettings() {
     setLoading(true);
     setCsvData(null);
     try {
-      // Fetch in batches to avoid the 1000 row limit
       let allRows: string[] = [];
       let offset = 0;
       const batchSize = 1000;
@@ -111,9 +110,125 @@ export function DataExportSettings() {
     }
   };
 
+  const loadCardio = async () => {
+    if (!user) return;
+    setLoading(true);
+    setCsvData(null);
+    try {
+      let allRows: string[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('cardio_entries')
+          .select(`
+            date, exercise_name, duration_seconds, distance_meters,
+            avg_speed_kmh, avg_heart_rate, max_heart_rate,
+            avg_watts, max_watts, rpe, is_pr, is_test, leg_fatigue, notes,
+            clients!inner(name)
+          `)
+          .eq('user_id', user.id)
+          .order('date', { ascending: false })
+          .range(offset, offset + batchSize - 1);
+
+        if (error) throw error;
+
+        const rows = (data || []).map((e: any) => {
+          return [
+            e.clients?.name || '',
+            e.date || '',
+            e.exercise_name || '',
+            e.duration_seconds ?? '',
+            e.distance_meters ?? '',
+            e.avg_speed_kmh ?? '',
+            e.avg_heart_rate ?? '',
+            e.max_heart_rate ?? '',
+            e.avg_watts ?? '',
+            e.max_watts ?? '',
+            e.rpe ?? '',
+            e.is_pr ? 'true' : 'false',
+            e.is_test ? 'true' : 'false',
+            e.leg_fatigue ? 'true' : 'false',
+            (e.notes || '').replace(/;/g, ',').replace(/\n/g, ' '),
+          ].join(';');
+        });
+
+        allRows = [...allRows, ...rows];
+        hasMore = (data?.length || 0) === batchSize;
+        offset += batchSize;
+      }
+
+      const header = 'Klient;Datum;Cvik;Doba (s);Vzdálenost (m);Průměrná rychlost;Průměrný tep;Max tep;Průměrné watty;Max watty;RPE;PR;Test;Únava nohou;Poznámky';
+      setCsvData([header, ...allRows].join('\n'));
+      toast({ title: `${allRows.length} záznamů načteno` });
+    } catch (e: any) {
+      toast({ title: 'Chyba', description: e.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSkills = async () => {
+    if (!user) return;
+    setLoading(true);
+    setCsvData(null);
+    try {
+      let allRows: string[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('skill_entries')
+          .select(`
+            date, exercise_name, duration_seconds, attempts, successful,
+            rpe, technique_rating, is_breakthrough, notes,
+            clients!inner(name)
+          `)
+          .eq('user_id', user.id)
+          .order('date', { ascending: false })
+          .range(offset, offset + batchSize - 1);
+
+        if (error) throw error;
+
+        const rows = (data || []).map((e: any) => {
+          return [
+            e.clients?.name || '',
+            e.date || '',
+            e.exercise_name || '',
+            e.duration_seconds ?? '',
+            e.attempts ?? '',
+            e.successful ?? '',
+            e.rpe ?? '',
+            e.technique_rating || '',
+            e.is_breakthrough ? 'true' : 'false',
+            (e.notes || '').replace(/;/g, ',').replace(/\n/g, ' '),
+          ].join(';');
+        });
+
+        allRows = [...allRows, ...rows];
+        hasMore = (data?.length || 0) === batchSize;
+        offset += batchSize;
+      }
+
+      const header = 'Klient;Datum;Cvik;Doba (s);Pokusy;Úspěšné;RPE;Technika;Průlom;Poznámky';
+      setCsvData([header, ...allRows].join('\n'));
+      toast({ title: `${allRows.length} záznamů načteno` });
+    } catch (e: any) {
+      toast({ title: 'Chyba', description: e.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLoad = () => {
     if (activeTab === 'clients') loadClients();
-    else loadPerformance();
+    else if (activeTab === 'performance') loadPerformance();
+    else if (activeTab === 'cardio') loadCardio();
+    else loadSkills();
   };
 
   const handleCopy = async () => {
@@ -130,7 +245,8 @@ export function DataExportSettings() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${activeTab === 'clients' ? 'klienti' : 'vykonnost'}-export-${new Date().toISOString().split('T')[0]}.csv`;
+    const tabNames: Record<ExportTab, string> = { clients: 'klienti', performance: 'vykonnost', cardio: 'kardio', skills: 'plyo-skill' };
+    link.download = `${tabNames[activeTab]}-export-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     toast({ title: 'Soubor stažen' });
@@ -148,7 +264,15 @@ export function DataExportSettings() {
           </TabsTrigger>
           <TabsTrigger value="performance" className="flex-1 gap-2">
             <Dumbbell className="w-4 h-4" />
-            Výkonnost
+            Síla
+          </TabsTrigger>
+          <TabsTrigger value="cardio" className="flex-1 gap-2">
+            <Heart className="w-4 h-4" />
+            Kardio
+          </TabsTrigger>
+          <TabsTrigger value="skills" className="flex-1 gap-2">
+            <Zap className="w-4 h-4" />
+            Plyo/Skill
           </TabsTrigger>
         </TabsList>
 
@@ -159,7 +283,17 @@ export function DataExportSettings() {
         </TabsContent>
         <TabsContent value="performance" className="mt-4">
           <p className="text-sm text-muted-foreground mb-3">
-            Export všech cvičebních záznamů napříč klienty — váhy, opakování, časy, PR a další.
+            Export všech silových cvičebních záznamů — váhy, opakování, časy, PR a další.
+          </p>
+        </TabsContent>
+        <TabsContent value="cardio" className="mt-4">
+          <p className="text-sm text-muted-foreground mb-3">
+            Export všech kardio záznamů — doba, vzdálenost, tepová frekvence, watty a další.
+          </p>
+        </TabsContent>
+        <TabsContent value="skills" className="mt-4">
+          <p className="text-sm text-muted-foreground mb-3">
+            Export všech plyo/skill záznamů — pokusy, úspěšnost, technika a další.
           </p>
         </TabsContent>
       </Tabs>
