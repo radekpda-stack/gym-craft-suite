@@ -230,14 +230,14 @@ export function DataExportSettings() {
     setCsvData(null);
     try {
       // Load all three tables in parallel
-      const fetchTable = async (table: string, selectCols: string) => {
+      const fetchTable = async (table: 'exercise_entries' | 'cardio_entries' | 'skill_entries', selectCols: string) => {
         let allData: any[] = [];
         let offset = 0;
         const batchSize = 1000;
         let hasMore = true;
         while (hasMore) {
-          const { data, error } = await supabase
-            .from(table)
+          const { data, error } = await (supabase
+            .from(table) as any)
             .select(selectCols)
             .eq('user_id', user.id)
             .order('date', { ascending: false })
