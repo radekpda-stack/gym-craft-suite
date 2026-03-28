@@ -7,12 +7,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-type ExportTab = 'clients' | 'performance' | 'cardio' | 'skills';
+type ExportTab = 'all' | 'clients' | 'performance' | 'cardio' | 'skills';
 
 export function DataExportSettings() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<ExportTab>('clients');
+  const [activeTab, setActiveTab] = useState<ExportTab>('all');
   const [loading, setLoading] = useState(false);
   const [csvData, setCsvData] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -224,8 +224,117 @@ export function DataExportSettings() {
     }
   };
 
+  const loadAll = async () => {
+    if (!user) return;
+    setLoading(true);
+    setCsvData(null);
+    try {
+      // Load all three tables in parallel
+      const fetchTable = async (table: 'exercise_entries' | 'cardio_entries' | 'skill_entries', selectCols: string) => {
+        let allData: any[] = [];
+        let offset = 0;
+        const batchSize = 1000;
+        let hasMore = true;
+        while (hasMore) {
+          const { data, error } = await (supabase
+            .from(table) as any)
+            .select(selectCols)
+            .eq('user_id', user.id)
+            .order('date', { ascending: false })
+            .range(offset, offset + batchSize - 1);
+          if (error) throw error;
+          allData = [...allData, ...(data || [])];
+          hasMore = (data?.length || 0) === batchSize;
+          offset += batchSize;
+        }
+        return allData;
+      };
+
+      const [strength, cardio, skills] = await Promise.all([
+        fetchTable('exercise_entries', 'date, exercise_name, sets, reps, weight_kg, time_seconds, distance_meters, is_bodyweight, is_pr, rpe, notes, clients!inner(name)'),
+        fetchTable('cardio_entries', 'date, exercise_name, duration_seconds, distance_meters, avg_speed_kmh, avg_heart_rate, max_heart_rate, avg_watts, max_watts, rpe, is_pr, notes, clients!inner(name)'),
+        fetchTable('skill_entries', 'date, exercise_name, duration_seconds, attempts, successful, rpe, technique_rating, is_breakthrough, notes, clients!inner(name)'),
+      ]);
+
+      // Group by client
+      const clientMap = new Map<string, { strength: any[]; cardio: any[]; skills: any[] }>();
+      const getGroup = (name: string) => {
+        if (!clientMap.has(name)) clientMap.set(name, { strength: [], cardio: [], skills: [] });
+        return clientMap.get(name)!;
+      };
+      strength.forEach((e: any) => getGroup(e.clients?.name || 'Neznámý').strength.push(e));
+      cardio.forEach((e: any) => getGroup(e.clients?.name || 'Neznámý').cardio.push(e));
+      skills.forEach((e: any) => getGroup(e.clients?.name || 'Neznámý').skills.push(e));
+
+      // Build text output grouped by client
+      const lines: string[] = [];
+      const sortedClients = [...clientMap.keys()].sort();
+      
+      for (const clientName of sortedClients) {
+        const g = clientMap.get(clientName)!;
+        lines.push(`${'='.repeat(60)}`);
+        lines.push(`KLIENT: ${clientName}`);
+        lines.push(`${'='.repeat(60)}`);
+        
+        if (g.strength.length > 0) {
+          lines.push('');
+          lines.push(`--- SILOVÉ CVIKY (${g.strength.length}) ---`);
+          lines.push('Datum;Cvik;Série;Opakování;Váha (kg);Čas (s);Vzdálenost (m);Tělesná váha;PR;RPE;Poznámky');
+          g.strength.forEach((e: any) => {
+            lines.push([
+              e.date || '', e.exercise_name || '', e.sets ?? '', e.reps ?? '',
+              e.weight_kg ?? '', e.time_seconds ?? '', e.distance_meters ?? '',
+              e.is_bodyweight ? 'ano' : 'ne', e.is_pr ? 'ano' : 'ne',
+              e.rpe ?? '', (e.notes || '').replace(/;/g, ',').replace(/\n/g, ' '),
+            ].join(';'));
+          });
+        }
+        
+        if (g.cardio.length > 0) {
+          lines.push('');
+          lines.push(`--- KARDIO CVIKY (${g.cardio.length}) ---`);
+          lines.push('Datum;Cvik;Doba (s);Vzdálenost (m);Rychlost;Prům. tep;Max tep;Prům. watty;Max watty;RPE;PR;Poznámky');
+          g.cardio.forEach((e: any) => {
+            lines.push([
+              e.date || '', e.exercise_name || '', e.duration_seconds ?? '',
+              e.distance_meters ?? '', e.avg_speed_kmh ?? '', e.avg_heart_rate ?? '',
+              e.max_heart_rate ?? '', e.avg_watts ?? '', e.max_watts ?? '',
+              e.rpe ?? '', e.is_pr ? 'ano' : 'ne',
+              (e.notes || '').replace(/;/g, ',').replace(/\n/g, ' '),
+            ].join(';'));
+          });
+        }
+        
+        if (g.skills.length > 0) {
+          lines.push('');
+          lines.push(`--- PLYO/SKILL CVIKY (${g.skills.length}) ---`);
+          lines.push('Datum;Cvik;Doba (s);Pokusy;Úspěšné;RPE;Technika;Průlom;Poznámky');
+          g.skills.forEach((e: any) => {
+            lines.push([
+              e.date || '', e.exercise_name || '', e.duration_seconds ?? '',
+              e.attempts ?? '', e.successful ?? '', e.rpe ?? '',
+              e.technique_rating || '', e.is_breakthrough ? 'ano' : 'ne',
+              (e.notes || '').replace(/;/g, ',').replace(/\n/g, ' '),
+            ].join(';'));
+          });
+        }
+        
+        lines.push('');
+      }
+
+      const total = strength.length + cardio.length + skills.length;
+      setCsvData(lines.join('\n'));
+      toast({ title: `Export kompletní: ${total} záznamů, ${sortedClients.length} klientů` });
+    } catch (e: any) {
+      toast({ title: 'Chyba', description: e.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLoad = () => {
-    if (activeTab === 'clients') loadClients();
+    if (activeTab === 'all') loadAll();
+    else if (activeTab === 'clients') loadClients();
     else if (activeTab === 'performance') loadPerformance();
     else if (activeTab === 'cardio') loadCardio();
     else loadSkills();
@@ -245,7 +354,7 @@ export function DataExportSettings() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const tabNames: Record<ExportTab, string> = { clients: 'klienti', performance: 'vykonnost', cardio: 'kardio', skills: 'plyo-skill' };
+    const tabNames: Record<ExportTab, string> = { all: 'kompletni-export', clients: 'klienti', performance: 'vykonnost', cardio: 'kardio', skills: 'plyo-skill' };
     link.download = `${tabNames[activeTab]}-export-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
@@ -257,7 +366,11 @@ export function DataExportSettings() {
   return (
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as ExportTab); setCsvData(null); }}>
-        <TabsList className="w-full">
+        <TabsList className="w-full flex-wrap">
+          <TabsTrigger value="all" className="flex-1 gap-2">
+            <Download className="w-4 h-4" />
+            Vše
+          </TabsTrigger>
           <TabsTrigger value="clients" className="flex-1 gap-2">
             <Users className="w-4 h-4" />
             Klienti
@@ -276,6 +389,11 @@ export function DataExportSettings() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="all" className="mt-4">
+          <p className="text-sm text-muted-foreground mb-3">
+            Kompletní export všech výkonnostních dat všech klientů — silové, kardio i plyo/skill cviky seskupené podle klienta.
+          </p>
+        </TabsContent>
         <TabsContent value="clients" className="mt-4">
           <p className="text-sm text-muted-foreground mb-3">
             Export všech aktivních klientů včetně kontaktních údajů a dat tréninků.
