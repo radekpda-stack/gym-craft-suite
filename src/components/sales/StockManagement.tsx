@@ -168,6 +168,50 @@ export function StockManagement() {
 
   const hasActiveFilters = searchQuery || activeFilter !== 'all' || typeFilter !== 'all';
 
+  // Summary metrics for top strip (derived from already-loaded data)
+  const summaryMetrics = useMemo(() => {
+    const totalStockValue = products.reduce((sum, p) => {
+      if (p.kind !== 'inventory') return sum;
+      return sum + (p.stock_quantity || 0) * (p.price || 0);
+    }, 0);
+    const belowThresholdCount = lowStockProducts.length;
+    const inactiveCount = products.filter(p => !p.is_active).length;
+    return { totalStockValue, belowThresholdCount, inactiveCount };
+  }, [products, lowStockProducts]);
+
+  // Group visible products by category, preserving CATEGORIES order
+  const groupedByCategory = useMemo(() => {
+    const groups = new Map<string, Product[]>();
+    filteredProducts.forEach(p => {
+      const key = p.category || 'other';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(p);
+    });
+    const orderedKeys = [
+      ...CATEGORIES.map(c => c.value).filter(k => groups.has(k)),
+      ...Array.from(groups.keys()).filter(k => !CATEGORIES.some(c => c.value === k)),
+    ];
+    return orderedKeys.map(key => ({ key, label: getCategoryLabel(key), items: groups.get(key)! }));
+  }, [filteredProducts]);
+
+  const isGroupOpen = (key: string) => groupOpen[key] !== false;
+  const toggleGroup = (key: string) => setGroupOpen(prev => ({ ...prev, [key]: !isGroupOpen(key) }));
+
+  const handleStockDelta = async (product: Product, delta: number) => {
+    const nextQty = Math.max(0, (product.stock_quantity || 0) + delta);
+    if (nextQty === product.stock_quantity) return;
+    setPendingStockIds(prev => new Set(prev).add(product.id));
+    try {
+      await updateProduct.mutateAsync({ id: product.id, stock_quantity: nextQty });
+    } finally {
+      setPendingStockIds(prev => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
+    }
+  };
+
   const resetForm = () => {
     setName('');
     setPrice('');

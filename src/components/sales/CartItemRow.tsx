@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { Minus, Plus, MoreHorizontal, Trash2, Tag, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,7 +50,6 @@ export function CartItemRow({
   const [discountOpen, setDiscountOpen] = useState(false);
   const [discountType, setDiscountType] = useState<'percent' | 'fixed'>(lineDiscount?.type || 'percent');
   const [discountValue, setDiscountValue] = useState(lineDiscount?.value?.toString() || '');
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const isProduct = product.kind === 'inventory';
   const canHaveDiscount = isProduct;
