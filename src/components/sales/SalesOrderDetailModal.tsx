@@ -21,7 +21,8 @@ import {
   Receipt
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -98,6 +99,7 @@ const KIND_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
 export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrderDetailModalProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const isMobile = useIsMobile();
   
   const { data: order, isLoading } = useQuery({
     queryKey: ['sales_order_detail', orderId],
@@ -155,13 +157,16 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
   const PaymentIcon = order ? PAYMENT_ICONS[order.payment_method] || Banknote : Banknote;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side={isMobile ? 'bottom' : 'right'}
+        className="w-full sm:max-w-md max-h-[92vh] sm:max-h-screen overflow-y-auto rounded-t-2xl sm:rounded-none"
+      >
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
             Detail objednávky
-          </DialogTitle>
-        </DialogHeader>
+          </SheetTitle>
+        </SheetHeader>
 
         {isLoading ? (
           <div className="space-y-4">
@@ -427,7 +432,7 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
             )}
           </div>
         ) : null}
-      </DialogContent>
+      </SheetContent>
       
       {/* Edit Dialog */}
       {order && (
@@ -459,6 +464,6 @@ export function SalesOrderDetailModal({ orderId, open, onOpenChange }: SalesOrde
           }}
         />
       )}
-    </Dialog>
+    </Sheet>
   );
 }
