@@ -30,6 +30,7 @@ import { RecentSales } from './RecentSales';
 import { ClientPurchaseSuggestions } from './ClientPurchaseSuggestions';
 import { MobileCartBar } from './MobileCartBar';
 import { MobileCartDrawer } from './MobileCartDrawer';
+import { SalesTileSkeleton, SalesEmptyState, ClientAvatar, StockBar } from './ui/SalesUI';
 import { useRecentSales, RecentSale } from '@/hooks/useRecentSales';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -38,6 +39,19 @@ import { featureTracker } from '@/hooks/useFeatureTracking';
 import { useQueryClient } from '@tanstack/react-query';
 
 type SortOption = 'best_selling' | 'least_selling' | 'name_asc' | 'name_desc' | 'price_asc' | 'price_desc';
+
+// Deterministic category accent tone (semantic tokens only)
+const CATEGORY_TONES = [
+  { bar: 'bg-primary', chip: 'bg-primary/10 text-primary' },
+  { bar: 'bg-accent', chip: 'bg-accent/10 text-accent' },
+  { bar: 'bg-warning', chip: 'bg-warning/10 text-warning' },
+  { bar: 'bg-success', chip: 'bg-success/10 text-success' },
+] as const;
+function getCategoryTone(key: string) {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return CATEGORY_TONES[hash % CATEGORY_TONES.length];
+}
 
 // Helper to normalize text for search (remove diacritics)
 const normalizeText = (text: string) => 
