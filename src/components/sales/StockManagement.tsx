@@ -409,6 +409,14 @@ export function StockManagement() {
         </TabsContent>
 
         <TabsContent value="items" className="mt-0 space-y-4 sm:space-y-6">
+      <SalesSummaryStrip
+        items={[
+          { label: 'Hodnota skladu', value: formatCurrency(summaryMetrics.totalStockValue), icon: Wallet },
+          { label: 'Pod minimem', value: String(summaryMetrics.belowThresholdCount), tone: summaryMetrics.belowThresholdCount > 0 ? 'warning' : 'default', icon: AlertTriangle },
+          { label: 'Neaktivní', value: String(summaryMetrics.inactiveCount), tone: summaryMetrics.inactiveCount > 0 ? 'destructive' : 'default', icon: Archive },
+        ]}
+      />
+
       <LowStockBanner
         products={lowStockProducts}
         expanded={bannerExpanded}
@@ -428,32 +436,50 @@ export function StockManagement() {
           onSortChange={setSortBy}
         />
 
+        {/* Compact toolbar: icon buttons w/ tooltip on mobile, labelled on desktop */}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowMargin(!showMargin)}
-            className="gap-2"
-          >
-            {showMargin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            <span className="hidden sm:inline">{showMargin ? 'Skrýt marži' : 'Zobrazit marži'}</span>
-          </Button>
-           <div className="flex items-center gap-2">
-             <ShoppingListDialog />
-             <StockExportButton />
-             <StocktakingDialog />
-             <StockReceiveDialog />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowMargin(!showMargin)}
+                className="gap-2 min-h-[44px] sm:min-h-0"
+              >
+                {showMargin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <span className="hidden sm:inline">{showMargin ? 'Skrýt marži' : 'Zobrazit marži'}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="sm:hidden">{showMargin ? 'Skrýt marži' : 'Zobrazit marži'}</TooltipContent>
+          </Tooltip>
+           <div className="flex items-center gap-1.5 sm:gap-2">
+             <ToolbarAction tooltip="Nákupní seznam"><ShoppingListDialog /></ToolbarAction>
+             <ToolbarAction tooltip="Export"><StockExportButton /></ToolbarAction>
+             <ToolbarAction tooltip="Inventura"><StocktakingDialog /></ToolbarAction>
+             <ToolbarAction tooltip="Naskladnit"><StockReceiveDialog /></ToolbarAction>
              <InvoiceImportDialog 
                trigger={
-                 <Button variant="outline" size="sm" className="gap-2">
+                 <Tooltip>
+                   <TooltipTrigger asChild>
+                     <Button variant="outline" size="icon" className="sm:hidden min-h-[44px] min-w-[44px]" aria-label="Import faktury">
+                       <FileText className="w-4 h-4" />
+                     </Button>
+                   </TooltipTrigger>
+                   <TooltipContent>Import faktury</TooltipContent>
+                 </Tooltip>
+               }
+             />
+             <InvoiceImportDialog 
+               trigger={
+                 <Button variant="outline" size="sm" className="hidden sm:flex gap-2">
                    <FileText className="w-4 h-4" />
-                   <span className="hidden sm:inline">Import faktury</span>
+                   Import faktury
                  </Button>
                }
              />
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" className="gap-2">
+                <Button size="sm" className="gap-2 min-h-[44px] sm:min-h-0">
                   <Plus className="w-4 h-4" />
                   <span className="hidden sm:inline">Přidat</span> položku
                 </Button>

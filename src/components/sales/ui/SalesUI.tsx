@@ -1,9 +1,9 @@
-import { ReactNode } from 'react';
+import { ComponentType, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 /** Kompatibilní typ ikony (lucide i vlastní SVG komponenty). */
-export type SalesIcon = React.ComponentType<{ className?: string }>;
+export type SalesIcon = ComponentType<{ className?: string }>;
 
 /* ============================================================
    Sdílené prezentační primitivy pro sekci Prodej.
