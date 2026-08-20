@@ -166,7 +166,7 @@ export function SalesHistory() {
     <>
       {/* Filters */}
       <div className="space-y-2.5 mb-4">
-        <SalesChipFilter options={PERIOD_FILTERS} value={periodFilter} onChange={setPeriodFilter} />
+        <SalesChipFilter options={PERIOD_FILTERS} value={periodFilter} onChange={(v) => setPeriodFilter(v as PeriodValue)} />
 
         {periodFilter === 'custom' && (
           <div className="flex items-center gap-2">

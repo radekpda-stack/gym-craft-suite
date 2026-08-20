@@ -107,6 +107,8 @@ export function StockManagement() {
   const [sortBy, setSortBy] = useState<StockSortOption>('name_asc');
   const [showMargin, setShowMargin] = useState(false);
   const [bannerExpanded, setBannerExpanded] = useState(false);
+  const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>({});
+  const [pendingStockIds, setPendingStockIds] = useState<Set<string>>(new Set());
 
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
