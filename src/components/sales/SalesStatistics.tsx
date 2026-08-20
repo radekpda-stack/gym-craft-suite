@@ -4,24 +4,21 @@ import {
   ShoppingCart, 
   Banknote, 
   Package,
-  Calendar,
-  Loader2,
   Trophy,
   BarChart3,
   CreditCard,
   Building,
   Wallet,
-  TrendingDown,
   DollarSign,
   Percent,
   ChevronRight,
   PieChartIcon,
   LineChart,
-  CalendarDays
+  CalendarDays,
+  Inbox
 } from 'lucide-react';
 import { format, subDays, subMonths, startOfDay, startOfMonth, getDay, getHours } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   AreaChart, 
   Area, 
@@ -35,6 +32,7 @@ import {
   Cell,
   BarChart,
   Bar,
+  LabelList,
   LineChart as RechartsLineChart,
   Line,
   Legend
@@ -44,12 +42,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useProducts } from '@/hooks/useProducts';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SparklineCard } from '@/components/charts/SparklineCard';
 import { ProductSalesDetailModal } from './ProductSalesDetailModal';
 import { SalesInsights } from './SalesInsights';
 import { ComparisonBadge } from './ComparisonBadge';
 import { SalesHeatmap } from './SalesHeatmap';
 import { TopClientsChart } from './TopClientsChart';
 import { CategoryTrendChart } from './CategoryTrendChart';
+import { SalesSectionHeader, SalesEmptyState, SalesChipFilter } from './ui/SalesUI';
 
 type Period = 'today' | 'week' | 'month' | 'year' | 'all';
 
@@ -486,8 +487,18 @@ export function SalesStatistics() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="space-y-4 sm:space-y-6">
+        <Skeleton className="h-9 w-64 rounded-full" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[120px] rounded-2xl" />
+          ))}
+        </div>
+        <Skeleton className="h-[280px] rounded-2xl" />
+        <div className="grid lg:grid-cols-2 gap-4">
+          <Skeleton className="h-[280px] rounded-2xl" />
+          <Skeleton className="h-[280px] rounded-2xl" />
+        </div>
       </div>
     );
   }

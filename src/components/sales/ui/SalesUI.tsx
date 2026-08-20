@@ -2,7 +2,8 @@ import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LucideIcon } from 'lucide-react';
+/** Kompatibilní typ ikony (lucide i vlastní SVG komponenty). */
+export type SalesIcon = React.ComponentType<{ className?: string }>;
 
 /* ============================================================
    Sdílené prezentační primitivy pro sekci Prodej.
@@ -17,7 +18,7 @@ export function SalesSectionHeader({
   action,
   className,
 }: {
-  icon?: LucideIcon;
+  icon?: SalesIcon;
   title: string;
   subtitle?: string;
   action?: ReactNode;
@@ -50,7 +51,7 @@ export function SalesEmptyState({
   onAction,
   className,
 }: {
-  icon: LucideIcon;
+  icon: SalesIcon;
   title: string;
   description?: string;
   actionLabel?: string;
@@ -78,7 +79,7 @@ export function SalesEmptyState({
 export interface ChipOption<T extends string | number> {
   value: T;
   label: string;
-  icon?: LucideIcon;
+  icon?: SalesIcon;
   count?: number;
 }
 
@@ -91,7 +92,7 @@ export function SalesChipFilter<T extends string | number>({
 }: {
   options: ChipOption<T>[];
   value: T;
-  onChange: (value: T) => void;
+  onChange: (value: any) => void;
   className?: string;
 }) {
   return (
@@ -143,9 +144,9 @@ export function SalesSegmented<T extends string>({
   onChange,
   className,
 }: {
-  options: { value: T; label: string; icon?: LucideIcon }[];
+  options: { value: T; label: string; icon?: SalesIcon }[];
   value: T;
-  onChange: (value: T) => void;
+  onChange: (value: any) => void;
   className?: string;
 }) {
   return (
@@ -184,7 +185,7 @@ export function SalesSummaryStrip({
     label: string;
     value: string;
     tone?: 'default' | 'success' | 'warning' | 'destructive';
-    icon?: LucideIcon;
+    icon?: SalesIcon;
   }[];
   className?: string;
 }) {

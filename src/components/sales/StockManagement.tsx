@@ -191,7 +191,7 @@ export function StockManagement() {
       ...CATEGORIES.map(c => c.value).filter(k => groups.has(k)),
       ...Array.from(groups.keys()).filter(k => !CATEGORIES.some(c => c.value === k)),
     ];
-    return orderedKeys.map(key => ({ key, label: getCategoryLabel(key), items: groups.get(key)! }));
+    return orderedKeys.map(key => ({ key, label: CATEGORIES.find(c => c.value === key)?.label || key, items: groups.get(key)! }));
   }, [filteredProducts]);
 
   const isGroupOpen = (key: string) => groupOpen[key] !== false;
@@ -378,8 +378,14 @@ export function StockManagement() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-3 gap-2">
+          <Skeleton className="h-16 rounded-2xl" />
+          <Skeleton className="h-16 rounded-2xl" />
+          <Skeleton className="h-16 rounded-2xl" />
+        </div>
+        <Skeleton className="h-10 rounded-xl" />
+        <SalesTileSkeleton count={6} />
       </div>
     );
   }

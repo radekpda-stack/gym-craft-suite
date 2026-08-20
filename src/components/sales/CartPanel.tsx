@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Check,
   Loader2,
+  LucideIcon,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { cn } from '@/lib/utils';
 import { useSalesCartWithDiscount } from '@/hooks/useSalesCartWithDiscount';
 import { SalesSegmented } from './ui/SalesUI';
 
-const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: LucideIcon }[] = [
   { value: 'cash', label: 'Hotově', icon: Banknote },
   { value: 'credit', label: 'Kredit', icon: Wallet },
   { value: 'card', label: 'Kartou', icon: CardIcon },
