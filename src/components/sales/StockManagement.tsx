@@ -452,28 +452,16 @@ export function StockManagement() {
             </TooltipTrigger>
             <TooltipContent className="sm:hidden">{showMargin ? 'Skrýt marži' : 'Zobrazit marži'}</TooltipContent>
           </Tooltip>
-           <div className="flex items-center gap-1.5 sm:gap-2">
-             <ToolbarAction tooltip="Nákupní seznam"><ShoppingListDialog /></ToolbarAction>
-             <ToolbarAction tooltip="Export"><StockExportButton /></ToolbarAction>
-             <ToolbarAction tooltip="Inventura"><StocktakingDialog /></ToolbarAction>
-             <ToolbarAction tooltip="Naskladnit"><StockReceiveDialog /></ToolbarAction>
+           <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 py-0.5">
+             <ShoppingListDialog />
+             <StockExportButton />
+             <StocktakingDialog />
+             <StockReceiveDialog />
              <InvoiceImportDialog 
                trigger={
-                 <Tooltip>
-                   <TooltipTrigger asChild>
-                     <Button variant="outline" size="icon" className="sm:hidden min-h-[44px] min-w-[44px]" aria-label="Import faktury">
-                       <FileText className="w-4 h-4" />
-                     </Button>
-                   </TooltipTrigger>
-                   <TooltipContent>Import faktury</TooltipContent>
-                 </Tooltip>
-               }
-             />
-             <InvoiceImportDialog 
-               trigger={
-                 <Button variant="outline" size="sm" className="hidden sm:flex gap-2">
+                 <Button variant="outline" size="sm" className="gap-2 shrink-0">
                    <FileText className="w-4 h-4" />
-                   Import faktury
+                   <span className="hidden sm:inline">Import faktury</span>
                  </Button>
                }
              />
