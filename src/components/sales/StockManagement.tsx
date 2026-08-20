@@ -644,7 +644,7 @@ export function StockManagement() {
 
       {/* Select all header */}
       {filteredProducts.length > 0 && (
-        <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-secondary/30">
+        <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-secondary/30 min-h-[44px]">
           <Checkbox
             checked={selectedIds.size === filteredProducts.length && filteredProducts.length > 0}
             onCheckedChange={toggleSelectAll}
@@ -658,165 +658,205 @@ export function StockManagement() {
         </div>
       )}
 
-      {/* Products list */}
-      <div className="space-y-2">
-        {filteredProducts.map((product) => (
-          <div
-            key={product.id}
-            className={cn(
-              "rounded-xl p-4 transition-all duration-200",
-              "bg-card/80 backdrop-blur-md border border-border/50 shadow-sm",
-              "hover:shadow-md",
-              isLowStock(product) && product.is_active && "ring-1 ring-warning/50 border-warning/30",
-              !product.is_active && "opacity-60",
-              selectedIds.has(product.id) && "ring-2 ring-primary border-primary/50"
-            )}
+      {/* Products grouped by category */}
+      <div className="space-y-3">
+        {groupedByCategory.map(group => (
+          <SalesCollapsibleSection
+            key={group.key}
+            title={group.label}
+            count={group.items.length}
+            open={isGroupOpen(group.key)}
+            onToggle={() => toggleGroup(group.key)}
           >
-            {editingProduct?.id === product.id ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <Input value={name} onChange={(e) => setName(e.target.value)} className="w-36" placeholder="Název" />
-                  <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-20" placeholder="Cena" />
-                  <Input type="number" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} className="w-20" placeholder="Nákup" />
-                  <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
-                    <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {PRODUCT_KINDS.map((k) => (
-                        <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {kind === 'credit_topup' && (
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs whitespace-nowrap">Kredit:</Label>
-                    <Input type="number" value={creditDelta} onChange={(e) => setCreditDelta(e.target.value)} className="w-24" placeholder="1000" />
-                    <span className="text-xs text-muted-foreground">Kč</span>
-                  </div>
-                )}
-                {kind === 'inventory' && (
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs whitespace-nowrap">Skladem:</Label>
-                      <Input type="number" value={stockQuantity} onChange={(e) => setStockQuantity(e.target.value)} className="w-16" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs whitespace-nowrap">Upozornit:</Label>
-                      <Input type="number" value={lowStockThreshold} onChange={(e) => setLowStockThreshold(e.target.value)} className="w-16" />
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-accent" />
-                  <Label className="text-xs whitespace-nowrap">XP:</Label>
-                  <Input type="number" value={xpBonus} onChange={(e) => setXpBonus(e.target.value)} className="w-16" min="0" />
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleUpdate} disabled={updateProduct.isPending}>Uložit</Button>
-                  <Button size="sm" variant="ghost" onClick={resetForm}>Zrušit</Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between gap-2 sm:gap-4">
-                <div className="flex items-center gap-2.5 sm:gap-4 flex-1 min-w-0">
-                  <Checkbox
-                    checked={selectedIds.has(product.id)}
-                    onCheckedChange={() => toggleSelect(product.id)}
-                    className="shrink-0"
-                  />
-                  <div className={cn(
-                    "p-2.5 rounded-xl shrink-0",
-                    product.kind === 'service' 
-                      ? "bg-accent/10 text-accent"
-                      : product.kind === 'credit_topup'
-                        ? "bg-success/10 text-success"
-                        : "bg-primary/10 text-primary"
-                  )}>
-                    {isLowStock(product) && product.is_active ? (
-                      <AlertTriangle className="w-5 h-5 text-warning" />
-                    ) : (
-                      getKindIcon(product.kind || 'inventory')
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-foreground truncate">{product.name}</p>
-                      {!product.is_active && (
-                        <Badge variant="outline" className="text-muted-foreground border-muted text-xs">Archivováno</Badge>
+            <div className="space-y-2 pt-1">
+              {group.items.map((product) => (
+                <div
+                  key={product.id}
+                  className={cn(
+                    "rounded-2xl p-3.5 sm:p-4 transition-all duration-200",
+                    "bg-card/80 backdrop-blur-md border border-border/50 shadow-sm",
+                    "hover:shadow-md",
+                    isLowStock(product) && product.is_active && "ring-1 ring-warning/50 border-warning/30",
+                    !product.is_active && "opacity-60",
+                    selectedIds.has(product.id) && "ring-2 ring-primary border-primary/50"
+                  )}
+                >
+                  {editingProduct?.id === product.id ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Input value={name} onChange={(e) => setName(e.target.value)} className="w-36" placeholder="Název" />
+                        <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-20" placeholder="Cena" />
+                        <Input type="number" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} className="w-20" placeholder="Nákup" />
+                        <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
+                          <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {PRODUCT_KINDS.map((k) => (
+                              <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {kind === 'credit_topup' && (
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs whitespace-nowrap">Kredit:</Label>
+                          <Input type="number" value={creditDelta} onChange={(e) => setCreditDelta(e.target.value)} className="w-24" placeholder="1000" />
+                          <span className="text-xs text-muted-foreground">Kč</span>
+                        </div>
                       )}
-                      {product.kind === 'credit_topup' && (
-                        <Badge variant="outline" className="text-success border-success/50 text-xs">
-                          +{(product.credit_delta || 0).toLocaleString('cs-CZ')} Kč kredit
-                        </Badge>
+                      {kind === 'inventory' && (
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs whitespace-nowrap">Skladem:</Label>
+                            <Input type="number" value={stockQuantity} onChange={(e) => setStockQuantity(e.target.value)} className="w-16" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs whitespace-nowrap">Upozornit:</Label>
+                            <Input type="number" value={lowStockThreshold} onChange={(e) => setLowStockThreshold(e.target.value)} className="w-16" />
+                          </div>
+                        </div>
                       )}
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-accent" />
+                        <Label className="text-xs whitespace-nowrap">XP:</Label>
+                        <Input type="number" value={xpBonus} onChange={(e) => setXpBonus(e.target.value)} className="w-16" min="0" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleUpdate} disabled={updateProduct.isPending}>Uložit</Button>
+                        <Button size="sm" variant="ghost" onClick={resetForm}>Zrušit</Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground mt-0.5 flex-wrap">
-                      <span>{getKindLabel(product.kind || 'inventory')}</span>
-                      <span>•</span>
-                      <span>{getCategoryLabel(product.category)}</span>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-start justify-between gap-2 sm:gap-4">
+                        <div className="flex items-start gap-2.5 sm:gap-3 flex-1 min-w-0">
+                          <Checkbox
+                            checked={selectedIds.has(product.id)}
+                            onCheckedChange={() => toggleSelect(product.id)}
+                            className="shrink-0 mt-1"
+                          />
+                          <div className={cn(
+                            "p-2.5 rounded-xl shrink-0",
+                            product.kind === 'service' 
+                              ? "bg-accent/10 text-accent"
+                              : product.kind === 'credit_topup'
+                                ? "bg-success/10 text-success"
+                                : "bg-primary/10 text-primary"
+                          )}>
+                            {isLowStock(product) && product.is_active ? (
+                              <AlertTriangle className="w-5 h-5 text-warning" />
+                            ) : (
+                              getKindIcon(product.kind || 'inventory')
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium text-foreground truncate">{product.name}</p>
+                              {!product.is_active && (
+                                <Badge variant="outline" className="text-muted-foreground border-muted text-xs">Neaktivní</Badge>
+                              )}
+                              {product.kind === 'credit_topup' && (
+                                <Badge variant="outline" className="text-success border-success/50 text-xs">
+                                  +{(product.credit_delta || 0).toLocaleString('cs-CZ')} Kč kredit
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground mt-0.5 flex-wrap">
+                              <span>{getKindLabel(product.kind || 'inventory')}</span>
+                              {velocityMap?.[product.id] && velocityMap[product.id].daysRemaining !== null && product.kind === 'inventory' && (
+                                <>
+                                  <span>•</span>
+                                  <span className={cn(
+                                    "tabular-nums",
+                                    velocityMap[product.id].daysRemaining! < 7 ? "text-destructive font-medium" :
+                                    velocityMap[product.id].daysRemaining! < 14 ? "text-warning font-medium" :
+                                    "text-muted-foreground"
+                                  )}>
+                                    ~{velocityMap[product.id].daysRemaining} dní zásoby
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                          <div className="text-right">
+                            <p className="font-bold text-foreground">{formatCurrency(product.price)}</p>
+                            {showMargin && product.purchase_price > 0 && (
+                              <p className="text-xs text-success font-medium">
+                                marže: {calculateMarginPercent(product.price, product.purchase_price)}%
+                              </p>
+                            )}
+                          </div>
+                          <Switch checked={product.is_active} onCheckedChange={() => handleToggleActive(product)} />
+                          <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" onClick={() => startEdit(product)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+
                       {product.kind === 'inventory' && (
-                        <>
-                          <span>•</span>
-                          <span className={cn(isLowStock(product) && product.is_active && "text-warning font-medium")}>
+                        <div className="flex items-center gap-3 pl-[3.1rem] sm:pl-[3.4rem]">
+                          <div className="flex-1 min-w-0">
+                            <StockBar quantity={product.stock_quantity || 0} threshold={product.low_stock_threshold || 0} />
+                          </div>
+                          <span className={cn(
+                            "text-sm font-bold tabular-nums shrink-0",
+                            isLowStock(product) && product.is_active ? "text-warning" : "text-foreground"
+                          )}>
                             {product.stock_quantity || 0} ks
                           </span>
-                          {velocityMap?.[product.id] && velocityMap[product.id].daysRemaining !== null && (
-                            <>
-                              <span>•</span>
-                              <span className={cn(
-                                "tabular-nums",
-                                velocityMap[product.id].daysRemaining! < 7 ? "text-destructive font-medium" :
-                                velocityMap[product.id].daysRemaining! < 14 ? "text-warning font-medium" :
-                                "text-muted-foreground"
-                              )}>
-                                ~{velocityMap[product.id].daysRemaining} dní
-                              </span>
-                            </>
-                          )}
-                        </>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-11 w-11 rounded-lg"
+                              disabled={pendingStockIds.has(product.id) || (product.stock_quantity || 0) <= 0}
+                              onClick={() => handleStockDelta(product, -1)}
+                              aria-label="Ubrat kus"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-11 w-11 rounded-lg"
+                              disabled={pendingStockIds.has(product.id)}
+                              onClick={() => handleStockDelta(product, 1)}
+                              aria-label="Přidat kus"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
                       )}
                     </div>
-                  </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                  <div className="text-right">
-                    <p className="font-bold text-foreground">{formatCurrency(product.price)}</p>
-                    {showMargin && product.purchase_price > 0 && (
-                      <p className="text-xs text-success font-medium">
-                        marže: {calculateMarginPercent(product.price, product.purchase_price)}%
-                      </p>
-                    )}
-                  </div>
-                  <Switch checked={product.is_active} onCheckedChange={() => handleToggleActive(product)} />
-                  <Button variant="ghost" size="icon" onClick={() => startEdit(product)}>
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-        
-        {filteredProducts.length === 0 && (
-          <div className="card-floating rounded-xl p-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-3">
-              <Package className="w-6 h-6 text-muted-foreground" />
+              ))}
             </div>
+          </SalesCollapsibleSection>
+        ))}
+
+        {filteredProducts.length === 0 && (
+          <div className="card-floating rounded-xl">
             {products.length === 0 ? (
-              <>
-                <p className="text-muted-foreground font-medium">Zatím žádné položky</p>
-                <Button className="mt-4 gap-2" onClick={() => setIsCreateOpen(true)}>
-                  <Plus className="w-4 h-4" />
-                  Přidat první položku
-                </Button>
-              </>
+              <SalesEmptyState
+                icon={Package}
+                title="Zatím žádné položky"
+                description="Přidejte první produkt nebo službu do skladu."
+                actionLabel="Přidat první položku"
+                onAction={() => setIsCreateOpen(true)}
+              />
             ) : hasActiveFilters ? (
-              <>
-                <p className="text-muted-foreground font-medium">Žádné položky nevyhovují filtru</p>
-                <Button variant="outline" className="mt-4" onClick={resetFilters}>Zrušit filtry</Button>
-              </>
+              <SalesEmptyState
+                icon={Package}
+                title="Žádné položky nevyhovují filtru"
+                description="Zkuste upravit vyhledávání nebo filtry."
+                actionLabel="Zrušit filtry"
+                onAction={resetFilters}
+              />
             ) : (
-              <p className="text-muted-foreground font-medium">Žádné položky</p>
+              <SalesEmptyState icon={Package} title="Žádné položky" />
             )}
           </div>
         )}

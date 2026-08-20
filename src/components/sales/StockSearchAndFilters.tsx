@@ -1,8 +1,9 @@
-import { Search, X, ArrowUpDown } from 'lucide-react';
+import { Search, X, ArrowUpDown, ArrowDownUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { SalesChipFilter } from './ui/SalesUI';
 
 export type StockFilter = 'all' | 'low_stock' | 'active' | 'archived';
 export type StockSortOption = 'name_asc' | 'name_desc' | 'stock_asc' | 'stock_desc' | 'price_asc' | 'price_desc' | 'margin_desc';
@@ -10,9 +11,9 @@ export type StockTypeFilter = 'all' | 'inventory' | 'service' | 'credit_topup';
 
 const FILTER_OPTIONS: { value: StockFilter; label: string }[] = [
   { value: 'all', label: 'Všechny' },
-  { value: 'low_stock', label: '⚠ Nízký stav' },
-  { value: 'active', label: '✓ Aktivní' },
-  { value: 'archived', label: '📦 Archiv' },
+  { value: 'low_stock', label: 'Pouze nízký sklad' },
+  { value: 'active', label: 'Aktivní' },
+  { value: 'archived', label: 'Archiv' },
 ];
 
 const TYPE_OPTIONS: { value: StockTypeFilter; label: string }[] = [
@@ -22,14 +23,11 @@ const TYPE_OPTIONS: { value: StockTypeFilter; label: string }[] = [
   { value: 'credit_topup', label: 'Dobití kreditu' },
 ];
 
-const SORT_OPTIONS: { value: StockSortOption; label: string }[] = [
-  { value: 'name_asc', label: 'Název A–Z' },
-  { value: 'name_desc', label: 'Název Z–A' },
-  { value: 'stock_asc', label: 'Stav (nejnižší)' },
-  { value: 'stock_desc', label: 'Stav (nejvyšší)' },
-  { value: 'price_asc', label: 'Cena (vzestupně)' },
-  { value: 'price_desc', label: 'Cena (sestupně)' },
-  { value: 'margin_desc', label: 'Marže (nejvyšší)' },
+type SortKey = 'name' | 'stock' | 'price';
+const SORT_KEYS: { key: SortKey; label: string }[] = [
+  { key: 'name', label: 'Název' },
+  { key: 'stock', label: 'Zásoba' },
+  { key: 'price', label: 'Hodnota' },
 ];
 
 interface StockSearchAndFiltersProps {
@@ -53,6 +51,24 @@ export function StockSearchAndFilters({
   sortBy,
   onSortChange,
 }: StockSearchAndFiltersProps) {
+  const currentSortKey: SortKey = sortBy.startsWith('stock') ? 'stock' : sortBy.startsWith('price') || sortBy === 'margin_desc' ? 'price' : 'name';
+  const isDesc = sortBy.endsWith('_desc') || sortBy === 'margin_desc';
+
+  const handleSortClick = (key: SortKey) => {
+    if (key === currentSortKey) {
+      // toggle direction
+      const next: StockSortOption = key === 'name'
+        ? (isDesc ? 'name_asc' : 'name_desc')
+        : key === 'stock'
+        ? (isDesc ? 'stock_asc' : 'stock_desc')
+        : (isDesc ? 'price_asc' : 'price_desc');
+      onSortChange(next);
+    } else {
+      const next: StockSortOption = key === 'name' ? 'name_asc' : key === 'stock' ? 'stock_desc' : 'price_desc';
+      onSortChange(next);
+    }
+  };
+
   return (
     <div className="space-y-3">
       {/* Search input */}
@@ -80,27 +96,32 @@ export function StockSearchAndFilters({
         )}
       </div>
 
-      {/* Filters row */}
+      {/* Quick filter chips (incl. "Pouze nízký sklad" toggle) */}
+      <SalesChipFilter options={FILTER_OPTIONS} value={activeFilter} onChange={onActiveFilterChange} />
+
+      {/* Sort chips + type dropdown */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Quick filter chips */}
-        <div className="flex flex-wrap gap-1.5">
-          {FILTER_OPTIONS.map((opt) => (
-            <Button
-              key={opt.value}
-              variant={activeFilter === opt.value ? 'default' : 'outline'}
-              size="sm"
-              className={cn(
-                "h-7 text-xs px-2.5",
-                activeFilter === opt.value && "bg-primary text-primary-foreground"
-              )}
-              onClick={() => onActiveFilterChange(opt.value)}
-            >
-              {opt.label}
-            </Button>
-          ))}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
+          {SORT_KEYS.map((s) => {
+            const active = currentSortKey === s.key;
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => handleSortClick(s.key)}
+                className={cn(
+                  'shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium',
+                  'transition-colors duration-150 press-feedback whitespace-nowrap',
+                  active ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                )}
+              >
+                {s.label}
+                {active && (isDesc ? <ArrowDownUp className="w-3 h-3" /> : <ArrowUpDown className="w-3 h-3" />)}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Spacer */}
         <div className="flex-1" />
 
         {/* Type filter dropdown */}
@@ -110,21 +131,6 @@ export function StockSearchAndFilters({
           </SelectTrigger>
           <SelectContent>
             {TYPE_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Sort dropdown */}
-        <Select value={sortBy} onValueChange={(v) => onSortChange(v as StockSortOption)}>
-          <SelectTrigger className="w-[140px] h-8 text-xs">
-            <ArrowUpDown className="w-3.5 h-3.5 mr-1.5" />
-            <SelectValue placeholder="Řazení" />
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
               </SelectItem>
