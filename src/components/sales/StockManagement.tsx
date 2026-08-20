@@ -7,7 +7,6 @@ import {
   Eye, 
   EyeOff,
   Wrench,
-  Loader2,
   CreditCard,
   Sparkles,
   FileText,
@@ -16,7 +15,14 @@ import {
   Archive,
   ArchiveRestore,
   Percent,
-  X
+  X,
+  Minus,
+  Wallet,
+  Boxes,
+  ClipboardList,
+  ShoppingCart,
+  Download,
+  PackagePlus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -27,6 +33,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, Product } from '@/hooks/useProducts';
 import { useStockVelocity } from '@/hooks/useStockVelocity';
 import { StockReceiveDialog } from '@/components/settings/StockReceiveDialog';
@@ -43,6 +50,15 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/formatters';
 import { toast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  SalesSummaryStrip,
+  SalesChipFilter,
+  SalesCollapsibleSection,
+  StockBar,
+  SalesEmptyState,
+  SalesTileSkeleton,
+} from './ui/SalesUI';
 
 const CATEGORIES = [
   { value: 'supplement', label: 'Doplněk' },

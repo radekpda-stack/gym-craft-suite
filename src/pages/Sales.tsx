@@ -46,18 +46,25 @@ export default function Sales() {
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Compact Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-transparent p-3 sm:p-5">
+      <div className="relative overflow-hidden rounded-2xl card-floating p-3 sm:p-5">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-16 -right-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl"
+        />
         <div className="relative flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-primary/15 shrink-0">
             <ShoppingCart className="w-6 h-6 text-primary" />
           </div>
-          
+
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg sm:text-2xl font-bold text-foreground">Prodej</h1>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              Pokladna &amp; sklad
+            </p>
+            <h1 className="text-lg sm:text-2xl font-bold text-foreground leading-tight">Prodej</h1>
             {/* Inline KPI chips */}
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
               <span className="text-xs font-medium text-muted-foreground">
-                Dnes: <span className="text-foreground font-bold">{formatCurrency(todayTotal)}</span>
+                Dnes: <span className="text-foreground font-bold tabular-nums">{formatCurrency(todayTotal)}</span>
                 {todayChange !== null && Math.abs(todayChange) >= 5 && (
                   <span className={cn(
                     "ml-1 text-[10px] font-bold",
@@ -69,15 +76,19 @@ export default function Sales() {
               </span>
               <span className="text-border">·</span>
               <span className="text-xs text-muted-foreground">
-                Měsíc: <span className="text-foreground font-medium">{formatCurrency(salesStats?.totalRevenue || 0)}</span>
+                Měsíc: <span className="text-foreground font-medium tabular-nums">{formatCurrency(salesStats?.totalRevenue || 0)}</span>
               </span>
               {lowStockCount > 0 && (
                 <>
                   <span className="text-border">·</span>
-                  <span className="text-xs text-warning font-medium">
-                    <AlertTriangle className="w-3 h-3 inline mr-0.5" />
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('stock')}
+                    className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning press-feedback"
+                  >
+                    <AlertTriangle className="w-3 h-3" />
                     {lowStockCount} nízký sklad
-                  </span>
+                  </button>
                 </>
               )}
             </div>
@@ -95,8 +106,9 @@ export default function Sales() {
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
+                aria-label={tab.label}
                 className={cn(
-                  "relative flex-1 gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl transition-all min-w-0",
+                  "relative flex-1 flex-col sm:flex-row gap-0.5 sm:gap-2 py-2 sm:py-3 px-1.5 sm:px-4 rounded-xl transition-all min-w-0 min-h-[44px]",
                   "text-muted-foreground hover:text-foreground/80",
                   isActive && "text-primary-foreground bg-primary shadow-md"
                 )}
@@ -107,11 +119,12 @@ export default function Sales() {
                 )}>
                   <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <span className="hidden sm:inline text-xs sm:text-sm font-medium truncate">{tab.label}</span>
+                <span className="text-[10px] sm:text-sm font-medium truncate max-w-full">{tab.label}</span>
               </TabsTrigger>
             );
           })}
         </TabsList>
+
 
         <TabsContent value="register" className="mt-0">
           <SalesRegister />
