@@ -505,178 +505,87 @@ export function SalesStatistics() {
 
   const hasData = stats && stats.totalOrders > 0;
 
+  const bestProduct = stats?.topProducts?.[0];
+
+  const revenueTrend = stats?.previousPeriod && stats.previousPeriod.totalRevenue > 0
+    ? ((stats.totalRevenue - stats.previousPeriod.totalRevenue) / stats.previousPeriod.totalRevenue) * 100
+    : undefined;
+  const ordersTrend = stats?.previousPeriod && stats.previousPeriod.totalOrders > 0
+    ? ((stats.totalOrders - stats.previousPeriod.totalOrders) / stats.previousPeriod.totalOrders) * 100
+    : undefined;
+  const prevAvgOrder = stats?.previousPeriod && stats.previousPeriod.totalOrders > 0
+    ? stats.previousPeriod.totalRevenue / stats.previousPeriod.totalOrders
+    : undefined;
+  const avgOrderTrend = stats && prevAvgOrder && prevAvgOrder > 0
+    ? ((stats.avgOrderValue - prevAvgOrder) / prevAvgOrder) * 100
+    : undefined;
+  const prevMargin = stats?.previousPeriod && stats.previousPeriod.totalRevenue > 0
+    ? (stats.previousPeriod.totalProfit / stats.previousPeriod.totalRevenue) * 100
+    : undefined;
+  const marginTrend = stats && prevMargin !== undefined
+    ? stats.profitMargin - prevMargin
+    : undefined;
+
+  const revenueSparkline = chartData.map(d => ({ value: d.revenue }));
+  const ordersSparkline = chartData.map(d => ({ value: d.count }));
+  const aovSparkline = (stats?.aovTrend ?? []).map(d => ({ value: d.aov }));
+  const marginSparkline = chartData.map(d => ({ value: d.margin }));
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Period Filter */}
-      <div className="flex items-center gap-3">
-        <Calendar className="w-4 h-4 text-muted-foreground" />
-        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PERIODS.map((p) => (
-              <SelectItem key={p.value} value={p.value}>
-                {p.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <SalesChipFilter
+        options={PERIODS.map(p => ({ value: p.value, label: p.label }))}
+        value={period}
+        onChange={(v) => setPeriod(v as Period)}
+      />
 
       {!hasData ? (
-        <div className="glass rounded-xl p-8 text-center">
-          <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">Žádné prodeje</h3>
-          <p className="text-muted-foreground text-sm">
-            Za vybrané období nebyly zaznamenány žádné prodeje
-          </p>
+        <div className="section-card">
+          <SalesEmptyState
+            icon={Package}
+            title="Žádné prodeje"
+            description="Za vybrané období nebyly zaznamenány žádné prodeje"
+          />
         </div>
       ) : (
         <>
-          {/* KPI Cards - 5 main metrics */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            {/* Tržby */}
-            <div className={cn(
-              "relative overflow-hidden rounded-xl p-4",
-              "bg-card/80 backdrop-blur-md",
-              "border border-primary/20 shadow-sm",
-              "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-            )}>
-              <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-primary/20 to-transparent" />
-              <div className="relative">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <div className="p-1.5 rounded-lg bg-primary/10">
-                    <TrendingUp className="w-4 h-4 text-primary" />
-                  </div>
-                  <span className="text-[10px] uppercase tracking-widest">Tržby celkem</span>
-                </div>
-                <p className="text-2xl font-bold text-primary tabular-nums">{formatCurrency(stats.totalRevenue)}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  {stats.previousPeriod ? (
-                    <ComparisonBadge 
-                      currentValue={stats.totalRevenue}
-                      previousValue={stats.previousPeriod.totalRevenue}
-                    />
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">{PERIODS.find(p => p.value === period)?.label}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Náklady */}
-            <div className={cn(
-              "relative overflow-hidden rounded-xl p-4",
-              "bg-card/80 backdrop-blur-md",
-              "border border-border/50 shadow-sm",
-              "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-            )}>
-              <div className="relative">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <div className="p-1.5 rounded-lg bg-muted/50">
-                    <TrendingDown className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                  <span className="text-[10px] uppercase tracking-widest">Náklady</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground tabular-nums">{formatCurrency(stats.totalCosts)}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  {stats.previousPeriod ? (
-                    <ComparisonBadge 
-                      currentValue={stats.totalCosts}
-                      previousValue={stats.previousPeriod.totalCosts}
-                      invert
-                    />
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">nákupní ceny</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Čistý zisk */}
-            <div className={cn(
-              "relative overflow-hidden rounded-xl p-4",
-              "bg-card/80 backdrop-blur-md",
-              "border border-success/30 shadow-sm shadow-success/10",
-              "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-            )}>
-              <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-success/20 to-transparent" />
-              <div className="relative">
-                <div className="flex items-center gap-2 mb-2">
-                   <div className="p-1.5 rounded-lg bg-success/10">
-                    <Banknote className="w-4 h-4 text-success" />
-                  </div>
-                  <span className="text-[10px] uppercase tracking-widest text-success font-medium">Čistý zisk</span>
-                </div>
-                <p className={cn(
-                  "text-2xl font-bold tabular-nums",
-                  stats.totalProfit >= 0 ? "text-success" : "text-destructive"
-                )}>
-                  {formatCurrency(stats.totalProfit)}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  {stats.previousPeriod ? (
-                    <ComparisonBadge 
-                      currentValue={stats.totalProfit}
-                      previousValue={stats.previousPeriod.totalProfit}
-                    />
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">marže {stats.profitMargin.toFixed(1)}%</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Počet prodejů */}
-            <div className={cn(
-              "relative overflow-hidden rounded-xl p-4",
-              "bg-card/80 backdrop-blur-md",
-              "border border-accent/20 shadow-sm",
-              "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-            )}>
-              <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-accent/20 to-transparent" />
-              <div className="relative">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <div className="p-1.5 rounded-lg bg-accent/10">
-                    <ShoppingCart className="w-4 h-4 text-accent" />
-                  </div>
-                  <span className="text-[10px] uppercase tracking-widest">Počet prodejů</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground tabular-nums">{stats.totalOrders}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  {stats.previousPeriod ? (
-                    <ComparisonBadge 
-                      currentValue={stats.totalOrders}
-                      previousValue={stats.previousPeriod.totalOrders}
-                    />
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">transakcí</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* NEW: Průměr / den */}
-            <div className={cn(
-              "relative overflow-hidden rounded-xl p-4",
-              "bg-card/80 backdrop-blur-md",
-              "border border-chart-2/20 shadow-sm",
-              "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5",
-              "col-span-2 lg:col-span-1"
-            )}>
-              <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-chart-2/20 to-transparent" />
-              <div className="relative">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <div className="p-1.5 rounded-lg bg-chart-2/10">
-                    <CalendarDays className="w-4 h-4 text-chart-2" />
-                  </div>
-                  <span className="text-[10px] uppercase tracking-widest">Průměr / den</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground tabular-nums">{formatCurrency(stats.avgPerDay)}</p>
-                <span className="text-[10px] text-muted-foreground">{stats.activeDays} aktivních dnů</span>
-              </div>
-            </div>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <SparklineCard
+              title="Tržby"
+              value={formatCurrency(stats.totalRevenue)}
+              data={revenueSparkline.length > 1 ? revenueSparkline : [{ value: 0 }, { value: stats.totalRevenue }]}
+              trend={revenueTrend !== undefined ? Math.round(revenueTrend) : undefined}
+              trendLabel="vs. minulé období"
+              variant="primary"
+              icon={<TrendingUp className="w-4 h-4" />}
+            />
+            <SparklineCard
+              title="Počet prodejů"
+              value={stats.totalOrders}
+              data={ordersSparkline.length > 1 ? ordersSparkline : [{ value: 0 }, { value: stats.totalOrders }]}
+              trend={ordersTrend !== undefined ? Math.round(ordersTrend) : undefined}
+              variant="blue"
+              icon={<ShoppingCart className="w-4 h-4" />}
+            />
+            <SparklineCard
+              title="Průměrná objednávka"
+              value={formatCurrency(stats.avgOrderValue)}
+              data={aovSparkline.length > 1 ? aovSparkline : [{ value: 0 }, { value: stats.avgOrderValue }]}
+              trend={avgOrderTrend !== undefined ? Math.round(avgOrderTrend) : undefined}
+              variant="success"
+              icon={<DollarSign className="w-4 h-4" />}
+            />
+            <SparklineCard
+              title="Marže"
+              value={`${stats.profitMargin.toFixed(1)}%`}
+              data={marginSparkline.length > 1 ? marginSparkline : [{ value: 0 }, { value: stats.profitMargin }]}
+              trend={marginTrend !== undefined ? Math.round(marginTrend) : undefined}
+              subtitle={bestProduct ? `TOP: ${bestProduct.name}` : undefined}
+              variant="warning"
+              icon={<Percent className="w-4 h-4" />}
+            />
           </div>
 
           {/* AI Insights */}
