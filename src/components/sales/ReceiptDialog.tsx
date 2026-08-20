@@ -2,7 +2,8 @@ import { useRef } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Printer, Download, Receipt } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/formatters';
@@ -38,6 +39,7 @@ interface ReceiptDialogProps {
 
 export function ReceiptDialog({ data, open, onOpenChange }: ReceiptDialogProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   if (!data) return null;
 
@@ -116,14 +118,17 @@ export function ReceiptDialog({ data, open, onOpenChange }: ReceiptDialogProps) 
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side={isMobile ? 'bottom' : 'right'}
+        className="w-full sm:max-w-sm max-h-[92vh] sm:max-h-screen overflow-y-auto rounded-t-2xl sm:rounded-none"
+      >
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
             <Receipt className="w-5 h-5 text-primary" />
             Paragon
-          </DialogTitle>
-        </DialogHeader>
+          </SheetTitle>
+        </SheetHeader>
 
         {/* Receipt preview */}
         <div
@@ -178,7 +183,7 @@ export function ReceiptDialog({ data, open, onOpenChange }: ReceiptDialogProps) 
             PDF
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

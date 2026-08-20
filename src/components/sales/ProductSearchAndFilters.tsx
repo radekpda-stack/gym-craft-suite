@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Product } from '@/hooks/useProducts';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import { SalesChipFilter } from './ui/SalesUI';
 
 const CATEGORIES = [
   { value: null, label: 'Vše' },
@@ -148,25 +149,14 @@ export function ProductSearchAndFilters({
       </div>
 
       {/* Category chips and in-stock filter */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1.5 flex-1">
-          {CATEGORIES.map((cat) => (
-            <Button
-              key={cat.value ?? 'all'}
-              variant={selectedCategory === cat.value ? 'default' : 'outline'}
-              size="sm"
-              className={cn(
-                "h-7 text-xs px-2.5",
-                selectedCategory === cat.value && "bg-primary text-primary-foreground"
-              )}
-              onClick={() => onCategoryChange(cat.value)}
-            >
-              {cat.label}
-            </Button>
-          ))}
-        </div>
-        
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2">
+        <SalesChipFilter
+          options={CATEGORIES.map(c => ({ value: c.value ?? '__all__', label: c.label }))}
+          value={selectedCategory ?? '__all__'}
+          onChange={(v) => onCategoryChange(v === '__all__' ? null : v)}
+        />
+
+        <div className="flex items-center gap-2 self-end">
           <Switch
             id="in-stock-only"
             checked={inStockOnly}

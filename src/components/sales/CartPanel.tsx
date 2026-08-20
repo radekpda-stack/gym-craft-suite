@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Check,
   Loader2,
+  LucideIcon,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -18,8 +19,9 @@ import { CartItemRow } from './CartItemRow';
 import { CartSummary } from './CartSummary';
 import { cn } from '@/lib/utils';
 import { useSalesCartWithDiscount } from '@/hooks/useSalesCartWithDiscount';
+import { SalesSegmented } from './ui/SalesUI';
 
-const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: LucideIcon }[] = [
   { value: 'cash', label: 'Hotově', icon: Banknote },
   { value: 'credit', label: 'Kredit', icon: Wallet },
   { value: 'card', label: 'Kartou', icon: CardIcon },
@@ -68,7 +70,6 @@ export function CartPanel({
   }
 
   const hasMinPriceIssue = cart.validation.errors.some(e => e.type === 'min_price');
-  const activeIndex = PAYMENT_METHODS.findIndex(m => m.value === paymentMethod);
 
   return (
     <div data-cart-panel className="card-floating rounded-xl p-4 space-y-4">
@@ -142,46 +143,18 @@ export function CartPanel({
         })}
       </div>
 
-      {/* Payment Method - Animated Pills */}
+      {/* Payment Method - Segmented Toggle */}
       <div>
         <Label className="mb-2 block text-xs text-muted-foreground uppercase tracking-wide">Způsob platby</Label>
-        <div className="relative bg-secondary/30 rounded-xl p-1">
-          {/* Animated background indicator */}
-          <motion.div
-            className="absolute inset-y-1 bg-primary rounded-lg shadow-sm"
-            animate={{
-              left: `calc(${activeIndex * 25}% + 4px)`,
-              width: `calc(25% - 8px)`,
-            }}
-            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-          />
-          
-          <div className="relative grid grid-cols-4 gap-1">
-            {PAYMENT_METHODS.map((method) => {
-              const disabled = method.value === 'credit' && !selectedClient && !noClient;
-              const disabledForTopup = method.value === 'credit' && hasCreditTopup;
-              const isActive = paymentMethod === method.value;
-
-              return (
-                <button
-                  key={method.value}
-                  onClick={() => !disabled && !disabledForTopup && onPaymentMethodChange(method.value)}
-                  disabled={disabled || disabledForTopup}
-                  className={cn(
-                    "relative flex flex-col items-center gap-1 p-2 rounded-lg transition-colors z-10",
-                    isActive ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
-                    (disabled || disabledForTopup) && "opacity-40 cursor-not-allowed"
-                  )}
-                >
-                  <method.icon className="w-4 h-4" />
-                  <span className="text-[10px] font-medium">
-                    {method.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <SalesSegmented
+          options={PAYMENT_METHODS.map(m => ({ value: m.value, label: m.label, icon: m.icon }))}
+          value={paymentMethod}
+          onChange={(v) => {
+            const disabled = v === 'credit' && !selectedClient && !noClient;
+            const disabledForTopup = v === 'credit' && hasCreditTopup;
+            if (!disabled && !disabledForTopup) onPaymentMethodChange(v);
+          }}
+        />
       </div>
 
       {/* Sale Note */}

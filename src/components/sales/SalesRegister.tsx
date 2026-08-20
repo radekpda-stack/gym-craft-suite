@@ -30,6 +30,7 @@ import { RecentSales } from './RecentSales';
 import { ClientPurchaseSuggestions } from './ClientPurchaseSuggestions';
 import { MobileCartBar } from './MobileCartBar';
 import { MobileCartDrawer } from './MobileCartDrawer';
+import { SalesTileSkeleton, SalesEmptyState, ClientAvatar, StockBar } from './ui/SalesUI';
 import { useRecentSales, RecentSale } from '@/hooks/useRecentSales';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -38,6 +39,19 @@ import { featureTracker } from '@/hooks/useFeatureTracking';
 import { useQueryClient } from '@tanstack/react-query';
 
 type SortOption = 'best_selling' | 'least_selling' | 'name_asc' | 'name_desc' | 'price_asc' | 'price_desc';
+
+// Deterministic category accent tone (semantic tokens only)
+const CATEGORY_TONES = [
+  { bar: 'bg-primary', chip: 'bg-primary/10 text-primary' },
+  { bar: 'bg-accent', chip: 'bg-accent/10 text-accent' },
+  { bar: 'bg-warning', chip: 'bg-warning/10 text-warning' },
+  { bar: 'bg-success', chip: 'bg-success/10 text-success' },
+] as const;
+function getCategoryTone(key: string) {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return CATEGORY_TONES[hash % CATEGORY_TONES.length];
+}
 
 // Helper to normalize text for search (remove diacritics)
 const normalizeText = (text: string) => 
@@ -66,55 +80,37 @@ function ProductCard({ product, cart, isLowStock, getProductIcon, getProductKind
   const inCart = !!cartItem;
   const lowStock = isLowStock(product);
   const outOfStock = product.kind === 'inventory' && (product.stock_quantity || 0) <= 0;
-  
-  // Calculate stock percentage for gauge
-  const maxStock = product.low_stock_threshold ? product.low_stock_threshold * 4 : 20;
-  const stockPercent = product.kind === 'inventory' 
-    ? Math.min(100, ((product.stock_quantity || 0) / maxStock) * 100) 
-    : 100;
+  const tone = getCategoryTone(product.category || product.kind);
 
   return (
     <button
       onClick={() => { if (!outOfStock) { cart.addItem(product); onAddToCart?.(product); } }}
       disabled={outOfStock}
       className={cn(
-        "relative overflow-hidden rounded-xl text-left transition-all duration-200",
+        "relative overflow-hidden rounded-2xl text-left transition-all duration-200 min-h-[44px]",
         "bg-card/80 backdrop-blur-md border border-border/50 shadow-sm",
-        "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]",
-        outOfStock && "opacity-50 cursor-not-allowed",
-        inCart && "ring-2 ring-primary bg-primary/10",
-        lowStock && !outOfStock && !inCart && "border-warning/50"
+        "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] press-feedback",
+        outOfStock && "opacity-50 cursor-not-allowed hover:translate-y-0 hover:shadow-sm",
+        inCart && "ring-2 ring-primary bg-primary/10"
       )}
     >
-      {/* Stock gauge bar for inventory items */}
-      {product.kind === 'inventory' && (
-        <div className="h-1 bg-secondary/30">
-          <div 
-            className={cn(
-              "h-full transition-all duration-300",
-              outOfStock ? "bg-destructive/50" :
-              lowStock ? "bg-gradient-to-r from-warning to-warning/50" :
-              "bg-gradient-to-r from-success to-success/50"
-            )}
-            style={{ width: `${stockPercent}%` }}
-          />
-        </div>
-      )}
-      
-      <div className="p-2 sm:p-3 sm:p-4">
-        {/* Product type badge */}
-        <div className="flex items-center gap-1.5 mb-1.5 sm:mb-2">
-          <div className={cn(
-            "p-1 rounded-md hidden sm:block",
-            product.kind === 'service' ? "bg-accent/10" :
-            product.kind === 'credit_topup' ? "bg-warning/10" :
-            "bg-primary/10"
+      {/* Category accent bar */}
+      <div className={cn("h-1", tone.bar)} />
+
+      <div className="p-2.5 sm:p-3">
+        {/* Product type chip */}
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <span className={cn(
+            "text-[9px] uppercase tracking-wide font-bold rounded-full px-1.5 py-0.5",
+            tone.chip
           )}>
-            {getProductIcon(product)}
-          </div>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
             {getProductKindLabel(product)}
           </span>
+          {outOfStock && (
+            <Badge variant="outline" className="text-[9px] py-0 px-1.5 border-destructive/40 text-destructive">
+              Není skladem
+            </Badge>
+          )}
         </div>
 
         {/* Name & Price */}
@@ -131,21 +127,18 @@ function ProductCard({ product, cart, isLowStock, getProductIcon, getProductKind
         )}
 
         {/* Stock info for inventory */}
-        {product.kind === 'inventory' && (
-          <div className="flex items-center gap-1 mt-2">
-            {outOfStock ? (
-              <span className="text-xs text-destructive font-medium">Vyprodáno</span>
-            ) : (
-              <>
-                {lowStock && <AlertTriangle className="w-3 h-3 text-warning" />}
-                <span className={cn(
-                  "text-xs tabular-nums",
-                  lowStock ? "text-warning font-medium" : "text-muted-foreground"
-                )}>
-                  {product.stock_quantity || 0} ks
-                </span>
-              </>
-            )}
+        {product.kind === 'inventory' && !outOfStock && (
+          <div className="mt-2 space-y-1">
+            <StockBar quantity={product.stock_quantity || 0} threshold={product.low_stock_threshold || 1} />
+            <div className="flex items-center gap-1">
+              {lowStock && <AlertTriangle className="w-3 h-3 text-warning shrink-0" />}
+              <span className={cn(
+                "text-[11px] tabular-nums",
+                lowStock ? "text-warning font-medium" : "text-muted-foreground"
+              )}>
+                {product.stock_quantity || 0} ks
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -406,8 +399,15 @@ export function SalesRegister() {
 
   if (productsLoading || clientsLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 lg:gap-6">
+        <div className="space-y-4">
+          <div className="card-floating rounded-xl p-3 h-16 animate-pulse" />
+          <div className="card-floating rounded-xl p-3 sm:p-4 space-y-3">
+            <div className="h-9 rounded-lg bg-muted animate-pulse" />
+            <SalesTileSkeleton count={8} />
+          </div>
+        </div>
+        <div className="hidden lg:block h-64 rounded-2xl bg-muted animate-pulse" />
       </div>
     );
   }
@@ -447,8 +447,11 @@ export function SalesRegister() {
               />
               {/* Inline credit info */}
               {selectedClientData && (
-                <div className="flex items-center justify-between px-1 text-xs">
-                  <span className="text-muted-foreground">{selectedClientData.name}</span>
+                <div className="flex items-center justify-between px-1 text-xs gap-2">
+                  <span className="flex items-center gap-1.5 min-w-0 text-muted-foreground">
+                    <ClientAvatar name={selectedClientData.name} size="sm" />
+                    <span className="truncate">{selectedClientData.name}</span>
+                  </span>
                   <div className="flex items-center gap-2">
                     {sharedBudget?.isShared && (
                       <Badge variant="outline" className="gap-0.5 text-[9px] py-0 px-1 bg-secondary/50">
@@ -550,17 +553,14 @@ export function SalesRegister() {
 
         {/* Products Grid */}
         {totalProducts === 0 ? (
-          <div className="card-floating rounded-xl p-8 text-center">
-            <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">
-              {searchQuery || selectedCategory ? 'Žádné výsledky' : 'Žádné produkty'}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {searchQuery || selectedCategory 
+          <div className="card-floating rounded-xl">
+            <SalesEmptyState
+              icon={Package}
+              title={searchQuery || selectedCategory ? 'Žádné výsledky' : 'Žádné produkty'}
+              description={searchQuery || selectedCategory
                 ? 'Zkuste upravit vyhledávání nebo filtry'
-                : 'Přidejte produkty v záložce Sklad'
-              }
-            </p>
+                : 'Přidejte produkty v záložce Sklad'}
+            />
           </div>
         ) : (
           <div className="space-y-5">
